@@ -113,6 +113,13 @@ pub const PALETTE: &[Tool] = &[
         command: "pipboy net scan local --confirm",
     },
     Tool {
+        id: "reclamation",
+        name: "RECLAMATION",
+        description: "Offline field site register with manual positions, condition, urgency and GeoJSON export.",
+        availability: Availability::Ready,
+        command: "pipboy dashboard --micro",
+    },
+    Tool {
         id: "geo-lab",
         name: "SCOUT GIS",
         description:
@@ -221,7 +228,7 @@ pub const PRESETS: &[Preset] = &[
         description: "Offline WGS84 field mapping, records, LAN planning, status and explicit game companion.",
         lore_evidence: "VT-02",
         role_fidelity: "role_inspired",
-        tools: &["geo-lab", "game", "net-lab", "notes", "host"],
+        tools: &["reclamation", "geo-lab", "game", "net-lab", "notes", "host"],
     },
     Preset {
         id: "records-custodian",
