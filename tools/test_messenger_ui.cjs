@@ -14,7 +14,7 @@ class Element{
 const document={createElement:tag=>new Element(tag)};
 const window={};
 let state={schema_version:1,device_id:"head-engineer",peers:["scout-one"],
-  transport:"pinned_openssh_explicit",storage:"plaintext_local_only",e2ee:false,
+  conversations:["scout-one"],transport:"pinned_openssh_explicit",storage:"plaintext_local_only",e2ee:false,
   messages:[]};
 const calls=[];
 let failSend=false;
@@ -90,7 +90,7 @@ async function main(){
   assert.equal(root.children.length,0);
   assert.equal(calls.length,before,"unmount has no outbound request");
   const emptyRoot=new Element("section");
-  state={...state,device_id:null,peers:[],messages:[]};
+  state={...state,device_id:null,peers:[],conversations:[],messages:[]};
   const empty=window.RustBoyMessenger.mount(emptyRoot,{compact:true});
   await tick();
   assert.ok(walk(emptyRoot).some(x=>x.textContent.includes("NO PAIRED DEVICES")));
@@ -100,6 +100,16 @@ async function main(){
   press(compose,"submit");await tick();
   assert.equal(calls.filter(x=>x.url==="/api/messages/send").length,2);
   empty.destroy();
+  state={...state,device_id:"scout-one",peers:[],conversations:["overseer-a"],
+    messages:[{id:1,peer:"overseer-a",direction:"incoming",body:"Inbound from HQ",
+      delivery:"received",created_at:100,remote_origin_id:1,remote_stored_id:null}]};
+  const receiver=new Element("div");
+  const receiverApp=window.RustBoyMessenger.mount(receiver,{compact:true});
+  await tick();
+  assert.ok(walk(receiver).some(x=>x.textContent==="Inbound from HQ"));
+  assert.ok(walk(receiver).some(x=>x.textContent.includes("RECEIVE ONLY")));
+  assert.equal(find(receiver,x=>x.tag==="button"&&x.textContent==="SEND VIA SSH").disabled,true);
+  receiverApp.destroy();
   console.log("Messenger UI: manual send, safe text, bounded input, queued retry, no auto transport PASS");
 }
 main().catch(e=>{console.error(e);process.exitCode=1;});
