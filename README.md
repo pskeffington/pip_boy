@@ -50,6 +50,7 @@ git pull --ff-only origin main
 | DIAG | Local CPU/RAM indicators and scoped, versioned NDJSON fault-evidence ingestion | Device-specific collectors and validated diagnostic rules |
 | Overseer Task Control | Persistent assignments, role queues, status, due dates and revision-safe history | Human/organizational identity beyond local role labels |
 | Peer task transport | Explicit paired-device OpenSSH send and receipt/status retrieval | Real Mac-to-Pi SSH pairing, interruption and key-rotation tests |
+| Reclamation Field Kit | Offline persistent survey sites, categories, condition, priority and status; manual WGS84 coordinates and GeoJSON export | Field GNSS, RustGIS full renderer, Pi touch acceptance and operational verification |
 | Scout maps | RustGIS/GeoJSON vector import, independent WGS84 canvas renderer and opt-in browser GPS; optional online reference overlay | Upstream RustGIS renderer, raster/terrain, native GNSS and Pi display |
 | Host / Library / Notes | Local telemetry with quality labels, bundled references and offline notes | Production packaging and accessibility acceptance |
 | Fallout 4 companion | Read-only TCP protocol browser, diagnostics and bounded observation | Actual game-build/PlayStation interoperability |
@@ -99,13 +100,15 @@ Responders, cache sightings and controller-connected clients are different count
 | Security Chief | Network/host diagnostics and disconnected four-camera layout |
 | Vault Doctor | Research references, observations and notes |
 | University Researcher | Reproducible local inspection and research tools |
-| Reclamation Scout | Field maps, waypoints and WGS84 distance |
+| Reclamation Scout | Site register, field maps, waypoints and WGS84 distance |
 | Records Custodian | Local notes and archive references |
 | Custom | Empty workspace with explicit tool pinning |
 
 Switch profiles through the UI or `pipboy workbench use head-engineer --replace`. Profile replacement changes pinned layout; each active operation still has its own Run/authorization step. [Role roadmap](docs/ROLE_ROADMAP.md) · [Lore/source matrix](docs/VAULT_TEC_LORE_MATRIX.md) · [Camera-wall contract](docs/SECURITY_CAMERA_WALL.md).
 
 ## Maps, tasks and diagnostics
+
+**Reclamation:** load Reclamation Scout and select **SITES** on micro. Add site observations with manual WGS84 coordinates, condition, priority, notes and position uncertainty; update status and export RFC 7946 GeoJSON. Records persist at `PIPBOY_HOME/reclamation.json` (default `~/.pipboy/reclamation.json`). No background GNSS or uploads. [Field kit guide](docs/RECLAMATION.md).
 
 **Scout MAP:** choose **RUSTGIS** to load `.rgismap`, `.rgis`, `.rgislyr`, `.rgismpk`, `.rgispkg` or GeoJSON. Native vector data remains primary; missing raster/streamed sources are reported. Browser GPS needs permission. **WEB ON** enables a separately labeled OpenStreetMap/Overpass reference overlay; provider reachability checks contain no coordinates. [Map/GPS guide](docs/SCOUT_GPS_MAP.md).
 
