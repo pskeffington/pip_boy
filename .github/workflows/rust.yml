@@ -60,6 +60,7 @@ jobs:
           python3 tools/smoke_broker.py
           python3 tools/smoke_game.py
           python3 tools/smoke_workbench.py
+          python3 tools/smoke_scout.py
 
   native:
     name: Native ${{ matrix.os }}
@@ -99,6 +100,7 @@ jobs:
           ${{ matrix.python }} tools/smoke_broker.py
           ${{ matrix.python }} tools/smoke_game.py
           ${{ matrix.python }} tools/smoke_workbench.py
+          ${{ matrix.python }} tools/smoke_scout.py
       - name: Native macOS terminal PTY journey
         if: matrix.os == 'macos-latest'
         shell: bash

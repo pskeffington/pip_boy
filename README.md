@@ -8,11 +8,11 @@
 
 Rust-Boy is an independent, Rust-native, role-configurable developer workbench for desktop terminals, with a modular foundation for future 4-inch wearable and handheld applications. It brings local host diagnostics, a curated research library and user-controlled field notes together in a keyboard-driven interface.
 
-**Current stage:** development preview. The terminal console and offline workflows are implemented and tested on Linux, macOS and Windows. Physical GPIO, serial, SDR, Bluetooth, mesh, GNSS, mapping and physical device integrations are **not enabled**. An explicitly requested Fallout 4 TCP companion browser is available for validation. No packaged production release is claimed.
+**Current stage:** development preview. The terminal console and offline workflows are implemented and tested on Linux, macOS and Windows. Physical GPIO, serial, SDR, Bluetooth, mesh, GNSS, live maps and physical device integrations are **not enabled**. Offline WGS84 GeoJSON Point tools are provided for the Reclamation Scout. An explicitly requested Fallout 4 TCP companion browser is available for validation. No packaged production release is claimed.
 
 ## Vault-Tec occupational workbenches
 
-**Seven ready-made roles + one empty Custom mode.** On a fresh workbench, **Overseer Operations** is the default; users can switch between complete, pre-pinned stations. Each preloaded tool must still be invoked explicitly. No saved role opens cameras or devices by itself. This development branch has **unresolved CI gates**; a profile present in source is not a certified release.
+**Seven ready-made roles + one empty Custom mode.** On a fresh workbench, **Overseer Operations** is the default; users can switch between complete, pre-pinned stations. Each preloaded tool must still be invoked explicitly. No saved role opens cameras or devices by itself. The workbench branch was CI-green at `d7ee200`; the Scout GIS branch requires its own exact-SHA verification. A profile present in source is not a certified release.
 
 | Role | Real-world station focus | Readiness |
 | --- | --- | --- |
@@ -21,12 +21,12 @@ Rust-Boy is an independent, Rust-native, role-configurable developer workbench f
 | Security Chief | Security diagnostics, **four-camera 2×2 wall with focus view** | Camera video planned, not connected |
 | Vault Doctor | Research library, environmental observation and safety checklists | Library/notes exist; environmental sensing planned |
 | University Researcher | Data inspection, reproducible experiments and statistics | Fixture/palette tools exist; data lab planned |
-| Reclamation Scout | Offline field notes, coordinates, maps and game companion | Map/GNSS planned; PS4 acceptance pending |
+| Reclamation Scout | Native GIS Lab, GeoJSON waypoints, field tools and future TAK-on-Pi | Offline Point tools implemented; maps/GNSS/TAK transport planned |
 | Records Custodian | Archive provenance, search, SHA-256 integrity and export | Notes/library exist; secure hashing/index planned |
 | Custom | Truly empty expert workspace with user-selected modules | Tool pinning code present; plugin sandbox planned |
 
 ```bash
-# On the feat/rust-boy-workbench development branch:
+# On the feat/reclamation-scout-gis-tak development branch:
 cargo run --locked -p pipboy -- workbench profiles
 cargo run --locked -p pipboy -- workbench list
 cargo run --locked -p pipboy -- workbench use security-chief --replace
@@ -35,6 +35,8 @@ cargo run --locked -p pipboy -- workbench net cidr 192.168.1.50/24
 ```
 
 Inside the desktop TUI, navigate to WORKBENCH and press **P** to choose a complete role (Enter, then Y to replace), or **A** to browse individual tools. Role replacement modifies pinned layout only, not notes or saved permission rules.
+
+**Scout GIS development:** [RustGIS/TAK on Raspberry Pi architecture](docs/SCOUT_GIS_TAK.md) · [source](crates/pipboy-core/src/scout_gis.rs). Offline GIS operations can be run independently: `pipboy scout geo waypoint "Trailhead" 42.0 -70.75`, `pipboy scout geo inspect trailhead.geojson`, and `pipboy scout geo distance 42.0 -70.75 42.01 -70.76`. No ATAK Android app, TAK server, GNSS integration, live map renderer or external RustGIS source is bundled.
 
 **Design and evidence:** [role-by-role roadmap](docs/ROLE_ROADMAP.md) · [Vault-Tec lore matrix](docs/VAULT_TEC_LORE_MATRIX.md) · [Security Chief four-camera wall](docs/SECURITY_CAMERA_WALL.md). Profiles and hardware readiness are separately gated.
 

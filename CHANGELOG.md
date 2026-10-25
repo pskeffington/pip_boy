@@ -2,12 +2,19 @@
 
 This file records notable changes to Rust-Boy. This repository is in **development preview**; the Rust workspace version `0.1.0` is not a published production release. Dates are in UTC unless otherwise stated.
 
+## Unreleased — Reclamation Scout GIS / Pi-TAK foundation (2026-10-25)
+
+- Add an offline `scout geo` CLI with bounded RFC 7946 Point/Feature/FeatureCollection inspection, WGS84 waypoint export, and spherical distance calculations. No network/GNSS access is performed by the module.
+- Make GIS Lab a ready, pre-pinned Reclamation Scout tool; preserve the other roles, offline defaults and explicit permissions.
+- Add a researched ARM64 RustGIS compatibility plan and Raspberry Pi TAK integration roadmap. ATAK is Android software; OpenTAKServer runs as separate, operator-managed Raspberry Pi software. No automatic TAK/CoT session, server installation or third-party RustGIS code is bundled.
+- Add exact-SHA smoke and unit acceptance gates; report them as pending until CI completes.
+
 ## Unreleased — workbench role roadmap (2026-10-25)
 
 - Document eight Vault-Tec-inspired operational profiles with exact existing palette mapping, real-world requirements, four R0–R3 acceptance gates each, formal source provenance and a consistent distinction between canonical occupational names and Rust-Boy adaptations.
 - Define the Security Chief four-feed 2×2 camera wall and one-press focus/back UX, safe manual camera import, ONVIF Profile T / RTSP interoperability plans and required credential, privacy and actual hardware test gates. **Video is not yet implemented.**
 - Add machine-readable `catalog/role_roadmap.json` and `tools/validate_roles.py` to detect divergence between docs and Rust profile definitions in CI.
-- **Status:** role-picker source is present on the development branch, but recent build/format checks are failing; do not describe it as a validated release.
+- **Status:** the workbench branch passed the full cross-platform quality matrix at `d7ee200`; this new Scout branch must pass independently.
 
 ## Unreleased — main-branch foundation (2026-10-25)
 

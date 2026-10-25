@@ -95,6 +95,38 @@
       "url": "https://github.com/pskeffington/pip_boy/blob/feat/rust-boy-workbench/crates/pipboy-core/src/workbench.rs",
       "supports": "Role preset IDs, currently pinned tool sets and independent Custom sandbox.",
       "limit": "Code presence on development branch is not cross-platform CI acceptance."
+    },
+    {
+      "id": "STD-07",
+      "type": "upstream_software",
+      "title": "OpenGeos RustGIS — architecture, licensing, ARM64 builds",
+      "url": "https://github.com/opengeos/RustGIS",
+      "supports": "RustGIS L0 geometry and L1 data are useful interoperability references; Apache-2.0, available Linux ARM64 distribution; workspace minimum Rust 1.90.",
+      "limit": "Rust-Boy targets Rust 1.81; full RustGIS source is not currently embedded or verified on Raspberry Pi. Keep independent GeoJSON bridge until compatibility gates pass."
+    },
+    {
+      "id": "STD-08",
+      "type": "official_product",
+      "title": "TAK Product Center — ATAK, TAKX, PiTAK, TAK Server",
+      "url": "https://tak.gov/products",
+      "supports": "ATAK-CIV is Android software, TAKX includes a Linux variant, and PiTAK is a transport-specific TAK ecosystem product.",
+      "limit": "PiTAK does not imply an entire ATAK mobile client on Raspberry Pi OS; Linux TAKX ARM64 support has not been established."
+    },
+    {
+      "id": "STD-09",
+      "type": "upstream_software",
+      "title": "OpenTAKServer — Raspberry Pi OS installation",
+      "url": "https://docs.opentakserver.io/installation/installation.html",
+      "supports": "OpenTAKServer supports Raspberry Pi OS Bookworm-or-newer with a documented Pi installer; this is a TAK-compatible server for client data exchange.",
+      "limit": "Separate software, not embedded in Rust-Boy; operator must review installer, certificates, access policy and live ARM64 hardware behavior."
+    },
+    {
+      "id": "STD-10",
+      "type": "technical_standard",
+      "title": "IETF RFC 7946 — GeoJSON",
+      "url": "https://www.rfc-editor.org/rfc/rfc7946",
+      "supports": "Positions use geographic longitude, latitude WGS84 axis order; GeoJSON Feature and FeatureCollection are suitable portable interchange artifacts.",
+      "limit": "Raw bounding boxes may be broad across antimeridian; this first Scout reader supports Point geometries only."
     }
   ],
   "roles": [
@@ -684,10 +716,15 @@
       "source_ids": [
         "VT-02",
         "VT-03",
-        "STD-04"
+        "STD-04",
+        "STD-07",
+        "STD-08",
+        "STD-09",
+        "STD-10"
       ],
-      "mission": "Use offline maps, coordinates and a durable field log with optional game companion.",
+      "mission": "Build a truly offline WGS84 field kit on Mac and Pi, interoperable with RustGIS and eventually opt-in TAK nodes.",
       "baseline_tools": [
+        "geo-lab",
         "game",
         "net-lab",
         "notes",
@@ -697,14 +734,16 @@
         "map",
         "coordinate-lab",
         "gnss",
-        "track-log"
+        "track-log",
+        "tak-bridge",
+        "rustgis-adapter"
       ],
       "needs": [
         {
           "id": "N1",
           "priority": "must",
-          "need": "Manual waypoints and coordinate conversion without network access",
-          "status": "planned"
+          "need": "Local WGS84 waypoints, approximate great-circle distances and bounded GeoJSON Point inspection",
+          "status": "partially_available"
         },
         {
           "id": "N2",
@@ -715,13 +754,13 @@
         {
           "id": "N3",
           "priority": "should",
-          "need": "Opt-in GNSS and GeoJSON/GPX import-export",
+          "need": "Opt-in GNSS, multi-geometry GeoJSON/GPX exchange and permitted TAK CoT interoperability",
           "status": "planned"
         },
         {
           "id": "N4",
           "priority": "later",
-          "need": "Offline tile maps with licensing, caching and battery budget",
+          "need": "Portable RustGIS-style map rendering, offline tile caching and Raspberry Pi display performance",
           "status": "planned"
         }
       ],
@@ -730,25 +769,29 @@
           "gate": "R0",
           "title": "Preloaded field desk",
           "deliverables": [
-            "Game, NET, notes and host tools with explicit connection flags"
+            "Pre-pinned GIS Lab plus Game, NET, notes and host tools",
+            "Offline waypoint GeoJSON, spherical distance and bounded Point-only file inspection"
           ],
           "acceptance": [
-            "No console connection or location access on first launch",
-            "Profile switch does not alter permissions"
+            "GeoJSON exports [longitude,latitude] and accepts only -90..90 lat and -180..180 lon",
+            "All GIS commands remain offline with no GNSS, console or TAK connection on profile activation",
+            "Unit, smoke and Rust 1.81/macOS/Windows CI gates pass before release"
           ],
           "dependencies": [],
           "status": "code_present_ci_pending"
         },
         {
           "gate": "R1",
-          "title": "Offline navigation primitives",
+          "title": "Offline RustGIS-compatible field mapping",
           "deliverables": [
-            "Lat/lon input, DMS conversion and GeoJSON point export",
-            "Manual waypoint notebook with units and provenance"
+            "Portable GeoJSON field layer, GPX imports, waypoints and manually selected cached offline tiles",
+            "Evaluate rustgis-geom/rustgis-data adapter separately, without silently increasing the Rust 1.81 MSRV",
+            "Touch/keyboard map navigation and DMS coordinate formats"
           ],
           "acceptance": [
-            "GeoJSON coordinates written [longitude, latitude] per RFC 7946",
-            "Malformed/out-of-range coordinates rejected"
+            "RustGIS reads exported waypoint layers and Rust-Boy inspects RustGIS Point layers without conversion errors",
+            "Golden dateline, polar, invalid-coordinate and lossless waypoint round trips",
+            "No network access required for local map navigation"
           ],
           "dependencies": [
             "R0"
@@ -757,14 +800,16 @@
         },
         {
           "gate": "R2",
-          "title": "Permissioned location",
+          "title": "Opt-in GNSS and TAK interoperability",
           "deliverables": [
-            "OS-enforced GNSS/location session consent",
-            "Uncertainty, fix age and accuracy labels"
+            "Explicit OS-granted GNSS with accuracy/stale indicators and revocation",
+            "Bounded Cursor-on-Target XML/Protobuf adapter with operator-selected destinations and TLS identity",
+            "Test with independent OpenTAKServer on Raspberry Pi OS and a civilian TAK client"
           ],
           "acceptance": [
-            "No location sampled until consent",
-            "Stop/revoke clears session and marks position stale"
+            "No position sharing before the user enables it, selects recipient and approves each session",
+            "Local CoT fixture tests pass; live Pi server interoperability is field-tested and credential-safe",
+            "Revocation stops transmission and marks positions stale"
           ],
           "dependencies": [
             "R1",
@@ -774,14 +819,16 @@
         },
         {
           "gate": "R3",
-          "title": "Field-map and companion acceptance",
+          "title": "Raspberry Pi handheld GIS acceptance",
           "deliverables": [
-            "Licensed offline map tiles, battery-aware map detail",
-            "Measured Mac/PS4 companion interoperability when tested"
+            "ARM64 Pi 5 native Scout build and tested RustGIS ARM64 deployment",
+            "Four-inch readout with waypoint and offline map controls, keyboard/touch fallback",
+            "Power/performance measurements plus independent Mac/PS4 game companion acceptance"
           ],
           "acceptance": [
-            "Valid offline navigation without signal",
-            "Actual PlayStation acceptance reported separately from mock peers"
+            "Offline waypoint, coordinate and cached-map use passes on actual Pi hardware",
+            "Measured cold start, frame latency, RAM/CPU and battery draw recorded without guessed metrics",
+            "TAK server/client and PlayStation tests are reported separately from mock connections"
           ],
           "dependencies": [
             "R2",

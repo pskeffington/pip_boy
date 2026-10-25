@@ -13,6 +13,10 @@ The [eight-role workbench plan](ROLE_ROADMAP.md) and [machine-readable role matr
 
 **Current blocker:** The workbench development branch has compilation/formatting failures in CI and must return to green before any role implementation is called accepted. The R0 role definitions are marked `code_present_ci_pending`. Hardware gates remain planned, not silently enabled.
 
+## Reclamation Scout: GIS + Raspberry Pi + TAK
+
+[Scout architecture and acceptance gates](SCOUT_GIS_TAK.md) define the current independent RFC 7946 Point geometry tools and the future separately gated ARM64 RustGIS adapter and OpenTAKServer/CoT connector. **ATAK itself remains Android-only, and no Pi-native ATAK app or TAK connection is shipped.** RustGIS requires Rust 1.90+; Rust-Boy still targets 1.81, so direct RustGIS code embedding is deferred. This work does not alter the external RustGIS repository.
+
 ## Navigate the build
 
 - [Literature matrix](LITERATURE_MATRIX.md) — 37 traceable primary/official references, limitations and corresponding tests.

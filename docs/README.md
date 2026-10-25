@@ -10,6 +10,7 @@ Technical contracts, architecture decisions, research provenance and validation 
 | --- | --- |
 | [Quick start](../README.md#quick-start) | Clone, build, run the terminal UI and inspect local status |
 | [Console controls](CONSOLE.md) | Keyboard navigation, resize behavior and terminal restoration |
+| [Scout GIS + TAK on Pi](SCOUT_GIS_TAK.md) | Offline GeoJSON, RustGIS ARM64 roadmap, Pi TAK server and CoT integration gates |
 | [Role roadmap](ROLE_ROADMAP.md) | Eight occupational workbenches, operational needs and R0-R3 acceptance gates |
 | [Lore/source matrix](VAULT_TEC_LORE_MATRIX.md) | Publisher-source evidence, role name fidelity and technical standards |
 | [Security camera wall](SECURITY_CAMERA_WALL.md) | Four-feed 2×2 view, one-key focus, camera authorization and media acceptance |
@@ -23,6 +24,7 @@ Technical contracts, architecture decisions, research provenance and validation 
 | Topic | Documents |
 | --- | --- |
 | Mac → PlayStation | [Launcher, setup and protocol diagnostics](MAC_PLAYSTATION.md) |
+| Reclamation Scout GIS | [RustGIS and Raspberry Pi / TAK architecture](SCOUT_GIS_TAK.md) |
 | Fallout 4 | [Game mode setup and protocol](GAME_MODE.md) |
 | Local host and UI | [Host telemetry and field quality](HOST_TELEMETRY.md) · [Object model](OBJECT_MODEL.md) · [Scoped local operations](LOCAL_OPERATIONS.md) · [Console](CONSOLE.md) |
 | Data and persistence | [Storage](STORAGE.md) · [Permission preferences](PERMISSIONS.md) |

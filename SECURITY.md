@@ -18,6 +18,12 @@ Profiles are declarative UI configurations only. Choosing Overseer, Security Chi
 
 The requested Security Chief **four-camera wall** is [currently a plan](docs/SECURITY_CAMERA_WALL.md). Live IP-camera integration must use explicit allowlisted endpoints, reviewed JPEG/MJPEG/RTSP decoders, credential storage outside plaintext JSON (macOS Keychain when available), TLS validation and per-feed stream limits. Disabling a feed must release resources. No background video recording, audio capture, automatic ONVIF discovery, default-password attempts, PTZ control or upload is permitted by profile activation. Retained frames must be clearly marked stale, never live.
 
+## Scout GIS and future TAK bridge
+
+Scout GIS is **offline and operator-invoked**: WGS84 waypoint/distance and bounded read-only GeoJSON Point inspection. It does not sample the user's position, request GNSS, scan local networks, or transmit CoT events. GeoJSON files explicitly exported by the operator contain plaintext coordinates; keep them private and use appropriate access controls. Do not add telemetry collection or persistent automatic location history by simply selecting Reclamation Scout.
+
+TAK integration is not currently implemented. A future Raspberry Pi OpenTAKServer connector needs explicit destination approval, verified TLS identity/certificates, client/source authorization, message TTL and replay checks, rate limits, log redaction, and immediate disconnect on revocation. It must not accept or rebroadcast untrusted position/identity claims as authenticated personnel. ATAK-CIV is Android software, not a native Pi OS application. See [Scout GIS and TAK-on-Pi](docs/SCOUT_GIS_TAK.md).
+
 ## Trust boundaries and planned hardware
 
 | Boundary | Current protection | Not yet available |

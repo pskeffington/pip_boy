@@ -30,7 +30,7 @@ Reviewed: **2026-10-25**. Repository: `pip_boy`; product: **Rust-Boy**. This is 
 | `security-chief` | Security Chief Station | canonical job | `host`, `net-lab`, `byte-lab`, `notes` | `camera-wall`, `camera-health`, `event-log` |
 | `vault-doctor` | Vault Doctor Station | canonical job | `library`, `notes`, `host` | `environment`, `checklists`, `reference-index` |
 | `university-researcher` | University Research Station | role inspired | `byte-lab`, `library`, `notes`, `simulator`, `net-lab` | `data-lab`, `experiment-log`, `graph-view` |
-| `reclamation-scout` | Reclamation Field Kit | role inspired | `game`, `net-lab`, `notes`, `host` | `map`, `coordinate-lab`, `gnss`, `track-log` |
+| `reclamation-scout` | Reclamation Field Kit | role inspired | `geo-lab`, `game`, `net-lab`, `notes`, `host` | `map`, `coordinate-lab`, `gnss`, `track-log`, `tak-bridge`, `rustgis-adapter` |
 | `records-custodian` | Records Custodian Station | role inspired | `library`, `notes`, `byte-lab` | `document-index`, `sha256`, `artifact-bundle` |
 | `custom` | Custom Workbench | rust boy original | None (empty by design) | `layout-editor`, `module-sdk`, `sandbox-runtime` |
 
@@ -144,24 +144,24 @@ Reviewed: **2026-10-25**. Repository: `pip_boy`; product: **Rust-Boy**. This is 
 
 ### Reclamation Field Kit (`reclamation-scout`)
 
-**Purpose:** Use offline maps, coordinates and a durable field log with optional game companion.  
-**Lore:** role inspired · `VT-02`, `VT-03`, `STD-04`  
-**Preloaded now:** `game`, `net-lab`, `notes`, `host`  
-**New modules:** `map`, `coordinate-lab`, `gnss`, `track-log`
+**Purpose:** Build a truly offline WGS84 field kit on Mac and Pi, interoperable with RustGIS and eventually opt-in TAK nodes.  
+**Lore:** role inspired · `VT-02`, `VT-03`, `STD-04`, `STD-07`, `STD-08`, `STD-09`, `STD-10`  
+**Preloaded now:** `geo-lab`, `game`, `net-lab`, `notes`, `host`  
+**New modules:** `map`, `coordinate-lab`, `gnss`, `track-log`, `tak-bridge`, `rustgis-adapter`
 
 **Operational needs**
 
-- **must — Manual waypoints and coordinate conversion without network access** (`planned`).
+- **must — Local WGS84 waypoints, approximate great-circle distances and bounded GeoJSON Point inspection** (`partially_available`).
 - **must — Offline trip notes, saved landmarks and position uncertainty labels** (`planned`).
-- **should — Opt-in GNSS and GeoJSON/GPX import-export** (`planned`).
-- **later — Offline tile maps with licensing, caching and battery budget** (`planned`).
+- **should — Opt-in GNSS, multi-geometry GeoJSON/GPX exchange and permitted TAK CoT interoperability** (`planned`).
+- **later — Portable RustGIS-style map rendering, offline tile caching and Raspberry Pi display performance** (`planned`).
 
 | Gate | Deliverable | Acceptance test | State |
 | --- | --- | --- | --- |
-| **R0** Preloaded field desk | Game, NET, notes and host tools with explicit connection flags | No console connection or location access on first launch; Profile switch does not alter permissions | code present ci pending |
-| **R1** Offline navigation primitives | Lat/lon input, DMS conversion and GeoJSON point export; Manual waypoint notebook with units and provenance | GeoJSON coordinates written [longitude, latitude] per RFC 7946; Malformed/out-of-range coordinates rejected | planned |
-| **R2** Permissioned location | OS-enforced GNSS/location session consent; Uncertainty, fix age and accuracy labels | No location sampled until consent; Stop/revoke clears session and marks position stale | planned |
-| **R3** Field-map and companion acceptance | Licensed offline map tiles, battery-aware map detail; Measured Mac/PS4 companion interoperability when tested | Valid offline navigation without signal; Actual PlayStation acceptance reported separately from mock peers | planned |
+| **R0** Preloaded field desk | Pre-pinned GIS Lab plus Game, NET, notes and host tools; Offline waypoint GeoJSON, spherical distance and bounded Point-only file inspection | GeoJSON exports [longitude,latitude] and accepts only -90..90 lat and -180..180 lon; All GIS commands remain offline with no GNSS, console or TAK connection on profile activation; Unit, smoke and Rust 1.81/macOS/Windows CI gates pass before release | code present ci pending |
+| **R1** Offline RustGIS-compatible field mapping | Portable GeoJSON field layer, GPX imports, waypoints and manually selected cached offline tiles; Evaluate rustgis-geom/rustgis-data adapter separately, without silently increasing the Rust 1.81 MSRV; Touch/keyboard map navigation and DMS coordinate formats | RustGIS reads exported waypoint layers and Rust-Boy inspects RustGIS Point layers without conversion errors; Golden dateline, polar, invalid-coordinate and lossless waypoint round trips; No network access required for local map navigation | planned |
+| **R2** Opt-in GNSS and TAK interoperability | Explicit OS-granted GNSS with accuracy/stale indicators and revocation; Bounded Cursor-on-Target XML/Protobuf adapter with operator-selected destinations and TLS identity; Test with independent OpenTAKServer on Raspberry Pi OS and a civilian TAK client | No position sharing before the user enables it, selects recipient and approves each session; Local CoT fixture tests pass; live Pi server interoperability is field-tested and credential-safe; Revocation stops transmission and marks positions stale | planned |
+| **R3** Raspberry Pi handheld GIS acceptance | ARM64 Pi 5 native Scout build and tested RustGIS ARM64 deployment; Four-inch readout with waypoint and offline map controls, keyboard/touch fallback; Power/performance measurements plus independent Mac/PS4 game companion acceptance | Offline waypoint, coordinate and cached-map use passes on actual Pi hardware; Measured cold start, frame latency, RAM/CPU and battery draw recorded without guessed metrics; TAK server/client and PlayStation tests are reported separately from mock connections | planned |
 
 ### Records Custodian Station (`records-custodian`)
 
@@ -206,6 +206,8 @@ Reviewed: **2026-10-25**. Repository: `pip_boy`; product: **Rust-Boy**. This is 
 | **R3** Advanced hardware playground | Per-module operating-system scoped broker permissions and lease expiry; Recovery from plugin crash and device unplug | Capability revocation immediately closes OS resource handles; Unsafe module cannot escape its declared interface | planned |
 
 ## Integration and acceptance notes
+
+**Scout GIS and Raspberry Pi TAK:** [Scout GIS + TAK architecture](SCOUT_GIS_TAK.md) explains the independent GeoJSON bridge, future RustGIS version gate, ARM64 testing and the separation of ATAK (Android), OpenTAKServer (Pi) and future CoT integration. No TAK network connection is active.
 
 **Security camera wall:** [camera implementation contract](SECURITY_CAMERA_WALL.md) defines the requested four-camera 2×2 UI and one-key focus/back behavior, source trust, video decoder boundary, credential handling, test plan and hardware acceptance. Do not label the Security profile camera-capable until real feeds are actually rendered. ONVIF Profile T and supported RTSP/JPEG/MJPEG are proposed compatibility surfaces, not installed drivers.
 
