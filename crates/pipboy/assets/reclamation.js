@@ -41,7 +41,7 @@
     } else wrapper.append(input);
     return wrapper;
   }
-  function mount(root, {compact = false} = {}) {
+  function mount(root, {compact = false, onMap = null} = {}) {
     let epoch = 0;
     let busy = false;
     const title = e("div", "SITE REGISTER / LOCAL", "rb-rec-title");
@@ -116,6 +116,13 @@
             } catch (err) { status.textContent = "ERROR / " + err.message; }
             finally { busy = false; apply.disabled = false; }
           });
+          if (typeof onMap === "function") {
+            const map = e("button", "MAP", "rb-rec-button");
+            map.type = "button";
+            map.setAttribute("aria-label", "Locate site " + site.id + " on local map");
+            map.addEventListener("click", () => onMap(site));
+            controls.append(map);
+          }
           controls.append(change, apply);
           card.append(controls);
           list.append(card);

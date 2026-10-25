@@ -327,7 +327,8 @@ function showMap() {
   if (window.RustBoyMap) {
     requestAnimationFrame(() => {
       if (holder.isConnected) window.RustBoyMap.mount(holder, {
-        onTools: hasTool("geo-lab") ? () => openTool("geo-lab", "waypoint") : null
+        onTools: hasTool("geo-lab") ? () => openTool("geo-lab", "waypoint") : null,
+        reclamation: hasTool("reclamation")
       });
     });
   } else {
@@ -567,7 +568,13 @@ function showTool() {
   if (openedTool === "reclamation" && window.RustBoyReclamation) {
     const host = make("div");
     root.append(host);
-    window.RustBoyReclamation.mount(host, { compact: true });
+    window.RustBoyReclamation.mount(host, {
+      compact: true,
+      onMap: (site) => {
+        if (!window.RustBoyMap || !window.RustBoyMap.queueSiteFocus(site.id)) return;
+        setTab("map");
+      }
+    });
   } else if (openedTool === "net-lab" && window.RustBoyNetwork) {
     const container = make("div");
     root.append(container);

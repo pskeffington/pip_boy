@@ -114,7 +114,7 @@ with tempfile.TemporaryDirectory() as temporary:
                                    {"id": "reclamation-scout", "confirm": True})
         assert code == 200, response
         assert response["active"]["profile"] == "reclamation-scout"
-        assert [x["tool"] for x in response["active"]["slots"]][:2] == ["geo-lab", "game"]
+        assert [x["tool"] for x in response["active"]["slots"]][:3] == ["reclamation", "geo-lab", "game"]
         assert not (home / "notes.json").exists()
 
         code, _, result = parsed(port, "POST", "/api/experiment", {

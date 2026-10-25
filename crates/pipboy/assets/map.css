@@ -46,3 +46,23 @@
   .rb-map-button { min-height:23px; }
   .rb-map-attribution { font-size:8px; }
 }
+
+/* Reclamation overlay: local manual site records, no remote basemap required. */
+.rb-map-sites { flex:none; min-width:0; max-width:100%; border-top:1px solid #48664b; font-size:10px; }
+.rb-map-sites[hidden] { display:none; }
+.rb-map-sites summary { padding:4px; cursor:pointer; color:#d8f0c4; font-weight:bold; }
+.rb-map-site-status { color:#e6c78d; padding:2px 4px; }
+.rb-map-site-list { max-height:130px; overflow-y:auto; }
+.rb-map-site-row { display:flex; justify-content:space-between; align-items:center; gap:6px;
+  padding:5px; border-top:1px solid #2e4c31; }
+.rb-map-site-row.selected { background:#203b25; }
+.rb-map-site-copy { flex:1; min-width:0; overflow-wrap:anywhere; }
+.rb-map-site-copy strong { display:block; font-size:11px; }
+.rb-map-site-copy small { display:block; font-size:9px; color:#aacf9f; }
+.rb-map-site-pager { display:flex; align-items:center; gap:5px; padding:4px; }
+.rb-map-site-pager .rb-map-button { min-height:28px; }
+.rb-map-site-pager span { min-width:36px; text-align:center; }
+@media (max-height:360px) {
+  .rb-map-site-list { max-height:65px; }
+  .rb-map-sites summary { padding:2px; }
+}

@@ -6,6 +6,10 @@ on:
   pull_request:
   workflow_dispatch:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
@@ -72,6 +76,7 @@ jobs:
           node --check crates/pipboy/assets/map-online.js
           node tools/test_rustgis_map_import.cjs
           node tools/test_rustgis_map_view.cjs
+          node tools/test_reclamation_map.cjs
           node tools/test_rustgis_online.cjs
           node tools/test_rustgis_online_view.cjs
       - name: Compile all targets

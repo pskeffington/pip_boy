@@ -20,6 +20,9 @@
   let webNextRequestAt = 0;
   let webProbeAt = 0;
   let webProbeSuccess = null;
+  let pendingSiteFocus = null; // numeric ID only, never raw coordinates or notes
+  const MAX_LOCAL_SITES = 256;
+  const SITE_PAGE_SIZE = 6;
 
   function clamp(value, lower, upper) {
     return Math.min(upper, Math.max(lower, value));
@@ -151,6 +154,218 @@
     return [view.width / 2 + dx * scale, view.height / 2 + (p[1] - c[1]) * scale];
   }
 
+
+  // Reclamation is a separate, operator-requested local overlay, never a GPS
+  // fix, imported basemap, or outbound query. Only the minimal map API is read.
+  function validLocalSite(value) {
+    if (!value || !Number.isSafeInteger(value.id) || value.id <= 0 ||
+        typeof value.name !== "string" || !value.name.length || value.name.length > 64 ||
+        typeof value.latitude !== "number" || !Number.isFinite(value.latitude) ||
+        typeof value.longitude !== "number" || !Number.isFinite(value.longitude) ||
+        Math.abs(value.latitude) > 90 || Math.abs(value.longitude) > 180 ||
+        value.position_source !== "manual" ||
+        !["routine", "high", "urgent"].includes(value.priority) ||
+        !["logged", "in_progress", "needs_assistance", "completed"].includes(value.status) ||
+        !["unknown", "serviceable", "degraded", "unsafe"].includes(value.condition) ||
+        !["water", "sanitation", "infrastructure", "terrain", "supplies", "other"].includes(value.kind) ||
+        !(value.accuracy_m === null ||
+          (Number.isFinite(value.accuracy_m) && value.accuracy_m >= 0 && value.accuracy_m <= 10000))) {
+      throw new Error("Invalid local site map record");
+    }
+    return {
+      id: value.id, name: value.name, latitude: value.latitude, longitude: value.longitude,
+      accuracy_m: value.accuracy_m, priority: value.priority,
+      condition: value.condition, status: value.status, kind: value.kind
+    };
+  }
+
+  function rememberPreSiteCenter(view) {
+    if (!view.siteCentered) {
+      view.siteReturn = { center: { ...view.center }, zoom: view.zoom };
+    }
+    view.siteCentered = true;
+    view.follow = false;
+    // An earlier WEB ON must not send the new, site-derived map extent.
+    if (view.webEnabled) webOff(view, false);
+  }
+
+  function focusLocalSite(view, site) {
+    rememberPreSiteCenter(view);
+    view.center = { lat: clamp(site.latitude, -MAX_LAT, MAX_LAT), lon: site.longitude };
+    view.zoom = Math.max(view.zoom, 14);
+    view.selectedSiteId = site.id;
+    view.gpsState = "SITE #" + site.id + " / MANUAL, NOT GPS";
+    view.sitePanel.open = false;
+    refresh(view);
+  }
+
+  function fitLocalSites(view) {
+    if (!view.sites.length) return;
+    rememberPreSiteCenter(view);
+    const anchor = view.sites[0].longitude;
+    let left = Infinity, right = -Infinity, top = Infinity, bottom = -Infinity;
+    for (const site of view.sites) {
+      let offset = site.longitude - anchor;
+      offset -= Math.round(offset / 360) * 360;
+      const p = project(anchor + offset, site.latitude);
+      left = Math.min(left, p[0]);
+      right = Math.max(right, p[0]);
+      top = Math.min(top, p[1]);
+      bottom = Math.max(bottom, p[1]);
+    }
+    if (view.sites.length === 1) {
+      view.center = { lat: clamp(view.sites[0].latitude, -MAX_LAT, MAX_LAT),
+        lon: view.sites[0].longitude };
+      view.zoom = Math.max(view.zoom, 14);
+    } else {
+      const width = Math.max(1e-5, right - left);
+      const height = Math.max(1e-5, bottom - top);
+      view.zoom = clamp(Math.floor(Math.log2(Math.min(
+        Math.max(80, view.width - 50) / width,
+        Math.max(60, view.height - 45) / height))), MIN_ZOOM, 16);
+      view.center = inverse((left + right) / 2, (top + bottom) / 2);
+    }
+    view.gpsState = "LOCAL SITES / MANUAL, NOT GPS";
+    refresh(view);
+  }
+
+  function renderLocalSiteList(view) {
+    view.siteList.replaceChildren();
+    const total = view.sites.length;
+    const pages = Math.max(1, Math.ceil(total / SITE_PAGE_SIZE));
+    view.sitePage = clamp(view.sitePage, 0, pages - 1);
+    view.sitePageLabel.textContent = (view.sitePage + 1) + "/" + pages;
+    view.sitePrev.disabled = view.sitePage === 0;
+    view.siteNext.disabled = view.sitePage === pages - 1;
+    for (const site of view.sites.slice(
+      view.sitePage * SITE_PAGE_SIZE, (view.sitePage + 1) * SITE_PAGE_SIZE)) {
+      const row = make("div", "rb-map-site-row");
+      if (site.id === view.selectedSiteId) row.classList.add("selected");
+      const copy = make("div", "rb-map-site-copy");
+      copy.append(make("strong", "", "#" + site.id + " " + site.name),
+        make("small", "", site.kind.toUpperCase() + " · " + site.priority.toUpperCase() +
+          " · " + site.status.replaceAll("_", " ").toUpperCase()),
+        make("small", "", site.latitude.toFixed(5) + ", " +
+          site.longitude.toFixed(5) + " · MANUAL"));
+      row.append(copy, control("FOCUS", () => {
+        focusLocalSite(view, site);
+        renderLocalSiteList(view);
+      }, "Center on manually recorded site " + site.id));
+      view.siteList.append(row);
+    }
+    view.siteRefresh.disabled = view.siteBusy;
+  }
+
+  async function loadLocalSites(view) {
+    if (active !== view || !view.siteAccess || !view.sitesVisible) return;
+    const version = ++view.siteVersion;
+    if (view.siteAbort) view.siteAbort.abort();
+    const controller = new AbortController();
+    view.siteAbort = controller;
+    view.siteBusy = true;
+    view.siteStatus.textContent = "READING LOCAL REGISTER";
+    renderLocalSiteList(view);
+    try {
+      const result = await fetch("/api/reclamation/map", {
+        cache: "no-store", credentials: "omit", signal: controller.signal
+      });
+      if (!result.ok) throw new Error("Local register unavailable (" + result.status + ")");
+      const response = await result.json();
+      if (active !== view || version !== view.siteVersion ||
+          controller.signal.aborted || !view.sitesVisible) return;
+      if (!response || !Array.isArray(response.sites) ||
+          response.sites.length > MAX_LOCAL_SITES ||
+          response.position_source !== "manual" || response.network_used !== false) {
+        throw new Error("Invalid local register response");
+      }
+      const seen = new Set();
+      const sites = response.sites.map(validLocalSite);
+      for (const site of sites) {
+        if (seen.has(site.id)) throw new Error("Duplicate site identifier");
+        seen.add(site.id);
+      }
+      view.sites = sites;
+      view.siteStatus.textContent = sites.length + " SAVED · MANUAL ONLY / NOT GPS";
+      if (sites.some((site) => Math.abs(site.latitude) > MAX_LAT)) {
+        view.siteStatus.textContent += " · POLAR LAT CLAMPED ON MAP";
+      }
+      if (pendingSiteFocus !== null) {
+        const site = sites.find((item) => item.id === pendingSiteFocus);
+        pendingSiteFocus = null;
+        if (site) focusLocalSite(view, site);
+        else view.siteStatus.textContent = "SITE NOT FOUND / REFRESH REGISTER";
+      } else if (sites.length && !view.siteCentered &&
+                 !view.shapes.length && !view.onlineShapes.length) {
+        fitLocalSites(view);
+      }
+      renderLocalSiteList(view);
+      refresh(view);
+    } catch (error) {
+      if (active === view && version === view.siteVersion &&
+          !controller.signal.aborted && view.sitesVisible) {
+        view.siteStatus.textContent = "LOCAL SITE ERROR / " +
+          (error instanceof Error ? error.message : "UNAVAILABLE");
+      }
+    } finally {
+      if (view.siteAbort === controller) view.siteAbort = null;
+      if (active === view && version === view.siteVersion) {
+        view.siteBusy = false;
+        renderLocalSiteList(view);
+        refresh(view);
+      }
+    }
+  }
+
+  function hideLocalSites(view) {
+    view.siteVersion++;
+    if (view.siteAbort) view.siteAbort.abort();
+    view.siteAbort = null;
+    view.siteBusy = false;
+    view.sitesVisible = false;
+    view.sites = [];
+    view.selectedSiteId = null;
+    view.siteMarkers = [];
+    view.sitePanel.hidden = true;
+    pendingSiteFocus = null;
+    if (view.siteCentered && view.siteReturn) {
+      view.center = { ...view.siteReturn.center };
+      view.zoom = view.siteReturn.zoom;
+      view.gpsState = "SITE VIEW CLOSED / GPS OFF";
+    }
+    view.siteCentered = false;
+    view.siteReturn = null;
+    refresh(view);
+  }
+
+  function showLocalSites(view) {
+    if (!view.siteAccess || active !== view) return;
+    if (view.webEnabled) webOff(view, false);
+    view.sitesVisible = true;
+    view.sitePanel.hidden = false;
+    void loadLocalSites(view);
+    refresh(view);
+  }
+
+  function queueSiteFocus(id) {
+    if (!Number.isSafeInteger(id) || id <= 0) return false;
+    pendingSiteFocus = id;
+    if (active && active.siteAccess) showLocalSites(active);
+    return true;
+  }
+
+  function siteAtPixel(view, x, y) {
+    if (!view.sitesVisible) return null;
+    let nearest = null, distance = 16 * 16;
+    for (const marker of view.siteMarkers) {
+      const d = (x - marker.x) ** 2 + (y - marker.y) ** 2;
+      if (d < distance) {
+        nearest = view.sites.find((site) => site.id === marker.id) || null;
+        distance = d;
+      }
+    }
+    return nearest;
+  }
+
   function drawGrid(ctx, view) {
     const scale = Math.pow(2, view.zoom);
     const center = project(view.center.lon, view.center.lat);
@@ -250,6 +465,33 @@
       }
     }
 
+
+    // Site markers remain distinct from imported RustGIS and opt-in OSM layers.
+    view.siteMarkers = [];
+    ctx.globalAlpha = 1;
+    if (view.sitesVisible) {
+      for (const site of view.sites) {
+        const p = screenPoint(view, site.longitude, site.latitude);
+        if (p[0] < -12 || p[0] > view.width + 12 ||
+            p[1] < -12 || p[1] > view.height + 12) continue;
+        view.siteMarkers.push({ id: site.id, x: p[0], y: p[1] });
+        ctx.beginPath();
+        ctx.arc(p[0], p[1], site.id === view.selectedSiteId ? 8 : 5, 0, Math.PI * 2);
+        ctx.fillStyle = site.priority === "urgent" ? "#f0ba77" :
+          site.priority === "high" ? "#e1e09a" : "#a6e5bc";
+        ctx.fill();
+        ctx.strokeStyle = "#092314";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        if (labels < 16) {
+          ctx.font = "10px monospace";
+          ctx.fillStyle = "#e1ffd1";
+          ctx.fillText("#" + site.id, p[0] + 8, p[1] - 7);
+          labels++;
+        }
+      }
+    }
+
     ctx.globalAlpha = 1;
     // Center crosshair is a camera reference, never passed off as a GPS fix.
     const midX = view.width / 2;
@@ -288,7 +530,9 @@
       ctx.textAlign = "center";
       ctx.font = "11px monospace";
       ctx.fillStyle = "#dfa96b";
-      ctx.fillText("LOAD RUSTGIS MAP / NO GEOGRAPHY", view.width / 2, view.height - 16);
+      ctx.fillText(view.sitesVisible && view.sites.length ?
+        "LOCAL SITES / NO BASEMAP" : "LOAD RUSTGIS MAP / NO GEOGRAPHY",
+        view.width / 2, view.height - 16);
       ctx.textAlign = "start";
     }
   }
@@ -300,18 +544,24 @@
       ? "FIX " + view.fix.lat.toFixed(5) + ", " + view.fix.lon.toFixed(5) +
         " \u00b1" + Math.round(view.fix.accuracy) + "m"
       : view.gpsState;
-    view.status.textContent = fix + "  |  Z" + view.zoom.toFixed(1) + "  |  " +
-      (view.layerName || "LOAD RUSTGIS MAP") + "  |  CENTER " + center;
+    view.status.textContent = (view.siteCentered ? "MANUAL SITE / NOT GPS  |  " : "") +
+      fix + "  |  Z" + view.zoom.toFixed(1) + "  |  " +
+      (view.layerName || (view.sitesVisible ? "LOCAL SITES" : "LOAD RUSTGIS MAP")) +
+      "  |  CENTER " + center;
     view.locate.textContent = view.watchId === null ? "GPS ON" : "GPS OFF";
     view.followButton.disabled = !view.fix;
     view.followButton.textContent = view.follow ? "FOLLOW" : "RECENTER";
     view.webButton.textContent = view.webEnabled ? "WEB OFF" : "WEB ON";
+    view.siteButton.textContent = view.sitesVisible ? "SITES OFF" : "SITES";
+    view.siteSummary.textContent = "RECLAMATION / " + view.sites.length + " LOCAL SITES";
     view.webRefresh.hidden = !view.webEnabled;
     view.webStatusNode.textContent = view.webStatus;
     view.attribution.hidden = !view.onlineShapes.length;
-    view.sourceBox.hidden = !view.layers.length && !view.webMeta;
-    if (view.layers.length || view.webMeta) {
+    view.sourceBox.hidden = !view.layers.length && !view.webMeta &&
+      !(view.sitesVisible && view.sites.length);
+    if (view.layers.length || view.webMeta || (view.sitesVisible && view.sites.length)) {
       view.sourceSummary.textContent = "DATA SOURCES / " + view.layers.length + " NATIVE LAYERS" +
+        (view.sitesVisible ? " / " + view.sites.length + " LOCAL SITES" : "") +
         (view.webMeta ? " / OSM WEB" : "") +
         (view.warnings.length ? " / " + view.warnings.length + " LIMITATIONS" : "");
       view.sourceLines.textContent = view.mapName + " / " + view.mapFormat + "\n" +
@@ -329,6 +579,7 @@
             "\nFeatures: " + Object.entries(view.webMeta.count).map(([k,v])=>k+"="+v).join(", ") +
             (view.webMeta.warnings.length ? "\nWEB LIMITS: " + view.webMeta.warnings.join(" | ") : "")
           : "") +
+        (view.sitesVisible ? "\nSITE SOURCE: local Reclamation manual observations, not GPS or verified remediation." : "") +
         "\nCoordinates drawn: WGS84 longitude/latitude.";
     }
   }
@@ -492,6 +743,11 @@
   }
 
   function webToggle(view) {
+    if (!view.webEnabled && (view.sitesVisible || view.siteCentered)) {
+      view.webStatus = "WEB BLOCKED / CLOSE SITES BEFORE OSM";
+      refresh(view);
+      return;
+    }
     if (view.webEnabled) {
       webOff(view);
     } else {
@@ -618,8 +874,11 @@
     if (view.webDisconnect) window.removeEventListener("offline", view.webDisconnect);
     if (view.webAbort) view.webAbort.abort();
     if (view.webProbeAbort) view.webProbeAbort.abort();
+    view.siteVersion++;
+    if (view.siteAbort) view.siteAbort.abort();
     mapMemory = (view.shapes.length || view.onlineShapes.length) ? {
-      center: { lat: view.center.lat, lon: view.center.lon }, zoom: view.zoom,
+      center: view.siteReturn ? { ...view.siteReturn.center } : { ...view.center },
+      zoom: view.siteReturn ? view.siteReturn.zoom : view.zoom,
       shapes: view.shapes, layers: view.layers, warnings: view.warnings,
       layerName: view.layerName, mapName: view.mapName, mapFormat: view.mapFormat,
       onlineShapes: view.onlineShapes, webMeta: view.webMeta
@@ -693,6 +952,27 @@
     const apply = make("button", "rb-map-button", "SET CENTER");
     apply.type = "submit";
     manual.append(latitude, longitude, apply);
+    // Separate local marker-list controls allow keyboard/touch selection even
+    // though the canvas is a visual layer.
+    const sitePanel = make("details", "rb-map-sites");
+    sitePanel.hidden = true;
+    const siteSummary = make("summary", "", "RECLAMATION / 0 LOCAL SITES");
+    const siteStatus = make("div", "rb-map-site-status", "MANUAL POSITIONS / NOT GPS");
+    const siteList = make("div", "rb-map-site-list");
+    const sitePager = make("div", "rb-map-site-pager");
+    const sitePrev = control("◀", () => {
+      view.sitePage--;
+      renderLocalSiteList(view);
+    }, "Previous saved site page");
+    const siteNext = control("▶", () => {
+      view.sitePage++;
+      renderLocalSiteList(view);
+    }, "Next saved site page");
+    const sitePageLabel = make("span", "", "1/1");
+    const siteRefresh = control("REFRESH", () => void loadLocalSites(view),
+      "Explicitly reload local site register; no network destination");
+    sitePager.append(sitePrev, sitePageLabel, siteNext, siteRefresh);
+    sitePanel.append(siteSummary, siteStatus, siteList, sitePager);
     const view = {
       host, root, stage, canvas, status, file, sourceBox, sourceSummary, sourceLines,
       manual, latitude, longitude,
@@ -713,7 +993,13 @@
       attribution, webStatusNode, webButton: null, webRefresh: null,
       fix: null, watchId: null, gpsState: "GPS OFF",
       follow: !mapMemory, observer: null, windowResize: null, drag: null,
-      locate: null, followButton: null
+      locate: null, followButton: null,
+      siteAccess: Boolean(options && options.reclamation),
+      sitesVisible: false, sites: [], sitePage: 0, selectedSiteId: null,
+      siteMarkers: [], siteBusy: false, siteVersion: 0, siteAbort: null,
+      siteCentered: false, siteReturn: null,
+      sitePanel, siteSummary, siteStatus, siteList, sitePrev, siteNext,
+      sitePageLabel, siteRefresh, siteButton: null
     };
     active = view;
     view.locate = control("GPS ON", () => {
@@ -725,6 +1011,11 @@
       if (view.fix) view.center = { lat: view.fix.lat, lon: view.fix.lon };
       refresh(view);
     }, "Center map on latest location fix");
+    view.siteButton = control("SITES", () => {
+      if (view.sitesVisible) hideLocalSites(view);
+      else showLocalSites(view);
+    }, "Show saved Reclamation sites only on this device; no sharing");
+    view.siteButton.hidden = !view.siteAccess;
     view.webButton = control("WEB ON", () => webToggle(view),
       "Enable online road/landmark retrieval; sends map area to Overpass (OSM), not official GIS");
     view.webRefresh = control("SYNC", () => void webFetch(view),
@@ -740,12 +1031,12 @@
       "Zoom in");
     const zoomOut = control("-", () => { view.zoom = clamp(view.zoom - 1, MIN_ZOOM, MAX_ZOOM); refresh(view); },
       "Zoom out");
-    toolbar.append(view.locate, view.followButton, importButton, view.webButton,
-      view.webRefresh, manualButton, zoomIn, zoomOut);
+    toolbar.append(view.locate, view.followButton, importButton, view.siteButton,
+      view.webButton, view.webRefresh, manualButton, zoomIn, zoomOut);
     if (options && typeof options.onTools === "function") {
       toolbar.append(control("GIS", options.onTools, "Open Scout GIS tools"));
     }
-    root.append(toolbar, stage, webStatusNode, status, sourceBox, manual, file);
+    root.append(toolbar, stage, webStatusNode, status, sitePanel, sourceBox, manual, file);
     host.replaceChildren(root);
 
     manual.addEventListener("submit", (event) => {
@@ -759,6 +1050,9 @@
         view.follow = false;
         view.zoom = Math.max(view.zoom, 13);
         view.gpsState = "MANUAL CENTER / NOT A FIX";
+        view.siteCentered = false;
+        view.siteReturn = null;
+        view.selectedSiteId = null;
         manual.hidden = true;
       }
       refresh(view);
@@ -792,6 +1086,9 @@
         view.mapName = native ? parsed.mapName : selected.name.slice(0, 50);
         view.mapFormat = native ? parsed.format : "GeoJSON";
         view.layerName = view.mapName + " (" + parsed.features + " features)";
+        view.siteCentered = false;
+        view.siteReturn = null;
+        view.selectedSiteId = null;
         // A current GPS follow fix is authoritative for the viewport center.
         if (view.fix && view.follow) {
           view.center = { lat: view.fix.lat, lon: view.fix.lon };
@@ -819,13 +1116,17 @@
 
     canvas.addEventListener("pointerdown", (event) => {
       if (event.button !== 0 && event.pointerType === "mouse") return;
-      view.drag = { x: event.clientX, y: event.clientY, pointer: event.pointerId };
+      view.drag = { x: event.clientX, y: event.clientY,
+        startX: event.clientX, startY: event.clientY,
+        moved: false, pointer: event.pointerId };
       canvas.setPointerCapture(event.pointerId);
     });
     canvas.addEventListener("pointermove", (event) => {
       if (!view.drag || view.drag.pointer !== event.pointerId) return;
       const dx = event.clientX - view.drag.x;
       const dy = event.clientY - view.drag.y;
+      if (Math.hypot(event.clientX - view.drag.startX,
+        event.clientY - view.drag.startY) > 6) view.drag.moved = true;
       view.drag.x = event.clientX;
       view.drag.y = event.clientY;
       const center = project(view.center.lon, view.center.lat);
@@ -834,8 +1135,20 @@
       view.follow = false;
       refresh(view);
     });
+    canvas.addEventListener("pointerup", (event) => {
+      if (view.drag && !view.drag.moved && view.drag.pointer === event.pointerId) {
+        const rect = canvas.getBoundingClientRect();
+        const site = siteAtPixel(view, event.clientX - (rect.left || 0),
+          event.clientY - (rect.top || 0));
+        if (site) {
+          focusLocalSite(view, site);
+          view.sitePage = Math.floor(view.sites.findIndex((item) => item.id === site.id) / SITE_PAGE_SIZE);
+          renderLocalSiteList(view);
+        }
+      }
+      view.drag = null;
+    });
     const endDrag = () => { view.drag = null; };
-    canvas.addEventListener("pointerup", endDrag);
     canvas.addEventListener("pointercancel", endDrag);
     canvas.addEventListener("lostpointercapture", endDrag);
     canvas.addEventListener("wheel", (event) => {
@@ -847,7 +1160,7 @@
     view.webReconnect = () => {
       if (active !== view) return;
       if (view.webEnabled) void webFetch(view);
-      else void probeWeb(view);
+      else if (!view.sitesVisible) void probeWeb(view);
     };
     view.webDisconnect = () => {
       if (active === view && view.webEnabled) {
@@ -868,11 +1181,13 @@
     }
     window.requestAnimationFrame(() => {
       resize(view);
-      void probeWeb(view);
+      if (view.siteAccess && pendingSiteFocus !== null) showLocalSites(view);
+      else void probeWeb(view);
+      if (!view.siteAccess) pendingSiteFocus = null;
     });
     return view;
   }
 
   // Public surface is intentionally small. Import and GNSS data stay in memory.
-  window.RustBoyMap = Object.freeze({ mount, unmount });
+  window.RustBoyMap = Object.freeze({ mount, unmount, queueSiteFocus });
 })();

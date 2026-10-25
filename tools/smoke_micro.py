@@ -124,6 +124,10 @@ with tempfile.TemporaryDirectory() as work:
         assert state["engine"]["rustgis"] == "not_integrated"
         assert not root.exists(), "GET must not initialize workbench or touch notes"
 
+        denied, _, _ = api(port, "GET", "/api/reclamation/map")
+        assert denied == 403, "unselected roles cannot read saved site coordinates"
+        assert not root.exists(), "unauthorized map reads must not create files"
+
         # Mutations require an explicit same-origin JSON POST to the local Rust API.
         for method, path, data, opts, code in [
             ("POST", "/api/profile", {"id": "custom", "confirm": True},
@@ -172,6 +176,10 @@ with tempfile.TemporaryDirectory() as work:
         assert code == 409
         code, _, response = api(port, "GET", "/api/reclamation/geojson")
         assert code == 200 and response["features"][0]["geometry"]["coordinates"] == [-70.75, 42.0]
+        code, _, map_records = api(port, "GET", "/api/reclamation/map")
+        assert code == 200 and map_records["sites"][0]["position_source"] == "manual"
+        assert map_records["network_used"] is False
+        assert "notes" not in map_records["sites"][0], "map view must omit private notes"
         code, _, result = api(port, "POST", "/api/experiment", {
             "tool": "geo-lab", "mode": "waypoint",
             "name": "Camp One", "lat": "42.0", "lon": "-70.75"
