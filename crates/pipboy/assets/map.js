@@ -463,6 +463,7 @@
 
     // Site markers remain distinct from imported RustGIS and opt-in OSM layers.
     view.siteMarkers = [];
+    ctx.globalAlpha = 1;
     if (view.sitesVisible) {
       for (const site of view.sites) {
         const p = screenPoint(view, site.longitude, site.latitude);
@@ -868,8 +869,11 @@
     if (view.webDisconnect) window.removeEventListener("offline", view.webDisconnect);
     if (view.webAbort) view.webAbort.abort();
     if (view.webProbeAbort) view.webProbeAbort.abort();
+    view.siteVersion++;
+    if (view.siteAbort) view.siteAbort.abort();
     mapMemory = (view.shapes.length || view.onlineShapes.length) ? {
-      center: { lat: view.center.lat, lon: view.center.lon }, zoom: view.zoom,
+      center: view.siteReturn ? { ...view.siteReturn.center } : { ...view.center },
+      zoom: view.siteReturn ? view.siteReturn.zoom : view.zoom,
       shapes: view.shapes, layers: view.layers, warnings: view.warnings,
       layerName: view.layerName, mapName: view.mapName, mapFormat: view.mapFormat,
       onlineShapes: view.onlineShapes, webMeta: view.webMeta
@@ -943,6 +947,27 @@
     const apply = make("button", "rb-map-button", "SET CENTER");
     apply.type = "submit";
     manual.append(latitude, longitude, apply);
+    // Separate local marker-list controls allow keyboard/touch selection even
+    // though the canvas is a visual layer.
+    const sitePanel = make("details", "rb-map-sites");
+    sitePanel.hidden = true;
+    const siteSummary = make("summary", "", "RECLAMATION / 0 LOCAL SITES");
+    const siteStatus = make("div", "rb-map-site-status", "MANUAL POSITIONS / NOT GPS");
+    const siteList = make("div", "rb-map-site-list");
+    const sitePager = make("div", "rb-map-site-pager");
+    const sitePrev = control("◀", () => {
+      view.sitePage--;
+      renderLocalSiteList(view);
+    }, "Previous saved site page");
+    const siteNext = control("▶", () => {
+      view.sitePage++;
+      renderLocalSiteList(view);
+    }, "Next saved site page");
+    const sitePageLabel = make("span", "", "1/1");
+    const siteRefresh = control("REFRESH", () => void loadLocalSites(view),
+      "Explicitly reload local site register; no network destination");
+    sitePager.append(sitePrev, sitePageLabel, siteNext, siteRefresh);
+    sitePanel.append(siteSummary, siteStatus, siteList, sitePager);
     const view = {
       host, root, stage, canvas, status, file, sourceBox, sourceSummary, sourceLines,
       manual, latitude, longitude,
@@ -963,7 +988,13 @@
       attribution, webStatusNode, webButton: null, webRefresh: null,
       fix: null, watchId: null, gpsState: "GPS OFF",
       follow: !mapMemory, observer: null, windowResize: null, drag: null,
-      locate: null, followButton: null
+      locate: null, followButton: null,
+      siteAccess: Boolean(options && options.reclamation),
+      sitesVisible: false, sites: [], sitePage: 0, selectedSiteId: null,
+      siteMarkers: [], siteBusy: false, siteVersion: 0, siteAbort: null,
+      siteCentered: false, siteReturn: null,
+      sitePanel, siteSummary, siteStatus, siteList, sitePrev, siteNext,
+      sitePageLabel, siteRefresh, siteButton: null
     };
     active = view;
     view.locate = control("GPS ON", () => {
@@ -975,6 +1006,11 @@
       if (view.fix) view.center = { lat: view.fix.lat, lon: view.fix.lon };
       refresh(view);
     }, "Center map on latest location fix");
+    view.siteButton = control("SITES", () => {
+      if (view.sitesVisible) hideLocalSites(view);
+      else showLocalSites(view);
+    }, "Show saved Reclamation sites only on this device; no sharing");
+    view.siteButton.hidden = !view.siteAccess;
     view.webButton = control("WEB ON", () => webToggle(view),
       "Enable online road/landmark retrieval; sends map area to Overpass (OSM), not official GIS");
     view.webRefresh = control("SYNC", () => void webFetch(view),
@@ -990,12 +1026,12 @@
       "Zoom in");
     const zoomOut = control("-", () => { view.zoom = clamp(view.zoom - 1, MIN_ZOOM, MAX_ZOOM); refresh(view); },
       "Zoom out");
-    toolbar.append(view.locate, view.followButton, importButton, view.webButton,
-      view.webRefresh, manualButton, zoomIn, zoomOut);
+    toolbar.append(view.locate, view.followButton, importButton, view.siteButton,
+      view.webButton, view.webRefresh, manualButton, zoomIn, zoomOut);
     if (options && typeof options.onTools === "function") {
       toolbar.append(control("GIS", options.onTools, "Open Scout GIS tools"));
     }
-    root.append(toolbar, stage, webStatusNode, status, sourceBox, manual, file);
+    root.append(toolbar, stage, webStatusNode, status, sitePanel, sourceBox, manual, file);
     host.replaceChildren(root);
 
     manual.addEventListener("submit", (event) => {
@@ -1009,6 +1045,9 @@
         view.follow = false;
         view.zoom = Math.max(view.zoom, 13);
         view.gpsState = "MANUAL CENTER / NOT A FIX";
+        view.siteCentered = false;
+        view.siteReturn = null;
+        view.selectedSiteId = null;
         manual.hidden = true;
       }
       refresh(view);
@@ -1042,6 +1081,9 @@
         view.mapName = native ? parsed.mapName : selected.name.slice(0, 50);
         view.mapFormat = native ? parsed.format : "GeoJSON";
         view.layerName = view.mapName + " (" + parsed.features + " features)";
+        view.siteCentered = false;
+        view.siteReturn = null;
+        view.selectedSiteId = null;
         // A current GPS follow fix is authoritative for the viewport center.
         if (view.fix && view.follow) {
           view.center = { lat: view.fix.lat, lon: view.fix.lon };
@@ -1069,13 +1111,17 @@
 
     canvas.addEventListener("pointerdown", (event) => {
       if (event.button !== 0 && event.pointerType === "mouse") return;
-      view.drag = { x: event.clientX, y: event.clientY, pointer: event.pointerId };
+      view.drag = { x: event.clientX, y: event.clientY,
+        startX: event.clientX, startY: event.clientY,
+        moved: false, pointer: event.pointerId };
       canvas.setPointerCapture(event.pointerId);
     });
     canvas.addEventListener("pointermove", (event) => {
       if (!view.drag || view.drag.pointer !== event.pointerId) return;
       const dx = event.clientX - view.drag.x;
       const dy = event.clientY - view.drag.y;
+      if (Math.hypot(event.clientX - view.drag.startX,
+        event.clientY - view.drag.startY) > 6) view.drag.moved = true;
       view.drag.x = event.clientX;
       view.drag.y = event.clientY;
       const center = project(view.center.lon, view.center.lat);
@@ -1084,8 +1130,20 @@
       view.follow = false;
       refresh(view);
     });
+    canvas.addEventListener("pointerup", (event) => {
+      if (view.drag && !view.drag.moved && view.drag.pointer === event.pointerId) {
+        const rect = canvas.getBoundingClientRect();
+        const site = siteAtPixel(view, event.clientX - (rect.left || 0),
+          event.clientY - (rect.top || 0));
+        if (site) {
+          focusLocalSite(view, site);
+          view.sitePage = Math.floor(view.sites.findIndex((item) => item.id === site.id) / SITE_PAGE_SIZE);
+          renderLocalSiteList(view);
+        }
+      }
+      view.drag = null;
+    });
     const endDrag = () => { view.drag = null; };
-    canvas.addEventListener("pointerup", endDrag);
     canvas.addEventListener("pointercancel", endDrag);
     canvas.addEventListener("lostpointercapture", endDrag);
     canvas.addEventListener("wheel", (event) => {
@@ -1119,10 +1177,12 @@
     window.requestAnimationFrame(() => {
       resize(view);
       void probeWeb(view);
+      if (view.siteAccess && pendingSiteFocus !== null) showLocalSites(view);
+      if (!view.siteAccess) pendingSiteFocus = null;
     });
     return view;
   }
 
   // Public surface is intentionally small. Import and GNSS data stay in memory.
-  window.RustBoyMap = Object.freeze({ mount, unmount });
+  window.RustBoyMap = Object.freeze({ mount, unmount, queueSiteFocus });
 })();
