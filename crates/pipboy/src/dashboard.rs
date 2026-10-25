@@ -24,6 +24,8 @@ const JS: &str = include_str!("../assets/dashboard.js");
 const MICRO_HTML: &str = include_str!("../assets/micro.html");
 const MICRO_CSS: &str = include_str!("../assets/micro.css");
 const MICRO_JS: &str = include_str!("../assets/micro.js");
+const MAP_JS: &str = include_str!("../assets/map.js");
+const MAP_CSS: &str = include_str!("../assets/map.css");
 const TASKS_JS: &str = include_str!("../assets/tasks.js");
 const TASKS_CSS: &str = include_str!("../assets/tasks.css");
 
@@ -624,6 +626,8 @@ fn dispatch(req: &Request, store: &WorkbenchStore, port: u16) -> Response {
         ("GET", "/assets/micro.js") => {
             Response::new(200, "text/javascript; charset=utf-8", MICRO_JS.as_bytes())
         }
+        ("GET", "/assets/map.js") => Response::new(200, "text/javascript; charset=utf-8", MAP_JS.as_bytes()),
+        ("GET", "/assets/map.css") => Response::new(200, "text/css; charset=utf-8", MAP_CSS.as_bytes()),
         ("GET", "/assets/tasks.js") => {
             Response::new(200, "text/javascript; charset=utf-8", TASKS_JS.as_bytes())
         }
@@ -843,6 +847,8 @@ mod tests {
             "/micro/",
             "/assets/micro.css",
             "/assets/micro.js",
+            "/assets/map.js",
+            "/assets/map.css",
         ] {
             let r = dispatch(&request("GET", endpoint, Value::Null), &store, 8765);
             assert_eq!(r.status, 200);
@@ -1147,6 +1153,10 @@ mod tests {
         assert!(JS.contains("/api/state"));
         assert!(CSS.contains("@media"));
         assert!(!JS.contains("eval("));
+        assert!(MICRO_HTML.contains("/assets/map.js"));
+        assert!(HTML.contains("/assets/map.js"));
+        assert!(MAP_JS.contains("watchPosition"));
+        assert!(MAP_JS.contains("parseGeoJSON"));
         assert!(MICRO_HTML.contains("/assets/micro.css"));
         assert!(MICRO_HTML.contains("/assets/micro.js"));
         assert!(MICRO_HTML.contains("id=\"micro-rail\""));
