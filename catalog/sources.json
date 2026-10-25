@@ -1,0 +1,156 @@
+[
+  {
+    "id": "pipboycrt",
+    "repository": "nyzoli/PipBoyCRT",
+    "project": "PipBoyCRT",
+    "language": "Rust",
+    "category": "native-dashboard",
+    "license": "MIT",
+    "license_status": "declared",
+    "disposition": "reference-only",
+    "summary": "Ratatui dashboard with host metrics, radio, weather, maps and offline-first inspiration."
+  },
+  {
+    "id": "pypboy-zapwizard",
+    "repository": "zapwizard/pypboy",
+    "project": "pypboy",
+    "language": "Python",
+    "category": "raspberry-pi",
+    "license": "MIT",
+    "license_status": "declared",
+    "disposition": "reference-only",
+    "summary": "Raspberry Pi pygame interface, GPIO controls, map caching and radio."
+  },
+  {
+    "id": "wand-mod-tool",
+    "repository": "thewandcompany/pip-boy",
+    "project": "Pip-Boy Mod Tool",
+    "language": "HTML/JavaScript",
+    "category": "device-apps",
+    "license": "MIT",
+    "license_status": "declared",
+    "disposition": "reference-only",
+    "summary": "Replica software modification and an on-device JavaScript input/graphics API."
+  },
+  {
+    "id": "holotapes",
+    "repository": "CodyTolene/pip-boy-3000-holotapes",
+    "project": "Pip-Boy 3000 Holotapes",
+    "language": "TypeScript",
+    "category": "device-apps",
+    "license": "MIT",
+    "license_status": "declared",
+    "disposition": "reference-only",
+    "summary": "TypeScript community apps compiled to Espruino JavaScript for replica devices."
+  },
+  {
+    "id": "pipboylib",
+    "repository": "RobCoIndustries/pipboylib",
+    "project": "pipboylib",
+    "language": "JavaScript",
+    "category": "companion-protocol",
+    "license": "Apache-2.0",
+    "license_status": "declared",
+    "disposition": "reference-only",
+    "summary": "Fallout 4 companion API state and database decoding; game required."
+  },
+  {
+    "id": "pi5",
+    "repository": "SurvivorGrim/PipBoy-Pi5",
+    "project": "PipBoy-Pi5",
+    "language": "Python",
+    "category": "hardware",
+    "license": "UNDECLARED",
+    "license_status": "unverified",
+    "disposition": "reference-only",
+    "summary": "Pi 5 hardware build, display, rotary encoders, wiring and setup."
+  },
+  {
+    "id": "companion",
+    "repository": "AidansLab/PipBoy3000Companion",
+    "project": "PipBoy3000Companion",
+    "language": "C++/JavaScript",
+    "category": "companion-protocol",
+    "license": "CC-BY-NC-SA-4.0",
+    "license_status": "review-required",
+    "disposition": "reference-only",
+    "summary": "Fallout game state via named pipe and USB serial to replica device; README badge asserts noncommercial license."
+  },
+  {
+    "id": "pipboyrs",
+    "repository": "Rimocide/pipboy.rs",
+    "project": "pipboy.rs",
+    "language": "Rust",
+    "category": "native-dashboard",
+    "license": "UNDECLARED",
+    "license_status": "unverified",
+    "disposition": "reference-only",
+    "summary": "Ratatui and sysinfo host monitoring including CPU/memory/processes."
+  },
+  {
+    "id": "pypboy-grieve",
+    "repository": "grieve/pypboy",
+    "project": "pypboy",
+    "language": "Python",
+    "category": "hardware",
+    "license": "UNDECLARED",
+    "license_status": "unverified",
+    "disposition": "reference-only",
+    "summary": "Python/Pygame OSM and Raspberry Pi GPIO reference."
+  },
+  {
+    "id": "raspipboy",
+    "repository": "ColtonMcCasland/Raspipboy-3000",
+    "project": "Raspipboy-3000",
+    "language": "Python",
+    "category": "raspberry-pi",
+    "license": "UNDECLARED",
+    "license_status": "unverified",
+    "disposition": "reference-only",
+    "summary": "Raspberry Pi TFT touchscreen with 3D-printed enclosure."
+  },
+  {
+    "id": "pipos",
+    "repository": "Theblastback/PipOS",
+    "project": "PipOS",
+    "language": "C++",
+    "category": "raspberry-pi",
+    "license": "Apache-2.0",
+    "license_status": "declared",
+    "disposition": "reference-only",
+    "summary": "C++ touchscreen Pi interface."
+  },
+  {
+    "id": "fnv-manager",
+    "repository": "Seltyk/pipboy",
+    "project": "pipboy",
+    "language": "Rust",
+    "category": "game-mod-manager",
+    "license": "GPL-3.0",
+    "license_status": "copyleft-review",
+    "disposition": "reference-only",
+    "summary": "Rust CLI game mod manager; name match but not a native dashboard."
+  },
+  {
+    "id": "pipboy-terminal",
+    "repository": "karanehra/pipboy-terminal",
+    "project": "pipboy-terminal",
+    "language": "Rust",
+    "category": "native-dashboard",
+    "license": "UNDECLARED",
+    "license_status": "unverified",
+    "disposition": "reference-only",
+    "summary": "Pip-Boy-like terminal; minimal repository metadata."
+  },
+  {
+    "id": "weather-clock",
+    "repository": "nishad2m8/Pip-Boy-Weather-Clock",
+    "project": "Pip-Boy-Weather-Clock",
+    "language": "C",
+    "category": "hardware",
+    "license": "UNDECLARED",
+    "license_status": "unverified",
+    "disposition": "reference-only",
+    "summary": "Small device weather and clock project."
+  }
+]
