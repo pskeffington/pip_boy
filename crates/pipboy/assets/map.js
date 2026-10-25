@@ -15,7 +15,11 @@
   const MAX_VERTICES = 30000;
   const EARTH_RADIUS_M = 6378137;
   let active = null;
-  let mapMemory = null; // volatile, imported geography only; never store GPS fixes
+  let mapMemory = null; // volatile geographic features only; never store GPS fixes
+  let webRequestCount = 0;
+  let webNextRequestAt = 0;
+  let webProbeAt = 0;
+  let webProbeSuccess = null;
 
   function clamp(value, lower, upper) {
     return Math.min(upper, Math.max(lower, value));
@@ -195,7 +199,8 @@
     ctx.lineJoin = "round";
     ctx.lineCap = "round";
     let labels = 0;
-    for (const shape of view.shapes) {
+    // Reference OSM geometry sits under authoritative local RustGIS layers.
+    for (const shape of [...view.onlineShapes, ...view.shapes]) {
       const style = shape.style || {};
       ctx.globalAlpha = Number.isFinite(style.opacity) ? style.opacity : 1;
       if (shape.kind === "point") {
@@ -229,6 +234,19 @@
         ctx.lineWidth = style.width || (shape.kind === "polygon" ? 1 : 1.5);
         ctx.strokeStyle = style.stroke || (shape.kind === "polygon" ? "#6b9f6b" : "#b5db90");
         ctx.stroke();
+        // A few named roads are useful on the miniature field display.
+        if (shape.label && shape.kind === "line" && view.zoom >= 13.5 && labels < 12 &&
+            shape.paths[0] && shape.paths[0].length >= 2) {
+          const mid = shape.paths[0][Math.floor(shape.paths[0].length / 2)];
+          const p = screenPoint(view, mid[0], mid[1]);
+          if (p[0] > 5 && p[0] < view.width - 65 &&
+              p[1] > 16 && p[1] < view.height - 12) {
+            ctx.fillStyle = "#d6efbd";
+            ctx.font = "10px monospace";
+            ctx.fillText(shape.label, p[0] + 4, p[1] - 6);
+            labels++;
+          }
+        }
       }
     }
 
@@ -266,7 +284,7 @@
       ctx.stroke();
     }
 
-    if (!view.shapes.length) {
+    if (!view.shapes.length && !view.onlineShapes.length) {
       ctx.textAlign = "center";
       ctx.font = "11px monospace";
       ctx.fillStyle = "#dfa96b";
@@ -287,9 +305,14 @@
     view.locate.textContent = view.watchId === null ? "GPS ON" : "GPS OFF";
     view.followButton.disabled = !view.fix;
     view.followButton.textContent = view.follow ? "FOLLOW" : "RECENTER";
-    view.sourceBox.hidden = !view.layers.length;
-    if (view.layers.length) {
-      view.sourceSummary.textContent = "DATA SOURCES / " + view.layers.length + " LAYERS" +
+    view.webButton.textContent = view.webEnabled ? "WEB OFF" : "WEB ON";
+    view.webRefresh.hidden = !view.webEnabled;
+    view.webStatusNode.textContent = view.webStatus;
+    view.attribution.hidden = !view.onlineShapes.length;
+    view.sourceBox.hidden = !view.layers.length && !view.webMeta;
+    if (view.layers.length || view.webMeta) {
+      view.sourceSummary.textContent = "DATA SOURCES / " + view.layers.length + " NATIVE LAYERS" +
+        (view.webMeta ? " / OSM WEB" : "") +
         (view.warnings.length ? " / " + view.warnings.length + " LIMITATIONS" : "");
       view.sourceLines.textContent = view.mapName + " / " + view.mapFormat + "\n" +
         view.layers.map((layer) => layer.name + " (" + layer.features + " features)\n" +
@@ -297,6 +320,15 @@
           (layer.originalCrs ? "\n  Original CRS: " + JSON.stringify(layer.originalCrs).slice(0, 120) : "")
         ).join("\n") +
         (view.warnings.length ? "\nLIMITS: " + view.warnings.join(" | ") : "") +
+        (view.webMeta
+          ? "\nREFERENCE ONLY: © OpenStreetMap contributors / ODbL" +
+            "\nProvider: overpass-api.de (RustGIS OSM query source)" +
+            "\nCoverage: " + view.webMeta.bounds.join(", ") +
+            "\nFetched: " + new Date(view.webMeta.fetchedAt).toISOString() +
+            (view.webMeta.timestamp ? "\nOSM base timestamp: " + view.webMeta.timestamp : "") +
+            "\nFeatures: " + Object.entries(view.webMeta.count).map(([k,v])=>k+"="+v).join(", ") +
+            (view.webMeta.warnings.length ? "\nWEB LIMITS: " + view.webMeta.warnings.join(" | ") : "")
+          : "") +
         "\nCoordinates drawn: WGS84 longitude/latitude.";
     }
   }
@@ -305,6 +337,167 @@
     if (active !== view) return;
     setStatus(view);
     draw(view);
+  }
+
+
+
+  // The only automatic outbound request: an infrequent, coordinate-free status
+  // ping upon entering MAP. Actual bbox queries require WEB ON.
+  async function probeWeb(view) {
+    if (active !== view || view.webEnabled || view.webProbePromise) return;
+    if (navigator.onLine === false) {
+      view.webStatus = "OFFLINE / WEB MAP UNAVAILABLE";
+      refresh(view);
+      return;
+    }
+    if (Date.now() - webProbeAt < 10 * 60 * 1000 && webProbeSuccess !== null) {
+      view.webStatus = webProbeSuccess ? "WEB READY / WEB ON SENDS MAP AREA" : "WEB STATUS UNAVAILABLE";
+      refresh(view);
+      return;
+    }
+    const service = window.RustBoyOnline;
+    if (!service) return;
+    const controller = new AbortController();
+    view.webProbeAbort = controller;
+    const timeout = setTimeout(() => controller.abort(), 5000);
+    view.webStatus = "PING WEB STATUS / NO COORDINATES SENT";
+    refresh(view);
+    const pending = (async () => {
+      try {
+        await service.ping(controller.signal);
+        webProbeSuccess = true;
+        webProbeAt = Date.now();
+        if (active === view && !view.webEnabled) {
+          view.webStatus = "WEB READY / WEB ON SENDS MAP AREA";
+        }
+      } catch (_) {
+        if (!controller.signal.aborted || active === view) {
+          webProbeSuccess = false;
+          webProbeAt = Date.now();
+        }
+        if (active === view && !view.webEnabled) {
+          view.webStatus = "WEB STATUS UNAVAILABLE / OFFLINE MAP READY";
+        }
+      } finally {
+        clearTimeout(timeout);
+        if (view.webProbeAbort === controller) view.webProbeAbort = null;
+        view.webProbePromise = null;
+        if (active === view && !view.webEnabled) refresh(view);
+      }
+    })();
+    view.webProbePromise = pending;
+    await pending;
+  }
+
+  function centerInside(bounds, center) {
+    if (!bounds || !center) return false;
+    const dx = (bounds[2] - bounds[0]) * 0.23;
+    const dy = (bounds[3] - bounds[1]) * 0.23;
+    return center.lon >= bounds[0] + dx && center.lon <= bounds[2] - dx &&
+      center.lat >= bounds[1] + dy && center.lat <= bounds[3] - dy;
+  }
+
+  function webOff(view, preserveCache = true) {
+    view.webEnabled = false;
+    if (view.webAbort) view.webAbort.abort();
+    view.webStatus = preserveCache && view.onlineShapes.length
+      ? "WEB OFF / CACHED ROAD REFERENCE" : "WEB OFF";
+    if (!preserveCache) {
+      view.onlineShapes = [];
+      view.webMeta = null;
+    }
+    refresh(view);
+  }
+
+  async function webFetch(view) {
+    if (active !== view || !view.webEnabled || view.webBusy) return;
+    const service = window.RustBoyOnline;
+    if (!service) { view.webStatus = "WEB CONNECTOR MISSING"; refresh(view); return; }
+    if (navigator.onLine === false) {
+      view.webStatus = "OFFLINE / EXISTING MAP PRESERVED";
+      refresh(view);
+      return;
+    }
+    let bbox;
+    try {
+      bbox = service.boundsFor(view);
+    } catch (error) {
+      view.webStatus = error instanceof Error ? error.message : "INVALID WEB MAP AREA";
+      refresh(view);
+      return;
+    }
+    const now = Date.now();
+    if (view.webMeta && now - view.webMeta.fetchedAt < 10 * 60 * 1000 &&
+        centerInside(view.webMeta.bounds, view.center)) {
+      view.webStatus = "OSM CACHE / " + view.onlineShapes.length + " FEATURES";
+      refresh(view);
+      return;
+    }
+    if (now < webNextRequestAt) {
+      view.webStatus = "WEB COOLDOWN / MAP PRESERVED";
+      refresh(view);
+      return;
+    }
+    if (webRequestCount >= 8) {
+      view.webStatus = "SESSION WEB LIMIT / RESTART TO RESET";
+      refresh(view);
+      return;
+    }
+    view.webBusy = true;
+    webRequestCount++;
+    webNextRequestAt = now + 2 * 60 * 1000;
+    const abort = new AbortController();
+    view.webAbort = abort;
+    const timeout = setTimeout(() => abort.abort(), 25000);
+    try {
+      view.webStatus = "PING OVERPASS / NO LOCATION IN PING";
+      refresh(view);
+      if (view.webProbePromise) await view.webProbePromise;
+      if (active !== view || !view.webEnabled || abort.signal.aborted) return;
+      if (!webProbeSuccess || Date.now() - webProbeAt >= 10 * 60 * 1000) {
+        await service.ping(abort.signal);
+        webProbeSuccess = true;
+        webProbeAt = Date.now();
+      }
+      if (active !== view || !view.webEnabled || abort.signal.aborted) return;
+      view.webStatus = "FETCH ROADS + LANDMARKS / OSM";
+      refresh(view);
+      const result = await service.roads(view, abort.signal);
+      if (active !== view || !view.webEnabled || abort.signal.aborted) return;
+      if (!result.shapes.length) {
+        view.webStatus = "NO OSM FEATURES IN AREA / LOCAL MAP PRESERVED";
+      } else {
+        // Atomic replacement: a failed fetch never discards the prior offline cache.
+        view.onlineShapes = result.shapes;
+        view.webMeta = {
+          bounds: result.bounds, count: result.count, timestamp: result.timestamp,
+          warnings: result.warnings, fetchedAt: Date.now()
+        };
+        view.webStatus = result.warnings.length
+          ? "OSM PARTIAL / CHECK DATA SOURCES"
+          : "OSM REFERENCE READY / " + result.shapes.length;
+      }
+    } catch (error) {
+      if (active !== view || !view.webEnabled) return;
+      const msg = error instanceof Error ? error.message : "OVERPASS UNAVAILABLE";
+      if (/BUSY|429|503|504/.test(msg)) webNextRequestAt = Date.now() + 5 * 60 * 1000;
+      view.webStatus = abort.signal.aborted ? "WEB TIMEOUT / MAP PRESERVED"
+        : msg.slice(0, 85) + " / MAP PRESERVED";
+    } finally {
+      clearTimeout(timeout);
+      if (view.webAbort === abort) view.webAbort = null;
+      view.webBusy = false;
+      if (active === view) refresh(view);
+    }
+  }
+
+  function webToggle(view) {
+    if (view.webEnabled) {
+      webOff(view);
+    } else {
+      view.webEnabled = true; // Explicit consent is never persisted across tabs.
+      void webFetch(view);
+    }
   }
 
   function fitLayer(view) {
@@ -372,6 +565,10 @@
           view.zoom = Math.max(view.zoom, 14);
         }
         refresh(view);
+        if (view.webEnabled && (!view.webMeta ||
+            !centerInside(view.webMeta.bounds, view.center))) {
+          void webFetch(view);
+        }
       }, (error) => {
         if (active !== view) return;
         const message = error && error.code === 1 ? "LOCATION DENIED" :
@@ -417,10 +614,15 @@
     if (view.watchId !== null && navigator.geolocation) navigator.geolocation.clearWatch(view.watchId);
     if (view.observer) view.observer.disconnect();
     if (view.windowResize) window.removeEventListener("resize", view.windowResize);
-    mapMemory = view.shapes.length ? {
+    if (view.webReconnect) window.removeEventListener("online", view.webReconnect);
+    if (view.webDisconnect) window.removeEventListener("offline", view.webDisconnect);
+    if (view.webAbort) view.webAbort.abort();
+    if (view.webProbeAbort) view.webProbeAbort.abort();
+    mapMemory = (view.shapes.length || view.onlineShapes.length) ? {
       center: { lat: view.center.lat, lon: view.center.lon }, zoom: view.zoom,
       shapes: view.shapes, layers: view.layers, warnings: view.warnings,
-      layerName: view.layerName, mapName: view.mapName, mapFormat: view.mapFormat
+      layerName: view.layerName, mapName: view.mapName, mapFormat: view.mapFormat,
+      onlineShapes: view.onlineShapes, webMeta: view.webMeta
     } : null;
     active = null;
     if (view.host.isConnected) view.host.replaceChildren();
@@ -444,12 +646,22 @@
     file.type = "file";
     file.accept = ".rgismap,.rgis,.rgislyr,.rgismpk,.rgispkg,.geojson,.json,application/geo+json";
     file.hidden = true;
+    const attribution = make("a", "rb-map-attribution",
+      "© OpenStreetMap contributors · ODbL");
+    attribution.href = "https://www.openstreetmap.org/copyright";
+    attribution.target = "_blank";
+    attribution.rel = "noopener noreferrer";
+    attribution.hidden = true;
+    stage.append(attribution);
+    const webStatusNode = make("div", "rb-map-web-state", "WEB OFF");
+    webStatusNode.setAttribute("role", "status");
     const sourceBox = make("details", "rb-map-sources");
     sourceBox.hidden = true;
     const sourceSummary = make("summary", "", "DATA SOURCES");
     const sourceLines = make("pre", "rb-map-source-text");
     const clearMap = control("CLEAR MAP", () => {
       mapMemory = null;
+      webOff(view, false);
       view.shapes = [];
       view.layers = [];
       view.warnings = [];
@@ -493,6 +705,12 @@
       layerName: mapMemory ? mapMemory.layerName : "",
       mapName: mapMemory ? mapMemory.mapName : "",
       mapFormat: mapMemory ? mapMemory.mapFormat : "",
+      onlineShapes: mapMemory ? mapMemory.onlineShapes || [] : [],
+      webMeta: mapMemory ? mapMemory.webMeta || null : null,
+      webEnabled: false, webBusy: false, webAbort: null,
+      webProbeAbort: null, webProbePromise: null,
+      webReconnect: null, webDisconnect: null, webStatus: "WEB OFF",
+      attribution, webStatusNode, webButton: null, webRefresh: null,
       fix: null, watchId: null, gpsState: "GPS OFF",
       follow: !mapMemory, observer: null, windowResize: null, drag: null,
       locate: null, followButton: null
@@ -507,6 +725,11 @@
       if (view.fix) view.center = { lat: view.fix.lat, lon: view.fix.lon };
       refresh(view);
     }, "Center map on latest location fix");
+    view.webButton = control("WEB ON", () => webToggle(view),
+      "Enable online road/landmark retrieval; sends map area to Overpass (OSM), not official GIS");
+    view.webRefresh = control("SYNC", () => void webFetch(view),
+      "Check online access and refresh nearby OSM road reference (rate limited)");
+    view.webRefresh.hidden = true;
     const importButton = control("RUSTGIS", () => file.click(),
       "Import native RustGIS map/project/mobile package or GeoJSON");
     const manualButton = control("CENTER", () => {
@@ -517,11 +740,12 @@
       "Zoom in");
     const zoomOut = control("-", () => { view.zoom = clamp(view.zoom - 1, MIN_ZOOM, MAX_ZOOM); refresh(view); },
       "Zoom out");
-    toolbar.append(view.locate, view.followButton, importButton, manualButton, zoomIn, zoomOut);
+    toolbar.append(view.locate, view.followButton, importButton, view.webButton,
+      view.webRefresh, manualButton, zoomIn, zoomOut);
     if (options && typeof options.onTools === "function") {
       toolbar.append(control("GIS", options.onTools, "Open Scout GIS tools"));
     }
-    root.append(toolbar, stage, status, sourceBox, manual, file);
+    root.append(toolbar, stage, webStatusNode, status, sourceBox, manual, file);
     host.replaceChildren(root);
 
     manual.addEventListener("submit", (event) => {
@@ -533,11 +757,12 @@
       } else {
         view.center = { lat, lon };
         view.follow = false;
-        view.zoom = Math.max(view.zoom, 12);
+        view.zoom = Math.max(view.zoom, 13);
         view.gpsState = "MANUAL CENTER / NOT A FIX";
         manual.hidden = true;
       }
       refresh(view);
+      if (view.webEnabled) void webFetch(view);
     });
 
     file.addEventListener("change", async () => {
@@ -581,6 +806,7 @@
         view.gpsState = native && parsed.warnings.length ?
           "RUSTGIS VECTOR PARTIAL / VIEW SOURCES" : "LOCAL MAP LOADED";
         refresh(view);
+        if (view.webEnabled) void webFetch(view);
       } catch (error) {
         if (active === view) {
           view.gpsState = "MAP ERROR: " + (error instanceof Error ? error.message : "Invalid file");
@@ -618,6 +844,21 @@
       refresh(view);
     }, { passive: false });
 
+    view.webReconnect = () => {
+      if (active !== view) return;
+      if (view.webEnabled) void webFetch(view);
+      else void probeWeb(view);
+    };
+    view.webDisconnect = () => {
+      if (active === view && view.webEnabled) {
+        if (view.webAbort) view.webAbort.abort();
+        view.webStatus = "OFFLINE / CACHED REFERENCE KEPT";
+        refresh(view);
+      }
+    };
+    window.addEventListener("online", view.webReconnect);
+    window.addEventListener("offline", view.webDisconnect);
+
     if ("ResizeObserver" in window) {
       view.observer = new ResizeObserver(() => resize(view));
       view.observer.observe(stage);
@@ -625,7 +866,10 @@
       view.windowResize = () => resize(view);
       window.addEventListener("resize", view.windowResize);
     }
-    window.requestAnimationFrame(() => resize(view));
+    window.requestAnimationFrame(() => {
+      resize(view);
+      void probeWeb(view);
+    });
     return view;
   }
 

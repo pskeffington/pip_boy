@@ -12,15 +12,15 @@ Rust-Boy is an independent, Rust-native developer workbench with separate local 
 
 ## RustGIS-native field maps and GPS (feature branch)
 
-Rust-Boy's MAP screen now imports actual data in RustGIS `.rgismap`, `.rgis`, `.rgislyr`, mobile `.rgismpk`, project `.rgispkg`, and GeoJSON files. Its independent WGS84 canvas renderer preserves embedded vector geography, source names, visible layers, and basic styling, and aligns an explicitly authorized browser location fix to that geometry. **No OSM proxy or alternative street tiles replace your RustGIS source data**; the viewer reports missing raster/streamed layers instead of inventing a basemap. Select `RUSTGIS` from MAP to load a local export, and expand **DATA SOURCES** to inspect its provenance.
+Rust-Boy's MAP screen now imports actual data in RustGIS `.rgismap`, `.rgis`, `.rgislyr`, mobile `.rgismpk`, project `.rgispkg`, and GeoJSON files. Its independent WGS84 canvas renderer preserves embedded vector geography, source names, visible layers, and basic styling, and aligns an explicitly authorized browser location fix to that geometry. **RustGIS data remains primary.** An optional OpenStreetMap/Overpass road and landmark **reference overlay** appears underneath native GIS layers only after the operator taps **WEB ON**; no external roads are represented as official government data. On MAP entry the connector can make a coordinate-free provider reachability ping. It reports missing raster/streamed layers instead of inventing them. Select `RUSTGIS` from MAP to load a local export, and expand **DATA SOURCES** to inspect its provenance.
 
 ```bash
-git clone --branch feat/scout-gps-rustgis-map https://github.com/pskeffington/pip_boy.git
+git clone --branch feat/scout-online-road-reference https://github.com/pskeffington/pip_boy.git
 cd pip_boy
 cargo run --locked -p pipboy -- dashboard --micro --open
 ```
 
-See the [RustGIS native map/GPS field guide](docs/SCOUT_GPS_MAP.md). This branch remains a preview: upstream RustGIS's rendering engine, terrain/raster layer integration, native serial GNSS and physical Raspberry Pi tests are separate work.
+See the [RustGIS native map, online road-reference and GPS field guide](docs/SCOUT_GPS_MAP.md). This branch remains a preview: upstream RustGIS's rendering engine, terrain/raster layer integration, native serial GNSS and physical Raspberry Pi tests are separate work.
 
 ## Peer-to-peer assignments — Mac ↔ handheld
 

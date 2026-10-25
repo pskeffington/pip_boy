@@ -1,6 +1,6 @@
 # Rust-Boy | Reclamation Scout GIS and TAK-on-Pi design
 
-**Implementation status:** Rust-Boy retains offline WGS84 Point GeoJSON tools and adds an independent browser map viewer on `feat/scout-gps-rustgis-map`. It can import RustGIS native map/project/layer data and zipped mobile packages and align browser geolocation on real embedded vector features. It is **not** an embedded upstream RustGIS renderer, physical GNSS receiver, TAK transport or certified navigation device. See [native map/GPS import](SCOUT_GPS_MAP.md).
+**Implementation status:** Rust-Boy retains offline WGS84 Point GeoJSON tools and adds an independent browser map viewer on `feat/scout-gps-rustgis-map`. It can import RustGIS native map/project/layer data and zipped mobile packages and align browser geolocation on real embedded vector features. It is **not** an embedded upstream RustGIS renderer, physical GNSS receiver, TAK transport or certified navigation device. See [native map/GPS import and online road reference](SCOUT_GPS_MAP.md). Online-reference queries use the same Overpass provider and category taxonomy as RustGIS's `osm.download` but do not embed the native upstream engine.
 
 ## Dashboard viewport before navigation
 
