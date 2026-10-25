@@ -1,6 +1,8 @@
 //! Scout GIS commands: explicit local-only GeoJSON I/O and spherical distance.
 //! No live positioning, RustGIS embedding, TAK network connections or location logging.
-use pipboy_core::scout_gis::{distance_meters, inspect_geojson, waypoint, Point, MAX_GEOJSON_BYTES};
+use pipboy_core::scout_gis::{
+    distance_meters, inspect_geojson, waypoint, Point, MAX_GEOJSON_BYTES,
+};
 use std::error::Error;
 use std::fs::File;
 use std::io::{self, Read};

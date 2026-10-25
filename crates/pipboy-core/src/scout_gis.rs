@@ -30,7 +30,10 @@ impl Point {
         if !(-180.0..=180.0).contains(&longitude) {
             return Err(invalid("longitude must be in -180..=180"));
         }
-        Ok(Self { latitude, longitude })
+        Ok(Self {
+            latitude,
+            longitude,
+        })
     }
 
     pub fn from_text(lat: &str, lon: &str) -> io::Result<Self> {
@@ -51,8 +54,7 @@ pub fn distance_meters(a: Point, b: Point) -> f64 {
     let dlon = (b.longitude - a.longitude).to_radians();
     let lat_a = a.latitude.to_radians();
     let lat_b = b.latitude.to_radians();
-    let h = (dlat / 2.0).sin().powi(2)
-        + lat_a.cos() * lat_b.cos() * (dlon / 2.0).sin().powi(2);
+    let h = (dlat / 2.0).sin().powi(2) + lat_a.cos() * lat_b.cos() * (dlon / 2.0).sin().powi(2);
     MEAN_EARTH_RADIUS_M * 2.0 * h.clamp(0.0, 1.0).sqrt().asin()
 }
 
@@ -92,7 +94,9 @@ pub struct GeoJsonSummary {
 
 fn point_geometry(value: &Value) -> io::Result<Point> {
     if value.get("type").and_then(Value::as_str) != Some("Point") {
-        return Err(invalid("only GeoJSON Point geometries are currently supported"));
+        return Err(invalid(
+            "only GeoJSON Point geometries are currently supported",
+        ));
     }
     let coordinates = value
         .get("coordinates")
@@ -112,7 +116,9 @@ fn point_geometry(value: &Value) -> io::Result<Point> {
 
 fn feature_geometry(value: &Value) -> io::Result<Point> {
     if value.get("type").and_then(Value::as_str) != Some("Feature") {
-        return Err(invalid("GeoJSON FeatureCollection entries must be Features"));
+        return Err(invalid(
+            "GeoJSON FeatureCollection entries must be Features",
+        ));
     }
     point_geometry(
         value
@@ -127,8 +133,8 @@ pub fn inspect_geojson(bytes: &[u8]) -> io::Result<GeoJsonSummary> {
     if bytes.is_empty() || bytes.len() > MAX_GEOJSON_BYTES {
         return Err(invalid("GeoJSON must be 1 byte to 1 MiB"));
     }
-    let root: Value = serde_json::from_slice(bytes)
-        .map_err(|_| invalid("invalid GeoJSON JSON document"))?;
+    let root: Value =
+        serde_json::from_slice(bytes).map_err(|_| invalid("invalid GeoJSON JSON document"))?;
     let points: Vec<Point> = match root.get("type").and_then(Value::as_str) {
         Some("Point") => vec![point_geometry(&root)?],
         Some("Feature") => vec![feature_geometry(&root)?],

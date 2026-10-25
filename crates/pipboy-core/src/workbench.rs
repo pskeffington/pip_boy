@@ -100,7 +100,8 @@ pub const PALETTE: &[Tool] = &[
     Tool {
         id: "geo-lab",
         name: "SCOUT GIS",
-        description: "Offline WGS84 GeoJSON waypoints, great-circle distance and local Point inspection.",
+        description:
+            "Offline WGS84 GeoJSON waypoints, great-circle distance and local Point inspection.",
         availability: Availability::Ready,
         command: "pipboy scout geo waypoint CAMP 42.0 -70.75",
     },
