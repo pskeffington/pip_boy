@@ -25,6 +25,7 @@ const MICRO_HTML: &str = include_str!("../assets/micro.html");
 const MICRO_CSS: &str = include_str!("../assets/micro.css");
 const MICRO_JS: &str = include_str!("../assets/micro.js");
 const MAP_JS: &str = include_str!("../assets/map.js");
+const MAP_IMPORT_JS: &str = include_str!("../assets/map-import.js");
 const MAP_CSS: &str = include_str!("../assets/map.css");
 const TASKS_JS: &str = include_str!("../assets/tasks.js");
 const TASKS_CSS: &str = include_str!("../assets/tasks.css");
@@ -626,6 +627,7 @@ fn dispatch(req: &Request, store: &WorkbenchStore, port: u16) -> Response {
         ("GET", "/assets/micro.js") => {
             Response::new(200, "text/javascript; charset=utf-8", MICRO_JS.as_bytes())
         }
+        ("GET", "/assets/map-import.js") => Response::new(200, "text/javascript; charset=utf-8", MAP_IMPORT_JS.as_bytes()),
         ("GET", "/assets/map.js") => Response::new(200, "text/javascript; charset=utf-8", MAP_JS.as_bytes()),
         ("GET", "/assets/map.css") => Response::new(200, "text/css; charset=utf-8", MAP_CSS.as_bytes()),
         ("GET", "/assets/tasks.js") => {
@@ -848,6 +850,7 @@ mod tests {
             "/assets/micro.css",
             "/assets/micro.js",
             "/assets/map.js",
+            "/assets/map-import.js",
             "/assets/map.css",
         ] {
             let r = dispatch(&request("GET", endpoint, Value::Null), &store, 8765);
@@ -1155,6 +1158,10 @@ mod tests {
         assert!(!JS.contains("eval("));
         assert!(MICRO_HTML.contains("/assets/map.js"));
         assert!(HTML.contains("/assets/map.js"));
+        assert!(MAP_IMPORT_JS.contains("parseRustGIS"));
+        assert!(MAP_IMPORT_JS.contains("readPackage"));
+        assert!(MICRO_HTML.contains("/assets/map-import.js"));
+        assert!(HTML.contains("/assets/map-import.js"));
         assert!(MAP_JS.contains("watchPosition"));
         assert!(MAP_JS.contains("parseGeoJSON"));
         assert!(MICRO_HTML.contains("/assets/micro.css"));
