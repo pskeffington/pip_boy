@@ -13,7 +13,7 @@ ROOT = Path(__file__).resolve().parents[1]
 BINARY = ROOT / 'target/debug/pipboy'
 
 
-def terminal_journey(env, malformed_notes=False):
+def terminal_journey(env, malformed_notes=False, interrupt=False):
     import fcntl
     import pty
     import struct
@@ -37,6 +37,10 @@ def terminal_journey(env, malformed_notes=False):
                 if b'\x1b[6n' in chunk:  # Terminal cursor-position query.
                     os.write(master, b'\x1b[1;1R')
             if stage == 0 and b'HISTORY:' in stage_output:
+                if interrupt:
+                    os.write(master, b'\x03')
+                    stage = 4
+                    continue
                 os.write(master, b'\t\t' if malformed_notes else b'p')
                 stage, stage_output = 1, b''
             elif not malformed_notes and stage == 1 and b'PAUSED' in stage_output:
@@ -150,6 +154,7 @@ def main():
         assert not list(Path(directory).iterdir())
         if os.name == 'posix':
             terminal_journey(env)
+            terminal_journey(env, interrupt=True)
             resize_and_reload_journey(env)
             Path(directory, 'notes.json').write_text('{broken', encoding='utf-8')
             terminal_journey(env, malformed_notes=True)

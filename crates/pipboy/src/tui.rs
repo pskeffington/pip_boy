@@ -1,5 +1,5 @@
 use crate::console::{self, Action, Navigation, View};
-use crossterm::event::{self, Event, KeyCode, KeyEventKind};
+use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use crossterm::execute;
 use crossterm::terminal::{
     disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen,
@@ -35,6 +35,14 @@ impl Drop for TerminalGuard {
         let _ = disable_raw_mode();
         let _ = execute!(io::stdout(), LeaveAlternateScreen);
     }
+}
+
+fn exit_requested(key: KeyEvent) -> bool {
+    key.kind == KeyEventKind::Press
+        && (matches!(key.code, KeyCode::Esc | KeyCode::Char('q' | 'Q'))
+            || (matches!(key.code, KeyCode::Char('c' | 'C'))
+                && key.modifiers.contains(KeyModifiers::CONTROL)
+                && (key.modifiers - (KeyModifiers::CONTROL | KeyModifiers::SHIFT)).is_empty()))
 }
 
 pub fn run() -> Result<(), Box<dyn Error>> {
@@ -74,8 +82,10 @@ pub fn run() -> Result<(), Box<dyn Error>> {
                 if key.kind != KeyEventKind::Press {
                     continue;
                 }
+                if exit_requested(key) {
+                    break;
+                }
                 match key.code {
-                    KeyCode::Char('q') | KeyCode::Char('Q') | KeyCode::Esc => break,
                     KeyCode::Right | KeyCode::Tab | KeyCode::Left | KeyCode::BackTab => {
                         let action = if matches!(key.code, KeyCode::Right | KeyCode::Tab) {
                             Action::Next
@@ -182,6 +192,29 @@ fn stat_body(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn interrupt_requires_an_explicit_press_and_preserves_other_shortcuts() {
+        for modifiers in [
+            KeyModifiers::CONTROL,
+            KeyModifiers::CONTROL | KeyModifiers::SHIFT,
+        ] {
+            assert!(exit_requested(KeyEvent::new(KeyCode::Char('c'), modifiers)));
+        }
+        for modifiers in [
+            KeyModifiers::NONE,
+            KeyModifiers::ALT,
+            KeyModifiers::CONTROL | KeyModifiers::ALT,
+        ] {
+            assert!(!exit_requested(KeyEvent::new(
+                KeyCode::Char('c'),
+                modifiers
+            )));
+        }
+        let mut release = KeyEvent::new(KeyCode::Char('c'), KeyModifiers::CONTROL);
+        release.kind = KeyEventKind::Release;
+        assert!(!exit_requested(release));
+    }
+
     #[test]
     fn pause_message_has_no_host_values_and_explains_resume() {
         let text = stat_body(None, State::Disabled, "old history", 1000);

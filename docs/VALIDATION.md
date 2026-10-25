@@ -2,6 +2,12 @@
 
 Updated October 25, 2026 (America/New_York). **Current verified source baseline:** [PR CI 40164915215](https://github.com/pskeffington/pip_boy/actions/runs/40164915215) passed catalog, Linux stable and Rust 1.81.0, native macOS PTY, native Windows ConPTY and the deny-all physical-broker tests at `e7d1090`. This is not physical-hardware, packaging or accessibility certification. **Sections farther below preserve historical development snapshots**; any older “pending”, “unexecuted” or “startup failure” wording describes the state *at the cited historical revision*, not the current status.
 
+## TUI keyboard-interrupt pass — local checks passed
+
+Ctrl+C now returns through normal terminal guard cleanup; Ctrl+Shift+C is also accepted when delivered as a key event. Plain C, Alt+C, Ctrl+Alt+C and key-release events do not trigger the interrupt path. The POSIX PTY regression verifies actual Ctrl+C input, zero exit status, exact terminal attributes and alternate-screen restoration. Windows ConPTY coverage adds Ctrl+C after pause/resume and shrink to 20×5. Native CI must validate that new Windows journey. This is keyboard-event handling, not external OS signal cancellation.
+
+Local Linux stable 1.99.1 and Rust 1.81.0 each passed **16 CLI + 107 core + 12 broker = 135 tests**. Formatting, Clippy with warnings denied, workspace build, catalog validation and the updated POSIX runtime smoke passed. Modules: console/telemetry; evidence: L05/L37. See [console contract](CONSOLE.md).
+
 ## G1-B/G1-C host field-quality pass — local checks passed
 
 Built from merged foundation `794da68`. The new `host_report.rs` provides seven typed field readings with units, quality and finite reason codes; `status --details [--json]`, `sample --details` and the console derive them from the same single snapshot. The default JSON keys are preserved; unavailable CPU is explicitly null. CPU initialization requests only CPU/RAM and gates refreshes with monotonic elapsed time; the TUI no longer sleeps to prime CPU. Poll-start intervals reset with a new session. See the [host telemetry contract](HOST_TELEMETRY.md).

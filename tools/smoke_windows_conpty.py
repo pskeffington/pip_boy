@@ -323,7 +323,7 @@ class ConPty:
             self.reader.join(timeout=2)
 
 
-def exercise(api, home, *, corrupt_notes):
+def exercise(api, home, *, corrupt_notes, interrupt=False):
     if corrupt_notes:
         home.mkdir(parents=True, exist_ok=True)
         (home / "notes.json").write_text("{invalid", encoding="utf-8")
@@ -345,6 +345,11 @@ def exercise(api, home, *, corrupt_notes):
             offset = len(host.output)
             host.resize(20, 5)
             host.wait_for(b"Resize to 40x12", since=offset)
+            if interrupt:
+                host.send(b"\x03")
+                host.finish(expected_code=0)
+                assert not home.exists(), "interrupt created user files"
+                return
             offset = len(host.output)
             host.resize(100, 24)
             host.wait_for(b"HISTORY:", since=offset)
@@ -375,6 +380,7 @@ def main():
         finally:
             probe.close()
         exercise(api, root / "normal", corrupt_notes=False)
+        exercise(api, root / "interrupt", corrupt_notes=False, interrupt=True)
         exercise(api, root / "corrupt", corrupt_notes=True)
     print(
         "PASS: Windows ConPTY TUI launch, pause/resume, resize/fallback, "

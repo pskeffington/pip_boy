@@ -20,7 +20,7 @@ cd pip_boy
 cargo run --locked -p pipboy -- tui
 ```
 
-Once running, use **Tab / Shift+Tab** or **Left / Right** to switch panels, **Up / Down** to navigate, **P** to pause/resume host sampling, **R** to reload notes in NOTES, and **Q** or **Esc** to exit. A terminal of at least 40×12 is recommended. See [all keyboard controls](docs/CONSOLE.md).
+Once running, use **Tab / Shift+Tab** or **Left / Right** to switch panels, **Up / Down** to navigate, **P** to pause/resume host sampling, **R** to reload notes in NOTES, and **Q**, **Esc** or **Ctrl+C** to exit. A terminal of at least 40×12 is recommended. See [all keyboard controls](docs/CONSOLE.md).
 
 Try the command-line interface:
 
