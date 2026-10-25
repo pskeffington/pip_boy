@@ -358,3 +358,18 @@ small { font-size:11px; }
 
 /* Task pages are fitted, but never silently hide controls at large zoom. */
 .micro-device.micro-overflow[data-depth="tasks"] .micro-viewport { overflow-y:auto; }
+
+
+/* Head Engineer NET SUITE: two columns, three rows, paged on four-inch HUD. */
+.net-suite-tile {
+  min-height:42px;
+  justify-content:center;
+  text-align:center;
+}
+.net-suite-tile .tile-copy { text-align:center; min-width:0; }
+.net-suite-tile .tile-copy strong { font-size:11px; white-space:nowrap; }
+.net-suite-tile .tile-copy small { font-size:9px; opacity:.8; }
+@media (max-height:360px) {
+  .net-suite-tile { min-height:38px; padding:4px; }
+  .net-suite-tile .tile-copy small { margin-top:0; }
+}

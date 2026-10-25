@@ -47,7 +47,7 @@ const roleStations = Object.freeze({
   "head-engineer": {
     heading: "ENGINEER",
     purpose: "SYSTEM / NET",
-    quick: "NET LAB", tool: "net-lab"
+    quick: "NET SUITE", tool: "net-lab"
   },
   "security-chief": {
     heading: "SECURITY",
@@ -91,13 +91,14 @@ let snapshot = null;
 let tab = "stat";
 let openedTool = null;
 let geoMode = "distance";
+let netMode = null;
 let focusedCamera = null;
 let pendingProfile = null;
 let busy = false;
 let toastTimer = null;
 let reducedEffects = false;
 let activeTaskUI = null;
-const viewPage = { gear: 0, data: 0, conf: 0 };
+const viewPage = { gear: 0, data: 0, conf: 0, net: 0 };
 let paletteOpen = false;
 let rolePage = 0;
 const MICRO_PAGE_SIZE = 6;
@@ -194,6 +195,7 @@ function setTab(next) {
   if (!pages.includes(next) || !snapshot) return;
   tab = next;
   openedTool = null;
+  netMode = null;
   activeTaskUI = null;
   focusedCamera = null;
   render();
@@ -442,11 +444,31 @@ function openTool(id, mode = "distance") {
     return;
   }
   openedTool = id;
+  netMode = null;
   activeTaskUI = null;
   geoMode = mode;
   render();
   ui.viewport.scrollTop = 0;
   ui.viewport.focus({ preventScroll: true });
+}
+
+function showNetworkMenu(root) {
+  const operations = snapshot.net_operations || [];
+  root.append(sectionTop("NETWORK TOOLS", "9 OFFLINE / 1 CONNECT"));
+  pagedTiles(root, operations, "net", (op) => {
+    const cell = button("", () => {
+      netMode = op.id;
+      render();
+      ui.viewport.scrollTop = 0;
+    }, "tile net-suite-tile");
+    cell.setAttribute("aria-label", "Open " + op.name +
+      (op.active ? ", requires confirmation before connection" : ", offline"));
+    const text = make("span", "tile-copy");
+    text.append(make("strong", "", op.name),
+      make("small", "", op.active ? "CONFIRM" : "OFFLINE"));
+    cell.append(text);
+    return cell;
+  }, 6);
 }
 
 function inputForm(root, id) {
@@ -474,12 +496,20 @@ function inputForm(root, id) {
     }
     form.append(fields);
   } else if (id === "net-lab") {
-    form.append(field("input", "IP / CIDR", "192.168.1.50/24"));
+    const op = (snapshot.net_operations || []).find((candidate) => candidate.id === netMode);
+    if (op) {
+      form.append(field("input", op.input_label, op.example, { maxLength: 256 }));
+      if (op.extra_label && op.extra_example) {
+        form.append(field("extra", op.extra_label, op.extra_example,
+          { maxLength: op.id === "route" ? 1024 : 256 }));
+      }
+    }
   } else if (id === "byte-lab") {
     form.append(field("input", "HEX", "48656c6c6f", { maxLength: 3000, hex: true }));
   }
   const row = make("div", "form-actions");
-  const run = make("button", "micro-button solid", id === "host" ? "SAMPLE" :
+  const run = make("button", "micro-button solid",
+    id === "net-lab" && netMode === "tcp" ? "CONNECT" : id === "host" ? "SAMPLE" :
     ["game", "notes", "simulator", "library"].includes(id) ? "INFO" : "RUN");
   run.type = "submit";
   row.append(run);
@@ -501,6 +531,10 @@ function inputForm(root, id) {
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
     if (busy) return;
+    if (id === "net-lab" && netMode === "tcp" &&
+        !window.confirm("Connect once to this IP and TCP port? Only test endpoints you administer.")) {
+      return;
+    }
     busy = true;
     run.disabled = true;
     entry.hidden = true;
@@ -509,6 +543,10 @@ function inputForm(root, id) {
     output.textContent = "RUNNING…";
     const payload = { tool: id };
     if (id === "geo-lab") payload.mode = geoMode;
+    if (id === "net-lab") {
+      payload.mode = netMode;
+      if (netMode === "tcp") payload.confirm = true;
+    }
     for (const [key, val] of new FormData(form).entries()) payload[key] = val;
     try {
       const result = await api("/api/experiment", payload);
@@ -548,7 +586,14 @@ function showTool() {
   const meta = toolInfo(openedTool);
   const row = make("div", "frame-head");
   row.append(
-    button("◀ BACK", () => { openedTool = null; render(); }, "micro-button compact"),
+    button("◀ BACK", () => {
+      if (openedTool === "net-lab" && netMode !== null) {
+        netMode = null;
+      } else {
+        openedTool = null;
+      }
+      render();
+    }, "micro-button compact"),
     make("span", "mini-pill", meta?.availability === "ready" ? "LOCAL" : "MANUAL")
   );
   root.append(row);
@@ -556,8 +601,15 @@ function showTool() {
     root.append(make("p", "warning", "Unknown module. Return to the deck."));
     return root;
   }
-  // The module title is already in the page heading; keep advanced help on
-  // the dedicated tool screen rather than repeating long descriptions.
+  // The module title is already in the heading.
+  if (openedTool === "net-lab" && netMode === null) {
+    showNetworkMenu(root);
+    return root;
+  }
+  if (openedTool === "net-lab" && netMode !== null) {
+    const op = (snapshot.net_operations || []).find((item) => item.id === netMode);
+    if (op) root.append(sectionTop(op.name, op.active ? "ACTIVE / OPT-IN" : "OFFLINE"));
+  }
   const supported = ["geo-lab", "net-lab", "byte-lab", "host", "notes", "library", "simulator", "game"];
   if (supported.includes(openedTool)) {
     inputForm(root, openedTool);
@@ -705,6 +757,11 @@ function back() {
   } else if (openedTool) {
     if (["assigned-duties", "mission-board"].includes(openedTool)
         && activeTaskUI?.back()) return;
+    if (openedTool === "net-lab" && netMode !== null) {
+      netMode = null;
+      render();
+      return;
+    }
     openedTool = null;
     activeTaskUI = null;
     render();
