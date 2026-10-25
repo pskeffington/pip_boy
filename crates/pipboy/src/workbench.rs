@@ -1,11 +1,13 @@
 //! Explicit local workbench management. No pin operation executes a tool.
 use crate::network_probe;
+use pipboy_core::network_health;
 use pipboy_core::network_suite;
+use crate::unifi;
 use pipboy_core::workbench::{crc32_hex, encode_hex, inspect_hex, tool, WorkbenchStore, PALETTE};
 use std::error::Error;
 
 pub fn run(args: Vec<String>) -> Result<(), Box<dyn Error>> {
-    let usage = "usage: pipboy workbench <list [--json]|profiles [--json]|use PROFILE --replace|palette [--json]|add TOOL|remove ID|rename TITLE|clear --confirm|bytes <encode TEXT|inspect HEX|crc32 HEX>|net <list|cidr IPv4/PREFIX|cidr6 IPv6/PREFIX|split4 PARENT CHILD|route IP PREFIXES|aggregate4 A B|overlap4 A B|mac MAC|vlan VID,PCP,DEI|mtu BYTES|tcp IP PORT --confirm>>";
+    let usage = "usage: pipboy workbench <list [--json]|profiles [--json]|use PROFILE --replace|palette [--json]|add TOOL|remove ID|rename TITLE|clear --confirm|bytes <encode TEXT|inspect HEX|crc32 HEX>|net <list|health IP PORT SAMPLES --confirm|unifi [SITE_UUID] --confirm|cidr|cidr6|split4|route|aggregate4|overlap4|mac|vlan|mtu|tcp>>";
     let mut args = args.into_iter();
     let command = args.next().ok_or(usage)?;
     match command.as_str() {
@@ -182,7 +184,7 @@ pub fn run(args: Vec<String>) -> Result<(), Box<dyn Error>> {
                             op.id,
                             op.name,
                             if op.active {
-                                "EXPLICIT TCP CONNECT"
+                                "EXPLICIT NETWORK REQUEST"
                             } else {
                                 "OFFLINE"
                             }
@@ -190,6 +192,30 @@ pub fn run(args: Vec<String>) -> Result<(), Box<dyn Error>> {
                     }
                     Ok(())
                 }
+                [mode, address, port, samples, confirmation]
+                    if mode == "health" && confirmation == "--confirm" =>
+                {
+                    let count = network_health::count(samples)?;
+                    let result = network_probe::tcp_health(address, port, count, true)?;
+                    println!("{}", result.console());
+                    Ok(())
+                }
+                [mode, ..] if mode == "health" => Err(
+                    "usage: pipboy workbench net health IP PORT SAMPLES(3..8) --confirm".into()
+                ),
+                [mode, confirmation] if mode == "unifi" && confirmation == "--confirm" => {
+                    let report = unifi::snapshot(None)?;
+                    println!("{}", report["output"].as_str().unwrap_or("No UniFi report"));
+                    Ok(())
+                }
+                [mode, site, confirmation] if mode == "unifi" && confirmation == "--confirm" => {
+                    let report = unifi::snapshot(Some(site))?;
+                    println!("{}", report["output"].as_str().unwrap_or("No UniFi report"));
+                    Ok(())
+                }
+                [mode, ..] if mode == "unifi" => Err(
+                    "usage: pipboy workbench net unifi [SITE_UUID] --confirm".into()
+                ),
                 [mode, address, port, confirmation]
                     if mode == "tcp" && confirmation == "--confirm" =>
                 {

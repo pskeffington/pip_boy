@@ -4,6 +4,8 @@
 //! declarative. No hardware, camera, console, GNSS or TAK transport is opened
 //! by browsing the dashboard or selecting a role.
 use crate::network_probe;
+use crate::unifi;
+use pipboy_core::network_health;
 use crate::peer;
 use pipboy_core::network_suite;
 use pipboy_core::peers::PeerStore;
@@ -261,6 +263,7 @@ fn state(store: &WorkbenchStore) -> Result<Response, Response> {
             "profiles": PRESETS,
             "palette": PALETTE,
             "net_operations": network_suite::OPERATIONS,
+            "unifi": {"configured":unifi::configured(), "connection":"manual_only", "source":"local_network_api"},
             "engine": {
                 "rustgis": "not_integrated",
                 "camera_wall": "not_integrated",
@@ -301,10 +304,34 @@ fn experiment(body: &Value, store: &WorkbenchStore) -> Result<Response, Response
         }
         "net-lab" => {
             let mode = body.get("mode").and_then(Value::as_str).unwrap_or("cidr4");
+            if mode == "unifi" {
+                if body.get("confirm").and_then(Value::as_bool) != Some(true) {
+                    return Err(Response::error(422, "UniFi API requires explicit confirmation"));
+                }
+                let site = body.get("site").and_then(Value::as_str);
+                let report = unifi::snapshot(site)
+                    .map_err(|_| Response::error(409,
+                        "UniFi local API unavailable: check console IP, key, TLS CA, and route"))?;
+                return Ok(Response::json(200, &report));
+            }
             let input = str_field(body, "input")?;
             let extra = body.get("extra").and_then(Value::as_str);
             if input.len() > 256 || extra.is_some_and(|x| x.len() > 1024) {
                 return Err(Response::error(422, "Network bench input exceeds limit"));
+            }
+            if mode == "health" {
+                if body.get("confirm").and_then(Value::as_bool) != Some(true) {
+                    return Err(Response::error(422, "Network Health requires confirmation"));
+                }
+                let port = extra.ok_or_else(|| Response::error(422, "TCP port required"))?;
+                let number = body.get("samples").and_then(Value::as_str).unwrap_or("5");
+                let count = network_health::count(number)
+                    .map_err(|_| Response::error(422, "Sample count must be 3..8"))?;
+                let metrics = network_probe::tcp_health(input, port, count, true)
+                    .map_err(|_| Response::error(422, "Invalid Network Health target"))?;
+                return Ok(Response::json(200, &json!({
+                    "kind":"health", "output": metrics.console(), "metrics": metrics
+                })));
             }
             if mode == "tcp" {
                 if body.get("confirm").and_then(Value::as_bool) != Some(true) {
@@ -735,8 +762,8 @@ fn dispatch(req: &Request, store: &WorkbenchStore, port: u16) -> Response {
                 let body = parse_json_body(
                     req,
                     &[
-                        "tool", "mode", "input", "extra", "confirm", "lat", "lon", "lat2", "lon2",
-                        "name",
+                        "tool", "mode", "input", "extra", "samples", "site", "confirm",
+                        "lat", "lon", "lat2", "lon2", "name",
                     ],
                 )?;
                 experiment(&body, store)

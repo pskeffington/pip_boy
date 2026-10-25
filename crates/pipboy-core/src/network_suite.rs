@@ -25,6 +25,24 @@ pub struct Operation {
 
 pub const OPERATIONS: &[Operation] = &[
     Operation {
+        id: "health",
+        name: "NETWORK HEALTH",
+        input_label: "TARGET IP",
+        example: "192.168.1.1",
+        extra_label: Some("TCP PORT"),
+        extra_example: Some("443"),
+        active: true,
+    },
+    Operation {
+        id: "unifi",
+        name: "UNIFI STATUS",
+        input_label: "LOCAL API CONFIG",
+        example: "RUSTBOY_UNIFI_IP",
+        extra_label: None,
+        extra_example: None,
+        active: true,
+    },
+    Operation {
         id: "cidr4",
         name: "IPv4 CIDR",
         input_label: "IPv4 / PREFIX",
@@ -652,6 +670,6 @@ mod tests {
         }
         assert!(run_offline("route", "10.0.0.1", Some(&"10.0.0.0/8,".repeat(17))).is_err());
         assert!(run_offline("cidr4", "10.0.0.1/24\nNEXT", None).is_err());
-        assert_eq!(OPERATIONS.iter().filter(|op| op.active).count(), 1);
+        assert_eq!(OPERATIONS.iter().filter(|op| op.active).count(), 3);
     }
 }
