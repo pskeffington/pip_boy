@@ -619,4 +619,7 @@ document.addEventListener("keydown", (event) => {
   }
 });
 
+if (window.RustBoyMessenger && document.getElementById("messenger-dock")) {
+  window.RustBoyMessenger.mount(document.getElementById("messenger-dock"));
+}
 reload();
