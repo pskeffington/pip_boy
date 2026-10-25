@@ -376,6 +376,7 @@
       "mission": "See four authorized IP-camera feeds on a small screen, instantly focus one, and investigate incidents.",
       "baseline_tools": [
         "host",
+        "diag",
         "net-lab",
         "byte-lab",
         "notes"
