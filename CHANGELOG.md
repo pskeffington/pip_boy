@@ -2,6 +2,12 @@
 
 This file records notable changes to Rust-Boy. This repository is in **development preview**; the Rust workspace version `0.1.0` is not a published production release. Dates are in UTC unless otherwise stated.
 
+## Unreleased — UniFi read-only controller reconciliation (2026-10-25)
+
+- Add an optional, explicitly configured UniFi Network local Integration API GET-only adapter (TLS-verified, private IPv4 controller). List sites and paginated connected clients using a server-only API key delivered through curl stdin rather than process arguments or the browser.
+- Add `net unifi sites`, `net unifi clients SITE`, `net unifi compare SITE CIDR` with explicit operator confirmation. Desktop and micro NET ENGINEER get the same three actions and show controller-connected counts separately from probe responders.
+- Add response bounds, UUID validation, paging consistency checks, no redirects, no insecure TLS mode and reproducible mocked-API tests. UniFi hardware acceptance and CI remain release gates.
+
 ## Unreleased — real NET ENGINEER LAN inspection (2026-10-25)
 
 - Add explicitly authorized private IPv4 /24..../32 ICMP echo and bounded TCP connectivity sweeps with distinct responders, ARP neighbor-cache sightings, observed-device counts, probe-specific RTT and short-interval delta.
