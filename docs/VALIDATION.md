@@ -2,6 +2,14 @@
 
 Updated October 25, 2026 (America/New_York). **Current verified source baseline:** [PR CI 40164915215](https://github.com/pskeffington/pip_boy/actions/runs/40164915215) passed catalog, Linux stable and Rust 1.81.0, native macOS PTY, native Windows ConPTY and the deny-all physical-broker tests at `e7d1090`. This is not physical-hardware, packaging or accessibility certification. **Sections farther below preserve historical development snapshots**; any older “pending”, “unexecuted” or “startup failure” wording describes the state *at the cited historical revision*, not the current status.
 
+## Mac → PlayStation launch pass
+
+Adds a PlayStation IP preset (TCP 27000 by default), protocol-aware diagnostic JSON, console-specific failure advice, and `scripts/launch-playstation.command` for Finder/Terminal. Diagnostic readiness requires a complete reachable game root, not merely TCP success; selected PlayStation profile is explicitly not authenticated console identity. Other edition expansion is deferred.
+
+Local Linux stable and Rust 1.81.0 passed **17 CLI + 111 core + 12 broker = 140 tests**; formatting, Clippy, build, source validation, native CLI and game mock-peer smoke passed. The game suite now checks the preset/diagnostic contract and rejects conflicting options/hostnames. On native macOS CI it additionally executes the actual launcher through a repository symlink containing spaces, from a different working directory, against a temporary protocol peer. This Mac-specific execution must be verified at the published head. Executable mode is part of the launcher contract.
+
+An actual PlayStation game session remains unavailable; PS4/PS5 build-specific support is not attested by the mock peer. See [Mac → PlayStation setup and live acceptance](MAC_PLAYSTATION.md).
+
 ## Fallout 4 companion precursor — controlled-peer validation
 
 The opt-in read-only game browser is implemented with a transactional binary database decoder and direct TCP client. Local stable and Rust 1.81.0 passed **16 CLI + 111 core + 12 broker = 139 tests**; stable Clippy, build, formatting, offline catalog, native CLI and runtime PTY smoke passed. `tools/smoke_game.py` passed a loopback mock game with byte-fragmented frames, heartbeat verification, late references, busy/oversize refusal, no gameplay commands/data-file writes, and interactive PTY navigation/exit restoration. The same game harness is wired into Windows ConPTY and macOS/Linux CI. New hosted CI remains to be verified at publication.

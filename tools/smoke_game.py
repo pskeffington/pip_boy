@@ -41,7 +41,7 @@ def exercise(mode):
                         pass # TCP close may reset after the final snapshot/terminal exit
             except Exception as error: errors.append(error)
         thread=threading.Thread(target=peer);thread.start()
-        command=[str(BIN),'game','--connect',address,'--confirm']
+        command=[str(BIN),'game','--playstation' if mode in ('playstation','mac-launcher') else '--connect',address,'--confirm']
         if mode=='interactive':
             if os.name=='nt':
                 from smoke_windows_conpty import ConPty, configure_windows_api
@@ -73,16 +73,31 @@ def exercise(mode):
                     if process.poll() is None:process.kill()
                     process.wait();os.close(master);os.close(slave)
         else:
-            result=subprocess.run([*command,'--snapshot'],capture_output=True,text=True,timeout=15,env=dict(os.environ,PIPBOY_HOME=temp))
+            invocation=[*command,'--diagnose' if mode in ('playstation','mac-launcher') else '--snapshot']
+            if mode=='mac-launcher':
+                project=Path(temp)/'Project With Spaces'
+                project.symlink_to(ROOT,target_is_directory=True)
+                invocation=[str(project/'scripts'/'launch-playstation.command'),address,'--diagnose']
+            result=subprocess.run(invocation,capture_output=True,text=True,timeout=30,env=dict(os.environ,PIPBOY_HOME=str(Path(temp)/'data')),cwd=temp)
         thread.join(10);assert not thread.is_alive();assert not errors,(mode,errors)
-        assert not list(Path(temp).iterdir())
+        assert not (Path(temp)/'data').exists()
+        assert set(p.name for p in Path(temp).iterdir()) <= {'Project With Spaces'}
         if mode=='interactive':pass
+        elif mode in ('playstation','mac-launcher'):
+            assert result.returncode==0,result.stderr
+            report=json.loads(result.stdout)
+            assert report['status']=='ready' and report['target_profile']=='playstation'
+            assert report['handshake']=={'version':'fixture','lang':'en'}
+            assert report['root_fields']==['HP']
+            assert report['console_identity_verified'] is False
+            assert report['game_actions_enabled'] is False
         elif mode=='normal':
             assert result.returncode==0,result.stderr
             report=json.loads(result.stdout);assert report['data']=={'HP':100};assert report['source']==address
         else: assert result.returncode!=0 and not result.stdout,(mode,result)
-for mode in ['normal','interactive','busy','oversize']:exercise(mode)
-for args in [[],['--connect','localhost:27000','--confirm'],['--connect','127.0.0.1:27000'],['--connect','127.0.0.1:27000','--confirm','--confirm']]:
+for mode in ['normal','interactive','playstation','busy','oversize']:exercise(mode)
+if __import__('sys').platform=='darwin':exercise('mac-launcher')
+for args in [[],['--connect','localhost:27000','--confirm'],['--connect','127.0.0.1:27000'],['--connect','127.0.0.1:27000','--confirm','--confirm'],['--playstation','example.com','--confirm'],['--playstation','127.0.0.1','--connect','127.0.0.1:1','--confirm'],['--playstation','127.0.0.1','--confirm','--snapshot','--diagnose']]:
     result=subprocess.run([str(BIN),'game',*args],capture_output=True,timeout=5)
     assert result.returncode!=0 and not result.stdout
 with tempfile.TemporaryDirectory() as temporary:

@@ -9,23 +9,39 @@ use ratatui::{
 use std::{
     error::Error,
     io::{self, Read, Write},
-    net::{SocketAddr, TcpStream},
+    net::{IpAddr, SocketAddr, TcpStream},
     time::{Duration, Instant},
 };
 
+fn playstation_address(raw: &str) -> Result<SocketAddr, std::net::AddrParseError> {
+    raw.parse::<SocketAddr>()
+        .or_else(|_| raw.parse::<IpAddr>().map(|ip| SocketAddr::new(ip, 27000)))
+}
+
 pub fn run(args: Vec<String>) -> Result<(), Box<dyn Error>> {
-    let usage = "usage: pipboy game --connect IP:PORT --confirm [--snapshot]";
+    let usage = "usage: pipboy game (--connect IP:PORT | --playstation IP[:PORT]) --confirm [--snapshot | --diagnose]";
     let mut address = None;
     let mut confirm = false;
     let mut snapshot = false;
+    let mut diagnose = false;
+    let mut playstation = false;
     let mut iter = args.iter();
     while let Some(arg) = iter.next() {
         match arg.as_str() {
             "--connect" if address.is_none() => {
                 address = Some(iter.next().ok_or(usage)?.parse::<SocketAddr>()?)
             }
+            "--playstation" if address.is_none() => {
+                let raw = iter.next().ok_or(usage)?;
+                address = Some(playstation_address(raw)?);
+                playstation = true;
+            }
             "--confirm" if !confirm => confirm = true,
-            "--snapshot" if !snapshot => snapshot = true,
+            "--snapshot" if !snapshot && !diagnose => snapshot = true,
+            "--diagnose" if !snapshot && !diagnose => {
+                snapshot = true;
+                diagnose = true;
+            }
             _ => return Err(usage.into()),
         }
     }
@@ -40,8 +56,26 @@ pub fn run(args: Vec<String>) -> Result<(), Box<dyn Error>> {
     {
         return Err("game connection denied by saved network.fetch preference; clear it explicitly with pipboy permissions clear network.fetch".into());
     }
+    let target = if playstation {
+        "playstation"
+    } else {
+        "generic"
+    };
+    let advice = if playstation {
+        "check the console IP, same LAN (avoid guest isolation/VPN), loaded Fallout 4 save, and companion setting on that exact PS4/PS5 game build; allow macOS Local Network access if prompted; PC companion-enabler mods do not apply to PlayStation"
+    } else {
+        "check game edition/service and firewall; Anniversary builds may require a game-side companion enabler"
+    };
     // Literal addresses avoid DNS activity and any network discovery.
-    let mut socket = TcpStream::connect_timeout(&address, Duration::from_secs(3)).map_err(|error| io::Error::new(error.kind(), format!("cannot reach Fallout 4 at {address}: {error}; check game edition/service and firewall; Anniversary builds may require a game-side companion enabler (docs/GAME_MODE.md)")))?;
+    let mut socket =
+        TcpStream::connect_timeout(&address, Duration::from_secs(3)).map_err(|error| {
+            io::Error::new(
+                error.kind(),
+                format!(
+                    "cannot reach Fallout 4 at {address}: {error}; {advice} (docs/GAME_MODE.md)"
+                ),
+            )
+        })?;
     socket.set_read_timeout(Some(Duration::from_millis(50)))?;
     socket.set_write_timeout(Some(Duration::from_secs(2)))?;
     let mut decoder = Frames::default();
@@ -106,11 +140,20 @@ pub fn run(args: Vec<String>) -> Result<(), Box<dyn Error>> {
         if !db.ready() && started.elapsed() > Duration::from_secs(10) {
             return Err("no Fallout 4 root database received; enable Pip-Boy App in the game and load a save".into());
         }
+        if diagnose && db.ready() {
+            println!(
+                "{}",
+                serde_json::to_string_pretty(
+                    &serde_json::json!({"status":"ready","target_profile":target,"endpoint":address.to_string(),"handshake":serde_json::from_str::<serde_json::Value>(&version).ok(),"root_fields":db.children(0).iter().map(|entry|&entry.0).collect::<Vec<_>>(),"game_actions_enabled":false,"console_identity_verified":false})
+                )?
+            );
+            return Ok(());
+        }
         if snapshot && db.ready() {
             println!(
                 "{}",
                 serde_json::to_string_pretty(
-                    &serde_json::json!({"game":"fallout4","source":address.to_string(),"game_handshake":version,"view_limits":{"depth":32,"nodes":5000},"data":db.view(0)})
+                    &serde_json::json!({"game":"fallout4","target_profile":target,"source":address.to_string(),"game_handshake":version,"view_limits":{"depth":32,"nodes":5000},"data":db.view(0)})
                 )?
             );
             return Ok(());
@@ -127,7 +170,7 @@ pub fn run(args: Vec<String>) -> Result<(), Box<dyn Error>> {
             .collect::<Vec<_>>()
             .join(" / ");
         let mut body = format!(
-            "GAME MODE / Fallout 4 / {address}\n{version}\n{} | update age {} s | read-only\n\n",
+            "GAME MODE / Fallout 4 / {target} / {address}\n{version}\n{} | update age {} s | read-only\n\n",
             if updated {
                 "CONNECTED"
             } else {
@@ -195,5 +238,28 @@ pub fn run(args: Vec<String>) -> Result<(), Box<dyn Error>> {
                 }
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn playstation_preset_defaults_to_companion_port_without_dns() {
+        assert_eq!(
+            playstation_address("192.168.1.50").unwrap().to_string(),
+            "192.168.1.50:27000"
+        );
+        assert_eq!(
+            playstation_address("192.168.1.50:12345").unwrap().port(),
+            12345
+        );
+        assert_eq!(playstation_address("fd00::1").unwrap().port(), 27000);
+        assert_eq!(
+            playstation_address("[fd00::1]:12345").unwrap().port(),
+            12345
+        );
+        assert!(playstation_address("playstation.local").is_err());
+        assert!(playstation_address("192.168.1.50;touch /tmp/example").is_err());
     }
 }

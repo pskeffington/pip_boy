@@ -42,10 +42,10 @@ Use `status --details` or `sample --details` for per-field units, quality, missi
 ## Fallout 4 game mode
 
 ```bash
-cargo run --locked -p pipboy -- game --connect 127.0.0.1:27000 --confirm
+./scripts/launch-playstation.command 192.168.1.50
 ```
 
-Enable the game's Pip-Boy App setting and load a save first. Use the host LAN IP when running Rust-Boy on another computer. Game mode browses live game objects and updates with keyboard navigation; it is currently read-only. **Actual game-build compatibility remains unverified.** See [setup, controls and limits](docs/GAME_MODE.md).
+Current priority: **Mac → PlayStation**. Double-click `scripts/launch-playstation.command` or substitute your console IP above. See [Mac/PlayStation setup and diagnostics](docs/MAC_PLAYSTATION.md). Enable the game's Pip-Boy App setting on a build that provides it and load a save first. Use the host LAN IP when running Rust-Boy on another computer. Game mode browses live game objects and updates with keyboard navigation; it is currently read-only. **Actual game-build compatibility remains unverified.** See [setup, controls and limits](docs/GAME_MODE.md).
 
 ## Current capabilities
 

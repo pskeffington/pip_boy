@@ -19,6 +19,7 @@ Technical contracts, architecture decisions, research provenance and validation 
 
 | Topic | Documents |
 | --- | --- |
+| Mac → PlayStation | [Launcher, setup and protocol diagnostics](MAC_PLAYSTATION.md) |
 | Fallout 4 | [Game mode setup and protocol](GAME_MODE.md) |
 | Local host and UI | [Host telemetry and field quality](HOST_TELEMETRY.md) · [Object model](OBJECT_MODEL.md) · [Scoped local operations](LOCAL_OPERATIONS.md) · [Console](CONSOLE.md) |
 | Data and persistence | [Storage](STORAGE.md) · [Permission preferences](PERMISSIONS.md) |

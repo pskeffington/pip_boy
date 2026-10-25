@@ -2,7 +2,9 @@
 
 Status: implemented **read-only companion browser**, with controlled-server protocol and terminal tests. Actual Fallout 4 builds/platforms are **not yet live-validated**. This is not a complete replacement for every official Pip-Boy app feature. Equip/use/drop, quest toggles, travel, radio control and local-map image rendering are not implemented.
 
-## Edition compatibility target: all versions
+**Current priority: [Mac launch → PlayStation](MAC_PLAYSTATION.md).** The broader edition matrix below is retained as deferred scope.
+
+## Broader edition compatibility target (deferred)
 
 The requested target covers all versions; **no edition is yet certified with a real running game**. A client cannot connect to a service the game does not expose.
 

@@ -22,7 +22,7 @@ mod tui;
 
 fn help() {
     println!("{PRODUCT_NAME} | {PRODUCT_DESCRIPTOR}");
-    println!("usage: {CLI_COMMAND} [game --connect IP:PORT --confirm [--snapshot]|tui|status [--details] [--json]|sample [--count N --interval-ms MS --details]|sources [query]|modules|plan [G0..G4]|evidence [query]|doctor|permissions <list|request KEY|deny KEY|clear KEY>|simulate <list|run ID [--confirm]|replay ID SCENARIO [--confirm]|transport ID --count N --capacity N [--confirm]|adapter <input|display|serial> [--confirm]>|notes <list|add TEXT|search QUERY|export|import FILE>|help]");
+    println!("usage: {CLI_COMMAND} [game (--connect IP:PORT | --playstation IP) --confirm [--snapshot|--diagnose]|tui|status [--details] [--json]|sample [--count N --interval-ms MS --details]|sources [query]|modules|plan [G0..G4]|evidence [query]|doctor|permissions <list|request KEY|deny KEY|clear KEY>|simulate <list|run ID [--confirm]|replay ID SCENARIO [--confirm]|transport ID --count N --capacity N [--confirm]|adapter <input|display|serial> [--confirm]>|notes <list|add TEXT|search QUERY|export|import FILE>|help]");
 }
 
 fn main() {
