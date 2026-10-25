@@ -13,6 +13,7 @@ Rust-Boy Reclamation Scout now includes a **local-only site register** with manu
 
 ## Constraints and safeguards
 
+- **Web Mercator map limits.** Latitudes beyond about ±85.05° remain valid in the saved WGS84 record and GeoJSON export but are clamped in the map display; check exact coordinates in the record before navigation.
 - **Manual input only.** Entered positions do not become GPS fixes. Accuracy is an operator estimate (or unknown), not a measured sensor value. The map explicitly labels site focus as manual, distinct from a browser GPS fix.
 - Map marker retrieval uses the locally gated `GET /api/reclamation/map` endpoint. It contains only identifier, label, category, condition, priority, status, coordinates, source, and accuracy; **notes are omitted**. No site records are fetched just by opening MAP. Markers are not retained across map mounts.
 - When saved sites are visible, **WEB ON** is blocked; opening or focusing a site disables prior online map access and cancels in-flight area requests. Turning SITES OFF removes the markers and restores the previous map center. This prevents site-based extent lookup from being sent to Overpass without a separate deliberate manual map action. The map's separate browser-GPS path is permission-gated.
