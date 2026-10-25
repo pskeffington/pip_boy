@@ -551,7 +551,8 @@ function inputForm(root, id) {
     try {
       const result = await api("/api/experiment", payload);
       if (openedTool === id) output.textContent = result.output;
-      ui.foot.textContent = result.kind === "computed" ? "RESULT / LOCAL ONLY" : "INFORMATION / NO CONNECTION";
+      ui.foot.textContent = result.kind === "probe" ? "TCP CHECK / CONNECT ATTEMPT"
+        : result.kind === "computed" ? "RESULT / LOCAL ONLY" : "INFO / OFFLINE";
     } catch (error) {
       if (openedTool === id) output.textContent = "ERROR / " + error.message;
       notify(error.message, true);
