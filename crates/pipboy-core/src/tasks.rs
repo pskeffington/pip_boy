@@ -153,8 +153,9 @@ pub struct RemoteReport {
 pub fn valid_device_id(value: &str) -> bool {
     (2..=32).contains(&value.len())
         && value.is_ascii()
-        && value.bytes().all(|ch| ch.is_ascii_lowercase()
-            || ch.is_ascii_digit() || ch == b'-')
+        && value
+            .bytes()
+            .all(|ch| ch.is_ascii_lowercase() || ch.is_ascii_digit() || ch == b'-')
         && !value.starts_with('-')
         && !value.ends_with('-')
 }
@@ -210,9 +211,7 @@ impl Task {
                 .acknowledged_at
                 .is_none_or(|ack| self.sent_at.is_some_and(|sent| ack >= sent))
             && self.origin.as_ref().is_none_or(|origin| {
-                valid_device_id(&origin.device)
-                    && origin.task_id > 0
-                    && origin.source_revision > 0
+                valid_device_id(&origin.device) && origin.task_id > 0 && origin.source_revision > 0
             })
             && self.delivery.as_ref().is_none_or(|receipt| {
                 valid_device_id(&receipt.peer)
@@ -581,8 +580,7 @@ impl TaskStore {
         let mut board = self.load()?;
         if let Some(existing) = board.tasks.iter().find(|task| {
             task.origin.as_ref().is_some_and(|origin| {
-                origin.device == input.from_device
-                    && origin.task_id == input.origin_task_id
+                origin.device == input.from_device && origin.task_id == input.origin_task_id
             })
         }) {
             let source = existing.origin.as_ref().expect("verified origin");
@@ -605,7 +603,9 @@ impl TaskStore {
             return Err(invalid("Task board capacity reached"));
         }
         let id = board.next_id;
-        board.next_id = id.checked_add(1).ok_or_else(|| invalid("Task IDs exhausted"))?;
+        board.next_id = id
+            .checked_add(1)
+            .ok_or_else(|| invalid("Task IDs exhausted"))?;
         let at = now();
         let task = Task {
             id,
@@ -644,7 +644,11 @@ impl TaskStore {
     /// Called only after the sender verifies the SSH remote host and its
     /// machine-readable receipt for a durably stored assignment.
     pub fn record_device_delivery(
-        &self, id: u64, revision: u64, alias: &str, remote_id: u64,
+        &self,
+        id: u64,
+        revision: u64,
+        alias: &str,
+        remote_id: u64,
     ) -> io::Result<Task> {
         if !valid_device_id(alias) || remote_id == 0 {
             return Err(invalid("Invalid destination device or receipt"));
@@ -661,9 +665,12 @@ impl TaskStore {
                 delivered_at: at,
             });
             task.remote_progress = None;
-            Ok(("peer_delivered", format!(
-                "Receiver confirmed durable storage at peer {alias}; no human acknowledgment"
-            )))
+            Ok((
+                "peer_delivered",
+                format!(
+                    "Receiver confirmed durable storage at peer {alias}; no human acknowledgment"
+                ),
+            ))
         })
     }
 
@@ -671,28 +678,42 @@ impl TaskStore {
         if !valid_device_id(device) {
             return Err(invalid("Invalid source device"));
         }
-        Ok(self.load()?.tasks.into_iter().filter_map(|task| {
-            let origin = task.origin?;
-            if origin.device != device { return None; }
-            Some(RemoteReport {
-                from_device: origin.device,
-                origin_task_id: origin.task_id,
-                remote_task_id: task.id,
-                status: task.status,
-                acknowledged: task.acknowledged_at.is_some(),
+        Ok(self
+            .load()?
+            .tasks
+            .into_iter()
+            .filter_map(|task| {
+                let origin = task.origin?;
+                if origin.device != device {
+                    return None;
+                }
+                Some(RemoteReport {
+                    from_device: origin.device,
+                    origin_task_id: origin.task_id,
+                    remote_task_id: task.id,
+                    status: task.status,
+                    acknowledged: task.acknowledged_at.is_some(),
+                })
             })
-        }).collect())
+            .collect())
     }
 
     /// Deliberate refresh from an SSH-authenticated peer. Do not overwrite
     /// locally managed status or equate transport receipts with a real person.
     pub fn reconcile_remote_reports(
-        &self, alias: &str, device: &str, reports: &[RemoteReport],
+        &self,
+        alias: &str,
+        device: &str,
+        reports: &[RemoteReport],
     ) -> io::Result<usize> {
-        if !valid_device_id(alias) || !valid_device_id(device)
+        if !valid_device_id(alias)
+            || !valid_device_id(device)
             || reports.len() > MAX_TASKS
-            || reports.iter().any(|report| report.from_device != device
-                || report.origin_task_id == 0 || report.remote_task_id == 0)
+            || reports.iter().any(|report| {
+                report.from_device != device
+                    || report.origin_task_id == 0
+                    || report.remote_task_id == 0
+            })
         {
             return Err(invalid("Invalid remote progress report"));
         }
@@ -700,16 +721,23 @@ impl TaskStore {
         let mut board = self.load()?;
         let mut changed = 0;
         for task in &mut board.tasks {
-            let Some(delivery) = &task.delivery else { continue; };
-            if delivery.peer != alias { continue; }
+            let Some(delivery) = &task.delivery else {
+                continue;
+            };
+            if delivery.peer != alias {
+                continue;
+            }
             let matching = reports.iter().find(|report| {
-                report.origin_task_id == task.id
-                    && report.remote_task_id == delivery.remote_task_id
+                report.origin_task_id == task.id && report.remote_task_id == delivery.remote_task_id
             });
-            let Some(report) = matching else { continue; };
+            let Some(report) = matching else {
+                continue;
+            };
             if task.remote_progress.as_ref().is_some_and(|old| {
                 old.status == report.status && old.acknowledged == report.acknowledged
-            }) { continue; }
+            }) {
+                continue;
+            }
             let at = now().max(task.updated_at);
             task.remote_progress = Some(RemoteProgress {
                 status: report.status,
@@ -717,18 +745,26 @@ impl TaskStore {
                 observed_at: at,
             });
             task.updated_at = at;
-            task.revision = task.revision.checked_add(1)
+            task.revision = task
+                .revision
+                .checked_add(1)
                 .ok_or_else(|| invalid("Task revision overflow"))?;
             task.events.push(Event {
                 at,
                 kind: "peer_progress".into(),
-                detail: format!("Peer {alias} reports {:?}; acknowledged={}",
-                    report.status, report.acknowledged),
+                detail: format!(
+                    "Peer {alias} reports {:?}; acknowledged={}",
+                    report.status, report.acknowledged
+                ),
             });
-            if task.events.len() > MAX_EVENTS { task.events.remove(0); }
+            if task.events.len() > MAX_EVENTS {
+                task.events.remove(0);
+            }
             changed += 1;
         }
-        if changed > 0 { self.save(&board)?; }
+        if changed > 0 {
+            self.save(&board)?;
+        }
         Ok(changed)
     }
 
@@ -795,13 +831,15 @@ mod tests {
             origin_revision: 2,
             task: incoming_task(),
         };
-        let (imported, created) = store.import_remote(RemoteAssignment {
-            schema_version: packet.schema_version,
-            from_device: packet.from_device.clone(),
-            origin_task_id: packet.origin_task_id,
-            origin_revision: packet.origin_revision,
-            task: incoming_task(),
-        }).unwrap();
+        let (imported, created) = store
+            .import_remote(RemoteAssignment {
+                schema_version: packet.schema_version,
+                from_device: packet.from_device.clone(),
+                origin_task_id: packet.origin_task_id,
+                origin_revision: packet.origin_revision,
+                task: incoming_task(),
+            })
+            .unwrap();
         assert!(created);
         assert_eq!(imported.id, 1);
         assert_eq!(imported.origin.as_ref().unwrap().device, "overseer-a");
@@ -813,16 +851,28 @@ mod tests {
         assert_eq!(same.id, imported.id);
         assert_eq!(store.load().unwrap().tasks.len(), 1);
         let ack = store.acknowledge(imported.id, imported.revision).unwrap();
-        let working = store.set_status(ack.id, ack.revision,
-            Status::InProgress, "Route verification").unwrap();
+        let working = store
+            .set_status(
+                ack.id,
+                ack.revision,
+                Status::InProgress,
+                "Route verification",
+            )
+            .unwrap();
         let reports = store.reports_for("overseer-a").unwrap();
         assert_eq!(reports.len(), 1);
         assert_eq!(reports[0].origin_task_id, 14);
         assert_eq!(reports[0].status, Status::InProgress);
         assert!(reports[0].acknowledged);
         assert_eq!(working.status, Status::InProgress);
-        assert_eq!(TaskStore::new(temp.path().join("receiver"))
-            .load().unwrap().tasks.len(), 1);
+        assert_eq!(
+            TaskStore::new(temp.path().join("receiver"))
+                .load()
+                .unwrap()
+                .tasks
+                .len(),
+            1
+        );
         let old_revision = RemoteAssignment {
             schema_version: 1,
             from_device: "overseer-a".into(),
@@ -830,12 +880,19 @@ mod tests {
             origin_revision: 1,
             task: incoming_task(),
         };
-        assert_eq!(store.import_remote(old_revision).unwrap_err().kind(),
-            io::ErrorKind::AlreadyExists);
+        assert_eq!(
+            store.import_remote(old_revision).unwrap_err().kind(),
+            io::ErrorKind::AlreadyExists
+        );
         let unknown = RemoteAssignment {
-            schema_version: 1, from_device: "evil".into(),
-            origin_task_id: 15, origin_revision: 1,
-            task: NewTask { role: "unrecognized".into(), ..incoming_task() }
+            schema_version: 1,
+            from_device: "evil".into(),
+            origin_task_id: 15,
+            origin_revision: 1,
+            task: NewTask {
+                role: "unrecognized".into(),
+                ..incoming_task()
+            },
         };
         assert!(store.import_remote(unknown).is_err());
     }
@@ -845,14 +902,20 @@ mod tests {
         let temp = tempfile::tempdir().unwrap();
         let store = TaskStore::new(temp.path().join("manager"));
         let task = store.create(new_task()).unwrap();
-        let sent = store.record_device_delivery(task.id, task.revision,
-            "scout-one", 42).unwrap();
+        let sent = store
+            .record_device_delivery(task.id, task.revision, "scout-one", 42)
+            .unwrap();
         assert_eq!(sent.revision, 2);
         assert!(sent.delivery.is_some());
         assert!(sent.acknowledged_at.is_none());
         assert!(sent.remote_progress.is_none());
-        assert_eq!(store.record_device_delivery(task.id, 1,
-            "scout-one", 42).unwrap_err().kind(), io::ErrorKind::AlreadyExists);
+        assert_eq!(
+            store
+                .record_device_delivery(task.id, 1, "scout-one", 42)
+                .unwrap_err()
+                .kind(),
+            io::ErrorKind::AlreadyExists
+        );
         let first = RemoteReport {
             from_device: "overseer-a".into(),
             origin_task_id: task.id,
@@ -860,23 +923,40 @@ mod tests {
             status: Status::InProgress,
             acknowledged: true,
         };
-        assert!(store.reconcile_remote_reports("scout-one", "wrong",
-            std::slice::from_ref(&first)).is_err());
-        assert_eq!(store.reconcile_remote_reports("scout-one", "overseer-a",
-            std::slice::from_ref(&first)).unwrap(), 1);
+        assert!(store
+            .reconcile_remote_reports("scout-one", "wrong", std::slice::from_ref(&first))
+            .is_err());
+        assert_eq!(
+            store
+                .reconcile_remote_reports("scout-one", "overseer-a", std::slice::from_ref(&first))
+                .unwrap(),
+            1
+        );
         let after = store.task(task.id).unwrap();
         assert_eq!(after.revision, 3);
         assert_eq!(after.status, Status::Todo);
-        assert_eq!(after.remote_progress.as_ref().unwrap().status, Status::InProgress);
+        assert_eq!(
+            after.remote_progress.as_ref().unwrap().status,
+            Status::InProgress
+        );
         assert!(after.remote_progress.as_ref().unwrap().acknowledged);
         assert!(after.acknowledged_at.is_none());
-        assert_eq!(store.reconcile_remote_reports("scout-one", "overseer-a",
-            &[first]).unwrap(), 0);
+        assert_eq!(
+            store
+                .reconcile_remote_reports("scout-one", "overseer-a", &[first])
+                .unwrap(),
+            0
+        );
         assert_eq!(store.load().unwrap().tasks.len(), 1);
         // Future schema and corruption must never be destroyed by import.
         fs::write(store.path(), "{\"schema_version\":999}").unwrap();
-        assert!(store.reconcile_remote_reports("scout-one", "overseer-a", &[]).is_err());
-        assert_eq!(fs::read_to_string(store.path()).unwrap(), "{\"schema_version\":999}");
+        assert!(store
+            .reconcile_remote_reports("scout-one", "overseer-a", &[])
+            .is_err());
+        assert_eq!(
+            fs::read_to_string(store.path()).unwrap(),
+            "{\"schema_version\":999}"
+        );
     }
 
     #[test]

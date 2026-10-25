@@ -30,9 +30,10 @@ fn setup() -> io::Result<(PeerConfig, PeerStore, TaskStore)> {
 }
 
 fn own_device(config: &PeerConfig) -> io::Result<&str> {
-    config.device_id.as_deref().ok_or_else(|| {
-        invalid("Initialize the device with 'pipboy peer init NAME --confirm'")
-    })
+    config
+        .device_id
+        .as_deref()
+        .ok_or_else(|| invalid("Initialize the device with 'pipboy peer init NAME --confirm'"))
 }
 
 /// Every option is fixed; target is tightly validated by PeerStore; the only
@@ -86,12 +87,21 @@ fn run_ssh(peer: &Peer, command: &str, payload: Option<&[u8]>) -> io::Result<Val
         return Err(invalid("Assignment packet exceeds 8 KiB"));
     }
     let mut child = ssh_command(peer, command).spawn().map_err(|_| {
-        io::Error::new(io::ErrorKind::NotFound, "OpenSSH client unavailable or unable to start")
+        io::Error::new(
+            io::ErrorKind::NotFound,
+            "OpenSSH client unavailable or unable to start",
+        )
     })?;
-    let stdout = child.stdout.take().ok_or_else(|| invalid("Missing SSH output stream"))?;
+    let stdout = child
+        .stdout
+        .take()
+        .ok_or_else(|| invalid("Missing SSH output stream"))?;
     let output = thread::spawn(move || {
         let mut bytes = Vec::new();
-        stdout.take(MAX_RESPONSE + 1).read_to_end(&mut bytes).map(|_| bytes)
+        stdout
+            .take(MAX_RESPONSE + 1)
+            .read_to_end(&mut bytes)
+            .map(|_| bytes)
     });
     // Bounded packet fits a pipe. Dropping stdin completes the remote frame.
     if let Some(mut pipe) = child.stdin.take() {
@@ -100,8 +110,10 @@ fn run_ssh(peer: &Peer, command: &str, payload: Option<&[u8]>) -> io::Result<Val
                 let _ = child.kill();
                 let _ = child.wait();
                 let _ = output.join();
-                return Err(io::Error::new(io::ErrorKind::BrokenPipe,
-                    "Peer command declined the assignment packet"));
+                return Err(io::Error::new(
+                    io::ErrorKind::BrokenPipe,
+                    "Peer command declined the assignment packet",
+                ));
             }
         }
     }
@@ -114,12 +126,16 @@ fn run_ssh(peer: &Peer, command: &str, payload: Option<&[u8]>) -> io::Result<Val
             let _ = child.kill();
             let _ = child.wait();
             let _ = output.join();
-            return Err(io::Error::new(io::ErrorKind::TimedOut,
-                "SSH peer request timed out; no local delivery receipt recorded"));
+            return Err(io::Error::new(
+                io::ErrorKind::TimedOut,
+                "SSH peer request timed out; no local delivery receipt recorded",
+            ));
         }
         thread::sleep(Duration::from_millis(40));
     };
-    let bytes = output.join().map_err(|_| invalid("Peer output reader failed"))??;
+    let bytes = output
+        .join()
+        .map_err(|_| invalid("Peer output reader failed"))??;
     if !status.success() {
         return Err(io::Error::new(io::ErrorKind::PermissionDenied,
             "Peer rejected SSH session or remote command; verify pinned host key, SSH key, and remote Rust-Boy setup"));
@@ -132,21 +148,27 @@ fn run_ssh(peer: &Peer, command: &str, payload: Option<&[u8]>) -> io::Result<Val
 }
 
 fn get_id<'a>(value: &'a Value, field: &str) -> io::Result<&'a str> {
-    value.get(field).and_then(Value::as_str)
+    value
+        .get(field)
+        .and_then(Value::as_str)
         .ok_or_else(|| invalid("Peer response missing identifying field"))
 }
 
 fn get_num(value: &Value, field: &str) -> io::Result<u64> {
-    value.get(field).and_then(Value::as_u64)
+    value
+        .get(field)
+        .and_then(Value::as_u64)
         .filter(|number| *number > 0)
         .ok_or_else(|| invalid("Peer response missing numeric field"))
 }
 
 pub fn safe_peers_from_store(store: &PeerStore) -> io::Result<Value> {
     let config = store.load()?;
-    let entries: Vec<Value> = config.peers.iter().map(|entry| {
-        json!({"alias": entry.alias, "target": entry.target})
-    }).collect();
+    let entries: Vec<Value> = config
+        .peers
+        .iter()
+        .map(|entry| json!({"alias": entry.alias, "target": entry.target}))
+        .collect();
     Ok(json!({
         "ready": config.device_id.is_some() && !entries.is_empty(),
         "device_id": config.device_id,
@@ -156,7 +178,11 @@ pub fn safe_peers_from_store(store: &PeerStore) -> io::Result<Value> {
 }
 
 pub fn send_from_store(
-    tasks: &TaskStore, peers: &PeerStore, id: u64, revision: u64, alias: &str,
+    tasks: &TaskStore,
+    peers: &PeerStore,
+    id: u64,
+    revision: u64,
+    alias: &str,
 ) -> io::Result<Task> {
     if !valid_device_id(alias) || id == 0 || revision == 0 {
         return Err(invalid("Invalid recipient alias, task ID or revision"));
@@ -166,11 +192,18 @@ pub fn send_from_store(
     let destination = peers.get(alias)?;
     let task = tasks.task(id)?;
     if task.revision != revision {
-        return Err(io::Error::new(io::ErrorKind::AlreadyExists,
-            "Task changed; reload before sending"));
+        return Err(io::Error::new(
+            io::ErrorKind::AlreadyExists,
+            "Task changed; reload before sending",
+        ));
     }
-    if task.origin.is_some() || task.delivery.is_some() || task.status == pipboy_core::tasks::Status::Done {
-        return Err(invalid("Incoming, completed, or already delivered tasks cannot be sent"));
+    if task.origin.is_some()
+        || task.delivery.is_some()
+        || task.status == pipboy_core::tasks::Status::Done
+    {
+        return Err(invalid(
+            "Incoming, completed, or already delivered tasks cannot be sent",
+        ));
     }
     let packet = RemoteAssignment {
         schema_version: 1,
@@ -195,7 +228,9 @@ pub fn send_from_store(
         || get_id(&receipt, "from_device")? != source
         || get_num(&receipt, "origin_task_id")? != id
     {
-        return Err(invalid("SSH peer returned an unexpected or mismatched storage receipt"));
+        return Err(invalid(
+            "SSH peer returned an unexpected or mismatched storage receipt",
+        ));
     }
     let remote_id = get_num(&receipt, "remote_task_id")?;
     tasks.record_device_delivery(id, revision, alias, remote_id)
@@ -206,16 +241,18 @@ pub fn send_task(id: u64, revision: u64, alias: &str) -> io::Result<Task> {
     send_from_store(&tasks, &peers, id, revision, alias)
 }
 
-pub fn sync_from_store(
-    tasks: &TaskStore, peers: &PeerStore, alias: &str,
-) -> io::Result<usize> {
+pub fn sync_from_store(tasks: &TaskStore, peers: &PeerStore, alias: &str) -> io::Result<usize> {
     if !valid_device_id(alias) {
         return Err(invalid("Invalid peer alias"));
     }
     let config = peers.load()?;
     let source = own_device(&config)?;
     let destination = peers.get(alias)?;
-    let response = run_ssh(&destination, &format!("pipboy peer receipts {source}"), None)?;
+    let response = run_ssh(
+        &destination,
+        &format!("pipboy peer receipts {source}"),
+        None,
+    )?;
     if response.get("schema_version").and_then(Value::as_u64) != Some(1)
         || get_id(&response, "kind")? != "reports"
         || get_id(&response, "receiver_device")? != alias
@@ -223,10 +260,12 @@ pub fn sync_from_store(
     {
         return Err(invalid("Peer returned a mismatched progress response"));
     }
-    let raw = response.get("reports").cloned()
+    let raw = response
+        .get("reports")
+        .cloned()
         .ok_or_else(|| invalid("Peer reports missing"))?;
-    let reports: Vec<RemoteReport> = serde_json::from_value(raw)
-        .map_err(|_| invalid("Remote reports are malformed"))?;
+    let reports: Vec<RemoteReport> =
+        serde_json::from_value(raw).map_err(|_| invalid("Remote reports are malformed"))?;
     tasks.reconcile_remote_reports(alias, source, &reports)
 }
 
@@ -243,23 +282,28 @@ fn receive() -> io::Result<()> {
     if data.len() as u64 > MAX_REQUEST {
         return Err(invalid("Assignment frame exceeds limit"));
     }
-    let input: RemoteAssignment = serde_json::from_slice(&data)
-        .map_err(|_| invalid("Invalid assignment frame"))?;
+    let input: RemoteAssignment =
+        serde_json::from_slice(&data).map_err(|_| invalid("Invalid assignment frame"))?;
     if input.from_device == local || !config.trusted_senders.contains(&input.from_device) {
-        return Err(io::Error::new(io::ErrorKind::PermissionDenied,
-            "Sender device label is not trusted on this device"));
+        return Err(io::Error::new(
+            io::ErrorKind::PermissionDenied,
+            "Sender device label is not trusted on this device",
+        ));
     }
     let from = input.from_device.clone();
     let source_id = input.origin_task_id;
     let (stored, _) = tasks.import_remote(input)?;
-    println!("{}", json!({
-        "schema_version": 1,
-        "kind": "stored",
-        "receiver_device": local,
-        "from_device": from,
-        "origin_task_id": source_id,
-        "remote_task_id": stored.id,
-    }));
+    println!(
+        "{}",
+        json!({
+            "schema_version": 1,
+            "kind": "stored",
+            "receiver_device": local,
+            "from_device": from,
+            "origin_task_id": source_id,
+            "remote_task_id": stored.id,
+        })
+    );
     Ok(())
 }
 
@@ -269,18 +313,27 @@ fn receipts(device: &str) -> io::Result<()> {
     }
     let (config, _, tasks) = setup()?;
     let local = own_device(&config)?;
-    if !config.trusted_senders.iter().any(|trusted| trusted == device) {
-        return Err(io::Error::new(io::ErrorKind::PermissionDenied,
-            "Source device not explicitly trusted"));
+    if !config
+        .trusted_senders
+        .iter()
+        .any(|trusted| trusted == device)
+    {
+        return Err(io::Error::new(
+            io::ErrorKind::PermissionDenied,
+            "Source device not explicitly trusted",
+        ));
     }
     let reports = tasks.reports_for(device)?;
-    println!("{}", json!({
-        "schema_version": 1,
-        "kind": "reports",
-        "receiver_device": local,
-        "for_device": device,
-        "reports": reports,
-    }));
+    println!(
+        "{}",
+        json!({
+            "schema_version": 1,
+            "kind": "reports",
+            "receiver_device": local,
+            "for_device": device,
+            "reports": reports,
+        })
+    );
     Ok(())
 }
 
@@ -308,9 +361,15 @@ pub fn run(args: Vec<String>) -> Result<(), Box<dyn Error>> {
             println!("Paired {alias} at {target} / SSH host-key verification required");
         }
         [command] if command == "list" => {
-            println!("LOCAL DEVICE: {}", config.device_id.as_deref().unwrap_or("NOT ENROLLED"));
+            println!(
+                "LOCAL DEVICE: {}",
+                config.device_id.as_deref().unwrap_or("NOT ENROLLED")
+            );
             for peer in config.peers {
-                println!("{} -> {} (pinned SSH / no auto-connect)", peer.alias, peer.target);
+                println!(
+                    "{} -> {} (pinned SSH / no auto-connect)",
+                    peer.alias, peer.target
+                );
             }
         }
         [command, flag] if command == "list" && flag == "--json" => {
@@ -348,7 +407,9 @@ mod tests {
             known_hosts_file: "/home/operator/.ssh/known_hosts".into(),
         };
         let cmd = ssh_command(&peer, "pipboy peer receive");
-        let args = cmd.get_args().map(|x| x.to_string_lossy().into_owned())
+        let args = cmd
+            .get_args()
+            .map(|x| x.to_string_lossy().into_owned())
             .collect::<Vec<_>>();
         assert!(args.contains(&"StrictHostKeyChecking=yes".to_owned()));
         assert!(args.contains(&"BatchMode=yes".to_owned()));

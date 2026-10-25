@@ -33,13 +33,16 @@ fn valid_target(value: &str) -> bool {
         && !host.ends_with('-')
         && !host.starts_with('.')
         && !host.ends_with('.')
-        && user.bytes().next().is_some_and(|ch| ch.is_ascii_alphabetic() || ch == b'_')
-        && user.bytes().all(|ch| {
-            ch.is_ascii_alphanumeric() || matches!(ch, b'-' | b'_')
-        })
-        && host.bytes().all(|ch| {
-            ch.is_ascii_alphanumeric() || matches!(ch, b'.' | b'-')
-        })
+        && user
+            .bytes()
+            .next()
+            .is_some_and(|ch| ch.is_ascii_alphabetic() || ch == b'_')
+        && user
+            .bytes()
+            .all(|ch| ch.is_ascii_alphanumeric() || matches!(ch, b'-' | b'_'))
+        && host
+            .bytes()
+            .all(|ch| ch.is_ascii_alphanumeric() || matches!(ch, b'.' | b'-'))
 }
 
 fn valid_path(value: &str) -> bool {
@@ -67,8 +70,7 @@ impl Peer {
     }
 
     fn files_exist(&self) -> bool {
-        Path::new(&self.identity_file).is_file()
-            && Path::new(&self.known_hosts_file).is_file()
+        Path::new(&self.identity_file).is_file() && Path::new(&self.known_hosts_file).is_file()
     }
 }
 
@@ -97,16 +99,27 @@ impl PeerConfig {
         if self.schema_version != VERSION
             || self.peers.len() > MAX_PEERS
             || self.trusted_senders.len() > MAX_PEERS
-            || self.device_id.as_deref().is_some_and(|id| !valid_device_id(id))
+            || self
+                .device_id
+                .as_deref()
+                .is_some_and(|id| !valid_device_id(id))
         {
             return Err(bad("Invalid peer configuration; existing file preserved"));
         }
         let mut names = HashSet::new();
-        if self.peers.iter().any(|peer| !peer.valid() || !names.insert(&peer.alias)) {
+        if self
+            .peers
+            .iter()
+            .any(|peer| !peer.valid() || !names.insert(&peer.alias))
+        {
             return Err(bad("Invalid or duplicate peer destination"));
         }
         let mut trusted = HashSet::new();
-        if self.trusted_senders.iter().any(|id| !valid_device_id(id) || !trusted.insert(id)) {
+        if self
+            .trusted_senders
+            .iter()
+            .any(|id| !valid_device_id(id) || !trusted.insert(id))
+        {
             return Err(bad("Invalid trusted sender list"));
         }
         Ok(())
@@ -119,7 +132,9 @@ pub struct PeerStore {
 
 impl PeerStore {
     pub fn new(root: PathBuf) -> Self {
-        Self { path: root.join("peers.json") }
+        Self {
+            path: root.join("peers.json"),
+        }
     }
 
     pub fn from_environment() -> io::Result<Self> {
@@ -161,7 +176,9 @@ impl PeerStore {
         #[cfg(unix)]
         {
             use std::os::unix::fs::DirBuilderExt;
-            fs::DirBuilder::new().recursive(true).mode(0o700)
+            fs::DirBuilder::new()
+                .recursive(true)
+                .mode(0o700)
                 .create(self.directory())?;
         }
         #[cfg(not(unix))]
@@ -203,13 +220,17 @@ impl PeerStore {
 
     pub fn init(&self, device_id: &str) -> io::Result<()> {
         if !valid_device_id(device_id) {
-            return Err(bad("Device ID must be 2-32 lowercase letters, numbers or hyphens"));
+            return Err(bad(
+                "Device ID must be 2-32 lowercase letters, numbers or hyphens",
+            ));
         }
         let _lock = self.lock()?;
         let mut config = self.load()?;
         if config.device_id.is_some() {
-            return Err(io::Error::new(io::ErrorKind::AlreadyExists,
-                "Device ID is already enrolled; never silently rotate identity"));
+            return Err(io::Error::new(
+                io::ErrorKind::AlreadyExists,
+                "Device ID is already enrolled; never silently rotate identity",
+            ));
         }
         config.device_id = Some(device_id.to_owned());
         self.save(&config)
@@ -225,8 +246,10 @@ impl PeerStore {
             return Err(bad("Cannot trust the local device as a remote sender"));
         }
         if config.trusted_senders.iter().any(|id| id == device_id) {
-            return Err(io::Error::new(io::ErrorKind::AlreadyExists,
-                "Sender already trusted"));
+            return Err(io::Error::new(
+                io::ErrorKind::AlreadyExists,
+                "Sender already trusted",
+            ));
         }
         if config.trusted_senders.len() >= MAX_PEERS {
             return Err(bad("Trusted sender list full"));
@@ -247,7 +270,10 @@ impl PeerStore {
             return Err(bad("Initialize this Rust-Boy device before adding peers"));
         }
         if config.peers.iter().any(|entry| entry.alias == peer.alias) {
-            return Err(io::Error::new(io::ErrorKind::AlreadyExists, "Duplicate peer alias"));
+            return Err(io::Error::new(
+                io::ErrorKind::AlreadyExists,
+                "Duplicate peer alias",
+            ));
         }
         if config.peers.len() >= MAX_PEERS {
             return Err(bad("Peer roster full"));
@@ -257,9 +283,16 @@ impl PeerStore {
     }
 
     pub fn get(&self, alias: &str) -> io::Result<Peer> {
-        self.load()?.peers.into_iter().find(|peer| peer.alias == alias)
-            .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound,
-                "Device alias is not paired on this Rust-Boy"))
+        self.load()?
+            .peers
+            .into_iter()
+            .find(|peer| peer.alias == alias)
+            .ok_or_else(|| {
+                io::Error::new(
+                    io::ErrorKind::NotFound,
+                    "Device alias is not paired on this Rust-Boy",
+                )
+            })
     }
 }
 
@@ -315,8 +348,14 @@ mod tests {
         #[cfg(unix)]
         {
             use std::os::unix::fs::PermissionsExt;
-            assert_eq!(fs::metadata(temp.path().join("vault/peers.json"))
-                .unwrap().permissions().mode() & 0o777, 0o600);
+            assert_eq!(
+                fs::metadata(temp.path().join("vault/peers.json"))
+                    .unwrap()
+                    .permissions()
+                    .mode()
+                    & 0o777,
+                0o600
+            );
         }
     }
 }
