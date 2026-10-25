@@ -406,6 +406,18 @@
 
 
   function bostonVisible(shape, view) {
+    if (shape.countyBase) {
+      // Draw only actual source vertices, with small-screen zoom filtering.
+      if (shape.countyLayer === "roads" && !shape.countyMajor && view.zoom < 11.4)
+        return false;
+      const bounds = shape.bounds;
+      const sw = screenPoint(view, bounds[0], bounds[1]);
+      const ne = screenPoint(view, bounds[2], bounds[3]);
+      return Math.max(sw[0],ne[0]) >= -12 &&
+        Math.min(sw[0],ne[0]) <= view.width+12 &&
+        Math.max(sw[1],ne[1]) >= -12 &&
+        Math.min(sw[1],ne[1]) <= view.height+12;
+    }
     if (!shape.bostonBase) return true;
     // Original road class (CFCC) determines detail, not a fabricated feature.
     if (view.zoom < 10.8 && shape.cfcc >= 30) return false;
@@ -454,7 +466,8 @@
     let labels = 0;
     // Real Boston snapshot sits under opt-in OSM reference and imported RustGIS.
     const baseShapes = view.baseVisible && view.boston ? view.boston.shapes : [];
-    for (const shape of [...baseShapes, ...view.onlineShapes, ...view.shapes,
+    for (const shape of [...baseShapes, ...view.countyShapes,
+      ...view.onlineShapes, ...view.shapes,
       ...(view.county ? [view.county.shape] : [])]) {
       if (!bostonVisible(shape, view)) continue;
       const style = shape.style || {};
@@ -568,7 +581,8 @@
       ctx.stroke();
     }
 
-    if (!view.baseVisible && !view.shapes.length && !view.onlineShapes.length) {
+    if (!view.baseVisible && !view.countyShapes.length && !view.shapes.length &&
+        !view.onlineShapes.length) {
       ctx.textAlign = "center";
       ctx.font = "11px monospace";
       ctx.fillStyle = "#dfa96b";
@@ -589,6 +603,7 @@
     view.status.textContent = (view.siteCentered ? "MANUAL SITE / NOT GPS  |  " : "") +
       fix + "  |  Z" + view.zoom.toFixed(1) + "  |  " +
       (view.layerName || (view.sitesVisible ? "LOCAL SITES" :
+        view.countyShapes.length ? "TIGER COUNTY " + view.countyPackage.geoid :
         view.baseVisible ? "BOSTON / REAL STREETS" : "LOAD RUSTGIS MAP")) +
       "  |  CENTER " + center;
     view.locate.textContent = view.watchId === null ? "GPS ON" : "GPS OFF";
@@ -599,23 +614,36 @@
     view.baseButton.hidden = !view.boston;
     view.baseButton.textContent = view.baseVisible ? "BOS OFF" : "BOS ON";
     view.baseAttribution.hidden = !view.baseVisible;
+    view.countyAttribution.hidden = !view.countyShapes.length && !view.county;
     view.siteSummary.textContent = "RECLAMATION / " + view.sites.length + " LOCAL SITES";
     view.webRefresh.hidden = !view.webEnabled;
     view.webStatusNode.textContent = view.webStatus;
     view.countyButton.textContent = view.countyEnabled ? "COUNTY OFF" : "COUNTY";
     view.countyNode.textContent = view.countyStatus;
     view.attribution.hidden = !view.onlineShapes.length;
-    view.sourceBox.hidden = !view.county && !view.layers.length && !view.webMeta &&
+    view.sourceBox.hidden = !view.county && !view.countyShapes.length &&
+      !view.layers.length && !view.webMeta &&
       !view.baseVisible && !(view.sitesVisible && view.sites.length);
-    if (view.county || view.baseVisible || view.layers.length || view.webMeta ||
+    if (view.county || view.countyShapes.length || view.baseVisible ||
+        view.layers.length || view.webMeta ||
         (view.sitesVisible && view.sites.length)) {
       view.sourceSummary.textContent = "DATA SOURCES / " + view.layers.length + " IMPORTED LAYERS" +
         (view.baseVisible ? " / BOSTON SAM" : "") +
         (view.county ? " / CENSUS COUNTY" : "") +
+        (view.countyPackage ? " / TIGER " + view.countyPackage.geoid : "") +
         (view.sitesVisible ? " / " + view.sites.length + " LOCAL SITES" : "") +
         (view.webMeta ? " / OSM WEB" : "") +
         (view.warnings.length ? " / " + view.warnings.length + " LIMITATIONS" : "");
-      view.sourceLines.textContent = (view.county ?
+      view.sourceLines.textContent = (view.countyPackage ?
+        "COUNTY GEOID " + view.countyPackage.geoid +
+        " / U.S. Census TIGER/Line 2025\n" +
+        Object.entries(view.countyPackage.layers).map(([id,d]) =>
+          id + ": " + d.features + " features, " + d.vertices +
+          " original vertices / county-wide source").join("\n") +
+        (view.countyPackage.errors.length ?
+          "\nPARTIAL SOURCES: " + view.countyPackage.errors.join(" | ") : "") +
+        "\nWater areas/streams are reference geometry, not surveyed coastline.\n" : "") +
+        (view.county ?
         "COUNTY: " + view.county.name + " / GEOID " + view.county.id + "\n" +
         "Source: " + view.county.source + "\n" +
         "Boundary ≠ surveyed shoreline; OSM roads are viewport-limited.\n" : "") +
@@ -1149,6 +1177,13 @@
     baseAttribution.rel = "noopener noreferrer";
     baseAttribution.hidden = true;
     stage.append(baseAttribution);
+    const countyAttribution = make("a", "rb-map-base-credit", "US CENSUS / TIGER 2025");
+    countyAttribution.href =
+      "https://www.census.gov/geographies/mapping-files/time-series/geo/tiger-line-file.html";
+    countyAttribution.target = "_blank";
+    countyAttribution.rel = "noopener noreferrer";
+    countyAttribution.hidden = true;
+    stage.append(countyAttribution);
     const webStatusNode = make("div", "rb-map-web-state", "WEB OFF");
     const countyNode = make("div", "rb-map-web-state", "COUNTY OFF / GPS OR CENTER REQUIRED");
     webStatusNode.setAttribute("role", "status");
@@ -1236,7 +1271,8 @@
       webEnabled: false, webBusy: false, webAbort: null,
       webProbeAbort: null, webProbePromise: null,
       webReconnect: null, webDisconnect: null, webStatus: "WEB OFF",
-      attribution, baseAttribution, webStatusNode, webButton: null, webRefresh: null,
+      attribution, baseAttribution, countyAttribution, webStatusNode,
+      webButton: null, webRefresh: null,
       baseButton: null,
       fix: null, watchId: null, gpsState: "GPS OFF",
       follow: !mapMemory, observer: null, windowResize: null, drag: null,
