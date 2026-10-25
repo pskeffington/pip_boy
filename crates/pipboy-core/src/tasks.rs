@@ -778,6 +778,12 @@ mod tests {
         }
     }
 
+    fn incoming_task() -> NewTask {
+        let mut task = new_task();
+        task.contact = None;
+        task
+    }
+
     #[test]
     fn incoming_peer_assignment_is_durable_idempotent_and_role_scoped() {
         let temp = tempfile::tempdir().unwrap();
@@ -787,14 +793,14 @@ mod tests {
             from_device: "overseer-a".into(),
             origin_task_id: 14,
             origin_revision: 2,
-            task: new_task(),
+            task: incoming_task(),
         };
         let (imported, created) = store.import_remote(RemoteAssignment {
             schema_version: packet.schema_version,
             from_device: packet.from_device.clone(),
             origin_task_id: packet.origin_task_id,
             origin_revision: packet.origin_revision,
-            task: new_task(),
+            task: incoming_task(),
         }).unwrap();
         assert!(created);
         assert_eq!(imported.id, 1);
@@ -822,14 +828,14 @@ mod tests {
             from_device: "overseer-a".into(),
             origin_task_id: 14,
             origin_revision: 1,
-            task: new_task(),
+            task: incoming_task(),
         };
         assert_eq!(store.import_remote(old_revision).unwrap_err().kind(),
             io::ErrorKind::AlreadyExists);
         let unknown = RemoteAssignment {
             schema_version: 1, from_device: "evil".into(),
             origin_task_id: 15, origin_revision: 1,
-            task: NewTask { role: "unrecognized".into(), ..new_task() }
+            task: NewTask { role: "unrecognized".into(), ..incoming_task() }
         };
         assert!(store.import_remote(unknown).is_err());
     }
