@@ -15,7 +15,7 @@ For truly portable, authoritative geography, load the appropriate public-agency/
 ## Run in Rust-Boy
 
 ```bash
-git clone --branch feat/scout-gps-rustgis-map https://github.com/pskeffington/pip_boy.git
+git clone https://github.com/pskeffington/pip_boy.git
 cd pip_boy
 cargo run --locked -p pipboy -- dashboard --micro --open
 ```
