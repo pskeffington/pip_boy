@@ -1,11 +1,13 @@
 //! Explicit local workbench management. No pin operation executes a tool.
 use pipboy_core::workbench::{
-    crc32_hex, encode_hex, inspect_hex, ipv4_cidr, tool, WorkbenchStore, PALETTE,
+    crc32_hex, encode_hex, inspect_hex, tool, WorkbenchStore, PALETTE,
 };
 use std::error::Error;
+use pipboy_core::network_suite; 
+use crate::network_probe;
 
 pub fn run(args: Vec<String>) -> Result<(), Box<dyn Error>> {
-    let usage = "usage: pipboy workbench <list [--json]|profiles [--json]|use PROFILE --replace|palette [--json]|add TOOL|remove ID|rename TITLE|clear --confirm|bytes <encode TEXT|inspect HEX|crc32 HEX>|net cidr IPv4/PREFIX>";
+    let usage = "usage: pipboy workbench <list [--json]|profiles [--json]|use PROFILE --replace|palette [--json]|add TOOL|remove ID|rename TITLE|clear --confirm|bytes <encode TEXT|inspect HEX|crc32 HEX>|net <list|cidr IPv4/PREFIX|cidr6 IPv6/PREFIX|split4 PARENT CHILD|route IP PREFIXES|aggregate4 A B|overlap4 A B|mac MAC|vlan VID,PCP,DEI|mtu BYTES|tcp IP PORT --confirm>>";
     let mut args = args.into_iter();
     let command = args.next().ok_or(usage)?;
     match command.as_str() {
@@ -172,13 +174,35 @@ pub fn run(args: Vec<String>) -> Result<(), Box<dyn Error>> {
             Ok(())
         }
         "net" => {
-            let mode = args.next().ok_or(usage)?;
-            let value = args.next().ok_or(usage)?;
-            if mode != "cidr" || args.next().is_some() {
-                return Err(usage.into());
+            let pieces: Vec<String> = args.collect();
+            match pieces.as_slice() {
+                [mode] if mode == "list" => {
+                    println!("NETWORK BENCH / NO AUTOMATIC I/O");
+                    for op in network_suite::OPERATIONS {
+                        println!("{:<12} {:<18} {}", op.id, op.name,
+                            if op.active { "EXPLICIT TCP CONNECT" } else { "OFFLINE" });
+                    }
+                    Ok(())
+                }
+                [mode, address, port, confirmation]
+                    if mode == "tcp" && confirmation == "--confirm" =>
+                {
+                    println!("{}", network_probe::tcp_once(address, port, true)?);
+                    Ok(())
+                }
+                [mode, ..] if mode == "tcp" => {
+                    Err("usage: pipboy workbench net tcp LITERAL_IP PORT --confirm".into())
+                }
+                [mode, input] => {
+                    println!("{}", network_suite::run_offline(mode, input, None)?);
+                    Ok(())
+                }
+                [mode, input, extra] => {
+                    println!("{}", network_suite::run_offline(mode, input, Some(extra))?);
+                    Ok(())
+                }
+                _ => Err(usage.into()),
             }
-            println!("{}", ipv4_cidr(&value)?);
-            Ok(())
         }
         _ => Err(usage.into()),
     }
