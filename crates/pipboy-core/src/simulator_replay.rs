@@ -12,6 +12,8 @@ pub enum ReplayScenario {
     Nominal,
     DisconnectRecover,
     Revoke,
+    Cancel,
+    Timeout,
 }
 
 impl ReplayScenario {
@@ -20,6 +22,8 @@ impl ReplayScenario {
             "nominal" => Some(Self::Nominal),
             "disconnect-recover" => Some(Self::DisconnectRecover),
             "revoke" => Some(Self::Revoke),
+            "cancel" => Some(Self::Cancel),
+            "timeout" => Some(Self::Timeout),
             _ => None,
         }
     }
@@ -29,6 +33,8 @@ impl ReplayScenario {
             Self::Nominal => "nominal",
             Self::DisconnectRecover => "disconnect-recover",
             Self::Revoke => "revoke",
+            Self::Cancel => "cancel",
+            Self::Timeout => "timeout",
         }
     }
 }
@@ -124,7 +130,11 @@ pub fn replay_fixture(
         .find(|device| device.id == id)
         .ok_or(BrokerError::UnknownDevice)?;
     let mut broker = SimulatedBroker::new(preferences)?;
-    let lease = broker.open(id, confirmation)?;
+    let lease = if scenario == ReplayScenario::Timeout {
+        broker.open_with_timeout(id, confirmation, 200)?
+    } else {
+        broker.open(id, confirmation)?
+    };
     let mut trace = ReplayTrace {
         schema_version: 1,
         simulated: true,
@@ -136,6 +146,9 @@ pub fn replay_fixture(
         steps: Vec::with_capacity(8),
     };
     trace.ok(0, "confirm_open", "fixture_active", None);
+    if broker.advance_to(100)? {
+        return Err(BrokerError::ReplayInvariant);
+    }
     let first = broker.sample(&lease)?;
     trace.ok(100, "sample_fixture", "fixture_active", Some(first));
 
@@ -181,6 +194,30 @@ pub fn replay_fixture(
             )?;
             trace.rejected(400, "open_without_new_confirmation", "inactive", error);
         }
+        ReplayScenario::Cancel => {
+            broker.cancel(&lease)?;
+            trace.ok(200, "cancel", "inactive", None);
+            let error = expect_rejection(broker.sample(&lease), BrokerError::InvalidLease)?;
+            trace.rejected(300, "sample_stale_lease", "inactive", error);
+            let error = expect_rejection(
+                broker.open(id, SessionConfirmation::Absent),
+                BrokerError::ConfirmationRequired,
+            )?;
+            trace.rejected(400, "open_without_new_confirmation", "inactive", error);
+        }
+        ReplayScenario::Timeout => {
+            if !broker.advance_to(200)? {
+                return Err(BrokerError::ReplayInvariant);
+            }
+            trace.ok(200, "advance_to_deadline", "inactive", None);
+            let error = expect_rejection(broker.sample(&lease), BrokerError::InvalidLease)?;
+            trace.rejected(300, "sample_stale_lease", "inactive", error);
+            let error = expect_rejection(
+                broker.open(id, SessionConfirmation::Absent),
+                BrokerError::ConfirmationRequired,
+            )?;
+            trace.rejected(400, "open_without_new_confirmation", "inactive", error);
+        }
     }
     if broker.active_device().is_some() {
         return Err(BrokerError::ReplayInvariant);
@@ -214,6 +251,8 @@ mod tests {
             ReplayScenario::from_key("revoke"),
             Some(ReplayScenario::Revoke)
         );
+        assert_eq!(ReplayScenario::from_key("cancel"), Some(ReplayScenario::Cancel));
+        assert_eq!(ReplayScenario::from_key("timeout"), Some(ReplayScenario::Timeout));
         assert_eq!(ReplayScenario::from_key("hardware"), None);
     }
 
@@ -291,6 +330,43 @@ mod tests {
     }
 
     #[test]
+    fn cancellation_trace_rejects_stale_lease_and_requires_new_confirmation() {
+        let trace = replay_fixture(
+            "sim:ble",
+            ReplayScenario::Cancel,
+            &[],
+            SessionConfirmation::Confirmed,
+        )
+        .unwrap();
+        assert_eq!(trace.steps.len(), 5);
+        assert_eq!(trace.steps[2].action, "cancel");
+        assert_eq!(trace.steps[2].state, "inactive");
+        assert_eq!(trace.steps[3].error, Some("invalid_lease"));
+        assert_eq!(trace.steps[4].error, Some("confirmation_required"));
+    }
+
+    #[test]
+    fn timeout_trace_expires_at_injected_deadline_without_real_clock() {
+        let trace = replay_fixture(
+            "sim:network",
+            ReplayScenario::Timeout,
+            &[],
+            SessionConfirmation::Confirmed,
+        )
+        .unwrap();
+        assert_eq!(trace.steps.len(), 5);
+        assert_eq!(
+            trace.steps.iter().map(|step| step.logical_ms).collect::<Vec<_>>(),
+            [0, 100, 200, 300, 400]
+        );
+        assert_eq!(trace.steps[2].action, "advance_to_deadline");
+        assert_eq!(trace.steps[2].state, "inactive");
+        assert_eq!(trace.steps[3].error, Some("invalid_lease"));
+        assert_eq!(trace.steps[4].error, Some("confirmation_required"));
+        assert!(trace.steps.iter().skip(2).all(|step| step.event.is_none()));
+    }
+
+    #[test]
     fn stored_requested_preference_cannot_replace_confirmation() {
         let preferences = [preference("sdr.receive", Preference::Requested)];
         let err = replay_fixture(
@@ -322,6 +398,8 @@ mod tests {
             ReplayScenario::Nominal,
             ReplayScenario::DisconnectRecover,
             ReplayScenario::Revoke,
+            ReplayScenario::Cancel,
+            ReplayScenario::Timeout,
         ] {
             let run = || {
                 serde_json::to_vec(
