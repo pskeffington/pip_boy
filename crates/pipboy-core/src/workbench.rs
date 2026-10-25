@@ -108,7 +108,7 @@ pub const PALETTE: &[Tool] = &[
     Tool {
         id: "net-lab",
         name: "NET ENGINEER",
-        description: "Active, operator-authorized private LAN discovery: responding hosts, RTT and cache sightings; offline CIDR planning retained.",
+        description: "Explicit LAN inventory, ICMP/TCP health, read-only UniFi and nine offline network calculators.",
         availability: Availability::Ready,
         command: "pipboy net scan local --confirm",
     },
@@ -189,7 +189,7 @@ pub const PRESETS: &[Preset] = &[
         description: "Systems engineering: health telemetry, subnet calculations, byte analysis and synthetic rigs.",
         lore_evidence: "VT-01",
         role_fidelity: "canonical_job",
-        tools: &["host", "diag", "net-lab", "byte-lab", "simulator", "notes"],
+        tools: &["net-lab", "host", "diag", "byte-lab", "simulator", "notes"],
     },
     Preset {
         id: "security-chief",

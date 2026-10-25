@@ -1,5 +1,9 @@
 # Rust-Boy | Micro handheld shell
 
+## Unified Network Engineer
+
+From `main`, select Head Engineer → NET ENGINEER. The shared Rust catalog has 16 operations across six-tool pages. Select a tool, enter inputs, and use NEXT for active operations to reach a separate authorization screen. Offline calculations run directly. Results display two inventory entries per page and retain full text under DETAILS. SCAN LAN and UniFi operations offer 60-second refresh capped at 60 runs; edit/back/navigation/hidden tabs/errors stop it. Returning to the view requires another explicit Run. See [health and UniFi setup](NETWORK_HEALTH_UNIFI.md).
+
 **Status:** functional local micro UI preview. The desktop dashboard remains available and unchanged except for a **MICRO** entry. The micro view shares the same Rust service, `PRESETS` registry, `PALETTE`, atomic `WorkbenchStore`, and allowlisted offline tool APIs. It is **not** a wearable hardware image, native RustGIS raster renderer, production GNSS service or live camera client. On the GIS feature branch, MAP can import native RustGIS vector maps and display an explicitly approved browser location.
 
 ## Launch on Mac

@@ -1,6 +1,6 @@
 # Rust-Boy | NET ENGINEER: live private-LAN probing
 
-**Status:** implemented on the diagnostic feature branch, pending cross-platform CI and a real Mac/UniFi LAN acceptance pass. Not a packaged release.
+**Status:** LAN/UniFi/DIAG software merged to `main` in PR #15 after all five CI jobs passed. Network calculators and endpoint health are consolidated in the follow-up integration. Real Mac/UniFi/Pi field acceptance remains open; no packaged release is claimed.
 
 NET ENGINEER is distinct from the fully offline DIAG evidence-ingestion pipeline. It is a real opt-in IPv4 network probe built in Rust, not a simulation or a CIDR-only button.
 
@@ -14,7 +14,7 @@ cargo run --locked -p pipboy -- net watch 192.168.1.0/24 --confirm --interval-se
 cargo run --locked -p pipboy -- dashboard --micro --open
 ```
 
-On the **micro display**, load **Head Engineer** or **Security Chief**, open **NET ENGINEER** via STAT quick action, GEAR or DATA, choose **SCAN PRIVATE LAN**, set **local** or a private IPv4 CIDR, tick **AUTHORIZED NETWORK**, then press **SCAN PRIVATE LAN**. Optional **REFRESH EVERY 60 SEC** repeats only while this tool view remains open. Desktop exposes the same action and can switch to the original **OFFLINE CIDR CALCULATOR**.
+On desktop or micro, load **Head Engineer** or **Security Chief** and open **NET ENGINEER**. Choose **SCAN LAN**, enter `local` or a private IPv4 CIDR, select NEXT, confirm authorization and Run. Inventory results have pages. Optional 60-second refresh is capped at 60 runs and stops on editing, navigation, hidden tabs or errors. The same workspace includes nine offline calculators, PING / JITTER, TCP health and controller inventory. See the [unified health and UniFi setup guide](NETWORK_HEALTH_UNIFI.md).
 
 The **local** shortcut uses a UDP socket connect solely to query the host's outbound route; it **does not send a datagram**. It assumes a conservative /24 around the selected private IPv4 address. It cannot know the interface's real subnet mask or which physical/VLAN network you intend; choose an explicit CIDR when the suggestion is incorrect, the route is through VPN, or there is no default private route.
 

@@ -1,5 +1,13 @@
 # Rust-Boy | Validation evidence
 
+## Network mainline and UI consolidation — 2026-10-25
+
+Baseline [PR #15](https://github.com/pskeffington/pip_boy/pull/15) merged LAN scan/watch, read-only UniFi connected-client reconciliation and DIAG ingestion to `main` at `15c9500`. [Quality run 40216528470](https://github.com/pskeffington/pip_boy/actions/runs/40216528470) passed all five jobs at `badabc523df585e31de20337f79d03dad8298139`: Linux stable, Rust 1.90.0, native macOS, native Windows and manifest validation.
+
+The follow-up consolidates the prior network-suite/health work into that mainline without replacing the newer inventory/DIAG adapters. Local dependency-free JavaScript journeys verify no unsolicited fetch, authorization, two-entry pagination, one owned refresh timer, hidden-tab stop, no automatic resumption, destroyed-request abort, stale-response suppression and text-only controller labels. Offline manifest, role and compiler-policy validators pass. At code head `f77df8c95233c0ec31a0c1425e34a52ab7b7cce2`, [quality run 40217917079](https://github.com/pskeffington/pip_boy/actions/runs/40217917079) passed all five jobs: stable Rust with formatting, Clippy and runtime suites; exact Rust 1.90.0; native macOS; native Windows; and manifest validation. The new loopback CLI/API health suite and the existing LAN/UniFi/DIAG tests passed on all three native platforms. A documentation-only follow-up records these results; its exact head also receives the normal quality matrix.
+
+No real LAN/controller, native ping process, physical Pi display or game/SSH endpoint was available in this editing environment. Controlled fixtures and loopback TCP tests remain distinct from those field acceptances.
+
 
 ## Rust 1.90 minimum-supported toolchain transition — October 25, 2026
 

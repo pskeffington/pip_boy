@@ -46,6 +46,7 @@ const symbols = {
 let snapshot = null;
 let previewId = null;
 let selectedTool = null;
+let activeNetworkUI = null;
 let selectedCamera = null;
 let working = false;
 let lastOutput = "";
@@ -314,19 +315,6 @@ const forms = Object.freeze({
     field("lon2", "END LONGITUDE", "-70.76", 'inputmode="decimal"') +
     '</div><div id="waypoint-fields" hidden>' +
     field("name", "WAYPOINT LABEL", "Camp Alpha") + "</div>",
-  "net-lab":
-    '<label for="lab-mode">OPERATION<select name="mode" id="lab-mode">' +
-    '<option value="scan">LIVE PRIVATE LAN SCAN</option>' +
-    '<option value="unifi-sites">UNIFI / LIST SITES</option>' +
-    '<option value="unifi-clients">UNIFI / CONNECTED CLIENTS</option>' +
-    '<option value="unifi-compare">UNIFI / COMPARE WITH LAN</option>' +
-    '<option value="cidr">OFFLINE CIDR CALCULATOR</option></select></label>' +
-    field("input", "LAN CIDR OR LOCAL", "local", 'autocomplete="off" spellcheck="false"') +
-    field("site", "UNIFI SITE UUID", "", 'autocomplete="off" spellcheck="false"') +
-    '<label class="scan-consent"><input type="checkbox" name="authorized" value="yes">' +
-    'Authorized for this network/controller</label>' +
-    '<label class="scan-consent"><input type="checkbox" name="monitor" value="yes">' +
-    'Refresh every 60 seconds while NET ENGINEER is open</label>',
   "byte-lab":
     field("input", "HEX BYTES (UP TO 4096)", "48656c6c6f", 'autocomplete="off" spellcheck="false"'),
   "diag": '<p class="workspace-subtitle">Check the local host using read-only CPU/RAM evidence. For scoped JSONL imports use pipboy diag ingest on the CLI.</p>',
@@ -338,6 +326,11 @@ const forms = Object.freeze({
 });
 
 function renderDetail() {
+  if (activeNetworkUI) activeNetworkUI.destroy();
+  activeNetworkUI = null;
+  const networkHost = byId("network-workspace");
+  networkHost.hidden = true;
+  networkHost.replaceChildren();
   ui.detailsTitle.textContent = "Select a module";
   ui.detailsDesc.textContent = "Choose a tile to inspect its scope and run a local test.";
   ui.detailStatus.replaceChildren();
@@ -385,6 +378,14 @@ function renderDetail() {
     ui.manual.textContent = "Task Control is open in the Module Viewport. Tasks remain local until explicitly handed off.";
     return;
   }
+  if (selectedTool === "net-lab" && window.RustBoyNetwork) {
+    networkHost.hidden = false;
+    activeNetworkUI = window.RustBoyNetwork.mount(networkHost, {
+      operations: snapshot.net_operations,
+      onStatus: (message) => { ui.footer.textContent = message; }
+    });
+    return;
+  }
   if (Object.hasOwn(forms, selectedTool)) {
     ui.testbench.hidden = false;
     ui.fields.innerHTML = forms[selectedTool]; // Only static authored form markup.
@@ -395,9 +396,8 @@ function renderDetail() {
     ui.outputKind.textContent = lastOutput ? "RESULT" : "IDLE";
     ui.copy.disabled = !lastOutput;
     const selector = byId("lab-mode");
-    if (selector) selector.addEventListener("change", () => { toggleGeoMode(); toggleNetMode(); });
+    if (selector) selector.addEventListener("change", toggleGeoMode);
     toggleGeoMode();
-    toggleNetMode();
   } else {
     ui.handoff.hidden = false;
     ui.manual.textContent = info.command;
@@ -416,38 +416,6 @@ function toggleGeoMode() {
   for (const input of waypoint.querySelectorAll("input")) input.required = exportPoint;
 }
 
-
-function toggleNetMode() {
-  if (selectedTool !== "net-lab") return;
-  const selector = byId("lab-mode");
-  const ip = byId("lab-input");
-  const site = byId("lab-site");
-  if (!selector || !ip || !site) return;
-  const mode = selector.value;
-  const needsCidr = ["scan", "unifi-compare", "cidr"].includes(mode);
-  const needsSite = ["unifi-clients", "unifi-compare"].includes(mode);
-  const needsConsent = mode !== "cidr";
-  const ipLabel = ip.closest("label");
-  const siteLabel = site.closest("label");
-  ipLabel.hidden = !needsCidr;
-  siteLabel.hidden = !needsSite;
-  ip.required = needsCidr;
-  site.required = needsSite;
-  for (const label of ui.form.querySelectorAll(".scan-consent")) {
-    label.hidden = !needsConsent;
-  }
-  const consent = ui.form.querySelector('input[name="authorized"]');
-  if (consent) consent.required = needsConsent;
-  if (mode === "cidr" && ip.value === "local") ip.value = "192.168.1.50/24";
-  if (mode !== "cidr" && ip.value === "192.168.1.50/24") ip.value = "local";
-  const labels = {
-    scan: "SCAN PRIVATE LAN", "unifi-sites": "LIST UNIFI SITES",
-    "unifi-clients": "GET CONNECTED CLIENTS",
-    "unifi-compare": "COMPARE CONTROLLER / LAN", cidr: "CALCULATE CIDR"
-  };
-  ui.run.textContent = labels[mode] || "RUN";
-  ui.kind.textContent = needsConsent ? "AUTHORIZED / READ ONLY" : "OFFLINE";
-}
 
 function renderAll() {
   const current = profile();
@@ -553,69 +521,23 @@ async function removeCustomTool(id) {
   }
 }
 
-let networkWatchTimer = null;
-
 async function runLab(event) {
   event.preventDefault();
   if (!selectedTool || !selectedAvailable() || working) return;
-  if (networkWatchTimer !== null) {
-    clearTimeout(networkWatchTimer);
-    networkWatchTimer = null;
-  }
   const tool = selectedTool;
   const input = Object.fromEntries(new FormData(ui.form).entries());
-  const mode = input.mode;
-  const activeScan = tool === "net-lab" && mode === "scan";
-  const unifi = tool === "net-lab" && mode.startsWith("unifi-");
-  const external = activeScan || unifi;
   working = true;
   ui.run.disabled = true;
-  ui.run.textContent = external ? "CHECKING AUTHORIZED NETWORK…" : "Processing locally…";
+  ui.run.textContent = "Processing locally…";
   ui.outputKind.textContent = "RUNNING";
-  ui.output.textContent = external
-    ? "Collecting explicitly requested network evidence. No credentials leave Rust-Boy."
-    : "Executing the selected allowlisted local tool.";
   try {
-    if (external && input.authorized !== "yes") {
-      throw new Error("Confirm authorization for this private network/controller.");
-    }
-    let result;
-    if (activeScan) {
-      result = await api("/api/net/scan", { cidr: input.input, confirm: true });
-    } else if (unifi) {
-      const operation = mode.substring("unifi-".length);
-      const payload = { operation, confirm: true };
-      if (operation !== "sites") payload.site = input.site.trim();
-      if (operation === "compare") payload.cidr = input.input;
-      result = await api("/api/net/unifi", payload);
-    } else {
-      result = await api("/api/experiment",
-        tool === "net-lab" ? { tool, input: input.input } : { tool, ...input });
-    }
+    const result = await api("/api/experiment", { tool, ...input });
     if (selectedTool !== tool || !selectedAvailable()) return;
     lastOutput = result.output;
     ui.output.textContent = lastOutput;
     ui.outputKind.textContent = result.kind.toUpperCase().replaceAll("_", " ");
     ui.copy.disabled = false;
-    ui.footer.textContent = unifi
-      ? result.inventory?.connected_clients !== undefined
-        ? "UniFi connected: " + result.inventory.connected_clients +
-          ". Controller inventory, not all LAN devices."
-        : "UniFi sites retrieved. Read-only."
-      : activeScan ? "LAN scan complete. Detected count is not total clients."
-        : result.kind === "computed"
-          ? "Local result computed; no external data uploaded"
-          : "Information only; no connection established";
-    if (external && input.monitor === "yes") {
-      networkWatchTimer = window.setTimeout(() => {
-        networkWatchTimer = null;
-        if (selectedTool === "net-lab" && selectedAvailable() && !working &&
-            byId("lab-mode")?.value === mode &&
-            ui.form.querySelector('input[name="monitor"]')?.checked) {
-          runLab({ preventDefault() {} });
-        }
-      }, 60000);
-    }
+    ui.footer.textContent = "Local tool complete";
   } catch (error) {
     if (selectedTool !== tool || !selectedAvailable()) return;
     lastOutput = "";
@@ -627,8 +549,7 @@ async function runLab(event) {
     working = false;
     if (selectedTool === tool && selectedAvailable()) {
       ui.run.disabled = false;
-      if (tool === "net-lab") toggleNetMode();
-      else ui.run.textContent = toolInfo(tool)?.availability === "ready"
+      ui.run.textContent = toolInfo(tool)?.availability === "ready"
         ? "Run local test" : "Show safe handoff";
     }
   }
