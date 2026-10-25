@@ -30,7 +30,7 @@ For each address, the engine attempts:
 
 The report separates **responding_devices** from **cached_only_devices**, and also provides **total_observed_devices** (unique union of both). Neither the number of responding devices nor the observed union is guaranteed to equal **all currently connected devices**. Sleeping/offline/filtered hosts and separate VLANs may not answer, and ARP cache entries can persist after disconnect. TCP refusal is weaker evidence than an ICMP echo. Measured RTT values from different probe methods are **not directly comparable**; the two-sample difference is **not** standard packet-delay variation/jitter.
 
-This is discovery and basic fault triage only. It does not identify manufacturer or hostnames, authenticate to routers, enumerate all endpoints across VLANs, inspect services for vulnerabilities, attempt logins, or discover private networks without operator input. Authoritative per-VLAN client inventories, RSSI, negotiated link speed and error counters require approved device/controller APIs, e.g., a separately enrolled UniFi controller with scoped read-only credentials.
+The active probe is discovery and basic fault triage only. It does not identify manufacturer or hostnames, inspect services for vulnerabilities, attempt logins, or discover networks outside the selected scope. An optional read-only UniFi adapter supplies controller-connected clients using the official Integration API, with separate counts for connected clients and IP-address matches. RSSI, negotiated link speed, error counters, disconnected history and more detailed device statistics remain future modules.
 
 ## Safety, permissions, and runtime
 
