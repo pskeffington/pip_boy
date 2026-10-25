@@ -3,11 +3,13 @@
 //! This is a local companion window, not an external web service. Profiles are
 //! declarative. No hardware, camera, console, GNSS or TAK transport is opened
 //! by browsing the dashboard or selecting a role.
+use crate::network_probe;
 use crate::peer;
+use pipboy_core::network_suite;
 use pipboy_core::peers::PeerStore;
 use pipboy_core::scout_gis::{distance_meters, waypoint, Point};
 use pipboy_core::tasks::{NewTask, Status, TaskStore};
-use pipboy_core::workbench::{inspect_hex, ipv4_cidr, tool, WorkbenchStore, PALETTE, PRESETS};
+use pipboy_core::workbench::{inspect_hex, tool, WorkbenchStore, PALETTE, PRESETS};
 use serde_json::{json, Value};
 use std::collections::BTreeMap;
 use std::error::Error;
@@ -258,6 +260,7 @@ fn state(store: &WorkbenchStore) -> Result<Response, Response> {
             "active": active,
             "profiles": PRESETS,
             "palette": PALETTE,
+            "net_operations": network_suite::OPERATIONS,
             "engine": {
                 "rustgis": "not_integrated",
                 "camera_wall": "not_integrated",
@@ -297,11 +300,24 @@ fn experiment(body: &Value, store: &WorkbenchStore) -> Result<Response, Response
             return Ok(native_result(inspect_hex(input)));
         }
         "net-lab" => {
+            let mode = body.get("mode").and_then(Value::as_str).unwrap_or("cidr4");
             let input = str_field(body, "input")?;
-            if input.len() > 64 {
-                return Err(Response::error(422, "CIDR input exceeds 64 bytes"));
+            let extra = body.get("extra").and_then(Value::as_str);
+            if input.len() > 256 || extra.is_some_and(|x| x.len() > 1024) {
+                return Err(Response::error(422, "Network bench input exceeds limit"));
             }
-            return Ok(native_result(ipv4_cidr(input)));
+            if mode == "tcp" {
+                if body.get("confirm").and_then(Value::as_bool) != Some(true) {
+                    return Err(Response::error(422, "TCP check requires confirmation"));
+                }
+                let port = extra.ok_or_else(|| Response::error(422, "TCP port required"))?;
+                let output = network_probe::tcp_once(input, port, true)
+                    .map_err(|_| Response::error(422, "Invalid TCP endpoint or input"))?;
+                return Ok(Response::json(
+                    200, &json!({"kind":"probe", "output":output, "connected_automatically":false})
+                ));
+            }
+            return Ok(native_result(network_suite::run_offline(mode, input, extra)));
         }
         "geo-lab" => {
             let mode = str_field(body, "mode")?;
@@ -719,7 +735,7 @@ fn dispatch(req: &Request, store: &WorkbenchStore, port: u16) -> Response {
                 let body = parse_json_body(
                     req,
                     &[
-                        "tool", "mode", "input", "lat", "lon", "lat2", "lon2", "name",
+                        "tool", "mode", "input", "extra", "confirm", "lat", "lon", "lat2", "lon2", "name",
                     ],
                 )?;
                 experiment(&body, store)

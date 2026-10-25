@@ -100,10 +100,10 @@ pub const PALETTE: &[Tool] = &[
     },
     Tool {
         id: "net-lab",
-        name: "NET LAB",
-        description: "Offline IPv4/CIDR planner for LAN setup; no probing or sockets.",
+        name: "NET SUITE",
+        description: "IPv4/IPv6, routes, subnet splitting, MAC, VLAN, MTU and confirmed TCP reachability.",
         availability: Availability::Ready,
-        command: "pipboy workbench net cidr 192.168.1.50/24",
+        command: "pipboy workbench net list",
     },
     Tool {
         id: "geo-lab",
@@ -179,10 +179,10 @@ pub const PRESETS: &[Preset] = &[
     Preset {
         id: "head-engineer",
         title: "Head Engineer Station",
-        description: "Systems engineering: health telemetry, subnet calculations, byte analysis and synthetic rigs.",
+        description: "Network engineering: address plans, VLAN, routes, MAC, MTU and endpoint checks.",
         lore_evidence: "VT-01",
         role_fidelity: "canonical_job",
-        tools: &["host", "net-lab", "byte-lab", "simulator", "notes"],
+        tools: &["net-lab", "host", "byte-lab", "simulator", "notes"],
     },
     Preset {
         id: "security-chief",
