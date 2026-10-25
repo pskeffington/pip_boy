@@ -114,6 +114,61 @@ pub struct Event {
     pub detail: String,
 }
 
+/// Origin is a correlation label, not standalone authentication. SSH access
+/// and the receiving OS account define the current trust boundary.
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub struct RemoteOrigin {
+    pub device: String,
+    pub task_id: u64,
+    pub source_revision: u64,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub struct DeviceDelivery {
+    pub peer: String,
+    pub remote_task_id: u64,
+    pub delivered_at: u64,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub struct RemoteProgress {
+    pub status: Status,
+    pub acknowledged: bool,
+    pub observed_at: u64,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub struct RemoteReport {
+    pub from_device: String,
+    pub origin_task_id: u64,
+    pub remote_task_id: u64,
+    pub status: Status,
+    pub acknowledged: bool,
+}
+
+pub fn valid_device_id(value: &str) -> bool {
+    (2..=32).contains(&value.len())
+        && value.is_ascii()
+        && value.bytes().all(|ch| ch.is_ascii_lowercase()
+            || ch.is_ascii_digit() || ch == b'-')
+        && !value.starts_with('-')
+        && !value.ends_with('-')
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct RemoteAssignment {
+    pub schema_version: u32,
+    pub from_device: String,
+    pub origin_task_id: u64,
+    pub origin_revision: u64,
+    pub task: NewTask,
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(deny_unknown_fields)]
 pub struct Task {
@@ -134,6 +189,15 @@ pub struct Task {
     pub sent_at: Option<u64>,
     /// Manually recorded acknowledgment; not an authenticated remote receipt.
     pub acknowledged_at: Option<u64>,
+    /// This task was imported from another independently stored Rust-Boy.
+    #[serde(default)]
+    pub origin: Option<RemoteOrigin>,
+    /// Authenticated SSH receiver-store receipt, not operator acknowledgment.
+    #[serde(default)]
+    pub delivery: Option<DeviceDelivery>,
+    /// Last explicitly requested SSH progress synchronization.
+    #[serde(default)]
+    pub remote_progress: Option<RemoteProgress>,
     pub events: Vec<Event>,
 }
 
@@ -145,6 +209,19 @@ impl Task {
             && self
                 .acknowledged_at
                 .is_none_or(|ack| self.sent_at.is_some_and(|sent| ack >= sent))
+            && self.origin.as_ref().is_none_or(|origin| {
+                valid_device_id(&origin.device)
+                    && origin.task_id > 0
+                    && origin.source_revision > 0
+            })
+            && self.delivery.as_ref().is_none_or(|receipt| {
+                valid_device_id(&receipt.peer)
+                    && receipt.remote_task_id > 0
+                    && self.sent_at.is_some()
+            })
+            && self.remote_progress.as_ref().is_none_or(|progress| {
+                self.delivery.is_some() && progress.observed_at >= self.created_at
+            })
             && checked_text(&self.title, 96, true)
             && checked_text(&self.details, 400, false)
             && checked_text(&self.assignee, 64, true)
@@ -188,7 +265,7 @@ impl Task {
     }
 }
 
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct NewTask {
     pub title: String,
@@ -376,6 +453,9 @@ impl TaskStore {
             updated_at: at,
             sent_at: None,
             acknowledged_at: None,
+            origin: None,
+            delivery: None,
+            remote_progress: None,
             events: vec![Event {
                 at,
                 kind: "created".into(),
@@ -468,7 +548,12 @@ impl TaskStore {
         self.change(id, revision, |task| {
             task.assignee = name.to_owned();
             task.role = role.to_owned();
+            if task.origin.is_some() {
+                return Err(invalid("Incoming assignments cannot be reassigned locally"));
+            }
             task.contact = contact.map(str::to_owned);
+            task.delivery = None;
+            task.remote_progress = None;
             task.sent_at = None;
             task.acknowledged_at = None;
             Ok((
@@ -476,6 +561,175 @@ impl TaskStore {
                 format!("Assigned to {name} / {role}; handoff reset"),
             ))
         })
+    }
+
+    /// Persist an assignment imported from a trusted SSH session. Redelivery of
+    /// the *same* source and revision is idempotent, including after restarts.
+    /// An edited upstream task must be reconciled explicitly, never overwrite
+    /// the receiver's local status or acknowledgment.
+    pub fn import_remote(&self, input: RemoteAssignment) -> io::Result<(Task, bool)> {
+        if input.schema_version != SCHEMA
+            || !valid_device_id(&input.from_device)
+            || input.origin_task_id == 0
+            || input.origin_revision == 0
+            || !input.task.valid()
+            || input.task.contact.is_some()
+        {
+            return Err(invalid("Invalid remote assignment envelope"));
+        }
+        let _lock = self.writer_lock()?;
+        let mut board = self.load()?;
+        if let Some(existing) = board.tasks.iter().find(|task| {
+            task.origin.as_ref().is_some_and(|origin| {
+                origin.device == input.from_device
+                    && origin.task_id == input.origin_task_id
+            })
+        }) {
+            let source = existing.origin.as_ref().expect("verified origin");
+            if source.source_revision == input.origin_revision
+                && existing.title == input.task.title
+                && existing.details == input.task.details
+                && existing.assignee == input.task.assignee
+                && existing.role == input.task.role
+                && existing.priority == input.task.priority
+                && existing.due == input.task.due
+            {
+                return Ok((existing.clone(), false));
+            }
+            return Err(io::Error::new(
+                io::ErrorKind::AlreadyExists,
+                "Upstream revision conflicts with received local task; manual reconciliation needed",
+            ));
+        }
+        if board.tasks.len() >= MAX_TASKS {
+            return Err(invalid("Task board capacity reached"));
+        }
+        let id = board.next_id;
+        board.next_id = id.checked_add(1).ok_or_else(|| invalid("Task IDs exhausted"))?;
+        let at = now();
+        let task = Task {
+            id,
+            revision: 1,
+            title: input.task.title,
+            details: input.task.details,
+            assignee: input.task.assignee,
+            role: input.task.role,
+            contact: None,
+            priority: input.task.priority,
+            status: Status::Todo,
+            due: input.task.due,
+            created_at: at,
+            updated_at: at,
+            // A receiving device has actually accepted this assignment.
+            sent_at: Some(at),
+            acknowledged_at: None,
+            origin: Some(RemoteOrigin {
+                device: input.from_device,
+                task_id: input.origin_task_id,
+                source_revision: input.origin_revision,
+            }),
+            delivery: None,
+            remote_progress: None,
+            events: vec![Event {
+                at,
+                kind: "peer_received".into(),
+                detail: "Stored through an SSH session; human acknowledgment outstanding".into(),
+            }],
+        };
+        board.tasks.push(task.clone());
+        self.save(&board)?;
+        Ok((task, true))
+    }
+
+    /// Called only after the sender verifies the SSH remote host and its
+    /// machine-readable receipt for a durably stored assignment.
+    pub fn record_device_delivery(
+        &self, id: u64, revision: u64, alias: &str, remote_id: u64,
+    ) -> io::Result<Task> {
+        if !valid_device_id(alias) || remote_id == 0 {
+            return Err(invalid("Invalid destination device or receipt"));
+        }
+        self.change(id, revision, |task| {
+            if task.delivery.is_some() || task.origin.is_some() {
+                return Err(invalid("Task has already been delivered or is inbound"));
+            }
+            let at = now();
+            task.sent_at = Some(at);
+            task.delivery = Some(DeviceDelivery {
+                peer: alias.to_owned(),
+                remote_task_id: remote_id,
+                delivered_at: at,
+            });
+            task.remote_progress = None;
+            Ok(("peer_delivered", format!(
+                "Receiver confirmed durable storage at peer {alias}; no human acknowledgment"
+            )))
+        })
+    }
+
+    pub fn reports_for(&self, device: &str) -> io::Result<Vec<RemoteReport>> {
+        if !valid_device_id(device) {
+            return Err(invalid("Invalid source device"));
+        }
+        Ok(self.load()?.tasks.into_iter().filter_map(|task| {
+            let origin = task.origin?;
+            if origin.device != device { return None; }
+            Some(RemoteReport {
+                from_device: origin.device,
+                origin_task_id: origin.task_id,
+                remote_task_id: task.id,
+                status: task.status,
+                acknowledged: task.acknowledged_at.is_some(),
+            })
+        }).collect())
+    }
+
+    /// Deliberate refresh from an SSH-authenticated peer. Do not overwrite
+    /// locally managed status or equate transport receipts with a real person.
+    pub fn reconcile_remote_reports(
+        &self, alias: &str, device: &str, reports: &[RemoteReport],
+    ) -> io::Result<usize> {
+        if !valid_device_id(alias) || !valid_device_id(device)
+            || reports.len() > MAX_TASKS
+            || reports.iter().any(|report| report.from_device != device
+                || report.origin_task_id == 0 || report.remote_task_id == 0)
+        {
+            return Err(invalid("Invalid remote progress report"));
+        }
+        let _lock = self.writer_lock()?;
+        let mut board = self.load()?;
+        let mut changed = 0;
+        for task in &mut board.tasks {
+            let Some(delivery) = &task.delivery else { continue; };
+            if delivery.peer != alias { continue; }
+            let matching = reports.iter().find(|report| {
+                report.origin_task_id == task.id
+                    && report.remote_task_id == delivery.remote_task_id
+            });
+            let Some(report) = matching else { continue; };
+            if task.remote_progress.as_ref().is_some_and(|old| {
+                old.status == report.status && old.acknowledged == report.acknowledged
+            }) { continue; }
+            let at = now().max(task.updated_at);
+            task.remote_progress = Some(RemoteProgress {
+                status: report.status,
+                acknowledged: report.acknowledged,
+                observed_at: at,
+            });
+            task.updated_at = at;
+            task.revision = task.revision.checked_add(1)
+                .ok_or_else(|| invalid("Task revision overflow"))?;
+            task.events.push(Event {
+                at,
+                kind: "peer_progress".into(),
+                detail: format!("Peer {alias} reports {:?}; acknowledged={}",
+                    report.status, report.acknowledged),
+            });
+            if task.events.len() > MAX_EVENTS { task.events.remove(0); }
+            changed += 1;
+        }
+        if changed > 0 { self.save(&board)?; }
+        Ok(changed)
     }
 
     pub fn mark_sent(&self, id: u64, revision: u64) -> io::Result<Task> {
