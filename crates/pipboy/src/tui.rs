@@ -1,6 +1,7 @@
 use crossterm::event::{self, Event, KeyCode, KeyEventKind};
 use crossterm::execute;
 use crossterm::terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen};
+use pipboy_core::branding::{CLI_COMMAND, PRODUCT_NAME};
 use pipboy_core::catalog::sources;
 use pipboy_core::metrics::Collector;
 use pipboy_core::notes::NoteStore;
@@ -54,7 +55,7 @@ pub fn run() -> Result<(), Box<dyn Error>> {
             ]).split(frame.area());
 
             let tab = Tabs::new(PANELS.iter().copied())
-                .block(Block::default().borders(Borders::ALL).title(" PIP_BOY // RUST NATIVE "))
+                .block(Block::default().borders(Borders::ALL).title(format!(" {PRODUCT_NAME} // RUST NATIVE ")))
                 .select(panel)
                 .style(Style::default().fg(Color::DarkGray))
                 .highlight_style(Style::default().fg(Color::Green).add_modifier(Modifier::BOLD));
@@ -74,7 +75,7 @@ pub fn run() -> Result<(), Box<dyn Error>> {
                     text
                 }
                 2 => {
-                    let mut text = String::from("LOCAL NOTES (plaintext; user-owned)\nAdd notes with: pipboy notes add \"text\"\n\n");
+                    let mut text = format!("LOCAL NOTES (plaintext; user-owned)\nAdd notes with: {CLI_COMMAND} notes add \"text\"\n\n");
                     if let Some(ref notes) = notes {
                         for note in notes.iter().rev().take(12) {
                             text.push_str(&format!("#{}  {}\n", note.id, note.text));

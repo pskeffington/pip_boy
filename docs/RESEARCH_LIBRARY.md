@@ -1,4 +1,6 @@
-# Open-source Pip-Boy research library
+# Rust-Boy | External Pip-Boy research library
+
+This is the **Rust-Boy** project's reference library. The Pip-Boy names below identify independently owned external projects, not Rust-Boy modules or endorsed assets.
 
 Repository discovery snapshot: 2026-10-24. Source metadata and license indicators are catalogued in ../catalog/sources.json. This is a reference library, not a vendored-code directory. Check the upstream license and exact commit again before adapting anything.
 

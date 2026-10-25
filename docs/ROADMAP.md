@@ -1,9 +1,12 @@
-# Development roadmap
+# Rust-Boy | Development roadmap
+
+Rust-Boy is the product name; `pip_boy` remains the repository slug and `pipboy` remains the existing command. Naming rules and identity are maintained in [BRANDING.md](../BRANDING.md).
 
 ## G0: Independent foundation (this pass)
 
 - [x] Inventory representative public Pip-Boy projects and license signals.
 - [x] Publish local source catalog and reuse policy.
+- [x] Establish Rust-Boy branding, top-level policies, docs navigation, and terminal-facing name.
 - [x] Native Rust workspace with CLI, Ratatui panels, telemetry, offline notes.
 - [x] Define build/test/lint checks (execution status tracked by GitHub Actions).
 - [ ] Verify CI green and perform human terminal smoke test on macOS, Linux and Windows.

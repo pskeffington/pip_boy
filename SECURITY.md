@@ -1,6 +1,6 @@
-# Security and privacy policy
+# Rust-Boy | Security and privacy
 
-PIP_BOY is an experimental local-first systems tool, not a safety-of-life product.
+Rust-Boy is an experimental offline-first field systems console, not a safety-of-life product.
 
 ## Default permissions
 

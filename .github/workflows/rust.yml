@@ -1,4 +1,4 @@
-name: Rust quality gates
+name: Rust-Boy quality gates
 
 on:
   push:

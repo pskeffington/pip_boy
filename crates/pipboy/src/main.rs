@@ -1,3 +1,4 @@
+use pipboy_core::branding::{CLI_COMMAND, PRODUCT_DESCRIPTOR, PRODUCT_NAME};
 use pipboy_core::catalog::{sources, validate_sources};
 use pipboy_core::metrics::Collector;
 use pipboy_core::notes::NoteStore;
@@ -6,13 +7,13 @@ use std::error::Error;
 mod tui;
 
 fn help() {
-    println!("PIP_BOY | native systems console");
-    println!("usage: pipboy [tui|status [--json]|sources [query]|modules|doctor|notes <list|add TEXT>|help]");
+    println!("{PRODUCT_NAME} | {PRODUCT_DESCRIPTOR}");
+    println!("usage: {CLI_COMMAND} [tui|status [--json]|sources [query]|modules|doctor|notes <list|add TEXT>|help]");
 }
 
 fn main() {
     if let Err(error) = run() {
-        eprintln!("pipboy: {error}");
+        eprintln!("{PRODUCT_NAME}: {error}");
         std::process::exit(1);
     }
 }
@@ -28,7 +29,7 @@ fn run() -> Result<(), Box<dyn Error>> {
         Some("status") => {
             let option = args.next();
             if option.as_deref().is_some_and(|value| value != "--json") || args.next().is_some() {
-                return Err("usage: pipboy status [--json]".into());
+                return Err(format!("usage: {CLI_COMMAND} status [--json]").into());
             }
             let mut collector = Collector::new();
             collector.prime();
@@ -36,7 +37,7 @@ fn run() -> Result<(), Box<dyn Error>> {
             if option.as_deref() == Some("--json") {
                 println!("{}", serde_json::to_string_pretty(&snapshot)?);
             } else {
-                println!("PIP_BOY STAT / {} {}", snapshot.os, snapshot.arch);
+                println!("{PRODUCT_NAME} STAT / {} {}", snapshot.os, snapshot.arch);
                 println!("CPU: {:.1}% across {} logical cores", snapshot.cpu_percent, snapshot.logical_cores);
                 println!("RAM: {} / {} MiB", snapshot.memory_used_mib, snapshot.memory_total_mib);
                 println!("UPTIME: {} s", snapshot.uptime_s);
@@ -46,7 +47,7 @@ fn run() -> Result<(), Box<dyn Error>> {
         Some("sources") => {
             let query = args.next().unwrap_or_default();
             if args.next().is_some() {
-                return Err("usage: pipboy sources [query]".into());
+                return Err(format!("usage: {CLI_COMMAND} sources [query]").into());
             }
             let entries = sources()?;
             validate_sources(&entries)?;
@@ -87,9 +88,9 @@ fn run() -> Result<(), Box<dyn Error>> {
                     println!("Saved local note #{}", note.id);
                     Ok(())
                 }
-                _ => Err("usage: pipboy notes <list|add TEXT>".into()),
+                _ => Err(format!("usage: {CLI_COMMAND} notes <list|add TEXT>").into()),
             }
         }
-        Some(other) => Err(format!("unknown command: {other}. Use pipboy help.").into()),
+        Some(other) => Err(format!("unknown command: {other}. Use {CLI_COMMAND} help.").into()),
     }
 }

@@ -1,5 +1,6 @@
 [package]
 name = "pipboy-core"
+description = "Offline-first telemetry, notes, and module core for Rust-Boy"
 version.workspace = true
 edition.workspace = true
 license.workspace = true

@@ -1,10 +1,13 @@
-# Architecture: Rust-native, offline-first
+# Rust-Boy | Architecture
+
+Rust-Boy is the public name of the modular console. The repository, executable, crate names, and data paths retain their existing `pip_boy`/`pipboy` identifiers for compatibility; see [BRANDING.md](../BRANDING.md).
 
 ## Boundaries
 
     User keyboard / physical controls (future)
                    |
-             pipboy binary
+          Rust-Boy console
+        (pipboy executable)
              CLI + Ratatui
                    |
             pipboy-core

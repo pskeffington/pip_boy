@@ -1,5 +1,6 @@
 [package]
 name = "pipboy"
+description = "Rust-Boy: offline-first native terminal UI and command-line field console"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
