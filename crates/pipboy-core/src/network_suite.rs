@@ -60,7 +60,6 @@ pub const OPERATIONS: &[Operation] = &[
         extra_example: Some(""),
         active: true,
     },
-
     Operation {
         id: "icmp",
         name: "PING / JITTER",
