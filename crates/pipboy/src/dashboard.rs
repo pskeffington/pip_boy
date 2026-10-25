@@ -3,6 +3,7 @@
 //! This is a local companion window, not an external web service. Profiles are
 //! declarative. No hardware, camera, console, GNSS or TAK transport is opened
 //! by browsing the dashboard or selecting a role.
+use pipboy_core::peers::PeerStore;
 use pipboy_core::scout_gis::{distance_meters, waypoint, Point};
 use pipboy_core::tasks::{NewTask, Status, TaskStore};
 use pipboy_core::workbench::{inspect_hex, ipv4_cidr, tool, WorkbenchStore, PALETTE, PRESETS};
@@ -12,6 +13,7 @@ use std::error::Error;
 use std::io::{self, Read, Write};
 use std::net::{Ipv4Addr, TcpListener, TcpStream};
 use std::time::Duration;
+use crate::peer;
 
 const DEFAULT_PORT: u16 = 8765;
 const MAX_HEADER: usize = 8192;
@@ -508,6 +510,63 @@ fn tasks_handoff(req: &Request, store: &WorkbenchStore) -> Result<Response, Resp
     ))
 }
 
+
+fn peers_read(store: &WorkbenchStore) -> Result<Response, Response> {
+    let (_, manager) = manager_role(store)?;
+    if !manager {
+        return Err(Response::error(403, "Only Task Control can inspect paired destinations"));
+    }
+    let root = store.path().parent().unwrap_or_else(|| std::path::Path::new("."));
+    let peers = PeerStore::new(root.to_path_buf());
+    let status = peer::safe_peers_from_store(&peers)
+        .map_err(|_| Response::error(409, "Peer roster unavailable; original file preserved"))?;
+    Ok(Response::json(200, &status))
+}
+
+fn device_send(req: &Request, store: &WorkbenchStore) -> Result<Response, Response> {
+    let (_, manager) = manager_role(store)?;
+    if !manager {
+        return Err(Response::error(403, "Load Overseer or explicitly pin Task Control"));
+    }
+    let body = parse_json_body(req, &["id", "revision", "alias", "confirm"])?;
+    if body.get("confirm").and_then(Value::as_bool) != Some(true) {
+        return Err(Response::error(422, "Explicit device-send confirmation required"));
+    }
+    let id = positive_integer(&body, "id")?;
+    let revision = positive_integer(&body, "revision")?;
+    let alias = str_field(&body, "alias")?;
+    let root = store.path().parent().unwrap_or_else(|| std::path::Path::new("."));
+    let peers = PeerStore::new(root.to_path_buf());
+    let tasks = TaskStore::new(root.to_path_buf());
+    let result = peer::send_from_store(&tasks, &peers, id, revision, alias)
+        .map_err(|_| Response::error(409,
+            "Device delivery failed or task changed; verify SSH peer and reload before retrying"))?;
+    Ok(Response::json(200, &json!({
+        "task": result,
+        "transport": "openssh",
+        "stored_on_receiver": true,
+        "human_acknowledged": false
+    })))
+}
+
+fn device_sync(req: &Request, store: &WorkbenchStore) -> Result<Response, Response> {
+    let (_, manager) = manager_role(store)?;
+    if !manager {
+        return Err(Response::error(403, "Only Task Control can refresh peer receipts"));
+    }
+    let body = parse_json_body(req, &["alias", "confirm"])?;
+    if body.get("confirm").and_then(Value::as_bool) != Some(true) {
+        return Err(Response::error(422, "Explicit receipt-sync confirmation required"));
+    }
+    let alias = str_field(&body, "alias")?;
+    let root = store.path().parent().unwrap_or_else(|| std::path::Path::new("."));
+    let peers = PeerStore::new(root.to_path_buf());
+    let tasks = TaskStore::new(root.to_path_buf());
+    let changed = peer::sync_from_store(&tasks, &peers, alias)
+        .map_err(|_| Response::error(409, "Could not verify or process remote progress; local records preserved"))?;
+    Ok(Response::json(200, &json!({"updated": changed, "source": "openssh_explicit_sync"})))
+}
+
 fn dispatch(req: &Request, store: &WorkbenchStore, port: u16) -> Response {
     let expected_host = format!("127.0.0.1:{port}");
     if req.header("host") != Some(expected_host.as_str()) {
@@ -545,6 +604,9 @@ fn dispatch(req: &Request, store: &WorkbenchStore, port: u16) -> Response {
         ("GET", "/favicon.ico") => Response::new(204, "text/plain; charset=utf-8", Vec::new()),
         ("GET", "/api/state") => state(store).unwrap_or_else(|error| error),
         ("GET", "/api/tasks") => tasks_read(store).unwrap_or_else(|error| error),
+        ("GET", "/api/peers") => peers_read(store).unwrap_or_else(|error| error),
+        ("POST", "/api/peer/send") => device_send(req, store).unwrap_or_else(|error| error),
+        ("POST", "/api/peer/sync") => device_sync(req, store).unwrap_or_else(|error| error),
         ("POST", "/api/tasks/create") => tasks_create(req, store).unwrap_or_else(|error| error),
         ("POST", "/api/tasks/change") => tasks_change(req, store).unwrap_or_else(|error| error),
         ("POST", "/api/tasks/handoff") => tasks_handoff(req, store).unwrap_or_else(|error| error),

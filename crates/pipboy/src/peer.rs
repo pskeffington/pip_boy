@@ -142,8 +142,8 @@ fn get_num(value: &Value, field: &str) -> io::Result<u64> {
         .ok_or_else(|| invalid("Peer response missing numeric field"))
 }
 
-pub fn safe_peers() -> io::Result<Value> {
-    let config = PeerStore::from_environment()?.load()?;
+pub fn safe_peers_from_store(store: &PeerStore) -> io::Result<Value> {
+    let config = store.load()?;
     let entries: Vec<Value> = config.peers.iter().map(|entry| {
         json!({"alias": entry.alias, "target": entry.target})
     }).collect();
@@ -314,7 +314,7 @@ pub fn run(args: Vec<String>) -> Result<(), Box<dyn Error>> {
             }
         }
         [command, flag] if command == "list" && flag == "--json" => {
-            println!("{}", safe_peers()?);
+            println!("{}", safe_peers_from_store(&peers)?);
         }
         [command, id, alias, flag] if command == "send" && flag == "--confirm" => {
             let id = id.parse::<u64>()?;
