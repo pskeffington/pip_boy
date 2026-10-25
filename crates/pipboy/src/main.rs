@@ -93,8 +93,3 @@ fn run() -> Result<(), Box<dyn Error>> {
         Some(other) => Err(format!("unknown command: {other}. Use pipboy help.").into()),
     }
 }
-
-#[allow(dead_code)]
-fn flush_stdout() -> io::Result<()> {
-    io::stdout().flush()
-}
