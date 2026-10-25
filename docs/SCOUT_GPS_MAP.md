@@ -67,3 +67,9 @@ python3 tools/smoke_micro.py
 ```
 
 The Node tests cover real RustGIS serde-style geometries, projects' active maps, layer ordering, source metadata, CRS refusals, ZIP stored/Deflate extraction and CRC rejection. **Browser integration, actual RustGIS-exported field layers, Raspberry Pi 480×320 display, GPS precision and native RustGIS renderer/raster acceptance still require manual field tests.** To confirm alignment, import a known authoritative road/parcel/trail layer and compare a recorded surveyed position with the same map in RustGIS.
+
+## Reclamation site markers (manual-only)
+
+From the Reclamation Field Kit, select **MAP** on a recorded site or open **MAP → SITES**. This is a separate, operator-requested local overlay of up to 256 saved manual WGS84 points. A visible marker and its paged, keyboard-accessible list can select/center a site; **no basemap is required** to see site markers on the coordinate grid. The marker feed excludes notes; no server request for it occurs just by opening MAP.
+
+Saved sites are **not** browser GPS fixes, verified survey-grade positions or official RustGIS reference layers. Site-derived centers disable the WEB reference lookup, and **WEB ON** stays blocked while site records are visible. Close SITES to restore the previous center, then explicitly use a manual center or imported layer before opting in to web reference. On closing or navigating away, marker records and selection are discarded from browser map memory. Field verification on Pi/RustGIS remains open.
