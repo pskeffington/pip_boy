@@ -60,7 +60,7 @@ async function until(cond){
 }
 async function main(){
   const view=window.RustBoyMap.mount(new Element("div"));
-  await until(()=>view.webStatus.includes("WEB AVAILABLE"));
+  await until(()=>view.webStatus.includes("WEB READY"));
   assert.equal(requests.length,1,"MAP entry pings status once without area");
   assert.equal(requests[0].method,"GET");
   assert.equal(requests[0].body,undefined);
