@@ -14,7 +14,9 @@
     "design": "Favor traits and composition instead of inherited class hierarchies.",
     "limitation": "Conceptual guidance; not evidence of runtime correctness.",
     "acceptance": "Prove two heterogeneous modules implement one object-safe interface.",
-    "reviewed_on": "2026-10-24"
+    "reviewed_on": "2026-10-24",
+    "contributors": "Rust Project contributors",
+    "publisher": "Rust Project"
   },
   {
     "id": "L02",
@@ -31,7 +33,9 @@
     "design": "Keep runtime module interface dyn-compatible (no generic methods or associated constants).",
     "limitation": "Runtime dispatch does not enforce operating-system permissions.",
     "acceptance": "Compile polymorphic test implementations as Box<dyn RuntimeModule>.",
-    "reviewed_on": "2026-10-24"
+    "reviewed_on": "2026-10-24",
+    "contributors": "Rust Project contributors",
+    "publisher": "Rust Project"
   },
   {
     "id": "L03",
@@ -48,7 +52,9 @@
     "design": "Keep unsafe and foreign-function boundaries outside core domain types.",
     "limitation": "Formal result does not prove each third-party dependency or device driver safe.",
     "acceptance": "Review unsafe dependencies and keep device I/O isolated.",
-    "reviewed_on": "2026-10-24"
+    "reviewed_on": "2026-10-24",
+    "contributors": "Ralf Jung; Jacques-Henri Jourdan; Robbert Krebbers; Derek Dreyer",
+    "publisher": "ACM / POPL 2018"
   },
   {
     "id": "L04",
@@ -66,7 +72,9 @@
     "design": "Prioritize local data ownership and offline functionality before optional synchronization.",
     "limitation": "Discusses CRDTs as potential tools; does not mandate sync or CRDT usage now.",
     "acceptance": "Offline create/read/export work with network disabled.",
-    "reviewed_on": "2026-10-24"
+    "reviewed_on": "2026-10-24",
+    "contributors": "Martin Kleppmann; Adam Wiggins; Peter van Hardenberg; Mark McGranaghan",
+    "publisher": "ACM / Onward! 2019"
   },
   {
     "id": "L05",
@@ -83,7 +91,9 @@
     "design": "Use memory-backed terminal frames and keyboard event replay for deterministic UI tests.",
     "limitation": "Current reference may describe a newer Ratatui version than this workspace's 0.29 dependency.",
     "acceptance": "Pin dependency; verify API and capture small-terminal snapshots.",
-    "reviewed_on": "2026-10-24"
+    "reviewed_on": "2026-10-24",
+    "contributors": "Ratatui maintainers",
+    "publisher": "Ratatui project"
   },
   {
     "id": "L06",
@@ -100,7 +110,9 @@
     "design": "Use hardware abstraction traits where peripheral protocols fit; keep Linux-specific GPIO separate.",
     "limitation": "Embedded HAL traits do not replace Linux userspace GPIO drivers or cover SDR.",
     "acceptance": "Build fake GPIO inputs before hardware tests.",
-    "reviewed_on": "2026-10-24"
+    "reviewed_on": "2026-10-24",
+    "contributors": "Rust Embedded HAL maintainers",
+    "publisher": "Rust Embedded HAL project"
   },
   {
     "id": "L07",
@@ -116,7 +128,9 @@
     "design": "Use kernel-supported GPIO requests instead of sysfs and ad-hoc bit banging.",
     "limitation": "Linux-specific and dependent on kernel + device capabilities.",
     "acceptance": "Require permission-denied, disconnect, and debounce tests.",
-    "reviewed_on": "2026-10-24"
+    "reviewed_on": "2026-10-24",
+    "contributors": "Linux kernel GPIO maintainers",
+    "publisher": "Linux kernel documentation"
   },
   {
     "id": "L08",
@@ -132,7 +146,9 @@
     "design": "Model optional GNSS measurements, explicit fix quality, and sample freshness.",
     "limitation": "Receiver and gpsd presence are not guaranteed; TPV can omit location fields.",
     "acceptance": "Replay no-fix, stale-fix and malformed payload fixtures.",
-    "reviewed_on": "2026-10-24"
+    "reviewed_on": "2026-10-24",
+    "contributors": "gpsd maintainers",
+    "publisher": "gpsd project"
   },
   {
     "id": "L09",
@@ -149,7 +165,9 @@
     "design": "Use standards-based GeoJSON import/export with WGS84 coordinates.",
     "limitation": "Format specification is not a routing engine or a tile licensing grant.",
     "acceptance": "Reject invalid coordinates and preserve geometry types.",
-    "reviewed_on": "2026-10-24"
+    "reviewed_on": "2026-10-24",
+    "contributors": "H. Butler; M. Daly; A. Doyle; S. Gillies; S. Hagen; T. Schaub",
+    "publisher": "IETF"
   },
   {
     "id": "L10",
@@ -165,7 +183,9 @@
     "design": "Track map-data provenance and attribution requirements in offline bundles.",
     "limitation": "ODbL applies to data; tiles and styles can have different terms.",
     "acceptance": "Every imported map bundle records source/license/attribution.",
-    "reviewed_on": "2026-10-24"
+    "reviewed_on": "2026-10-24",
+    "contributors": "OpenStreetMap Foundation",
+    "publisher": "OpenStreetMap Foundation"
   },
   {
     "id": "L11",
@@ -181,7 +201,9 @@
     "design": "Never bulk-prefetch official OSM raster tiles for Rust-Boy offline maps.",
     "limitation": "Provider policy is distinct from OSM database license and can change.",
     "acceptance": "Offline map test uses user-supplied, permitted tile bundles only.",
-    "reviewed_on": "2026-10-24"
+    "reviewed_on": "2026-10-24",
+    "contributors": "OpenStreetMap Foundation Operations Working Group",
+    "publisher": "OpenStreetMap Foundation"
   },
   {
     "id": "L12",
@@ -198,7 +220,9 @@
     "design": "Use explicit pairing, connection security and known peripheral capabilities.",
     "limitation": "Bluetooth pairing alone does not equal application-layer peer trust.",
     "acceptance": "Manual pairing and peer identity tests; no automatic discovery.",
-    "reviewed_on": "2026-10-24"
+    "reviewed_on": "2026-10-24",
+    "contributors": "Bluetooth Core Specification Working Group",
+    "publisher": "Bluetooth SIG"
   },
   {
     "id": "L13",
@@ -214,7 +238,9 @@
     "design": "Consider platform-specific BLE adapter behind a host-only trait.",
     "limitation": "Library and backend support vary; no implementation approval yet.",
     "acceptance": "Mock BLE central callbacks and verify cancellation.",
-    "reviewed_on": "2026-10-24"
+    "reviewed_on": "2026-10-24",
+    "contributors": "btleplug maintainers",
+    "publisher": "btleplug project"
   },
   {
     "id": "L14",
@@ -231,7 +257,9 @@
     "design": "Abstract serial enumeration and read-only device sessions.",
     "limitation": "Some platform backends and native libraries may require extra dependencies.",
     "acceptance": "Test manual port selection, unplug, timeout and cancellation.",
-    "reviewed_on": "2026-10-24"
+    "reviewed_on": "2026-10-24",
+    "contributors": "serialport-rs maintainers",
+    "publisher": "serialport-rs project"
   },
   {
     "id": "L15",
@@ -247,7 +275,9 @@
     "design": "Evaluate standard cryptographic envelopes for future trusted local communications.",
     "limitation": "HPKE alone does not provide a complete authenticated messaging protocol or key lifecycle.",
     "acceptance": "Threat model and independent protocol review before sending messages.",
-    "reviewed_on": "2026-10-24"
+    "reviewed_on": "2026-10-24",
+    "contributors": "R. Barnes; K. Bhargavan; B. Lipp; C. Wood",
+    "publisher": "IETF / IRTF CFRG"
   },
   {
     "id": "L16",
@@ -264,7 +294,9 @@
     "design": "Apply threat modeling, dependency hygiene, testing and change provenance.",
     "limitation": "A practice framework, not proof of security certification.",
     "acceptance": "Document dependency audit, reviewed risks and release approvals.",
-    "reviewed_on": "2026-10-24"
+    "reviewed_on": "2026-10-24",
+    "contributors": "Murugiah Souppaya; Karen Scarfone; Donna Dodson",
+    "publisher": "NIST"
   },
   {
     "id": "L17",
@@ -280,7 +312,9 @@
     "design": "Record build provenance and improve artifact integrity incrementally.",
     "limitation": "Do not claim a SLSA level merely by producing a GitHub workflow.",
     "acceptance": "Validate release provenance with known source and builder identities.",
-    "reviewed_on": "2026-10-24"
+    "reviewed_on": "2026-10-24",
+    "contributors": "SLSA contributors",
+    "publisher": "OpenSSF / SLSA project"
   },
   {
     "id": "L18",
@@ -296,7 +330,9 @@
     "design": "Borrow keyboard access, contrast and reduced-motion accessibility criteria.",
     "limitation": "Primarily a web content standard; terminal-specific usability needs separate testing.",
     "acceptance": "Keyboard-only journeys, screen-size tests and readable status without color alone.",
-    "reviewed_on": "2026-10-24"
+    "reviewed_on": "2026-10-24",
+    "contributors": "Accessibility Guidelines Working Group",
+    "publisher": "W3C"
   },
   {
     "id": "L19",
@@ -314,7 +350,9 @@
     "design": "Use versioned JSON data interchange and strictly validate inputs.",
     "limitation": "JSON alone provides neither schema governance nor data authenticity.",
     "acceptance": "Reject malformed data and incompatible schema versions.",
-    "reviewed_on": "2026-10-24"
+    "reviewed_on": "2026-10-24",
+    "contributors": "Tim Bray (editor)",
+    "publisher": "IETF"
   },
   {
     "id": "L20",
@@ -331,7 +369,9 @@
     "design": "Maintain read-only field instrumentation and separate control from observation.",
     "limitation": "Relevant to OT-adjacent environments; not permission to operate infrastructure.",
     "acceptance": "Ensure sensor/radio modules cannot actuate external systems by default.",
-    "reviewed_on": "2026-10-24"
+    "reviewed_on": "2026-10-24",
+    "contributors": "Keith Stouffer et al.",
+    "publisher": "NIST"
   },
   {
     "id": "L21",
@@ -347,7 +387,9 @@
     "design": "Compare licensed LoRaWAN device constraints during transport selection.",
     "limitation": "LoRaWAN is not interchangeable with Meshtastic point-to-point mesh; do not assume interoperability.",
     "acceptance": "Choose and document a specific transport before protocol code.",
-    "reviewed_on": "2026-10-24"
+    "reviewed_on": "2026-10-24",
+    "contributors": "LoRa Alliance technical contributors",
+    "publisher": "LoRa Alliance"
   },
   {
     "id": "L22",
@@ -364,7 +406,9 @@
     "design": "Require explicit peer authorization rather than trusting proximity.",
     "limitation": "Enterprise design guidance; adapt proportionally to a personal field device.",
     "acceptance": "Deny untrusted peer messages and show consent state.",
-    "reviewed_on": "2026-10-24"
+    "reviewed_on": "2026-10-24",
+    "contributors": "Scott Rose; Oliver Borchert; Stu Mitchell; Sean Connelly",
+    "publisher": "NIST"
   },
   {
     "id": "L23",
@@ -380,7 +424,9 @@
     "design": "Distinguish 1090ES and 978 MHz UAT in receiver/decoder capability planning.",
     "limitation": "Airborne equipage guidance is not a decoder implementation or authorization to transmit.",
     "acceptance": "Receive-only data fixtures distinguish source channel and uncertainty.",
-    "reviewed_on": "2026-10-24"
+    "reviewed_on": "2026-10-24",
+    "contributors": "Federal Aviation Administration",
+    "publisher": "FAA"
   },
   {
     "id": "L24",
@@ -397,7 +443,9 @@
     "design": "Consider a receiver-only abstraction over supported SDR hardware.",
     "limitation": "FFI and native drivers require per-platform auditing; TX APIs must not be enabled by default.",
     "acceptance": "Mock IQ source; document library and driver prerequisites.",
-    "reviewed_on": "2026-10-24"
+    "reviewed_on": "2026-10-24",
+    "contributors": "rust-soapysdr maintainers",
+    "publisher": "rust-soapysdr project"
   },
   {
     "id": "L25",
@@ -414,6 +462,8 @@
     "design": "Use Box<dyn Trait> for heterogeneous internal modules; generics for homogeneous hot paths.",
     "limitation": "Trait objects are runtime polymorphism, not a stable cross-language plugin ABI.",
     "acceptance": "Test two module types under a shared host without dynamic library loading.",
-    "reviewed_on": "2026-10-24"
+    "reviewed_on": "2026-10-24",
+    "contributors": "Rust Project contributors",
+    "publisher": "Rust Project"
   }
 ]

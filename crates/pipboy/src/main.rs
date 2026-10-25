@@ -76,7 +76,7 @@ fn run() -> Result<(), Box<dyn Error>> {
             let modules = plans()?;
             let references = literature()?;
             validate_blueprint(&modules, &references)?;
-            for module in modules.iter().filter(|item| gate.as_deref().is_none_or(|value| value == item.gate)) {
+            for module in modules.iter().filter(|item| (gate.is_none() || gate.as_deref() == Some(item.gate.as_str()))) {
                 println!("{} [{} / {}] {}", module.id, module.gate, module.status, module.name);
                 println!("  Requires: {}", if module.depends_on.is_empty() { "none".to_string() } else { module.depends_on.join(", ") });
                 println!("  Features: {}", module.features.join("; "));

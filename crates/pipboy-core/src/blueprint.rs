@@ -4,7 +4,7 @@
  //! network requests and does not grant any OS or hardware permissions.
 
 use crate::registry::{Readiness, MODULES};
-use crate::runtime::Capability;
+use crate::capability::Capability;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 
@@ -12,6 +12,8 @@ use std::collections::{HashMap, HashSet};
 pub struct Literature {
     pub id: String,
     pub title: String,
+    pub contributors: String,
+    pub publisher: String,
     pub year: u16,
     pub r#type: String,
     pub url: String,
@@ -125,6 +127,14 @@ pub fn validate_blueprint(modules: &[ModulePlan], literature: &[Literature]) -> 
         if implemented != (runtime.readiness == Readiness::Ready) {
             return Err(format!("readiness drift for runtime module {}", runtime.id));
         }
+        let planned_capabilities = item
+            .capabilities
+            .iter()
+            .map(|key| Capability::from_key(key).expect("capabilities validated above"))
+            .collect::<Vec<_>>();
+        if planned_capabilities.as_slice() != runtime.required_capabilities {
+            return Err(format!("capability drift for runtime module {}", runtime.id));
+        }
     }
 
     let mut evidence_ids = HashSet::new();
@@ -135,6 +145,8 @@ pub fn validate_blueprint(modules: &[ModulePlan], literature: &[Literature]) -> 
         if !(2000..=2026).contains(&item.year)
             || !item.url.starts_with("https://")
             || item.title.trim().is_empty()
+            || item.contributors.trim().is_empty()
+            || item.publisher.trim().is_empty()
             || item.design.trim().is_empty()
             || item.limitation.trim().is_empty()
             || item.acceptance.trim().is_empty()

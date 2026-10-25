@@ -5,6 +5,7 @@
 
 pub mod branding;
 pub mod blueprint;
+pub mod capability;
 pub mod runtime;
 pub mod catalog;
 pub mod metrics;

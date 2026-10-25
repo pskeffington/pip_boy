@@ -4,102 +4,9 @@
  //! operating system sandbox. No untrusted native code may be loaded here.
 
 use crate::registry::{Readiness, MODULES};
+pub use crate::capability::{Capability, PermissionSet};
 use serde::Serialize;
 use std::collections::HashSet;
-
-/// Explicitly named future I/O surfaces, with no implicit network/device grant.
-#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq, Serialize)]
-#[serde(rename_all = "snake_case")]
-pub enum Capability {
-    HostRead,
-    FilesRead,
-    FilesWrite,
-    DeviceEnumerate,
-    GpioRead,
-    DisplayWrite,
-    SerialRead,
-    GnssRead,
-    SdrReceive,
-    BleDiscover,
-    MeshTransmit,
-    SensorRead,
-    AudioPlay,
-    NetworkFetch,
-}
-
-impl Capability {
-    pub fn key(self) -> &'static str {
-        match self {
-            Self::HostRead => "host.read",
-            Self::FilesRead => "files.read",
-            Self::FilesWrite => "files.write",
-            Self::DeviceEnumerate => "device.enumerate",
-            Self::GpioRead => "gpio.read",
-            Self::DisplayWrite => "display.write",
-            Self::SerialRead => "serial.read",
-            Self::GnssRead => "gnss.read",
-            Self::SdrReceive => "sdr.receive",
-            Self::BleDiscover => "ble.discover",
-            Self::MeshTransmit => "mesh.transmit",
-            Self::SensorRead => "sensor.read",
-            Self::AudioPlay => "audio.play",
-            Self::NetworkFetch => "network.fetch",
-        }
-    }
-
-    pub fn from_key(value: &str) -> Option<Self> {
-        match value {
-            "host.read" => Some(Self::HostRead),
-            "files.read" => Some(Self::FilesRead),
-            "files.write" => Some(Self::FilesWrite),
-            "device.enumerate" => Some(Self::DeviceEnumerate),
-            "gpio.read" => Some(Self::GpioRead),
-            "display.write" => Some(Self::DisplayWrite),
-            "serial.read" => Some(Self::SerialRead),
-            "gnss.read" => Some(Self::GnssRead),
-            "sdr.receive" => Some(Self::SdrReceive),
-            "ble.discover" => Some(Self::BleDiscover),
-            "mesh.transmit" => Some(Self::MeshTransmit),
-            "sensor.read" => Some(Self::SensorRead),
-            "audio.play" => Some(Self::AudioPlay),
-            "network.fetch" => Some(Self::NetworkFetch),
-            _ => None,
-        }
-    }
-}
-
-/// Capability grants must originate from a later explicit consent flow.
-#[derive(Default)]
-pub struct PermissionSet {
-    grants: HashSet<Capability>,
-}
-
-impl PermissionSet {
-    pub fn empty() -> Self {
-        Self::default()
-    }
-
-    /// Only read-only local operations; files.write is deliberately absent.
-    pub fn offline_read_only() -> Self {
-        Self {
-            grants: [Capability::HostRead, Capability::FilesRead]
-                .into_iter()
-                .collect(),
-        }
-    }
-
-    pub fn grant(&mut self, capability: Capability) {
-        self.grants.insert(capability);
-    }
-
-    pub fn revoke(&mut self, capability: Capability) {
-        self.grants.remove(&capability);
-    }
-
-    pub fn allows(&self, capability: Capability) -> bool {
-        self.grants.contains(&capability)
-    }
-}
 
 /// A domain sample; future versioned Observation<T> models add type/units/quality.
 #[derive(Clone, Debug, Serialize)]
@@ -166,6 +73,9 @@ impl ModuleHost {
         if declared.readiness != Readiness::Ready {
             return Err(format!("module {id} is not implemented"));
         }
+        if module.capabilities() != declared.required_capabilities {
+            return Err(format!("module {id} capability declaration differs from registry"));
+        }
         if self.modules.iter().any(|item| item.id() == id) {
             return Err(format!("duplicate module {id}"));
         }
@@ -213,6 +123,7 @@ mod tests {
 
     const READ: &[Capability] = &[Capability::HostRead];
     const WRITE: &[Capability] = &[Capability::FilesWrite];
+    const FILE_READ: &[Capability] = &[Capability::FilesRead];
     const RADIO: &[Capability] = &[Capability::SdrReceive];
 
     struct MockModule {
@@ -270,7 +181,7 @@ mod tests {
         let calls = Arc::new(AtomicUsize::new(0));
         let mut host = ModuleHost::new(PermissionSet::offline_read_only());
         host.register(mock("stat", READ, &calls)).unwrap();
-        host.register(mock("library", &[], &calls)).unwrap();
+        host.register(mock("library", FILE_READ, &calls)).unwrap();
 
         let output = host.poll_once();
         assert_eq!(output.len(), 2);
@@ -286,6 +197,7 @@ mod tests {
         assert!(host.register(mock("unknown", &[], &calls)).is_err());
         host.register(mock("stat", READ, &calls)).unwrap();
         assert!(host.register(mock("stat", READ, &calls)).is_err());
+        assert!(host.register(mock("library", &[], &calls)).is_err());
         assert_eq!(calls.load(Ordering::SeqCst), 0);
     }
 
