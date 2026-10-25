@@ -16,13 +16,14 @@ Rust-Boy is the public product name. The existing `pip_boy` repository, `pipboy`
 - [Device simulator precursor](SIMULATION.md) — in-memory fixture broker, active simulated leases, confirmation and revocation.
 - [Typed adapter interfaces](MOCK_ADAPTERS.md) — input/display/serial mock contracts and OS limitations.
 - [Architecture](ARCHITECTURE.md) — host / UI / core / adapter boundaries.
+- [OS device broker contract](OS_DEVICE_BROKER.md) — independent privilege boundary and real-device acceptance requirements.
 - [Research library](RESEARCH_LIBRARY.md) — external open-source Pip-Boy implementation references.
 
 ## Sequencing rules
 
 The build is a directed acyclic dependency plan, **not** a schedule. All module IDs and dependencies live in [catalog/module_plan.json](../catalog/module_plan.json). Each PR must identify: affected module IDs; evidence IDs; data contracts; permission changes; deterministic test fixtures; user-visible status language; and its exit gate. A module cannot advance from **planned** until its testable implementation has been reviewed.
 
-### G0: Native foundation and quality recovery — **Ubuntu CI verified; platform acceptance still open**
+### G0: Native foundation and quality recovery — **Linux/macOS/Windows CLI verified; terminal gate open**
 
 - [x] Curated public GitHub reference catalog with license status.
 - [x] Rust-Boy product identity and documented independent-project IP boundaries.
@@ -32,7 +33,8 @@ The build is a directed acyclic dependency plan, **not** a schedule. All module 
 - [x] GitHub Actions admitted jobs and [passed the full Ubuntu Rust quality matrix](https://github.com/pskeffington/pip_boy/actions/runs/40160220866) after replacing unsupported third-party setup/cache actions with runner-native `rustup`.
 - [x] Validate dependency lockfile and pinned toolchain compatibility. **Local Linux: passed; lockfile committed.**
 - [x] Native macOS/Windows build, unit test and offline fixture smoke jobs passed in [run 40161263824](https://github.com/pskeffington/pip_boy/actions/runs/40161263824). Native portable output and POSIX/macOS TUI restoration checks are expanded in the next pass (new runs pending).
-- [ ] Complete native Windows ConPTY TUI launch/exit, assistive-tech and persistence/forced-error acceptance.
+- [ ] Validate new Windows ConPTY TUI pause/resume, resize, clean/error exit and restoration on the exact CI commit; harness added under `tools/smoke_windows_conpty.py`.
+- [ ] Complete screen-reader/contrast checks, interrupt/write durability and other native accessibility/persistence acceptance.
 - [ ] Verify terminal restoration on panic/error and note persistence during interrupted writes.
 
 **G0 exit:** green checks and reproducible build logs; tested CLI and TUI with no implicit external IO. Do not call CI startup failure a code test failure or a passing check.
@@ -49,7 +51,7 @@ The build is a directed acyclic dependency plan, **not** a schedule. All module 
 - [ ] Establish explicit retention/erase policies and schema migration for stored observations. Notes now support explicit schema-1 export/import; observation storage/migration remains planned.
 - [x] Author a pure module lifecycle state machine and existing deny-before-poll host prechecks (**in-process only; unverified**).
 - [x] Author a bounded version-1 **preference-only** adapter request/deny/clear store and CLI, with no implicit runtime grants (**new tests unexecuted**).
-- [ ] Complete actual session-based per-adapter consent and an OS-level device broker. Host-read revocation is already enforced locally; TUI P resumes only after grant/start. A stored preference is **not** consent or an OS sandbox.
+- [ ] Implement independently enforced, per-device OS broker and trusted real-device consent. The [broker threat-model/acceptance contract](OS_DEVICE_BROKER.md) is defined; no physical I/O implementation or authorization is enabled. A stored preference and virtual CLI `--confirm` are **not** grants.
 - [ ] Add battery, thermal, disk and network-interface status only where supported, with `Unknown` rather than guessed values.
 - [ ] Complete accessibility acceptance across platforms. Keyboard collection/detail navigation, compact 40x12 rendering and smaller-screen fallback are locally tested; motion remains static, with no decorative animation.
 - [x] Author state/quality/overflow and sample-argument unit tests (**not yet executed**).
@@ -103,7 +105,7 @@ The build is a directed acyclic dependency plan, **not** a schedule. All module 
 
 ## G0 and G1 status summary
 
-**G0:** remote Actions previously reported startup_failure with zero executed jobs; local Linux stable/MSRV compilation, 63 tests, fmt, Clippy and CLI/TUI smoke checks now pass; remote CI and remaining platform acceptance are still open.
+**G0:** GitHub Actions is operational. [Run 40162059963](https://github.com/pskeffington/pip_boy/actions/runs/40162059963) passed Linux stable/MSRV, macOS native PTY and Windows native CLI/fixture checks at `8a4f7c5` (115 Rust tests per toolchain). Newly authored Windows interactive ConPTY, release hardening and accessibility gates are open until checked on the exact commit.
 
 **G1:** typed observation, bounded sample buffer, lifecycle transitions, finite NDJSON command and offline catalog validator have initial source implementations with telemetry now shared by TUI and finite NDJSON through a bounded session. The lazy host telemetry adapter now connects ModuleHost, lifecycle and capabilities to the TUI and finite sampling command; the one-shot status CLI has also been wired through it (new tests awaiting execution). The new `PreferenceStore` and CLI record requested/denied adapter intent only, with authored schema/locking/smoke tests not yet executed. No preference enables radio, GNSS, mesh, BLE, GPIO or network access; actual consent and brokering remain planned. See [permissions contract](PERMISSIONS.md) and [validation evidence](VALIDATION.md).
 

@@ -36,4 +36,4 @@ Ten new core unit tests exercise trait-object dispatch, mock-only output contrac
 
 The GitHub workflow runs the new tests on Linux stable/MSRV and native macOS/Windows, plus a POSIX PTY journey on macOS using tools/smoke_runtime.py. The portable Windows CLI test is **not a Windows ConPTY interactive TUI test**; that remains an acceptance gate. Native TUI/accessibility evaluation and real devices are still outstanding.
 
-See [virtual transport](VIRTUAL_TRANSPORT.md), [simulation](SIMULATION.md), [roadmap](ROADMAP.md), and [validation](VALIDATION.md).
+See [virtual transport](VIRTUAL_TRANSPORT.md), [simulation](SIMULATION.md), [OS device broker requirements](OS_DEVICE_BROKER.md), [roadmap](ROADMAP.md), and [validation](VALIDATION.md).

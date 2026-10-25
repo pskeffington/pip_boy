@@ -21,7 +21,8 @@
 | Typed adapter precursor | mock_adapters.rs; CLI simulate adapter | InputSource/DisplayBackend/SerialReader traits, fixed in-memory GPIO/display/serial mocks, 10 Rust test fixtures and CLI smoke suite authored | Execute new checks on stable/MSRV, native macOS/Windows and macOS PTY, then review OS-specific backends |
 | Console navigation | console.rs / tui.rs | Compact layout, scrolling, explicit note reload and Linux resize smoke checks | Native platforms, assistive-tech and contrast acceptance |
 | Research consistency | tools/validate_catalog.py | Passing locally | Keep catalog and Rust registry aligned |
-| Quality checks | rust.yml | Cross-platform Ubuntu/macOS/Windows five-job matrix green at 46cc627; new adapter/terminal checks authored | New exact-commit CI, native Windows ConPTY, accessibility/hardware acceptance |
+| Quality checks | rust.yml | Green five-job Linux/macOS/Windows matrix at `8a4f7c5`: 115 tests per Linux toolchain, macOS PTY and Windows CLI | New Windows ConPTY test (in CI, pending), platform accessibility and actual hardware |
+| OS broker trust model | docs/OS_DEVICE_BROKER.md | Independent broker IPC, per-device identity/consent, real deadline and revocation acceptance specified | No real OS-enforced broker code, user authorization UX or physical adapter yet |
 
 See [VALIDATION.md](VALIDATION.md) for executed Linux checks. TUI and NDJSON use `ModuleHost` with a lazy telemetry adapter; the status CLI has now been routed through the same host (validated in Ubuntu CI at `f445814`). TUI P controls local host-read grant/revocation. Preference persistence is authored but is not an active grant; session authorization, general adapter consent and OS brokering remain planned.
 
@@ -83,7 +84,7 @@ G1 module-plan statuses remain **planned** until integration and acceptance test
 | P0 | Validate preference store and virtual broker fixtures; build trusted real-device authorization UI and OS handle broker | G1-D/G2 |
 | P0 | Extend tested notes portability to general collection migrations and backup identities | G1-E |
 | P1 | Build testable host telemetry timing and source-quality dashboard | G1-C |
-| P1 | Native platform, assistive-tech and contrast acceptance | G1-E |
+| P1 | Execute Windows ConPTY terminal journey, then native accessibility and forced-error acceptance | G0/G1-E |
 | P2 | Validate new bounded mock transport and native macOS/Windows CI; follow with adapter traits and injection/cancellation harness, no physical I/O | G1-D/G2 |
 
 ## Acceptance evidence format

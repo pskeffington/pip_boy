@@ -4,7 +4,7 @@
 
 Rust-Boy is an independent, modular toolkit for desktop terminals and future wearable field computers. It combines local host diagnostics, a curated research library, and a user-controlled offline journal under one minimal native interface. Planned adapters extend it to Raspberry Pi hardware, maps, receive-only radios, and authenticated local communications.
 
-> **Project status — Linux, macOS and Windows CI baseline verified on the feature branch.** [Push run 40161263824](https://github.com/pskeffington/pip_boy/actions/runs/40161263824) and [PR run 40161267203](https://github.com/pskeffington/pip_boy/actions/runs/40161267203) passed all five jobs at `46cc627`: catalog validation, stable/MSRV compilation and tests, formatting, Clippy, six Linux smoke suites, and native macOS/Windows build/tests plus offline virtual-device smoke. A new set of typed GPIO-input, display and serial fixture interfaces and native console/PTTY checks is undergoing validation on the current branch. External physical devices and an OS-enforced authorization broker remain **unimplemented**. Saved adapter requests never turn on a device. See [validation evidence](docs/VALIDATION.md).
+> **Project status — cross-platform Linux/macOS/Windows quality checks verified.** [Push run 40162057807](https://github.com/pskeffington/pip_boy/actions/runs/40162057807) and [PR run 40162059963](https://github.com/pskeffington/pip_boy/actions/runs/40162059963) passed all five GitHub Actions jobs at `8a4f7c5`, including 115 Rust tests on stable and Rust 1.81.0, typed mock adapters, native macOS PTY and Windows CLI. The newest Windows **ConPTY interactive TUI** regression is now authored and executing; that gate cannot be called complete before CI passes its exact commit. OS-brokered real device authorization and any physical access remain **unimplemented**. See [validation](docs/VALIDATION.md).
 
 ## Rust-Boy identity
 
@@ -89,6 +89,8 @@ python3 tools/smoke_replay.py      # synthetic trace fixtures only
 python3 tools/smoke_transport.py   # bounded fake event FIFO only
 python3 tools/smoke_mock_adapters.py # typed offline input/display/serial fixtures
 python3 tools/smoke_native_cli.py    # portable console/JSON/no-ANSI output checks
+# Windows only, after cargo build:
+python tools/smoke_windows_conpty.py  # native interactive TUI ConPTY journey
 cargo clippy --workspace --all-targets -- -D warnings
 ```
 
@@ -130,6 +132,7 @@ Three new Rust core traits (`InputSource`, `DisplayBackend`, and `SerialReader`)
 | [docs/SIMULATION.md](docs/SIMULATION.md) | Fixed virtual device fixtures, session revocation and mock-only outputs |
 | [docs/VIRTUAL_TRANSPORT.md](docs/VIRTUAL_TRANSPORT.md) | Bounded fake FIFO, drop accounting, per-lease read checks and cross-platform CI |
 | [docs/MOCK_ADAPTERS.md](docs/MOCK_ADAPTERS.md) | Typed input/display/serial fixture interfaces and no-hardware contract |
+| [docs/OS_DEVICE_BROKER.md](docs/OS_DEVICE_BROKER.md) | Required OS-enforced authorization design and blocked real-hardware gate |
 | [docs/CI_TRIAGE.md](docs/CI_TRIAGE.md) | GitHub Actions startup investigation and local verification |
 | [docs/LITERATURE_MATRIX.md](docs/LITERATURE_MATRIX.md) | Evidence matrix connecting standards and studies to modules |
 | [docs/MODULE_CATALOG.md](docs/MODULE_CATALOG.md) | Planned modules, features, dependency gates and acceptance criteria |

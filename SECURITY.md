@@ -26,6 +26,10 @@ The bounded `VirtualTransport` queue only holds synthetic `sim:*` events; explic
 
 The typed mock input/display/serial adapters also remain in-memory only: they reject missing confirmation or saved denials, return explicit simulated records and never measure a GPIO pin, render to a physical screen, or read serial hardware. The mock display rejects control bytes/escape sequences. The serial payload is an explicitly injected fixture, not information received over a port. No real adapter authorization, encrypted channel or OS isolation is implied by these trait interfaces. See [typed adapter contract](docs/MOCK_ADAPTERS.md).
 
+## Actual device-authorization boundary (not implemented)
+
+The project now specifies [G2 OS device broker requirements](docs/OS_DEVICE_BROKER.md): explicit device identity, trusted per-operation consent, a separately enforced OS permission boundary, ephemeral scoped handles, actual deadline/close-on-revoke behavior, and fail-closed hot-unplug and process error handling. **None of those features are enabled merely because their design is written.** Windows ConPTY validation exercises only terminal behavior and cannot grant peripheral access.
+
 ## Future devices
 
 Location, serial ports, GPIO, SDR/radio, BLE, Wi-Fi, and mesh transports require separate adapters, permission gates, simulator tests, and user-facing indicators. Do not silently initiate scans, pair devices, transmit, or modify settings. No interference, jamming, credential interception, or covert collection features.
