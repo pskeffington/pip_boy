@@ -6,7 +6,7 @@ Rust-Boy is the public name of the modular console. The repository, executable, 
 
 - [Object model](OBJECT_MODEL.md): traits, runtime registry, permission policy, typed data proposals and lifecycle.
 - [Module catalog](MODULE_CATALOG.md): 27 scoped modules and their dependency/acceptance gates.
-- [Literature matrix](LITERATURE_MATRIX.md): 30 references tied to engineering decisions and test criteria.
+- [Literature matrix](LITERATURE_MATRIX.md): 34 references tied to engineering decisions and test criteria.
 - [Roadmap](ROADMAP.md): phase sequencing, release gates and risks.
 
 The current `ModuleHost` is an **in-process testable policy precheck** and does not isolate untrusted code. Physical device access, OS-enforced permissions and transport isolation remain planned, not implemented.

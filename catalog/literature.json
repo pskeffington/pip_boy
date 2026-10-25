@@ -559,5 +559,77 @@
     "limitation": "Research network deployment does not establish GNSS accuracy or validate a local dongle decoder.",
     "acceptance": "Compare recorded receive-only ADS-B fixtures with known decoder outputs and explicit coverage gaps.",
     "reviewed_on": "2026-10-24"
+  },
+  {
+    "id": "L31",
+    "title": "sysinfo 0.33.1: System API and CPU refresh behavior",
+    "contributors": "sysinfo maintainers",
+    "publisher": "docs.rs / sysinfo",
+    "year": 2026,
+    "type": "official_docs",
+    "url": "https://docs.rs/sysinfo/0.33.1/sysinfo/struct.System.html",
+    "doi": null,
+    "modules": [
+      "stat",
+      "telemetry"
+    ],
+    "design": "Refresh CPU counters over an appropriate platform-dependent interval and distinguish host values from fabricated device readings.",
+    "limitation": "API docs do not prove measured CPU accuracy on a specific OS or application sampling schedule.",
+    "acceptance": "Measure CPU refresh cadence against sysinfo MINIMUM_CPU_UPDATE_INTERVAL and cross-platform fixtures.",
+    "reviewed_on": "2026-10-24"
+  },
+  {
+    "id": "L32",
+    "title": "Rust std::time::Instant API",
+    "contributors": "Rust Project contributors",
+    "publisher": "Rust standard library",
+    "year": 2026,
+    "type": "official_docs",
+    "url": "https://doc.rust-lang.org/stable/std/time/struct.Instant.html",
+    "doi": null,
+    "modules": [
+      "telemetry",
+      "diagnostics"
+    ],
+    "design": "Use monotonic in-process elapsed duration for expiry; keep separately sourced wall timestamps for display and serialization.",
+    "limitation": "Instant values are opaque and not meaningfully serialized or compared between runs; clock behavior may differ on suspension.",
+    "acceptance": "Test stale transitions with fixture elapsed times and never compare process-specific timestamps across sessions.",
+    "reviewed_on": "2026-10-24"
+  },
+  {
+    "id": "L33",
+    "title": "Rust std::collections::VecDeque API",
+    "contributors": "Rust Project contributors",
+    "publisher": "Rust standard library",
+    "year": 2026,
+    "type": "official_docs",
+    "url": "https://doc.rust-lang.org/stable/std/collections/struct.VecDeque.html",
+    "doi": null,
+    "modules": [
+      "telemetry",
+      "storage"
+    ],
+    "design": "Bound in-memory sample history and account for dropped items when older observations are evicted.",
+    "limitation": "VecDeque is not itself a retention policy, stream backpressure strategy, or persistent storage guarantee.",
+    "acceptance": "Prove a queue of capacity N never retains more than N records and tracks drop count.",
+    "reviewed_on": "2026-10-24"
+  },
+  {
+    "id": "L34",
+    "title": "GitHub Actions: Using workflow run logs",
+    "contributors": "GitHub Docs contributors",
+    "publisher": "GitHub",
+    "year": 2026,
+    "type": "official_docs",
+    "url": "https://docs.github.com/en/actions/how-tos/monitor-workflows/use-workflow-run-logs",
+    "doi": null,
+    "modules": [
+      "diagnostics",
+      "release"
+    ],
+    "design": "Distinguish run-level startup failures from job-level compilation or test failures; require a link to executed checks before claiming CI success.",
+    "limitation": "General troubleshooting guidance does not identify the cause of this repository's zero-job startup_failure.",
+    "acceptance": "Capture GitHub run and job metadata and successful test/formatter logs for G0 promotion.",
+    "reviewed_on": "2026-10-24"
   }
 ]

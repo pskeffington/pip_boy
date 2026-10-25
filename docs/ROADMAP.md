@@ -7,7 +7,7 @@ Rust-Boy is the public product name. The existing `pip_boy` repository, `pipboy`
 
 ## Navigate the build
 
-- [Literature matrix](LITERATURE_MATRIX.md) — 30 traceable primary/official references, limitations and corresponding tests.
+- [Literature matrix](LITERATURE_MATRIX.md) — 34 traceable primary/official references, limitations and corresponding tests.
 - [Module and feature catalog](MODULE_CATALOG.md) — 27 modules, dependency gates, capability needs, acceptance criteria.
 - [Rust object model](OBJECT_MODEL.md) — object boundaries, traits, composition and runtime access policy.
 - [Architecture](ARCHITECTURE.md) — host / UI / core / adapter boundaries.

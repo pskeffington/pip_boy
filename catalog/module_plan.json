@@ -12,7 +12,8 @@
     ],
     "evidence": [
       "L03",
-      "L19"
+      "L19",
+      "L31"
     ],
     "features": [
       "CPU/memory/OS/uptime snapshot",
@@ -92,7 +93,10 @@
       "L19",
       "L25",
       "L27",
-      "L30"
+      "L30",
+      "L31",
+      "L32",
+      "L33"
     ],
     "features": [
       "Provenance-tagged samples",
@@ -122,7 +126,8 @@
       "L04",
       "L09",
       "L19",
-      "L26"
+      "L26",
+      "L33"
     ],
     "features": [
       "Versioned local collections",
@@ -259,7 +264,9 @@
     "evidence": [
       "L16",
       "L17",
-      "L26"
+      "L26",
+      "L32",
+      "L34"
     ],
     "features": [
       "Schema checks and adapter readiness",
@@ -753,7 +760,8 @@
       "L03",
       "L16",
       "L17",
-      "L27"
+      "L27",
+      "L34"
     ],
     "features": [
       "Signed multi-platform builds",

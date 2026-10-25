@@ -11,7 +11,7 @@
 
 | ID | Module | Priority | State | Prerequisites | Evidence |
 | --- | --- | --- | --- | --- | --- |
-| `stat` | Host status | P0 | implemented unverified | — | [L03](LITERATURE_MATRIX.md#l03), [L19](LITERATURE_MATRIX.md#l19) |
+| `stat` | Host status | P0 | implemented unverified | — | [L03](LITERATURE_MATRIX.md#l03), [L19](LITERATURE_MATRIX.md#l19), [L31](LITERATURE_MATRIX.md#l31) |
 | `library` | Reference library | P0 | implemented unverified | — | [L10](LITERATURE_MATRIX.md#l10), [L19](LITERATURE_MATRIX.md#l19) |
 | `notes` | Offline field notes | P0 | implemented unverified | — | [L04](LITERATURE_MATRIX.md#l04), [L19](LITERATURE_MATRIX.md#l19) |
 
@@ -49,13 +49,13 @@
 
 | ID | Module | Priority | State | Prerequisites | Evidence |
 | --- | --- | --- | --- | --- | --- |
-| `telemetry` | Telemetry event stream | P0 | planned | `stat` | [L01](LITERATURE_MATRIX.md#l01), [L02](LITERATURE_MATRIX.md#l02), [L03](LITERATURE_MATRIX.md#l03), [L19](LITERATURE_MATRIX.md#l19), [L25](LITERATURE_MATRIX.md#l25), [L27](LITERATURE_MATRIX.md#l27), [L30](LITERATURE_MATRIX.md#l30) |
-| `storage` | Storage and schema service | P0 | planned | `notes` | [L04](LITERATURE_MATRIX.md#l04), [L09](LITERATURE_MATRIX.md#l09), [L19](LITERATURE_MATRIX.md#l19), [L26](LITERATURE_MATRIX.md#l26) |
+| `telemetry` | Telemetry event stream | P0 | planned | `stat` | [L01](LITERATURE_MATRIX.md#l01), [L02](LITERATURE_MATRIX.md#l02), [L03](LITERATURE_MATRIX.md#l03), [L19](LITERATURE_MATRIX.md#l19), [L25](LITERATURE_MATRIX.md#l25), [L27](LITERATURE_MATRIX.md#l27), [L30](LITERATURE_MATRIX.md#l30), [L31](LITERATURE_MATRIX.md#l31), [L32](LITERATURE_MATRIX.md#l32), [L33](LITERATURE_MATRIX.md#l33) |
+| `storage` | Storage and schema service | P0 | planned | `notes` | [L04](LITERATURE_MATRIX.md#l04), [L09](LITERATURE_MATRIX.md#l09), [L19](LITERATURE_MATRIX.md#l19), [L26](LITERATURE_MATRIX.md#l26), [L33](LITERATURE_MATRIX.md#l33) |
 | `power` | Power and resources | P1 | planned | `stat` | [L03](LITERATURE_MATRIX.md#l03), [L27](LITERATURE_MATRIX.md#l27), [L29](LITERATURE_MATRIX.md#l29) |
 | `network` | Local network link status | P1 | planned | `stat` | [L20](LITERATURE_MATRIX.md#l20) |
 | `settings` | Settings and permission UI | P0 | planned | `storage` | [L16](LITERATURE_MATRIX.md#l16), [L22](LITERATURE_MATRIX.md#l22) |
 | `accessibility` | Accessible console | P0 | planned | `stat`, `settings` | [L05](LITERATURE_MATRIX.md#l05), [L18](LITERATURE_MATRIX.md#l18) |
-| `diagnostics` | Diagnostics and evidence audit | P0 | planned | `library`, `settings` | [L16](LITERATURE_MATRIX.md#l16), [L17](LITERATURE_MATRIX.md#l17), [L26](LITERATURE_MATRIX.md#l26) |
+| `diagnostics` | Diagnostics and evidence audit | P0 | planned | `library`, `settings` | [L16](LITERATURE_MATRIX.md#l16), [L17](LITERATURE_MATRIX.md#l17), [L26](LITERATURE_MATRIX.md#l26), [L32](LITERATURE_MATRIX.md#l32), [L34](LITERATURE_MATRIX.md#l34) |
 
 ### `telemetry` — Telemetry event stream
 
@@ -297,7 +297,7 @@
 | --- | --- | --- | --- | --- | --- |
 | `plugins` | Versioned module API | P1 | planned | `devices`, `simulator`, `diagnostics` | [L01](LITERATURE_MATRIX.md#l01), [L02](LITERATURE_MATRIX.md#l02), [L15](LITERATURE_MATRIX.md#l15), [L16](LITERATURE_MATRIX.md#l16), [L17](LITERATURE_MATRIX.md#l17), [L25](LITERATURE_MATRIX.md#l25) |
 | `feeds` | Opt-in external data connectors | P2 | planned | `settings`, `storage`, `network` | [L04](LITERATURE_MATRIX.md#l04), [L11](LITERATURE_MATRIX.md#l11), [L19](LITERATURE_MATRIX.md#l19) |
-| `release` | Reproducible release pipeline | P0 | planned | `plugins`, `accessibility`, `simulator` | [L03](LITERATURE_MATRIX.md#l03), [L16](LITERATURE_MATRIX.md#l16), [L17](LITERATURE_MATRIX.md#l17), [L27](LITERATURE_MATRIX.md#l27) |
+| `release` | Reproducible release pipeline | P0 | planned | `plugins`, `accessibility`, `simulator` | [L03](LITERATURE_MATRIX.md#l03), [L16](LITERATURE_MATRIX.md#l16), [L17](LITERATURE_MATRIX.md#l17), [L27](LITERATURE_MATRIX.md#l27), [L34](LITERATURE_MATRIX.md#l34) |
 
 ### `plugins` — Versioned module API
 
