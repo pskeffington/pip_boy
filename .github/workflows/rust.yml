@@ -58,6 +58,7 @@ jobs:
         run: |
           node --check crates/pipboy/assets/dashboard.js
           node --check crates/pipboy/assets/micro.js
+          node --check crates/pipboy/assets/tasks.js
       - name: Compile all targets
         run: cargo check --workspace --all-targets --locked
       - name: Unit tests
@@ -83,6 +84,7 @@ jobs:
           python3 tools/smoke_scout.py
           python3 tools/smoke_dashboard.py
           python3 tools/smoke_micro.py
+          python3 tools/smoke_tasks.py
 
   native:
     name: Native ${{ matrix.os }}
@@ -125,6 +127,7 @@ jobs:
           ${{ matrix.python }} tools/smoke_scout.py
           ${{ matrix.python }} tools/smoke_dashboard.py
           ${{ matrix.python }} tools/smoke_micro.py
+          ${{ matrix.python }} tools/smoke_tasks.py
       - name: Native macOS terminal PTY journey
         if: matrix.os == 'macos-latest'
         shell: bash

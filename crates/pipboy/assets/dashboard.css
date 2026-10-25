@@ -223,3 +223,18 @@ dialog::backdrop { background:#000c; backdrop-filter:blur(4px); }
   .module-card { min-height:100px; }
 }
 @media (prefers-reduced-motion:reduce) { * { transition:none !important; animation:none !important; } }
+
+
+/* Job-specific command workbench - keep assignment cards readable on desktop. */
+.job-command-panel { padding: 12px 14px 18px; background: #101a14; }
+.job-command-panel .section-heading { margin: 0 0 12px; }
+.job-command-panel .task-desktop-board { border-top:1px solid #3c5d3c; padding-top:11px; }
+.job-station-summary { padding:13px; background:#111e14; border:1px solid #334b35; }
+.job-station-summary>strong { display:block; font:700 12px var(--mono); color:var(--lime); margin-bottom:8px; }
+.job-assignments { margin-top:10px; }
+.job-assignments>.task-summary { border-left:0; border-right:0; }
+@media (max-width:600px) {
+  .job-command-panel { padding:8px; }
+  .job-station-summary { padding:8px; }
+  .job-command-panel .task-specs { grid-template-columns:1fr; }
+}
