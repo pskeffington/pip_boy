@@ -22,5 +22,6 @@ pub mod runtime;
 pub mod simulator_replay;
 pub mod telemetry;
 pub mod virtual_transport;
+pub mod workbench;
 
 pub mod host_telemetry;
