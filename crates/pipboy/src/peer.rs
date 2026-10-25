@@ -3,7 +3,7 @@
 //! This deliberately delegates transport encryption and host authentication to
 //! mature OpenSSH instead of claiming home-grown TLS or unprotected LAN sockets.
 //! It opens no listening port and sends nothing when merely loading a profile.
-use pipboy_core::messenger::{Message, MessageStore, RemoteMessage, Delivery, MAX_TEXT_BYTES};
+use pipboy_core::messenger::{Delivery, Message, MessageStore, RemoteMessage, MAX_TEXT_BYTES};
 use pipboy_core::peers::{Peer, PeerConfig, PeerStore};
 use pipboy_core::tasks::{
     valid_device_id, NewTask, RemoteAssignment, RemoteReport, Task, TaskStore,
@@ -275,7 +275,6 @@ pub fn sync_peer(alias: &str) -> io::Result<usize> {
     sync_from_store(&tasks, &peers, alias)
 }
 
-
 /// An outgoing message is queued durably before any outbound SSH attempt.
 /// The remote receipt proves application-level persistence, NOT human reading.
 pub fn send_message_from_store(
@@ -316,7 +315,9 @@ pub fn send_message_from_store(
         || get_id(&response, "from_device")? != source
         || get_num(&response, "origin_id")? != id
     {
-        return Err(invalid("Peer returned a mismatched Messenger storage receipt"));
+        return Err(invalid(
+            "Peer returned a mismatched Messenger storage receipt",
+        ));
     }
     journal.mark_stored(id, alias, get_num(&response, "remote_id")?)
 }
@@ -354,8 +355,8 @@ fn message_receive(expected_sender: Option<&str>) -> io::Result<()> {
     if bytes.len() as u64 > MAX_REQUEST {
         return Err(invalid("Messenger frame exceeds transport limit"));
     }
-    let frame: RemoteMessage = serde_json::from_slice(&bytes)
-        .map_err(|_| invalid("Unrecognized Messenger frame"))?;
+    let frame: RemoteMessage =
+        serde_json::from_slice(&bytes).map_err(|_| invalid("Unrecognized Messenger frame"))?;
     if !frame.valid()
         || frame.to_device != local
         || expected_sender.is_some_and(|sender| frame.from_device != sender)
@@ -368,14 +369,17 @@ fn message_receive(expected_sender: Option<&str>) -> io::Result<()> {
     }
     let journal = MessageStore::from_environment()?;
     let (stored, _) = journal.receive(&frame, local)?;
-    println!("{}", json!({
-        "schema_version": 1,
-        "kind": "message_stored",
-        "receiver_device": local,
-        "from_device": frame.from_device,
-        "origin_id": frame.origin_id,
-        "remote_id": stored.id,
-    }));
+    println!(
+        "{}",
+        json!({
+            "schema_version": 1,
+            "kind": "message_stored",
+            "receiver_device": local,
+            "from_device": frame.from_device,
+            "origin_id": frame.origin_id,
+            "remote_id": stored.id,
+        })
+    );
     Ok(())
 }
 
@@ -524,15 +528,24 @@ pub fn run(args: Vec<String>) -> Result<(), Box<dyn Error>> {
         }
         [command, alias, flag] if command == "message-send" && flag == "--confirm" => {
             let mut bytes = Vec::new();
-            io::stdin().take(MAX_TEXT_BYTES as u64 + 1).read_to_end(&mut bytes)?;
+            io::stdin()
+                .take(MAX_TEXT_BYTES as u64 + 1)
+                .read_to_end(&mut bytes)?;
             if bytes.len() > MAX_TEXT_BYTES {
                 return Err(invalid("Messenger body exceeds 1024 bytes").into());
             }
             let body = String::from_utf8(bytes).map_err(|_| invalid("Message must be UTF-8"))?;
             let journal = MessageStore::from_environment()?;
             let (message, delivered) = queue_message_from_store(&journal, &peers, alias, &body)?;
-            println!("MESSAGE #{} / {}", message.id,
-                if delivered { "STORED ON RECEIVER" } else { "QUEUED / RETRY REQUIRED" });
+            println!(
+                "MESSAGE #{} / {}",
+                message.id,
+                if delivered {
+                    "STORED ON RECEIVER"
+                } else {
+                    "QUEUED / RETRY REQUIRED"
+                }
+            );
         }
         [command, id, alias, flag] if command == "message-retry" && flag == "--confirm" => {
             let id = id.parse::<u64>()?;
