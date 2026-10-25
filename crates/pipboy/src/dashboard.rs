@@ -460,6 +460,40 @@ fn reclamation_read(store: &WorkbenchStore, export: bool) -> Result<Response, Re
     }
 }
 
+
+fn reclamation_map_read(store: &WorkbenchStore) -> Result<Response, Response> {
+    reclamation_allowed(store)?;
+    let book = reclamation_store(store)
+        .load()
+        .map_err(|_| Response::error(409, "Site register unavailable; original preserved"))?;
+    let sites: Vec<Value> = book
+        .sites
+        .iter()
+        .map(|site| {
+            json!({
+                "id": site.id,
+                "name": site.name,
+                "latitude": site.latitude,
+                "longitude": site.longitude,
+                "accuracy_m": site.accuracy_m,
+                "position_source": site.position_source,
+                "priority": site.priority,
+                "condition": site.condition,
+                "status": site.status,
+                "kind": site.kind
+            })
+        })
+        .collect();
+    Ok(Response::json(
+        200,
+        &json!({
+            "sites": sites,
+            "position_source": "manual",
+            "network_used": false
+        }),
+    ))
+}
+
 fn reclamation_create(req: &Request, store: &WorkbenchStore) -> Result<Response, Response> {
     reclamation_allowed(store)?;
     let body = parse_json_body(req, &["name", "kind", "condition", "priority", "latitude", "longitude", "accuracy_m", "notes"])?;
@@ -952,6 +986,9 @@ fn dispatch(req: &Request, store: &WorkbenchStore, port: u16) -> Response {
         ("GET", "/favicon.ico") => Response::new(204, "text/plain; charset=utf-8", Vec::new()),
         ("GET", "/api/state") => state(store).unwrap_or_else(|error| error),
         ("GET", "/api/reclamation") => reclamation_read(store, false).unwrap_or_else(|error| error),
+        ("GET", "/api/reclamation/map") => {
+            reclamation_map_read(store).unwrap_or_else(|error| error)
+        }
         ("GET", "/api/reclamation/geojson") => reclamation_read(store, true).unwrap_or_else(|error| error),
         ("POST", "/api/reclamation/create") => reclamation_create(req, store).unwrap_or_else(|error| error),
         ("POST", "/api/reclamation/change") => reclamation_change(req, store).unwrap_or_else(|error| error),
@@ -1356,7 +1393,8 @@ mod tests {
             json!({"id":"reclamation-scout","confirm":true}),
         );
         assert_eq!(dispatch(&apply, &store, 8765).status, 200);
-        assert_eq!(store.load().unwrap().slots[0].tool, "geo-lab");
+        assert_eq!(store.load().unwrap().slots[0].tool, "reclamation");
+        assert_eq!(store.load().unwrap().slots[1].tool, "geo-lab");
         let lab = request(
             "POST",
             "/api/experiment",
