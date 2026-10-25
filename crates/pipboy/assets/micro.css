@@ -325,3 +325,29 @@ small { font-size:11px; }
   .role-pager .micro-button { min-height:29px; }
   .dialog-warning { font-size:9px; }
 }
+
+
+/* Compact lab: input and result occupy distinct screens, never stack. */
+.lab-entry { display:flex; flex-direction:column; gap:6px; }
+.lab-entry .button-row { gap:5px; }
+.lab-entry .form-grid { gap:5px; }
+.lab-entry .form-grid .field { min-width:0; }
+.lab-entry .field input { height:33px; padding:5px; margin-top:3px; }
+.lab-entry .form-actions { margin-top:3px; }
+.micro-device[data-depth="detail"] .mono-output {
+  max-height:min(120px,calc(100dvh - 185px)); min-height:40px;
+  margin:0; overflow:auto; scrollbar-width:thin;
+}
+.micro-device[data-depth="detail"] .micro-panel > * + * { margin-top:6px; }
+@media (max-width:960px) {
+  .status-local { display:none; }
+  .micro-toast {
+    bottom:54px; padding:7px 9px; font-size:11px;
+    max-width:calc(100vw - 18px);
+  }
+}
+@media (max-height:360px) {
+  .lab-entry { gap:4px; }
+  .lab-entry .field input { height:31px; }
+  .micro-device[data-depth="detail"] .mono-output { max-height:118px; }
+}

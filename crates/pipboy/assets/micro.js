@@ -462,37 +462,51 @@ function inputForm(root, id) {
     }
     form.append(modes);
     const fields = make("div", "form-grid");
-    fields.append(field("lat", "LATITUDE", "42.0", { numeric:true }));
-    fields.append(field("lon", "LONGITUDE", "-70.75", { numeric:true }));
+    fields.append(field("lat", "LAT", "42.0", { numeric:true }));
+    fields.append(field("lon", "LON", "-70.75", { numeric:true }));
     if (geoMode === "distance") {
-      fields.append(field("lat2", "DEST LATITUDE", "42.01", { numeric:true }));
-      fields.append(field("lon2", "DEST LONGITUDE", "-70.76", { numeric:true }));
+      fields.append(field("lat2", "TO LAT", "42.01", { numeric:true }));
+      fields.append(field("lon2", "TO LON", "-70.76", { numeric:true }));
     } else {
-      const name = field("name", "WAYPOINT LABEL", "Camp Alpha");
+      const name = field("name", "NAME", "Camp Alpha");
       name.classList.add("wide");
       fields.append(name);
     }
     form.append(fields);
   } else if (id === "net-lab") {
-    form.append(field("input", "IPV4 / CIDR", "192.168.1.50/24"));
+    form.append(field("input", "IP / CIDR", "192.168.1.50/24"));
   } else if (id === "byte-lab") {
-    form.append(field("input", "HEXADECIMAL BYTES", "48656c6c6f", { maxLength: 3000, hex: true }));
+    form.append(field("input", "HEX", "48656c6c6f", { maxLength: 3000, hex: true }));
   }
   const row = make("div", "form-actions");
-  const run = make("button", "micro-button solid", id === "host" ? "SAMPLE LOCAL STATUS" :
-    ["game", "notes", "simulator", "library"].includes(id) ? "VIEW SAFE HANDOFF" : "RUN LOCAL TOOL");
+  const run = make("button", "micro-button solid", id === "host" ? "SAMPLE" :
+    ["game", "notes", "simulator", "library"].includes(id) ? "INFO" : "RUN");
   run.type = "submit";
   row.append(run);
   form.append(row);
-  const output = make("pre", "mono-output", "Awaiting explicit operator action.");
+  const entry = make("div", "lab-entry");
+  while (form.firstChild) entry.append(form.firstChild);
+  form.append(entry);
+  const output = make("pre", "mono-output", "");
+  output.hidden = true;
   output.setAttribute("aria-live", "polite");
   form.append(output);
+  const edit = button("◀ INPUT", () => {
+    output.hidden = true;
+    edit.hidden = true;
+    entry.hidden = false;
+  }, "micro-button compact");
+  edit.hidden = true;
+  form.append(edit);
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
     if (busy) return;
     busy = true;
     run.disabled = true;
-    output.textContent = "LOCAL TOOL / PROCESSING";
+    entry.hidden = true;
+    output.hidden = false;
+    edit.hidden = false;
+    output.textContent = "RUNNING…";
     const payload = { tool: id };
     if (id === "geo-lab") payload.mode = geoMode;
     for (const [key, val] of new FormData(form).entries()) payload[key] = val;
@@ -622,7 +636,8 @@ function selectRole(id) {
   ui.chosenName.textContent = choice.title;
   ui.chosenDetail.textContent = choice.id === "custom" ? "EMPTY" : choice.tools.length + " TOOLS";
   const unchanged = id === snapshot.active.profile
-    && !(id === "custom" && snapshot.active.slots.length);
+    && choice.tools.length === allPinned().length
+    && choice.tools.every((tool, i) => allPinned()[i] === tool);
   ui.applyRole.disabled = unchanged || busy;
   ui.applyRole.textContent = id === "custom" && snapshot.active.profile === "custom"
     ? "RESET CUSTOM" : "LOAD ROLE";

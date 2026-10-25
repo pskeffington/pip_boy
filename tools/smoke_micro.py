@@ -85,7 +85,14 @@ with tempfile.TemporaryDirectory() as work:
         assert b"/api/profile" in js and b"/api/custom/add" in js
         assert b"/api/experiment" in js and b"/api/custom/remove" in js
         assert b"eval(" not in js and b"innerHTML" not in js
-        assert b"RUSTGIS NOT ATTACHED" in js and b"NO VIDEO / NO SOURCE" in js
+        assert b"NO MAP / NO GPS" in js and b"NO SIGNAL" in js
+        assert b"function pagedTiles(" in js
+        assert b"function renderRolePage(" in js
+        assert b"root.classList.add(\"micro-home\")" in js
+        assert b'data-depth="root"' in css and b'overflow:hidden' in css
+        assert b'id="role-prev"' in html and b'id="role-next"' in html
+        assert b"LOAD ROLE" in js
+        assert b"MAILTO:" not in js.upper()
         assert b"https://" not in js, "Micro UI must not include third-party fetch targets"
 
         status, headers, state = api(port, "GET", "/api/state")
