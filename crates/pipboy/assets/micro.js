@@ -257,12 +257,12 @@ function showStat() {
 }
 
 /** Paging is bounded to the visible screen; modules are not hidden offscreen. */
-function pagedTiles(root, ids, key, renderItem = toolTile) {
-  const count = Math.max(1, Math.ceil(ids.length / MICRO_PAGE_SIZE));
+function pagedTiles(root, ids, key, renderItem = toolTile, pageSize = MICRO_PAGE_SIZE) {
+  const count = Math.max(1, Math.ceil(ids.length / pageSize));
   viewPage[key] = Math.min(viewPage[key], count - 1);
-  const offset = viewPage[key] * MICRO_PAGE_SIZE;
+  const offset = viewPage[key] * pageSize;
   const grid = make("div", "tile-grid");
-  ids.slice(offset, offset + MICRO_PAGE_SIZE).forEach((id, index) =>
+  ids.slice(offset, offset + pageSize).forEach((id, index) =>
     grid.append(renderItem(id, offset + index)));
   root.append(grid);
   if (count > 1) {
@@ -412,7 +412,7 @@ function showConf() {
         make("small", "", item.availability === "planned"
           ? "PLANNED" : exists ? "PINNED" : "ADD"));
       return tile;
-    });
+    }, 4);
     return root;
   }
   root.append(sectionTop("SETTINGS", "LOCAL"));
