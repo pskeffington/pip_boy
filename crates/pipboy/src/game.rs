@@ -16,6 +16,17 @@ fn playstation_address(raw: &str) -> Result<SocketAddr, std::net::AddrParseError
         .or_else(|_| raw.parse::<IpAddr>().map(|ip| SocketAddr::new(ip, 27000)))
 }
 
+pub(crate) fn ensure_network_allowed() -> Result<(), Box<dyn Error>> {
+    if PreferenceStore::from_environment()?
+        .list()?
+        .iter()
+        .any(|entry| entry.capability == "network.fetch" && entry.preference == Preference::Denied)
+    {
+        return Err("game connection denied by saved network.fetch preference; clear it explicitly with pipboy permissions clear network.fetch".into());
+    }
+    Ok(())
+}
+
 fn game_handshake(payload: &[u8]) -> Result<serde_json::Value, Box<dyn Error>> {
     if payload.len() > 4096 {
         return Err("Fallout 4 handshake exceeds 4096 bytes".into());
@@ -40,12 +51,17 @@ fn game_handshake(payload: &[u8]) -> Result<serde_json::Value, Box<dyn Error>> {
 }
 
 pub fn run(args: Vec<String>) -> Result<(), Box<dyn Error>> {
-    let usage = "usage: pipboy game (--connect IP:PORT | --playstation IP[:PORT]) --confirm [--snapshot | --diagnose]";
+    if args.iter().any(|arg| arg == "--discover-ps4") {
+        return crate::game_discovery::run(&args);
+    }
+    let usage = "usage: pipboy game (--connect IP:PORT | --playstation IP[:PORT] | --ps4 IP[:PORT]) --confirm [--snapshot | --diagnose | --observe-seconds 1..120]";
     let mut address = None;
     let mut confirm = false;
     let mut snapshot = false;
     let mut diagnose = false;
     let mut playstation = false;
+    let mut ps4 = false;
+    let mut observe = None;
     let mut iter = args.iter();
     while let Some(arg) = iter.next() {
         match arg.as_str() {
@@ -57,11 +73,24 @@ pub fn run(args: Vec<String>) -> Result<(), Box<dyn Error>> {
                 address = Some(playstation_address(raw)?);
                 playstation = true;
             }
+            "--ps4" if address.is_none() => {
+                let raw = iter.next().ok_or(usage)?;
+                address = Some(playstation_address(raw)?);
+                playstation = true;
+                ps4 = true;
+            }
             "--confirm" if !confirm => confirm = true,
-            "--snapshot" if !snapshot && !diagnose => snapshot = true,
-            "--diagnose" if !snapshot && !diagnose => {
+            "--snapshot" if !snapshot && !diagnose && observe.is_none() => snapshot = true,
+            "--diagnose" if !snapshot && !diagnose && observe.is_none() => {
                 snapshot = true;
                 diagnose = true;
+            }
+            "--observe-seconds" if !snapshot && !diagnose && observe.is_none() => {
+                let seconds = iter.next().ok_or(usage)?.parse::<u64>().map_err(|_| usage)?;
+                if !(1..=120).contains(&seconds) {
+                    return Err("--observe-seconds must be 1..120".into());
+                }
+                observe = Some(Duration::from_secs(seconds));
             }
             _ => return Err(usage.into()),
         }
@@ -70,14 +99,10 @@ pub fn run(args: Vec<String>) -> Result<(), Box<dyn Error>> {
     if !confirm {
         return Err("game connection requires explicit --confirm".into());
     }
-    if PreferenceStore::from_environment()?
-        .list()?
-        .iter()
-        .any(|entry| entry.capability == "network.fetch" && entry.preference == Preference::Denied)
-    {
-        return Err("game connection denied by saved network.fetch preference; clear it explicitly with pipboy permissions clear network.fetch".into());
-    }
-    let target = if playstation {
+    ensure_network_allowed()?;
+    let target = if ps4 {
+        "ps4"
+    } else if playstation {
         "playstation"
     } else {
         "generic"
@@ -107,12 +132,16 @@ pub fn run(args: Vec<String>) -> Result<(), Box<dyn Error>> {
     let mut handshake = None;
     let mut received_root = false;
     let mut browser = Browser::default();
-    let _guard = if snapshot {
+    let mut observation_started: Option<Instant> = None;
+    let mut observation_heartbeats = 0u64;
+    let mut observation_update_frames = 0u64;
+    let mut observation_changed_views = 0u64;
+    let _guard = if snapshot || observe.is_some() {
         None
     } else {
         Some(crate::tui::TerminalGuard::enter()?)
     };
-    let mut terminal = if snapshot {
+    let mut terminal = if snapshot || observe.is_some() {
         None
     } else {
         Some(Terminal::new(CrosstermBackend::new(io::stdout()))?)
@@ -125,7 +154,12 @@ pub fn run(args: Vec<String>) -> Result<(), Box<dyn Error>> {
                 received = Instant::now();
                 for (channel, payload) in decoder.feed(&bytes[..n])? {
                     match channel {
-                        0 if payload.is_empty() => socket.write_all(&[0; 5])?,
+                        0 if payload.is_empty() => {
+                            socket.write_all(&[0; 5])?;
+                            if observation_started.is_some() {
+                                observation_heartbeats += 1;
+                            }
+                        }
                         0 => return Err("malformed game heartbeat".into()),
                         1 => {
                             handshake = Some(game_handshake(&payload)?);
@@ -136,8 +170,17 @@ pub fn run(args: Vec<String>) -> Result<(), Box<dyn Error>> {
                             )
                         }
                         3 => {
+                            // Count only updates after the initial complete state and handshake.
+                            // Compare bounded views; never store or transmit game values.
+                            let previous = observation_started.map(|_| db.view(0));
                             db.update(&payload)?;
                             last_data = Instant::now();
+                            if let Some(previous) = previous {
+                                observation_update_frames += 1;
+                                if db.view(0) != previous {
+                                    observation_changed_views += 1;
+                                }
+                            }
                         }
                         4 | 6 => {} // No map-image or RPC request is sent by this read-only browser.
                         _ => return Err(format!("unsupported game channel {channel}").into()),
@@ -169,6 +212,34 @@ pub fn run(args: Vec<String>) -> Result<(), Box<dyn Error>> {
             .into());
         }
         let ready = handshake.is_some() && database_ready;
+        if observe.is_some() && ready && observation_started.is_none() {
+            observation_started = Some(Instant::now());
+        }
+        if let (Some(duration), Some(start)) = (observe, observation_started) {
+            if start.elapsed() >= duration {
+                println!(
+                    "{}",
+                    serde_json::to_string_pretty(&serde_json::json!({
+                        "status": "observed",
+                        "game": "fallout4",
+                        "target_profile": target,
+                        "endpoint": address.to_string(),
+                        "handshake": handshake,
+                        "requested_seconds": duration.as_secs(),
+                        "observed_seconds": start.elapsed().as_secs(),
+                        "data_complete_at_end": database_ready,
+                        "root_fields": db.children(0).iter().map(|entry| &entry.0).collect::<Vec<_>>(),
+                        "heartbeat_replies_sent": observation_heartbeats,
+                        "update_frames_after_ready": observation_update_frames,
+                        "changed_bounded_views_after_ready": observation_changed_views,
+                        "game_actions_enabled": false,
+                        "console_identity_verified": false,
+                        "note": "Zero observed changes may mean the game was idle; a PS4 profile does not authenticate the console."
+                    }))?
+                );
+                return Ok(());
+            }
+        }
         if diagnose && ready {
             println!(
                 "{}",
@@ -187,7 +258,7 @@ pub fn run(args: Vec<String>) -> Result<(), Box<dyn Error>> {
             );
             return Ok(());
         }
-        if snapshot {
+        if snapshot || observe.is_some() {
             continue;
         }
         let version = handshake
