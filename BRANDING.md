@@ -18,6 +18,12 @@ This is the authoritative product-naming reference for this repository. The bran
 
 Do not invent a general-purpose `rust-boy` CLI or a new storage path: the interactive command is still `pipboy`, and `rust-boy-broker` is a separate **deny-only** protocol binary. User-facing prose always says **Rust-Boy**; code and paths must accurately reflect the current implementation.
 
+## Original phosphor handheld styling
+
+Micro mode uses an original dark-green field monitor treatment with subtle scanlines, restrained glow, legible monospaced status text and a six-tab lower rail. It conveys the **retro-futurist wrist computer** category without cloning a copyrighted game interface, importing art, or implying endorsement by Bethesda/Vault-Tec. Static fixtures must state when there is no camera frame, GIS renderer, GNSS or power sensor. The screen remains keyboard/touch usable with effects disabled for accessibility.
+
+See the [micro UI operator guide](docs/MICRO_UI.md).
+
 ## Dashboard visual identity
 
 The local dashboard adopts its own charcoal and green phosphor visual language, a generic `RB/` mark, original typography and responsive module cards. It uses no official Fallout, Pip-Boy or Vault-Tec images, icons, proprietary interface code or font assets. Seven role titles are inspired by the documented job taxonomy and Custom is an original advanced-workbench designation. Distinguish a dashboard **template** from an approved capability: the appearance of a camera tile or map viewport cannot imply a live video feed or working navigation. See [graphical UI guide](docs/DASHBOARD_UI.md).

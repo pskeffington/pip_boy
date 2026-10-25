@@ -12,6 +12,12 @@ Rust-Boy is an **experimental local field console**, not a safety-of-life, secur
 
 The `ModuleHost` capability checks and mock leases are cooperative **in-process** controls; they are **not** an OS sandbox for untrusted native code. A separate deny-only process is likewise **not** a working OS permission broker.
 
+## Micro display and device boundary
+
+The `/micro` view and `dashboard --micro` launch switch only the UI route; they **do not** change the Rust service's loopback binding, expose the app on LAN, or enable any new endpoint or permission. Both UIs use the same strict JSON Host/Origin/CSP rules, atomic profile store and allowlisted Rust experiments. Role changes require a visible **CONFIRM REPLACE** action. The micro CRT effect toggle is cosmetic and remains in memory only.
+
+The Security Chief 2×2 tiles are **UI-only disconnected camera placeholders**, and Scout's crosshair grid is **not** a GNSS fix or RustGIS navigation display. The micro status must never fabricate battery charge, position, camera health or radio state. Real camera/GNSS/TAK integration requires separate protected transport and hardware testing. See [micro operator guide](docs/MICRO_UI.md).
+
 ## Local graphical dashboard security
 
 The optional `pipboy dashboard` command creates a **local-only HTTP listener bound to 127.0.0.1**, serving embedded original HTML/CSS/JS and strictly allowlisted JSON routes. It does not bind to LAN interfaces. Browser requests have an exact Host requirement; changing saved workbench state requires a same-origin JSON POST from `http://127.0.0.1:<port>`, explicit confirmation for role replacement and bounded input (8 KiB headers, 4 KiB bodies). The response uses restrictive CSP, `nosniff`, frame denial, no CORS and no-store. No arbitrary commands, general file browsing, exposed note contents, hidden streams or credentials are part of this service.

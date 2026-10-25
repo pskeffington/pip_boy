@@ -15,6 +15,12 @@ cargo run --locked -p pipboy -- doctor
 
 Core layout: `crates/pipboy` (CLI/TUI), `crates/pipboy-core` (local core and mock adapters), `crates/rust-boy-broker` (separate **deny-only** process), `catalog/` (evidence and planned modules), `tools/` (validation), and `docs/` (technical contracts).
 
+## Micro UI development
+
+The micro renderer is separately maintained at `crates/pipboy/assets/micro.{html,css,js}`; the Rust server serves it at `/micro` without creating a second backend. Source roles, tools, availability and permission settings **must** continue to come from the Rust API, not a duplicate JavaScript role catalog. The same confirmed profile-change API and local-workbench storage are shared with desktop. Keep bottom tabs and touch targets stable at 480×320 and 800×480, preserve keyboard and reduced-motion behavior, and never display fabricated camera frames, battery charge, GPS fixes or RustGIS maps.
+
+To test: `cargo run --locked -p pipboy -- dashboard --micro --open` on macOS; `node --check crates/pipboy/assets/micro.js`; `python3 tools/smoke_micro.py` after a build. Before merging, manually inspect both handheld widths and native Pi hardware when available. See [micro acceptance plan](docs/MICRO_UI.md).
+
 ## Dashboard development
 
 The [graphical dashboard](docs/DASHBOARD_UI.md) is a local browser shell served by `crates/pipboy/src/dashboard.rs`. UI assets live under `crates/pipboy/assets/`; do not add external font/CDN/API references or new network routes without review. The job-template source of truth is `pipboy-core::workbench::PRESETS`, and physical/simulated availability is `PALETTE`. Do **not** add a hard-coded duplicate role list to JavaScript; keep Custom last.

@@ -7,6 +7,12 @@ Rust-Boy is the public product name. The existing `pip_boy` repository, `pipboy`
 
 > **Verified integration baseline:** [Five-job Linux/macOS/Windows CI](https://github.com/pskeffington/pip_boy/actions/runs/40164915215) passed at `e7d1090`, including macOS PTY, Windows ConPTY, and the strict deny-all broker suite. **This does not complete a packaged release or enable physical devices.** The catalog's `implemented_unverified` status denotes a pending module acceptance review, not an absence of CI execution.
 
+## G1 micro display shell — implementation and acceptance
+
+[Micro handheld mode](MICRO_UI.md) now has a distinct `/micro` shell served by the same local Rust dashboard. It uses original phosphor-style scanlines and restrained glow, a dedicated top status ribbon, one scrolling content viewport, and six fixed thumb-sized tabs (**STAT / GEAR / MAP / DATA / LINK / CONF**). Occupational presets are loaded from the real Rust registry; Custom remains the final empty template. Implemented local labs and explicit profile persistence are shared with desktop. The micro `--micro` launcher, route, asset and end-to-end loopback smoke checks are CI-gated.
+
+**Current limitations:** no real RustGIS navigation renderer, no GNSS or TAK transport, no live IP camera feed, no device battery telemetry, and no Pi touchscreen performance claim. The Scout and Security Chief fixture panels label these absences. The next G1 screen milestone is manual visual/keyboard/touch review at **480×320** and **800×480**, then independent Raspberry Pi 5 hardware testing before GNSS, camera or native RustGIS integration.
+
 ## G1 graphical dashboard / job-template experiment station
 
 The [local graphical dashboard](DASHBOARD_UI.md) is the first experimental UI shell. A Rust-only loopback HTTP service hosts original responsive assets; job templates and availability labels come from `PRESETS`/`PALETTE`, with seven ready-made profiles and Custom last. The UI saves explicitly confirmed template changes via the existing WorkbenchStore and exposes allowlisted **offline** GIS, CIDR, hex and user-invoked host experiments. Test coverage includes same-origin denial, local-only bind, persistence and responsive assets; final viewport readability still requires real browser and Pi-screen checks.

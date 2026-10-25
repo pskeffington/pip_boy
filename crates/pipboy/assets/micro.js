@@ -581,7 +581,10 @@ async function addCustom(id) {
     render();
   } catch (error) {
     notify(error.message, true);
-  } finally { busy = false; }
+  } finally {
+    busy = false;
+    render();
+  }
 }
 
 async function removeCustom(id) {
@@ -596,7 +599,10 @@ async function removeCustom(id) {
     notify("TOOL REMOVED / LAYOUT ONLY");
   } catch (error) {
     notify(error.message, true);
-  } finally { busy = false; }
+  } finally {
+    busy = false;
+    render();
+  }
 }
 
 function back() {

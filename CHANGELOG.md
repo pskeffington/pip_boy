@@ -2,6 +2,14 @@
 
 This file records notable changes to Rust-Boy. This repository is in **development preview**; the Rust workspace version `0.1.0` is not a published production release. Dates are in UTC unless otherwise stated.
 
+## Unreleased — dedicated micro handheld shell (2026-10-25)
+
+- Add `pipboy dashboard --micro [--open]` and `/micro` with embedded `micro.html`, `micro.css` and `micro.js`, running inside the existing loopback-only Rust dashboard; the desktop route and API are preserved.
+- Original compact phosphor-green field screen with optional static scanline/glow effects, top status ribbon, one scrolling viewport, and fixed six-tab thumb-sized navigation, targeting 480×320 and 800×480. No third-party artwork, game code, fonts or remote assets.
+- Seven ready-made job templates remain sourced from Rust; Custom is last and starts empty. Explicitly confirmed profile switching, Custom pin/unpin, offline GIS waypoint/distance, CIDR and hex tools are available from the handheld UI.
+- Scout map area is a **RustGIS not attached** reference grid; Security Chief has a disconnected four-camera focus/back layout prototype. Neither represents a live map or camera stream.
+- Add Mac double-click launcher `scripts/launch-micro.command`, [micro guide](docs/MICRO_UI.md), JS syntax checks and actual loopback HTTP smoke tests for Linux/macOS/Windows CI. Manual 4-inch browser and physical Raspberry Pi tests remain separate release gates.
+
 ## Unreleased — local graphical dashboard shell (2026-10-25)
 
 - Add a **Rust-served localhost-only dashboard** with original responsive field-console styling, desktop/4-inch reference layouts, and no new frontend or network-service dependencies.

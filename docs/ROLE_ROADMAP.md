@@ -10,6 +10,10 @@ Reviewed: **2026-10-25**. Repository: `pip_boy`; product: **Rust-Boy**. This is 
 4. **Truthful states:** Distinguish static layout, simulation, real local tools, explicit opt-in connectors, stale data, and entirely unimplemented features. A pinned icon is not proof of a live feed.
 5. **No IP confusion:** Vault-Tec terminology and citations inspire the profile names; tool design, UX, code, and visuals are original. No Vault-Tec affiliation or game artwork license is claimed. See [lore matrix](VAULT_TEC_LORE_MATRIX.md).
 
+## Handheld micro display shell
+
+[Micro terminal UI](MICRO_UI.md) provides the compact visual shell shared by the seven occupational templates and Custom: a top status band, six fixed thumb-sized navigation tabs, one active viewport and the existing confirmed profile save. Scout's geospatial page allows genuine offline waypoint/distance calculations, but a **working RustGIS map is deferred**. Security Chief's four-camera page is a no-video fixture with one-tap focus/back; genuine camera streams are a separate integration gate. The micro shell does not grant physical permissions or claim Pi hardware acceptance.
+
 ## Base dashboard and template activation
 
 The [graphical dashboard implementation](DASHBOARD_UI.md) provides a shared UI foundation **before** role-specific extensions. Its left rail lists the seven preconfigured roles in canonical order with **Custom last**, offers non-mutating role previews and explicitly confirmed loading, and places pinned modules in a responsive deck. Custom is empty until deliberately populated. Reclamation Scout reserves a viewport for a future **real RustGIS launcher/renderer**; Security Chief currently uses four camera **mock-layout controls**, not network video. The Rust service is local only and uses the established WorkbenchStore, so CLI/TUI/web selections share one source of truth. Browser usability, accessibility and 4-inch hardware acceptance remain independent gates.

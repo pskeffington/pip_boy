@@ -11,6 +11,12 @@ Rust-Boy is the public name of the modular console. The repository, executable, 
 
 The current `ModuleHost` is an **in-process testable policy precheck** and does not isolate untrusted code. Physical device access, OS-enforced permissions and transport isolation remain planned, not implemented.
 
+## Dual graphical presentation: desktop and micro
+
+The Rust `pipboy dashboard` process serves two intentionally distinct local views: `/` for the desktop workstation and `/micro` for the dedicated handheld frame (or use `dashboard --micro --open` on Mac). Both send requests to the **same** bounded JSON API and authoritative `pipboy-core::workbench::PRESETS` / `PALETTE` / WorkbenchStore. A role change in one view is reflected in the other after reload. Neither view may acquire new permissions merely by displaying a tile.
+
+The micro renderer has a fixed status header, six-tab rail and one scrollable active viewport rather than responsive desktop columns. It uses original CSS effects, no game artwork, no external scripts/CDNs, and only allowlisted offline tool operations. Scout's map and the Security Chief camera grid are clearly marked **unconnected UI fixtures**. The API still runs only on IPv4 loopback with strict request checks. See [micro controls](MICRO_UI.md).
+
 ## Local graphical UI and template state
 
 The new `pipboy dashboard [--port N] [--open]` command runs a loopback-only HTTP service and serves static, embedded original UI assets. The browser is a **presentation client**, not a device broker. `GET /api/state` projects `pipboy-core::workbench::{PRESETS, PALETTE, Workbench}` to the UI; profile activation and Custom pin/unpin go through the same versioned, atomic WorkbenchStore used by the TUI and CLI. Explicitly invoked GIS/NET/HEX calculations call the existing Rust core functions and **never** shell out arbitrary commands. The service neither exposes note contents nor automatically opens live devices.

@@ -6,9 +6,21 @@
 
 **Offline first. Native by design.**
 
-Rust-Boy is an independent, Rust-native, role-configurable developer workbench with a local graphical dashboard and terminal console, designed as a modular foundation for future 4-inch handheld applications. It brings local host diagnostics, a curated research library and user-controlled field notes together in a keyboard-driven interface.
+Rust-Boy is an independent, Rust-native developer workbench with separate local desktop and micro-handheld graphical shells plus a terminal console, built toward a future 4-inch device. It brings local host diagnostics, a curated research library and user-controlled field notes together in a keyboard-driven interface.
 
 **Current stage:** development preview. The terminal console and offline workflows are implemented and tested on Linux, macOS and Windows. Physical GPIO, serial, SDR, Bluetooth, mesh, GNSS, live maps and physical device integrations are **not enabled**. Offline WGS84 GeoJSON Point tools are provided for the Reclamation Scout. An explicitly requested Fallout 4 TCP companion browser is available for validation. No packaged production release is claimed.
+
+## Micro handheld shell — test on Mac
+
+The **micro mode** is a separate phosphor-style 4-inch-inspired interface, not a collapsed desktop sidebar. It has a top status strip, a single scrolling viewport, six bottom tabs (**STAT / GEAR / MAP / DATA / LINK / CONF**) and a touch/keyboard-friendly occupational profile picker. Seven preloaded jobs and **Custom last** all use the existing Rust data store. Offline Scout waypoint/distance, CIDR and byte inspection work from the micro controls. The Scout viewport says **RUSTGIS NOT ATTACHED**; the Security Chief 2×2 camera focus view says **NO VIDEO** until real drivers exist.
+
+```bash
+git clone --branch feat/micro-handheld-shell https://github.com/pskeffington/pip_boy.git
+cd pip_boy
+./scripts/launch-micro.command
+```
+
+On Mac, the launcher starts Rust-Boy and opens **http://127.0.0.1:8765/micro**. Or run `cargo run --locked -p pipboy -- dashboard --micro --open`. Press Ctrl+C in Terminal to stop. The **DESK** link switches to the existing desktop UI at `/`; desktop's **MICRO** link returns here. The same profile changes are visible in both UIs. The micro layout is intended for **800×480** and **480×320** testing, but *physical Pi touchscreen acceptance remains outstanding*. See [micro operator guide](docs/MICRO_UI.md).
 
 ## Try the graphical dashboard
 
@@ -28,7 +40,7 @@ See the [graphical dashboard guide](docs/DASHBOARD_UI.md) for keyboard/touch lay
 
 ## Vault-Tec occupational workbenches
 
-**Seven ready-made roles + one empty Custom mode.** On a fresh workbench, **Overseer Operations** is the default; users can switch between complete, pre-pinned stations. Each preloaded tool must still be invoked explicitly. No saved role opens cameras or devices by itself. The base workbench/Scout compiler migration has passed its exact-SHA CI baseline; the new dashboard branch requires its own successful checks. A rendered module is not a certified physical-device integration.
+**Seven ready-made roles + one empty Custom mode.** On a fresh workbench, **Overseer Operations** is the default; users can switch between complete, pre-pinned stations. Each preloaded tool must still be invoked explicitly. No saved role opens cameras or devices by itself. The desktop dashboard baseline has passed its cross-platform checks; the dedicated micro branch requires its own exact-SHA CI acceptance. A rendered module is not a certified physical-device integration.
 
 | Role | Real-world station focus | Readiness |
 | --- | --- | --- |
