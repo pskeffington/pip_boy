@@ -57,6 +57,30 @@ def validate():
     require(len(vocabulary) >= 14 and len(matches) == len(vocabulary),
             "invalid capability vocabulary")
 
+    # All future external capabilities must have an explicit preference key.
+    # Persisted preferences are not active runtime grants.
+    preferences_source = (
+        ROOT / "crates/pipboy-core/src/permissions.rs"
+    ).read_text(encoding="utf-8")
+    declared_match = re.search(
+        r"pub const ADAPTER_CAPABILITIES: &\[Capability\] = &\[(.*?)\];",
+        preferences_source,
+        flags=re.DOTALL,
+    )
+    require(declared_match is not None, "missing adapter capability roster")
+    declared_adapters = re.findall(
+        r"Capability::(\w+)", declared_match.group(1)
+    )
+    expected_adapters = set(vocabulary.values()) - {
+        "HostRead", "FilesRead", "FilesWrite",
+    }
+    require(
+        len(declared_adapters) == len(set(declared_adapters))
+        and set(declared_adapters) == expected_adapters,
+        "adapter preferences and runtime capability vocabulary disagree",
+    )
+
+
     for entry in literature:
         eid = entry["id"]
         require(entry["url"].startswith("https://"), f"{eid}: insecure URL")
