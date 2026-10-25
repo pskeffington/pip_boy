@@ -2,6 +2,14 @@
 
 This file records notable changes to Rust-Boy. This repository is in **development preview**; the Rust workspace version `0.1.0` is not a published production release. Dates are in UTC unless otherwise stated.
 
+## Unreleased — live network health and UniFi local read-only integration (2026-10-25)
+
+- Add real, finite ICMP Echo RTT/reply-loss/RTT-variation tests using OS-native ping, with explicit confirmation, literal IP only and bounded process time/output; use macOS/Linux/Windows parser fixtures.
+- Add 3–8 TCP handshake timing samples with 450 ms per-connect limits and 100 ms spacing; report median/p95/mean, adjacent variation and **connection failures (not packet loss)**.
+- Add an explicit read-only local UniFi Network Integration API adapter for sites and adopted devices. Private console IP only, validated TLS with optional local CA/name, injected API key over curl stdin, no bypass, no DNS/cloud, no API writes or persisted secrets.
+- Provide Engineer STATUS quick actions for HEALTH and UNIFI; compact measured statistics and desktop sample visualization, plus 13-mode NET SUITE catalog shared by Rust and JS.
+- Add cross-platform health/consent smoke tests, deterministic statistics/ICMP fixture tests, safety documentation and explicit hardware acceptance gates.
+
 ## Unreleased — Head Engineer network suite (2026-10-25)
 
 - Preload NET SUITE as the first Head Engineer module, with nine bounded offline tools: IPv4/IPv6 CIDR, subnet split, longest-prefix route match, exact CIDR merge, overlap, MAC/EUI-64, 802.1Q VLAN and MTU/MSS.

@@ -31,6 +31,10 @@ No physical screen, Raspberry Pi graphics stack, battery sensor or refresh-rate 
 
 **STAT:** one role label, quick action and real Open/Late/Blocked counts. No repeated job name or empty sensor graphic. **GEAR/DATA:** up to six tools per page. **CONF:** change role, switch CRT effects, reload; Custom's palette has four modules per page. **Role picker:** four options per page, Custom last. **TASK CONTROL:** two assignments per page, two-step creation, Info/Text (when present)/Status/Device/Log tabs and an Assign tab when allowed. **MAP/LINK:** placeholders remain labeled NO MAP / NO GPS and NO SIGNAL; no fabricated connections. **Local labs:** input and result on separate screens. The primary frame normally does not vertically scroll at 480×320; the renderer restores scrolling if browser zoom, larger fonts, or unexpected content would clip controls. Deep results can also scroll.
 
+## Head Engineer — live Health and UniFi
+
+Engineer STATUS now opens **HEALTH** (native ICMP RTT, loss and RTT-variation) or **UNIFI** (read-only controller status) without scrolling through the NET SUITE. The other tool pages include bounded TCP handshake health samples and nine offline engineering calculators. The results are compact; active requests need a fresh confirmation and never run when a profile loads. See [Network Health / UniFi setup](NETWORK_HEALTH_UNIFI.md).
+
 ## Head Engineer / NET SUITE
 
 STAT → **NET SUITE** opens a six-per-page menu of real network engineering operations. Choose IPv4/IPv6, Subnets, Route, CIDR Merge, Overlap, MAC, VLAN, MTU or TCP. Each operation has its own one- or two-field input screen and a separate scrollable result. **TCP** alone says **CONNECT** and explicitly confirms a single literal-IP:port handshake attempt. The rest are offline arithmetic. No role switch, tool pin or page load starts network traffic. [Examples and limits](NETWORK_ENGINEERING.md).

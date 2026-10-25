@@ -78,6 +78,7 @@ The [graphical dashboard implementation](DASHBOARD_UI.md) provides a shared UI f
 
 **Operational needs**
 
+- **must — Live network health:** operator-confirmed native ICMP RTT/reply loss and variation, sampled TCP handshake time, and restricted read-only UniFi local sites/devices API; physical Mac + controller acceptance still pending. [Guide](NETWORK_HEALTH_UNIFI.md).
 - **must — NET SUITE:** working offline IPv4/IPv6 CIDR, split/aggregate/overlap, longest-prefix route matching, MAC/EUI-64, VLAN, MTU/MSS and one confirmed TCP endpoint check. [Guide](NETWORK_ENGINEERING.md). Cross-platform acceptance pending.
 - **must — Hex dumps, checksums, IPv4/CIDR math, host diagnostics and fixture runs** (`code_present_ci_pending`).
 - **must — Device inventory and repeatable diagnostic recipes** (`planned`).

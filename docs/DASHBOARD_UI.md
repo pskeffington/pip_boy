@@ -24,6 +24,10 @@ cargo run --locked -p pipboy -- dashboard --port 8790 --open
 
 On Linux or an appropriately configured Raspberry Pi, omit `--open` and browse to the printed local address **on that same device**. The server intentionally cannot be reached from other LAN computers; the browser and Rust process must run on the same host. `--port 0` selects an ephemeral loopback port, primarily for automated tests.
 
+## Live Network Health and UniFi
+
+NET SUITE offers a native ICMP ping RTT/loss mode, a separate sampled TCP connect-time health mode and a **read-only UniFi local API** mode. Run buttons are explicit, targets are single literal IPs, and the dashboard never receives an API key from a browser form. Successful health tests show structured metrics and a per-attempt visualization. The local UniFi link requires a matching verified TLS certificate and an env-provided key; its first page provides sites and up to 50 adopted devices, without remote mutation. See [Network Health + UniFi](NETWORK_HEALTH_UNIFI.md).
+
 ## Head Engineer network tools
 
 The NET SUITE desktop module has a Rust-provided operation picker and per-mode fields. Nine calculations stay offline. **TCP CHECK** requires a separate operator confirmation before invoking one bounded IP:port connection; it never enumerates ports or contacts hostnames. Tool details and output are presented in the same existing workbench pane. See [Network Engineering guide](NETWORK_ENGINEERING.md).

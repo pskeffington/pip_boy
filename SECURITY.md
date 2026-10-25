@@ -12,6 +12,14 @@ Rust-Boy is an **experimental local field console**, not a safety-of-life, secur
 
 The `ModuleHost` capability checks and mock leases are cooperative **in-process** controls; they are **not** an OS sandbox for untrusted native code. A separate deny-only process is likewise **not** a working OS permission broker.
 
+## Live Network Health and UniFi boundary
+
+The Head Engineer's live ICMP Echo operation uses an OS-native, bounded ping subprocess to a validated literal IP only. The TCP Health operation opens 3–8 individually timed handshake connections to one validated IP and port, then closes them. Both require explicit operator confirmation and never run when a profile or page loads. ICMP reply loss **can** be measured from a complete native ping summary; TCP connection failures **must not** be represented as packet loss. RTT variation is a jitter *proxy*, not packet interarrival jitter or an SLA guarantee.
+
+The UniFi connector is an **explicit, local, read-only** HTTPS client: only an operator-configured private IPv4 console, strict certificate/name verification (optionally a trusted local CA PEM), no `--insecure`, no proxy/redirect/cloud fallback, and exactly two GET routes under the official Integration API. Credentials are consumed from `RUSTBOY_UNIFI_API_KEY` in process environment and delivered to curl via **stdin**, not argv, not a query string or a Rust-Boy data file. Device and site previews are capped; the JSON response excludes keys and MAC addresses. The key itself can still have extensive controller permissions. Never expose the unauthenticated local dashboard beyond loopback. Manual real-controller acceptance is required.
+
+See [Network Health + UniFi](docs/NETWORK_HEALTH_UNIFI.md).
+
 ## Network Engineering Suite and explicit diagnostics
 
 NET SUITE separates nine deterministic, fully offline address/route/L2 calculators from a tenth single-endpoint TCP connect test. The latter runs only when an operator explicitly enters a **literal unicast IP** and valid TCP port and confirms. The local dashboard checks its existing loopback Host/Origin policy and requires a separate JSON `confirm:true` flag; the CLI requires `--confirm`. The TCP socket uses a fixed connect timeout (900 ms), sends no application payload, does not resolve DNS, fan out to a range or schedule scans. An attempted handshake **does send network packets**; it may generate remote logs and must only target systems the operator is authorized to test. `confirm:true` is not OS-enforced or user identity authorization. Never expose the local dashboard on the LAN.

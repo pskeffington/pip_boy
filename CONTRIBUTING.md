@@ -15,6 +15,10 @@ cargo run --locked -p pipboy -- doctor
 
 Core layout: `crates/pipboy` (CLI/TUI), `crates/pipboy-core` (local core and mock adapters), `crates/rust-boy-broker` (separate **deny-only** process), `catalog/` (evidence and planned modules), `tools/` (validation), and `docs/` (technical contracts).
 
+## Network Health / UniFi adapter changes
+
+The Health metrics calculator is pure in `pipboy-core/src/network_health.rs`. All live ICMP and TCP operations are confined to `pipboy/src/network_probe.rs` and require explicit confirmation. UniFi access is limited to `pipboy/src/unifi.rs`: private IPv4, verified TLS, fixed allowlisted GET paths and a secret header delivered over child stdin; never add `--insecure`, mutable APIs, arbitrary URL pass-through, credentials in JSON or silent background polling. Keep real packet loss separate from TCP failure-rate semantics, and verify macOS/Linux/Windows native ping fixture parsing. [Live integration guide](docs/NETWORK_HEALTH_UNIFI.md).
+
 ## Network Engineering Suite changes
 
 Network operation specifications and offline functions live in `pipboy-core::network_suite`, not in separately hardcoded JS arrays. The only active networking implementation is a single-purpose, confirmed TCP check in `pipboy/src/network_probe.rs`. Do not add a shell executor, port sweep, unattended listener or DNS lookup without a bounded resolver and explicit review of permissions, timeout and output. Preserve the legacy `workbench net cidr` call and `POST /api/experiment` CIDR request. After code changes run `python3 tools/smoke_network.py`, Rust tests, Clippy and the handheld JavaScript syntax gate. [Network Suite guide](docs/NETWORK_ENGINEERING.md).

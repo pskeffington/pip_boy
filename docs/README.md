@@ -8,6 +8,7 @@ Technical contracts, architecture decisions, research provenance and validation 
 
 | Guide | Focus |
 | --- | --- |
+| [Live Network Health + UniFi](NETWORK_HEALTH_UNIFI.md) | ICMP RTT/loss, TCP handshake health, secure read-only local UniFi adapter |
 | [Network Engineering Suite](NETWORK_ENGINEERING.md) | Head Engineer address, route, VLAN, MAC and MTU tools; confirmed one-port TCP diagnostics |
 | [Peer task transport](PEER_TASK_TRANSPORT.md) | Explicit OpenSSH Mac/Pi enrollment, restricted bridge, delivery and receipt sync |
 | [Overseer Task Control](TASK_CONTROL.md) | Persistent assignments, status, manual handoff and role queues |
@@ -28,7 +29,7 @@ Technical contracts, architecture decisions, research provenance and validation 
 
 | Topic | Documents |
 | --- | --- |
-| Networking bench | [Head Engineer Network Suite](NETWORK_ENGINEERING.md) |
+| Networking bench | [Head Engineer Network Suite](NETWORK_ENGINEERING.md) · [live Health/UniFi](NETWORK_HEALTH_UNIFI.md) |
 | Mac → PlayStation | [Launcher, setup and protocol diagnostics](MAC_PLAYSTATION.md) |
 | Reclamation Scout GIS | [RustGIS and Raspberry Pi / TAK architecture](SCOUT_GIS_TAK.md) |
 | Fallout 4 | [Game mode setup and protocol](GAME_MODE.md) |

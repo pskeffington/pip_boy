@@ -10,9 +10,22 @@ Rust-Boy is an independent, Rust-native developer workbench with separate local 
 
 **Current stage:** development preview. The terminal console and offline workflows are implemented and tested on Linux, macOS and Windows. Physical GPIO, serial, SDR, Bluetooth, mesh, GNSS, live maps and physical device integrations are **not enabled**. Offline WGS84 GeoJSON Point tools are provided for the Reclamation Scout. An explicitly requested Fallout 4 TCP companion browser is available for validation. No packaged production release is claimed.
 
+## Head Engineer — Live Network Health + UniFi
+
+The local Head Engineer workspace now has **real, opt-in network diagnostics**, not just offline calculators: native ICMP ping RTT and reply loss, RTT variation (jitter proxy), bounded TCP handshake sampling, and read-only UniFi Network API snapshots of sites and adopted devices. **HEALTH** and **UNIFI** are one-touch entries on the 480×320 Engineer STATUS screen. The UniFi reader stays on the local LAN, requires a configured API key and verified TLS, and never changes controller settings.
+
+```bash
+git fetch origin
+git switch --track origin/feat/network-health-unifi
+cargo run --locked -p pipboy -- workbench use head-engineer --replace
+./scripts/launch-micro.command
+```
+
+Start with a real gateway ping: `cargo run --locked -p pipboy -- workbench net icmp 192.168.1.1 5 --confirm` (replace the example IP with your own gateway). See [Network Health + UniFi setup](docs/NETWORK_HEALTH_UNIFI.md) for local TLS certificates, API key setup, read-only device snapshots, and true ICMP versus TCP metric meanings. **No device test runs automatically**.
+
 ## Head Engineer — Network Suite
 
-The Head Engineer's first preloaded tool is **NET SUITE**: nine working offline network-engineering calculators (IPv4/IPv6 CIDR, subnet split, longest-prefix routes, exact CIDR merging, overlaps, MAC/EUI-64, 802.1Q VLAN and MTU/MSS) plus a **single-endpoint TCP reachability check** requiring explicit confirmation. The compact four-inch HUD presents six operations per page; desktop has a mode picker, and the CLI offers repeatable commands. The browser **never scans, resolves DNS, connects or changes networking merely by opening a page**.
+The Head Engineer's first preloaded tool is **NET SUITE**: nine offline network-engineering calculators plus four deliberately invoked live tools: ICMP Echo, TCP Health, UniFi local API, and TCP Check. The compact four-inch HUD presents six operations per page; desktop has a mode picker, and the CLI offers repeatable commands. The browser **never scans, resolves DNS, connects or changes networking merely by opening a page**.
 
 ```bash
 git fetch origin
@@ -99,7 +112,7 @@ See the [graphical dashboard guide](docs/DASHBOARD_UI.md) for keyboard/touch lay
 | Role | Real-world station focus | Readiness |
 | --- | --- | --- |
 | Overseer | **Task Control: assign, track, reassign and deliver tasks to a paired device** | Local queues plus opt-in OpenSSH delivery prototype; physical Mac/Pi test pending |
-| Head Engineer | **NET SUITE:** IPv4/IPv6, routes, subnets, VLAN, MAC, MTU/MSS, TCP checks | Nine offline modes and one confirmed single-port probe; hardware diagnostics planned |
+| Head Engineer | **NET SUITE:** ICMP RTT/jitter proxy/loss, TCP health, UniFi read-only device status, and offline IP planning | Live opt-in diagnostics implemented; real UniFi/handheld acceptance pending |
 | Security Chief | Security diagnostics, **four-camera 2×2 wall with focus view** | Camera video planned, not connected |
 | Vault Doctor | Research library, environmental observation and safety checklists | Library/notes exist; environmental sensing planned |
 | University Researcher | Data inspection, reproducible experiments and statistics | Fixture/palette tools exist; data lab planned |
@@ -182,7 +195,7 @@ Current priority: **Mac → PlayStation**. Double-click `scripts/launch-playstat
 | --- | --- | --- |
 | **Fallout 4 companion** | Implemented; live game acceptance pending | Opt-in TCP game-data browser, heartbeat, incremental state and snapshot diagnostics |
 | **STAT** | Available | Local CPU, memory, OS, architecture, uptime, field quality and bounded telemetry |
-| **NET SUITE** | New development pass | Nine offline network calculations plus one explicitly confirmed TCP endpoint connection |
+| **NET SUITE** | Development pass | Nine offline calculators; opt-in ICMP, TCP health, TCP check and local read-only UniFi API |
 | **LIBRARY** | Available | Browse bundled, license-aware research/source references without contacting GitHub |
 | **NOTES** | Available | Create, search, list, export and import offline field notes |
 | **Permission preferences** | Available, intent only | Save `requested` / `denied` settings; never activates devices |

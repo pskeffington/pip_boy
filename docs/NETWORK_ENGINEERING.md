@@ -7,7 +7,7 @@
 ```bash
 # On the feature branch:
 git fetch origin
-git switch --track origin/feat/network-engineering-suite
+git switch --track origin/feat/network-health-unifi
 cargo build --workspace --locked
 ./scripts/launch-micro.command
 
@@ -15,14 +15,21 @@ cargo build --workspace --locked
 cargo run --locked -p pipboy -- workbench use head-engineer --replace
 ```
 
-Micro: **Head Engineer → STAT → NET SUITE**, or **GEAR → NET SUITE**. The mode menu shows six actions per page, with a visible next/previous page control. Choose a mode, enter data, and press **RUN**. Large computed results have their own result view with an **INPUT** return action; the primary HUD remains compact.
+Micro: **Head Engineer → STAT → HEALTH** (ICMP) or **UNIFI**; **GEAR → NET SUITE**, or **GEAR → NET SUITE**. The mode menu shows six actions per page, with a visible next/previous page control. Choose a mode, enter data, and press **RUN**. Large computed results have their own result view with an **INPUT** return action; the primary HUD remains compact.
 
 Desktop: `cargo run --locked -p pipboy -- dashboard --open` → **Head Engineer → NET SUITE**. The mode picker and input forms use the same operation descriptions returned by the Rust backend, rather than a separate hardcoded tool registry.
+
+## Live link: Network Health and UniFi
+
+The Engineer now includes **13** modes: the nine existing offline calculations plus TCP Check, TCP Health (connection timing), ICMP Echo (true RTT and reply loss), and a read-only UniFi local API snapshot. The two Health methods are intentionally distinct: **ICMP response loss is packet loss; TCP connect failures are not**. The micro STATUS screen has HEALTH and UNIFI quick entries. [Live setup and security contract](NETWORK_HEALTH_UNIFI.md).
 
 ## Preloaded operations
 
 | Operation / CLI verb | Real function | Boundary |
 | --- | --- | --- |
+| **PING / JITTER** `icmp` | Native OS ICMP RTT, loss and successive-reply RTT variation | **Active**; operator confirmation, literal IP, at most 8 probes |
+| **NETWORK HEALTH** `health` | 3–8 TCP handshake samples with mean/median/p95 and connect-time variation | **Active**; failures are not packet loss |
+| **UNIFI STATUS** `unifi` | Read-only local UniFi sites and adopted-device snapshot via verified HTTPS | **Active**; configured private gateway, API key and confirmation |
 | **IPv4 CIDR** `cidr4` (or legacy `cidr`) | Address/netmask, network, broadcast, usable range and host count | Offline; /31 counts two *point-to-point* endpoints under RFC 3021, not a broadcast LAN |
 | **IPv6 CIDR** `cidr6` | Network/range for 0–128-bit prefixes, canonical compressed addresses, exact power-of-two size | Offline; no IPv6 broadcast |
 | **SUBNET SPLIT** `split4` | Divide a parent IPv4 range into longer prefixes, showing the first 12 and the total count | Offline; bounded output even for /0 → /32 |
@@ -34,7 +41,7 @@ Desktop: `cargo run --locked -p pipboy -- dashboard --open` → **Head Engineer 
 | **MTU / MSS** `mtu` | Estimate IPv4/IPv6 TCP MSS and UDP payload from an entered IP MTU | Offline; assumes base headers; options, extensions, tunnels and lower-layer overhead require further planning |
 | **TCP CHECK** `tcp` | One TCP connection attempt to one **literal IP and port**, with a fixed 900 ms attempt limit | **Active**; user confirms explicitly before each attempt; no DNS, payload transfer, port range, scheduled scans or background probes |
 
-All modes return a bounded, copyable text result from the existing `/api/experiment` endpoint. No separate service or script is launched from a browser request. There is no automatic network operation when a job is selected, a tool is pinned or a page is opened.
+All modes return a bounded, copyable text result from the existing `/api/experiment` endpoint. The ICMP operation explicitly invokes the native OS ping and UniFi uses a restricted local curl process; the nine offline calculations do not spawn processes. There is no automatic network operation when a job is selected, a tool is pinned or a page is opened.
 
 ## Reproducible CLI examples
 
@@ -92,7 +99,7 @@ python3 tools/smoke_micro.py
 
 **Hardware acceptance remains open:** test the NET SUITE modes and result return controls at 480×320 and 800×480 (browser zoom/keyboard/large fonts), on a 4-inch Raspberry Pi display, then test a single authorized endpoint on a real LAN with explicit permission. A passing CI integration test does not establish safety or device performance.
 
-**Next releases (not implemented):** separately permissioned OS interface/route inventory, DNS with bounded resolver timeouts, ICMP reachability/traceroute, LLDP/CDP read-only discovery, TLS certificate inspection, packet capture, local link quality and report export. Each active function must have explicit target scope, rate/size limits, a genuine permission boundary, and proof it cannot run on profile load. Do not represent future functions as already working.
+**Next releases (not implemented):** separately permissioned OS interface/route inventory, DNS with bounded resolver timeouts, traceroute, LLDP/CDP read-only discovery, TLS certificate inspection, packet capture, local link quality and report export. Each active function must have explicit target scope, rate/size limits, a genuine permission boundary, and proof it cannot run on profile load. Do not represent future functions as already working.
 
 ### Standards / evidence
 

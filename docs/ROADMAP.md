@@ -7,6 +7,12 @@ Rust-Boy is the public product name. The existing `pip_boy` repository, `pipboy`
 
 > **Verified integration baseline:** [Five-job Linux/macOS/Windows CI](https://github.com/pskeffington/pip_boy/actions/runs/40164915215) passed at `e7d1090`, including macOS PTY, Windows ConPTY, and the strict deny-all broker suite. **This does not complete a packaged release or enable physical devices.** The catalog's `implemented_unverified` status denotes a pending module acceptance review, not an absence of CI execution.
 
+## G1 live Network Health / UniFi API — explicit local tests
+
+Added native ICMP Echo RTT/reply-loss and RTT-variation measurements; finite TCP connect-time sampling and a restricted local UniFi Network Integration API reader. Engineer micro STATUS includes HEALTH/UNIFI quick actions. No background monitoring, API key storage, auto-scan, browser-selected controller URL or configuration writes. [Live operator contract](NETWORK_HEALTH_UNIFI.md).
+
+**Open gates:** exact-head CI on 1.90/stable/macOS/Windows, physical Mac gateway ping, first real UniFi local HTTPS read under a valid TLS trust chain and correct integration route, 480×320 legibility/zoom and Pi power budget. Site pagination beyond 25 sites and controller statistics beyond adopted-device status remain planned.
+
 ## G1 Network Engineer suite — functional local tools
 
 The Head Engineer now has **NET SUITE** as its first preloaded module, with nine deterministic IPv4/IPv6 and Layer-2 planning modes and one operator-confirmed single-endpoint TCP check. This retains a strict separation between pure offline arithmetic and the executable's 900 ms bounded connection attempt. Desktop and micro interfaces use one Rust operation catalog. See [Network Engineering contract](NETWORK_ENGINEERING.md).
