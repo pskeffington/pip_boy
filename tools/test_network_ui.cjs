@@ -130,7 +130,13 @@ async function main() {
   button(env.container, "STOP REFRESH").dispatch("click");
   assert.equal(env.timers.size, 0);
   assert.match(env.container.textContent, /REFRESH STOPPED/);
+  assert.equal(env.ui.back(), true, "Result Back should open preserved inputs");
+  assert.equal(find(env.container, (item) => item.name === "input").value, "local");
+  assert.equal(env.ui.back(), true, "Input Back should open tool menu");
+  assert.equal(env.ui.back(), false, "Menu Back should delegate to shell");
+  assert.equal(env.timers.size, 0);
   env.ui.destroy();
+  assert.equal(env.ui.back(), false);
   assert.equal(env.document.events.size, 0);
   assert.equal(env.window.events.size, 0);
 

@@ -92,6 +92,7 @@ let snapshot = null;
 let tab = "stat";
 let openedTool = null;
 let geoMode = "distance";
+const labDrafts = new Map();
 let focusedCamera = null;
 let pendingProfile = null;
 let busy = false;
@@ -201,6 +202,7 @@ function setTab(next) {
   focusedCamera = null;
   render();
   ui.viewport.scrollTop = 0;
+  ui.viewport.focus({ preventScroll: true });
 }
 
 function panel() {
@@ -452,6 +454,9 @@ function inputForm(root, id) {
   const form = make("form", "micro-panel");
   form.id = "micro-lab-form";
   form.classList.add("micro-lab");
+  const draftKey = snapshot.active.profile + ":" + id + ":" + (id === "geo-lab" ? geoMode : "default");
+  const saveDraft = () => labDrafts.set(draftKey, Object.fromEntries(new FormData(form)));
+  form.addEventListener("input", saveDraft);
   if (id === "geo-lab") {
     const modes = make("div", "button-row");
     for (const mode of ["distance", "waypoint"]) {
@@ -488,6 +493,7 @@ function inputForm(root, id) {
     form.classList.remove("show-result");
     output.hidden = true;
     edit.hidden = true;
+    (form.querySelector("input") || run).focus({ preventScroll: true });
   }, "micro-button compact lab-edit");
   edit.hidden = true;
   form.append(edit);
@@ -496,6 +502,7 @@ function inputForm(root, id) {
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
     if (busy) return;
+    saveDraft();
     busy = true;
     run.disabled = true;
     output.hidden = false;
@@ -509,16 +516,23 @@ function inputForm(root, id) {
         output.textContent = result.output;
         form.classList.add("show-result");
         edit.hidden = false;
+        edit.focus({ preventScroll: true });
+        ui.foot.textContent = "LOCAL TOOL / COMPLETE";
       }
-      ui.foot.textContent = "LOCAL TOOL / COMPLETE";
     } catch (error) {
-      if (openedTool === id) output.textContent = "ERROR / " + error.message;
-      notify(error.message, true);
+      if (openedTool === id && form.isConnected) {
+        output.textContent = "ERROR / " + error.message;
+        notify(error.message, true);
+      }
     } finally {
       busy = false;
       run.disabled = false;
     }
   });
+  const draft = labDrafts.get(draftKey);
+  if (draft) for (const input of form.querySelectorAll("input[name]")) {
+    if (Object.hasOwn(draft, input.name)) input.value = draft[input.name];
+  }
   root.append(form);
 }
 
@@ -703,6 +717,12 @@ function back() {
   if (ui.rolesDialog.open) {
     ui.rolesDialog.close();
   } else if (openedTool) {
+    if (openedTool === "net-lab" && activeNetworkUI?.back()) return;
+    const resultForm = ui.content.querySelector(".micro-lab.show-result");
+    if (resultForm) {
+      resultForm.querySelector(".lab-edit").click();
+      return;
+    }
     if (["assigned-duties", "mission-board"].includes(openedTool)
         && activeTaskUI?.back()) return;
     openedTool = null;

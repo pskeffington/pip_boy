@@ -1,6 +1,6 @@
 # Rust-Boy
 
-Micro navigation uses HOME / TOOLS / MAP / DATA / LINK / SETUP, a consistent header Back button and separate local-tool input/results screens.
+Micro navigation uses HOME / TOOLS / MAP / DATA / LINK / SETUP, a consistent header Back button and separate local-tool input/results screens. Back returns through inputs before leaving a tool; temporary local drafts survive navigation until reload.
 
 [![Rust-Boy quality gates](https://github.com/pskeffington/pip_boy/actions/workflows/rust.yml/badge.svg?branch=main)](https://github.com/pskeffington/pip_boy/actions/workflows/rust.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-informational)](LICENSE)
