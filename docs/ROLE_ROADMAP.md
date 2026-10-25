@@ -94,7 +94,7 @@ The [graphical dashboard implementation](DASHBOARD_UI.md) provides a shared UI f
 
 **Purpose:** See four authorized IP-camera feeds on a small screen, instantly focus one, and investigate incidents.  
 **Lore:** canonical job · `VT-01`, `STD-01`, `STD-02`, `STD-03`, `STD-05`, `STD-06`  
-**Preloaded now:** `host`, `net-lab`, `byte-lab`, `notes`  
+**Preloaded now:** `host`, `diag`, `net-lab`, `byte-lab`, `notes`  
 **New modules:** `camera-wall`, `camera-health`, `event-log`
 
 **Operational needs**
