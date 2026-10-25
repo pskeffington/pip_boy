@@ -1,8 +1,18 @@
-# Rust-Boy | Opt-in location and GeoJSON map viewport
+# Rust-Boy | Native RustGIS map data + opt-in GPS
 
-**Status:** working browser-based WGS84 coordinate viewer on `feat/scout-gps-rustgis-map`. This is an independently implemented map viewport, **not** an embedded RustGIS application or its native renderer. It displays georeferenced user-imported RustGIS-compatible GeoJSON, grid, position, accuracy circle, panning and zoom. Without an imported layer, **no streets, terrain, basemap tiles or routing are shown**.
+**Development branch:** `feat/scout-gps-rustgis-map` (draft PR #10). Rust-Boy now has an independent Web Mercator canvas viewer that reads *native RustGIS data exports*, draws embedded WGS84 vector geometry, and overlays opt-in browser geolocation. It is **not** RustGIS's native raster, basemap, symbology or map-renderer engine; no roads, terrain or imagery appear unless their *actual* geographic data is imported.
 
-## Launch
+## On RustGIS: export the field map
+
+Preferred interchange: **Publish > Save As > Map File** (`.rgismap`). This is native RustGIS JSON, containing map layers and their embedded feature tables. A normal RustGIS **project save** (`.rgis`) is also accepted: Rust-Boy reads its active map. For a field-sized/portable package, use **Publish > Package > Mobile Map** (`.rgismpk`); Rust-Boy reads the embedded `.rgismap` from the ZIP archive. **Publish > Package > Project** (`.rgispkg`) is accepted too. An individual saved layer file (`.rgislyr`) and WGS84 GeoJSON exports still work.
+
+RustGIS writes vector geometry as WGS84 longitude/latitude (including when a layer's `dataset.crs` refers to its *original* source system); Rust-Boy projects these geometries into EPSG:3857 for its own map display. A layer marked `crs_incomplete` is refused because its coordinates are not trustworthy. Native project map order, visible layers, source references, groups hidden by visibility, and supported single-symbol colors are preserved.
+
+**Only embedded vector feature data is currently drawn.** A project that references external GeoPackage/PostGIS/GeoParquet sources, linked rasters, RustGIS's built-in world backdrop, or tile URLs is **not** self-sufficient in Rust-Boy. Those layers are reported as excluded; they are never fetched silently. A map made only of those sources fails with an explicit error instead of drawing an empty frame that appears to be a functioning map.
+
+For truly portable, authoritative geography, load the appropriate public-agency/source layers in RustGIS, narrow the area and choose an embedded vector map or export separate, WGS84 GeoJSON features. **RustGIS is the GIS tool, not the data authority.** Record the underlying data producer, dataset date, license, accuracy, and layer purpose. Rust-Boy's DATA SOURCES view lists the retained `dataset.source` names; a missing source is marked *Not specified*, not assumed official.
+
+## Run in Rust-Boy
 
 ```bash
 git clone --branch feat/scout-gps-rustgis-map https://github.com/pskeffington/pip_boy.git
@@ -10,32 +20,31 @@ cd pip_boy
 cargo run --locked -p pipboy -- dashboard --micro --open
 ```
 
-Open **MAP**. Press **GPS ON** and grant the *browser's* location permission. GPS is never started by opening the map. Browser geolocation requires a secure context; this local dashboard uses http://127.0.0.1, which modern browsers treat as potentially trustworthy. A desktop Mac may have only Wi-Fi/IP positioning, or no location provider. On Raspberry Pi, the browser needs a working geolocation provider; attaching a USB GNSS receiver does *not* automatically expose it to `navigator.geolocation`. A future GNSS broker can supply NMEA/serial fixes only after explicit device consent and OS permission controls.
+Open **MAP** and press **RUSTGIS** to select `.rgismap`, `.rgis`, `.rgislyr`, `.rgismpk`, `.rgispkg`, or `.geojson`. The map uses a project camera center/zoom if available. **GPS ON** requests browser location permission, then **FOLLOW** centers on the live fix without altering map feature coordinates. GPS is *never* activated by selecting a map. You can drag/touch pan, zoom, and manually enter a center (marked as *not* GPS).
 
-Use **LAYER** to import an offline WGS84 GeoJSON file exported from RustGIS. Supported GeoJSON: Point, MultiPoint, LineString, MultiLineString, Polygon, MultiPolygon, GeometryCollection, Feature, FeatureCollection. **GeoJSON is always [longitude,latitude]**, whereas the displayed manual center uses LAT then LON. The renderer applies a Web Mercator (EPSG:3857) transform in memory and clamps rendering latitudes to ~85.05 degrees, including antimeridian-aware longitude wrapping. It rejects non-WGS84 CRS declarations, invalid coordinates, unknown geometries, files over 2 MiB, >2,000 features or >30,000 vertices. Polygons use even-odd fill for interior rings. Do not import unknown or highly sensitive layers.
+Expand **DATA SOURCES** under the map to see visible imported layers, per-layer feature counts, original source references and unavailable-layer warnings. WGS84 geometry, GPS and accuracy circle share the same screen projection. No files, coordinates or photos are uploaded by Rust-Boy. Switching away from MAP destroys the current imported layer and position watch.
 
-Controls: **GPS ON/OFF** starts and stops a position watch; **FOLLOW/RECENTER** follows/recenters on the last fix; **LAYER** selects a local file; **CENTER** manually enters a coordinate (never labeled as GPS); **+/-**, mouse wheel and drag/touch pan change the view. Pressing other tabs or switching profiles closes the watcher and discards the fix and imported layer. The screen shows *NO BASEMAP LAYER* when there is no imported geography; the center crosshair is only a viewport reference.
+## Supported data and safety limits
 
-## Privacy and limitations
+- Native `.rgis`, `.rgismap`, `.rgislyr`: JSON up to **12 MiB**; 128 layers, 8,000 features and 120,000 vertices. Active map from a project is selected. GeoJSON retains its stricter **2 MiB** input cap.
+- RustGIS ZIP packages: **32 MiB** maximum archive; only one embedded `.rgis` or `.rgismap` JSON is unpacked; size, CRC and path are checked. Supports ZIP stored and raw Deflate compression with a browser implementing `DecompressionStream("deflate-raw")`. If the browser does not support it, extract the `.rgismap` with a ZIP tool and import that. No archive paths are written to disk.
+- Native geometries: Point, MultiPoint, multipart Line and multipart Polygon; WGS84 coordinates are strictly validated. Multi-layer drawing is back-to-front, following RustGIS's zero-index-on-top layer contract. Only `Single` symbology is reflected in the canvas; complex classified rendering, labels/scale gates and layer graphics are not guaranteed identical to RustGIS.
+- GeoJSON: Point, MultiPoint, LineString, MultiLineString, Polygon, MultiPolygon and GeometryCollection, including FeatureCollections. GeoJSON positions are **[longitude, latitude]**.
+- Browser location may be derived from Wi-Fi/IP rather than a physical GNSS receiver. The Raspberry Pi needs an actual browser geolocation provider; USB/serial NMEA input requires a future separately authorized Rust device broker.
+- Browser/OS location services may use their own external positioning providers. Rust-Boy itself makes **no** location API posts, remote map tile downloads, hidden GPS recordings, TAK broadcasts or background network discoveries.
+- North-up, EPSG:3857 map, no route planning, no raster terrain, no offline raster tile cache, no survey certification. An unreferenced `basemap: Paper` preference in a RustGIS project does not carry actual world geography.
 
-- No location is posted to Rust-Boy HTTP APIs, persisted, shared to peers, transmitted to TAK, or added to notes. No tile service, geolocation proxy or third-party JavaScript is loaded by Rust-Boy.
-- Browser/OS location services may independently consult operating-system or third-party positioning providers; their privacy behavior is **outside** Rust-Boy's control.
-- No geocoding, turn-by-turn route calculation, paths, raw satellite lock indicators, magnetic declination or quality-certified navigation is present.
-- Imported layers may have been created on a different coordinate reference system: convert them to WGS84 (EPSG:4326) **before** GeoJSON export from RustGIS. Matching display positions is not a field survey.
-- Browser-provided accuracy and timestamps are displayed; >60-second-old samples and malformed coordinates are rejected. Loss of permission or provider error removes the fix.
-- The OS device broker remains deny-only. Do not treat browser GPS as authorization to access serial GNSS hardware.
-
-## Acceptance
+## Verification
 
 ```bash
+node --check crates/pipboy/assets/map-import.js
+node --check crates/pipboy/assets/map.js
+node tools/test_rustgis_map_import.cjs
 cargo fmt --all -- --check
 cargo check --workspace --all-targets --locked
 cargo test --workspace --locked
-node --check crates/pipboy/assets/map.js
-node --check crates/pipboy/assets/micro.js
-node --check crates/pipboy/assets/dashboard.js
-python3 tools/smoke_micro.py
 python3 tools/smoke_dashboard.py
+python3 tools/smoke_micro.py
 ```
 
-Manual tests: load RustGIS GeoJSON exported in EPSG:4326; ensure fixed landmarks, own position and uncertainty circle agree at the same coordinates; verify no fake basemap; test pan/zoom and antimeridian layer; deny GPS; exit MAP while watching and confirm browser location watch stops; test 480x320 and 800x480 Pi touchscreens, missing GNSS and denied permission. Real Pi hardware/browser acceptance and upstream RustGIS native renderer integration remain separate gates.
+The Node tests cover real RustGIS serde-style geometries, projects' active maps, layer ordering, source metadata, CRS refusals, ZIP stored/Deflate extraction and CRC rejection. **Browser integration, actual RustGIS-exported field layers, Raspberry Pi 480×320 display, GPS precision and native RustGIS renderer/raster acceptance still require manual field tests.** To confirm alignment, import a known authoritative road/parcel/trail layer and compare a recorded surveyed position with the same map in RustGIS.
