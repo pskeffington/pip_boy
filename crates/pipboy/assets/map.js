@@ -195,8 +195,10 @@
     ctx.lineCap = "round";
     let labels = 0;
     for (const shape of view.shapes) {
+      const style = shape.style || {};
+      ctx.globalAlpha = Number.isFinite(style.opacity) ? style.opacity : 1;
       if (shape.kind === "point") {
-        ctx.fillStyle = "#bced99";
+        ctx.fillStyle = style.fill || "#bced99";
         for (const point of shape.paths[0]) {
           const p = screenPoint(view, point[0], point[1]);
           if (p[0] < -8 || p[0] > view.width + 8 || p[1] < -8 || p[1] > view.height + 8) continue;
@@ -220,15 +222,16 @@
           if (shape.kind === "polygon") ctx.closePath();
         }
         if (shape.kind === "polygon") {
-          ctx.fillStyle = "rgba(116, 178, 112, 0.19)";
+          ctx.fillStyle = style.fill || "rgba(116, 178, 112, 0.19)";
           ctx.fill("evenodd");
         }
-        ctx.lineWidth = shape.kind === "polygon" ? 1 : 1.5;
-        ctx.strokeStyle = shape.kind === "polygon" ? "#6b9f6b" : "#b5db90";
+        ctx.lineWidth = style.width || (shape.kind === "polygon" ? 1 : 1.5);
+        ctx.strokeStyle = style.stroke || (shape.kind === "polygon" ? "#6b9f6b" : "#b5db90");
         ctx.stroke();
       }
     }
 
+    ctx.globalAlpha = 1;
     // Center crosshair is a camera reference, never passed off as a GPS fix.
     const midX = view.width / 2;
     const midY = view.height / 2;
@@ -266,7 +269,7 @@
       ctx.textAlign = "center";
       ctx.font = "11px monospace";
       ctx.fillStyle = "#dfa96b";
-      ctx.fillText("NO BASEMAP LAYER", view.width / 2, view.height - 16);
+      ctx.fillText("LOAD RUSTGIS MAP / NO GEOGRAPHY", view.width / 2, view.height - 16);
       ctx.textAlign = "start";
     }
   }
@@ -279,10 +282,22 @@
         " \u00b1" + Math.round(view.fix.accuracy) + "m"
       : view.gpsState;
     view.status.textContent = fix + "  |  Z" + view.zoom.toFixed(1) + "  |  " +
-      (view.layerName || "NO LAYER") + "  |  CENTER " + center;
+      (view.layerName || "LOAD RUSTGIS MAP") + "  |  CENTER " + center;
     view.locate.textContent = view.watchId === null ? "GPS ON" : "GPS OFF";
     view.followButton.disabled = !view.fix;
     view.followButton.textContent = view.follow ? "FOLLOW" : "RECENTER";
+    view.sourceBox.hidden = !view.layers.length;
+    if (view.layers.length) {
+      view.sourceSummary.textContent = "DATA SOURCES / " + view.layers.length + " LAYERS" +
+        (view.warnings.length ? " / " + view.warnings.length + " LIMITATIONS" : "");
+      view.sourceLines.textContent = view.mapName + " / " + view.mapFormat + "\n" +
+        view.layers.map((layer) => layer.name + " (" + layer.features + " features)\n" +
+          "  Source: " + layer.source +
+          (layer.originalCrs ? "\n  Original CRS: " + JSON.stringify(layer.originalCrs).slice(0, 120) : "")
+        ).join("\n") +
+        (view.warnings.length ? "\nLIMITS: " + view.warnings.join(" | ") : "") +
+        "\nCoordinates drawn: WGS84 longitude/latitude.";
+    }
   }
 
   function refresh(view) {
@@ -421,8 +436,13 @@
     status.setAttribute("aria-live", "polite");
     const file = make("input", "");
     file.type = "file";
-    file.accept = ".geojson,.json,application/geo+json";
+    file.accept = ".rgismap,.rgis,.rgislyr,.rgismpk,.rgispkg,.geojson,.json,application/geo+json";
     file.hidden = true;
+    const sourceBox = make("details", "rb-map-sources");
+    sourceBox.hidden = true;
+    const sourceSummary = make("summary", "", "DATA SOURCES");
+    const sourceLines = make("pre", "rb-map-source-text");
+    sourceBox.append(sourceSummary, sourceLines);
     const manual = make("form", "rb-map-manual");
     manual.hidden = true;
     const latitude = make("input", "", "");
@@ -445,10 +465,12 @@
     apply.type = "submit";
     manual.append(latitude, longitude, apply);
     const view = {
-      host, root, stage, canvas, status, file, manual, latitude, longitude,
+      host, root, stage, canvas, status, file, sourceBox, sourceSummary, sourceLines,
+      manual, latitude, longitude,
       width: 0, height: 0, dpr: 1,
       center: { lat: 0, lon: 0 }, zoom: 2,
-      shapes: [], layerName: "", fix: null, watchId: null, gpsState: "GPS OFF",
+      shapes: [], layers: [], warnings: [], layerName: "", mapName: "", mapFormat: "",
+      fix: null, watchId: null, gpsState: "GPS OFF",
       follow: true, observer: null, windowResize: null, drag: null,
       locate: null, followButton: null
     };
@@ -462,7 +484,8 @@
       if (view.fix) view.center = { lat: view.fix.lat, lon: view.fix.lon };
       refresh(view);
     }, "Center map on latest location fix");
-    const importButton = control("LAYER", () => file.click(), "Import offline RustGIS GeoJSON");
+    const importButton = control("RUSTGIS", () => file.click(),
+      "Import native RustGIS map/project/mobile package or GeoJSON");
     const manualButton = control("CENTER", () => {
       manual.hidden = !manual.hidden;
       if (!manual.hidden) latitude.focus();
@@ -475,7 +498,7 @@
     if (options && typeof options.onTools === "function") {
       toolbar.append(control("GIS", options.onTools, "Open Scout GIS tools"));
     }
-    root.append(toolbar, stage, status, manual, file);
+    root.append(toolbar, stage, status, sourceBox, manual, file);
     host.replaceChildren(root);
 
     manual.addEventListener("submit", (event) => {
@@ -498,18 +521,46 @@
       const selected = file.files && file.files[0];
       if (!selected) return;
       try {
-        if (selected.size > MAX_FILE_BYTES) throw new Error("Layer exceeds 2 MiB");
-        const text = await selected.text();
+        const importer = window.RustBoyMapImport;
+        const native = importer && importer.isRustGIS(selected.name);
+        let parsed;
+        if (native) {
+          parsed = await importer.readFile(selected);
+        } else {
+          if (selected.size > MAX_FILE_BYTES) throw new Error("GeoJSON exceeds 2 MiB");
+          const text = await selected.text();
+          if (new TextEncoder().encode(text).length > MAX_FILE_BYTES) {
+            throw new Error("GeoJSON exceeds 2 MiB");
+          }
+          parsed = parseGeoJSON(text);
+        }
         if (active !== view) return;
-        if (new TextEncoder().encode(text).length > MAX_FILE_BYTES) throw new Error("Layer exceeds 2 MiB");
-        const parsed = parseGeoJSON(text);
         view.shapes = parsed.shapes;
-        view.layerName = selected.name.slice(0, 35) + " (" + parsed.features + " features)";
-        fitLayer(view);
+        view.layers = native ? parsed.layers : [{
+          name: selected.name.slice(0, 60), source: "User-selected GeoJSON file",
+          features: parsed.features, originalCrs: "WGS84"
+        }];
+        view.warnings = native ? parsed.warnings : [];
+        view.mapName = native ? parsed.mapName : selected.name.slice(0, 50);
+        view.mapFormat = native ? parsed.format : "GeoJSON";
+        view.layerName = view.mapName + " (" + parsed.features + " features)";
+        // A current GPS follow fix is authoritative for the viewport center.
+        if (view.fix && view.follow) {
+          view.center = { lat: view.fix.lat, lon: view.fix.lon };
+          view.zoom = Math.max(view.zoom, 14);
+        } else if (native && parsed.camera) {
+          view.center = { lat: parsed.camera.lat, lon: parsed.camera.lon };
+          view.zoom = parsed.camera.zoom;
+          view.follow = false;
+        } else {
+          fitLayer(view);
+        }
+        view.gpsState = native && parsed.warnings.length ?
+          "RUSTGIS VECTOR PARTIAL / VIEW SOURCES" : "LOCAL MAP LOADED";
         refresh(view);
       } catch (error) {
         if (active === view) {
-          view.gpsState = "LAYER ERROR: " + (error instanceof Error ? error.message : "Invalid file");
+          view.gpsState = "MAP ERROR: " + (error instanceof Error ? error.message : "Invalid file");
           refresh(view);
         }
       } finally {
