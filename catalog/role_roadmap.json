@@ -1,0 +1,1012 @@
+{
+  "schema_version": 1,
+  "review_date": "2026-10-25",
+  "branch": "feat/rust-boy-workbench",
+  "designation": "design_roadmap_not_a_feature_release",
+  "gate_order": [
+    "R0",
+    "R1",
+    "R2",
+    "R3"
+  ],
+  "quality_prerequisites": [
+    "CI_GREEN",
+    "HANDHELD",
+    "OS_BROKER",
+    "PLUGIN_SECURITY"
+  ],
+  "sources": [
+    {
+      "id": "VT-01",
+      "type": "official_game_support",
+      "title": "Bethesda Support: Overseer, Overseen (Fallout 76)",
+      "url": "https://help.bethesda.net/app/answers/detail/a_id/49597/",
+      "supports": "Overseer, Security Chief Robinson, Head Engineer Brass, Doctor Loris and Professor-Bot are quest roles; the scenario is a Vault-Tec University training simulation.",
+      "limit": "Does not establish an exhaustive corporate personnel chart or real job specification."
+    },
+    {
+      "id": "VT-02",
+      "type": "official_game_support",
+      "title": "Bethesda Support: Reclamation Day (Fallout 76)",
+      "url": "https://help.bethesda.net/app/answers/detail/a_id/43149",
+      "supports": "Pip-Boy, Overseer's Mission, Vault 76 departure and Wasteland exploration.",
+      "limit": "The title Reclamation Scout is an adaptation, not an attested Vault-Tec position."
+    },
+    {
+      "id": "VT-03",
+      "type": "official_game_publisher",
+      "title": "Bethesda: Fallout Shelter",
+      "url": "https://fallout.bethesda.net/en/games/fallout-shelter",
+      "supports": "Overseer administration, Dwellers' assigned jobs, radio and Vault protection and wasteland exploration.",
+      "limit": "Neither Records Custodian nor University Researcher is represented here as an exact canonical employee title."
+    },
+    {
+      "id": "STD-01",
+      "type": "technical_standard",
+      "title": "ONVIF Profile T",
+      "url": "https://www.onvif.org/profiles/profile-t/",
+      "supports": "Current camera video interoperability target: H.264/H.265, imaging, metadata and alarm features.",
+      "limit": "Interoperability depends on tested camera/client conformity and codec support."
+    },
+    {
+      "id": "STD-02",
+      "type": "technical_announcement",
+      "title": "ONVIF: Transition away from Profile S",
+      "url": "https://www.onvif.org/pressrelease/onvif-to-end-support-for-profile-s/",
+      "supports": "Profile S deprecation; Profile T preferred for newer integrations.",
+      "limit": "Legacy cameras may still require separately tested paths."
+    },
+    {
+      "id": "STD-03",
+      "type": "technical_standard",
+      "title": "IETF RFC 7826: RTSP 2.0",
+      "url": "https://www.rfc-editor.org/rfc/rfc7826",
+      "supports": "Media session setup/control protocol fundamentals.",
+      "limit": "Does not imply every consumer camera implements RTSP 2.0; compatibility must be negotiated and tested."
+    },
+    {
+      "id": "STD-04",
+      "type": "technical_standard",
+      "title": "IETF RFC 7946: GeoJSON",
+      "url": "https://www.rfc-editor.org/rfc/rfc7946",
+      "supports": "GeoJSON positions are longitude-latitude in WGS 84 (CRS84 axis order).",
+      "limit": "Location data may be sensitive and must be protected by explicit storage/sharing policy."
+    },
+    {
+      "id": "STD-05",
+      "type": "technical_guidance",
+      "title": "NIST SP 800-92: Computer Security Log Management",
+      "url": "https://csrc.nist.gov/pubs/sp/800/92/final",
+      "supports": "Planning and management of incident logs and evidence.",
+      "limit": "Reference guidance, not implementation certification."
+    },
+    {
+      "id": "STD-06",
+      "type": "technical_standard",
+      "title": "W3C WCAG 2.2",
+      "url": "https://www.w3.org/TR/WCAG22/",
+      "supports": "Readable controls, input targets and keyboard operability guide handheld UI acceptance.",
+      "limit": "A desktop terminal prototype does not establish WCAG conformance for a future handheld."
+    },
+    {
+      "id": "RB-01",
+      "type": "project_definition",
+      "title": "Rust-Boy role architecture",
+      "url": "https://github.com/pskeffington/pip_boy/blob/feat/rust-boy-workbench/crates/pipboy-core/src/workbench.rs",
+      "supports": "Role preset IDs, currently pinned tool sets and independent Custom sandbox.",
+      "limit": "Code presence on development branch is not cross-platform CI acceptance."
+    }
+  ],
+  "roles": [
+    {
+      "id": "overseer",
+      "name": "Overseer Operations",
+      "fidelity": "canonical_job",
+      "source_ids": [
+        "VT-01",
+        "VT-03",
+        "RB-01"
+      ],
+      "mission": "Coordinate people, systems and incidents from a concise command dashboard.",
+      "baseline_tools": [
+        "host",
+        "notes",
+        "library",
+        "game"
+      ],
+      "future_tools": [
+        "mission-board",
+        "alerts",
+        "reports"
+      ],
+      "needs": [
+        {
+          "id": "N1",
+          "priority": "must",
+          "need": "At-a-glance system/companion health and truthful stale states",
+          "status": "partially_available"
+        },
+        {
+          "id": "N2",
+          "priority": "must",
+          "need": "Local mission tasks with owner, priority, due state and acknowledgment",
+          "status": "planned"
+        },
+        {
+          "id": "N3",
+          "priority": "should",
+          "need": "Cross-role handoff and incident notes",
+          "status": "planned"
+        },
+        {
+          "id": "N4",
+          "priority": "later",
+          "need": "Opt-in live sources and redacted report export",
+          "status": "planned"
+        }
+      ],
+      "gates": [
+        {
+          "gate": "R0",
+          "title": "Preset, launch and honest status",
+          "deliverables": [
+            "Overseer selected by default on a fresh install",
+            "Four pre-pinned tools are visible and inert until launched",
+            "Existing boards survive upgrade"
+          ],
+          "acceptance": [
+            "Fresh install shows Overseer profile without writing until user changes it",
+            "No automatic PlayStation/network connection",
+            "Linux/macOS/Windows CI passes"
+          ],
+          "dependencies": [],
+          "status": "code_present_ci_pending"
+        },
+        {
+          "gate": "R1",
+          "title": "Offline command desk",
+          "deliverables": [
+            "Mission/task cards with statuses and manual alerts",
+            "Role and tool switcher with clear source-quality labels"
+          ],
+          "acceptance": [
+            "Create, complete, reassign and export ten sample tasks offline",
+            "No alert displayed without an actual event or manual entry"
+          ],
+          "dependencies": [
+            "R0"
+          ],
+          "status": "planned"
+        },
+        {
+          "gate": "R2",
+          "title": "Consent-based integrations",
+          "deliverables": [
+            "Explicitly connected game observations and permitted sensor status",
+            "Incident-to-task linking and event acknowledgment"
+          ],
+          "acceptance": [
+            "Disconnect immediately marks readings stale",
+            "No network activity until a user explicitly connects"
+          ],
+          "dependencies": [
+            "R1"
+          ],
+          "status": "planned"
+        },
+        {
+          "gate": "R3",
+          "title": "Field command acceptance",
+          "deliverables": [
+            "Resource-aware handheld overview",
+            "Signed/redacted local reports and restore"
+          ],
+          "acceptance": [
+            "Operator completes status-task-report journey on 4-inch target",
+            "Storage rollback and interrupted write are tested"
+          ],
+          "dependencies": [
+            "R2"
+          ],
+          "status": "planned"
+        }
+      ]
+    },
+    {
+      "id": "head-engineer",
+      "name": "Head Engineer Station",
+      "fidelity": "canonical_job",
+      "source_ids": [
+        "VT-01",
+        "RB-01"
+      ],
+      "mission": "Troubleshoot embedded systems, networks and hardware using reproducible diagnostics.",
+      "baseline_tools": [
+        "host",
+        "net-lab",
+        "byte-lab",
+        "simulator",
+        "notes"
+      ],
+      "future_tools": [
+        "serial-console",
+        "sensor-console",
+        "device-graph"
+      ],
+      "needs": [
+        {
+          "id": "N1",
+          "priority": "must",
+          "need": "Hex dumps, checksums, IPv4/CIDR math, host diagnostics and fixture runs",
+          "status": "code_present_ci_pending"
+        },
+        {
+          "id": "N2",
+          "priority": "must",
+          "need": "Device inventory and repeatable diagnostic recipes",
+          "status": "planned"
+        },
+        {
+          "id": "N3",
+          "priority": "should",
+          "need": "Read-only USB/serial log console with explicit scope",
+          "status": "planned"
+        },
+        {
+          "id": "N4",
+          "priority": "later",
+          "need": "Physical GPIO, environmental sensors and managed test rigs",
+          "status": "planned"
+        }
+      ],
+      "gates": [
+        {
+          "gate": "R0",
+          "title": "Ready engineering desk",
+          "deliverables": [
+            "Pinned host/NET/BYTE/SIM/NOTES palette",
+            "Offline CIDR, byte dump and CRC32 commands"
+          ],
+          "acceptance": [
+            "Golden CIDR /24 /31 /32 and CRC32 vectors pass",
+            "All tools remain inactive until invoked"
+          ],
+          "dependencies": [],
+          "status": "code_present_ci_pending"
+        },
+        {
+          "gate": "R1",
+          "title": "Real offline engineering lab",
+          "deliverables": [
+            "Bounded hex/file-header inspector and developer test recipes",
+            "Diagnostic session reports with reproducible parameters"
+          ],
+          "acceptance": [
+            "Input limits and invalid file/hex handling tested",
+            "Fixture replay produces the same output on repeat"
+          ],
+          "dependencies": [
+            "R0"
+          ],
+          "status": "planned"
+        },
+        {
+          "gate": "R2",
+          "title": "OS-authorized device diagnostics",
+          "deliverables": [
+            "Separately reviewed read-only serial gateway",
+            "Device identity, per-device consent, expiry and hot-unplug"
+          ],
+          "acceptance": [
+            "USB device cannot open without OS permission and explicit session grant",
+            "Unplug/revoke closes handles and clears buffers"
+          ],
+          "dependencies": [
+            "R1",
+            "OS_BROKER"
+          ],
+          "status": "planned"
+        },
+        {
+          "gate": "R3",
+          "title": "Embedded hardware integration",
+          "deliverables": [
+            "Sensor modules and typed adapter SDK",
+            "Battery/runtime budgets and device-specific compatibility matrix"
+          ],
+          "acceptance": [
+            "Physical device tested on macOS and chosen handheld prototype",
+            "No transmission capability is implied by receiver diagnostics"
+          ],
+          "dependencies": [
+            "R2",
+            "HANDHELD"
+          ],
+          "status": "planned"
+        }
+      ]
+    },
+    {
+      "id": "security-chief",
+      "name": "Security Chief Station",
+      "fidelity": "canonical_job",
+      "source_ids": [
+        "VT-01",
+        "STD-01",
+        "STD-02",
+        "STD-03",
+        "STD-05",
+        "STD-06"
+      ],
+      "mission": "See four authorized IP-camera feeds on a small screen, instantly focus one, and investigate incidents.",
+      "baseline_tools": [
+        "host",
+        "net-lab",
+        "byte-lab",
+        "notes"
+      ],
+      "future_tools": [
+        "camera-wall",
+        "camera-health",
+        "event-log"
+      ],
+      "needs": [
+        {
+          "id": "N1",
+          "priority": "must",
+          "need": "Four-camera 2x2 wall with one-key focus and back",
+          "status": "planned"
+        },
+        {
+          "id": "N2",
+          "priority": "must",
+          "need": "Manual, permissioned import of IP cameras (JPEG/MJPEG first; RTSP/ONVIF later)",
+          "status": "planned"
+        },
+        {
+          "id": "N3",
+          "priority": "must",
+          "need": "Per-feed connected/loading/stale/disconnected/auth-error state and timestamps",
+          "status": "planned"
+        },
+        {
+          "id": "N4",
+          "priority": "should",
+          "need": "Minimal network/incident diagnostics and bounded evidence notes",
+          "status": "partially_available"
+        },
+        {
+          "id": "N5",
+          "priority": "later",
+          "need": "Opt-in motion/alarm events, export and optional PTZ",
+          "status": "planned"
+        }
+      ],
+      "gates": [
+        {
+          "gate": "R0",
+          "title": "Security desk baseline",
+          "deliverables": [
+            "Pinned host, network math, byte inspection and notes",
+            "No camera connection without explicit configuration"
+          ],
+          "acceptance": [
+            "Security profile renders without claiming feeds live",
+            "Offline baseline is usable without network"
+          ],
+          "dependencies": [],
+          "status": "code_present_ci_pending"
+        },
+        {
+          "gate": "R1",
+          "title": "Four-feed UI with deterministic camera fixtures",
+          "deliverables": [
+            "2×2 thumbnail wall and four separate feed state machines",
+            "1–4 choose, Enter expands, Esc returns, loading/error/stale labels",
+            "4-inch readable layout and input focus"
+          ],
+          "acceptance": [
+            "All four synthetic feeds animate independently",
+            "Focus/back and missing/stale feeds tested at 800×480 and compact fallback",
+            "No external endpoints contacted"
+          ],
+          "dependencies": [
+            "R0",
+            "HANDHELD"
+          ],
+          "status": "planned"
+        },
+        {
+          "gate": "R2",
+          "title": "Authorized real camera streams",
+          "deliverables": [
+            "Manually entered allowlisted HTTPS JPEG/MJPEG sources",
+            "Per-camera credentials in secure OS storage; strict TLS verification and redaction",
+            "RTSP H.264/H.265 decoder path and ONVIF Profile T compatibility by model"
+          ],
+          "acceptance": [
+            "Four verified real feeds display simultaneously and can focus",
+            "No URLs/credentials in logs or public config",
+            "No surprise recording/discovery, audio or PTZ"
+          ],
+          "dependencies": [
+            "R1",
+            "OS_BROKER"
+          ],
+          "status": "planned"
+        },
+        {
+          "gate": "R3",
+          "title": "Operational security acceptance",
+          "deliverables": [
+            "Reconnect/backoff, bandwidth and frame freshness indicators",
+            "Optional local events and user-confirmed evidence export",
+            "Unplug, timeout, session expiry and offline recovery"
+          ],
+          "acceptance": [
+            "Stale frames never carry a live indicator",
+            "Operator selects feed <1s under lab fixture load",
+            "Camera field matrix documents latency/memory/CPU on Mac and handheld"
+          ],
+          "dependencies": [
+            "R2"
+          ],
+          "status": "planned"
+        }
+      ]
+    },
+    {
+      "id": "vault-doctor",
+      "name": "Vault Doctor Station",
+      "fidelity": "canonical_job",
+      "source_ids": [
+        "VT-01",
+        "RB-01"
+      ],
+      "mission": "Maintain non-diagnostic health/environment reference and field observations without exposing patient records.",
+      "baseline_tools": [
+        "library",
+        "notes",
+        "host"
+      ],
+      "future_tools": [
+        "environment",
+        "checklists",
+        "reference-index"
+      ],
+      "needs": [
+        {
+          "id": "N1",
+          "priority": "must",
+          "need": "Trusted offline medical/public-health references with provenance",
+          "status": "partially_available"
+        },
+        {
+          "id": "N2",
+          "priority": "must",
+          "need": "Environmental observations: temperature, humidity, water and air quality (non-medical)",
+          "status": "planned"
+        },
+        {
+          "id": "N3",
+          "priority": "should",
+          "need": "Structured checklists with source-linked thresholds and units",
+          "status": "planned"
+        },
+        {
+          "id": "N4",
+          "priority": "later",
+          "need": "Explicitly consented sensors and privacy-governed exports",
+          "status": "planned"
+        }
+      ],
+      "gates": [
+        {
+          "gate": "R0",
+          "title": "Research-and-notes starter",
+          "deliverables": [
+            "Offline library, manual notes and host condition tools"
+          ],
+          "acceptance": [
+            "No health inference or clinical diagnosis is claimed",
+            "No protected patient data are seeded"
+          ],
+          "dependencies": [],
+          "status": "code_present_ci_pending"
+        },
+        {
+          "gate": "R1",
+          "title": "Environmental observation desk",
+          "deliverables": [
+            "Manual readings with units, timestamps and missing-value explanations",
+            "Hazard-specific safety checklists backed by references"
+          ],
+          "acceptance": [
+            "Synthetic and real/manual readings distinguish provenance",
+            "Out-of-range values do not trigger unsupported medical recommendations"
+          ],
+          "dependencies": [
+            "R0"
+          ],
+          "status": "planned"
+        },
+        {
+          "gate": "R2",
+          "title": "Opt-in environmental sensing",
+          "deliverables": [
+            "Approved temperature/humidity and non-clinical sensor adapters",
+            "Calibration record, source quality and stale-device warnings"
+          ],
+          "acceptance": [
+            "Consent and calibration test gates pass",
+            "No clinical sensor device claimed compliant by default"
+          ],
+          "dependencies": [
+            "R1",
+            "OS_BROKER"
+          ],
+          "status": "planned"
+        },
+        {
+          "gate": "R3",
+          "title": "Field validation and privacy",
+          "deliverables": [
+            "Accessible checklist export",
+            "Privacy review before any person-specific data flow"
+          ],
+          "acceptance": [
+            "No plaintext protected health record workflow offered by default",
+            "End-to-end offline reference-checklist-export acceptance"
+          ],
+          "dependencies": [
+            "R2"
+          ],
+          "status": "planned"
+        }
+      ]
+    },
+    {
+      "id": "university-researcher",
+      "name": "University Research Station",
+      "fidelity": "role_inspired",
+      "source_ids": [
+        "VT-01",
+        "RB-01"
+      ],
+      "mission": "Run small, reproducible experiments and inspect data without requiring proprietary applications.",
+      "baseline_tools": [
+        "byte-lab",
+        "library",
+        "notes",
+        "simulator",
+        "net-lab"
+      ],
+      "future_tools": [
+        "data-lab",
+        "experiment-log",
+        "graph-view"
+      ],
+      "needs": [
+        {
+          "id": "N1",
+          "priority": "must",
+          "need": "Reproducible sampling and synthetic test runs",
+          "status": "partially_available"
+        },
+        {
+          "id": "N2",
+          "priority": "must",
+          "need": "CSV/JSON inspection, simple descriptive statistics and unit-aware charts",
+          "status": "planned"
+        },
+        {
+          "id": "N3",
+          "priority": "should",
+          "need": "Experiment manifest, seeds and deterministic export",
+          "status": "planned"
+        },
+        {
+          "id": "N4",
+          "priority": "later",
+          "need": "Restricted plugin sandbox for advanced computation",
+          "status": "planned"
+        }
+      ],
+      "gates": [
+        {
+          "gate": "R0",
+          "title": "Preloaded research bench",
+          "deliverables": [
+            "Byte, reference, note, simulator and subnet tools"
+          ],
+          "acceptance": [
+            "All experiments identified as synthetic where appropriate",
+            "No arbitrary scripts executed on profile activation"
+          ],
+          "dependencies": [],
+          "status": "code_present_ci_pending"
+        },
+        {
+          "gate": "R1",
+          "title": "Offline data lab",
+          "deliverables": [
+            "Bounded CSV/JSON import and schema reporting",
+            "Count/mean/median/variance and small-screen sparkline viewer"
+          ],
+          "acceptance": [
+            "Known numerical fixtures agree with trusted reference values",
+            "Invalid, huge and missing inputs fail without changing raw data"
+          ],
+          "dependencies": [
+            "R0"
+          ],
+          "status": "planned"
+        },
+        {
+          "gate": "R2",
+          "title": "Reproducible sessions",
+          "deliverables": [
+            "Versioned experiment manifest with parameter set, seed and source hash",
+            "Saved/replayable in-memory simulation recipes"
+          ],
+          "acceptance": [
+            "Exact replay generates matching deterministic artifacts",
+            "No implicit upload or network access"
+          ],
+          "dependencies": [
+            "R1"
+          ],
+          "status": "planned"
+        },
+        {
+          "gate": "R3",
+          "title": "Optional advanced computation",
+          "deliverables": [
+            "Versioned typed WASM plugin contract with capability gates",
+            "Snapshot/restore and independent process isolation tests"
+          ],
+          "acceptance": [
+            "Untrusted plugin cannot read files, network or hardware without external enforcement",
+            "Process crash leaves project usable"
+          ],
+          "dependencies": [
+            "R2",
+            "PLUGIN_SECURITY"
+          ],
+          "status": "planned"
+        }
+      ]
+    },
+    {
+      "id": "reclamation-scout",
+      "name": "Reclamation Field Kit",
+      "fidelity": "role_inspired",
+      "source_ids": [
+        "VT-02",
+        "VT-03",
+        "STD-04"
+      ],
+      "mission": "Use offline maps, coordinates and a durable field log with optional game companion.",
+      "baseline_tools": [
+        "game",
+        "net-lab",
+        "notes",
+        "host"
+      ],
+      "future_tools": [
+        "map",
+        "coordinate-lab",
+        "gnss",
+        "track-log"
+      ],
+      "needs": [
+        {
+          "id": "N1",
+          "priority": "must",
+          "need": "Manual waypoints and coordinate conversion without network access",
+          "status": "planned"
+        },
+        {
+          "id": "N2",
+          "priority": "must",
+          "need": "Offline trip notes, saved landmarks and position uncertainty labels",
+          "status": "planned"
+        },
+        {
+          "id": "N3",
+          "priority": "should",
+          "need": "Opt-in GNSS and GeoJSON/GPX import-export",
+          "status": "planned"
+        },
+        {
+          "id": "N4",
+          "priority": "later",
+          "need": "Offline tile maps with licensing, caching and battery budget",
+          "status": "planned"
+        }
+      ],
+      "gates": [
+        {
+          "gate": "R0",
+          "title": "Preloaded field desk",
+          "deliverables": [
+            "Game, NET, notes and host tools with explicit connection flags"
+          ],
+          "acceptance": [
+            "No console connection or location access on first launch",
+            "Profile switch does not alter permissions"
+          ],
+          "dependencies": [],
+          "status": "code_present_ci_pending"
+        },
+        {
+          "gate": "R1",
+          "title": "Offline navigation primitives",
+          "deliverables": [
+            "Lat/lon input, DMS conversion and GeoJSON point export",
+            "Manual waypoint notebook with units and provenance"
+          ],
+          "acceptance": [
+            "GeoJSON coordinates written [longitude, latitude] per RFC 7946",
+            "Malformed/out-of-range coordinates rejected"
+          ],
+          "dependencies": [
+            "R0"
+          ],
+          "status": "planned"
+        },
+        {
+          "gate": "R2",
+          "title": "Permissioned location",
+          "deliverables": [
+            "OS-enforced GNSS/location session consent",
+            "Uncertainty, fix age and accuracy labels"
+          ],
+          "acceptance": [
+            "No location sampled until consent",
+            "Stop/revoke clears session and marks position stale"
+          ],
+          "dependencies": [
+            "R1",
+            "OS_BROKER"
+          ],
+          "status": "planned"
+        },
+        {
+          "gate": "R3",
+          "title": "Field-map and companion acceptance",
+          "deliverables": [
+            "Licensed offline map tiles, battery-aware map detail",
+            "Measured Mac/PS4 companion interoperability when tested"
+          ],
+          "acceptance": [
+            "Valid offline navigation without signal",
+            "Actual PlayStation acceptance reported separately from mock peers"
+          ],
+          "dependencies": [
+            "R2",
+            "HANDHELD"
+          ],
+          "status": "planned"
+        }
+      ]
+    },
+    {
+      "id": "records-custodian",
+      "name": "Records Custodian Station",
+      "fidelity": "role_inspired",
+      "source_ids": [
+        "VT-03",
+        "STD-05"
+      ],
+      "mission": "Catalog documents and make integrity, provenance and export understandable.",
+      "baseline_tools": [
+        "library",
+        "notes",
+        "byte-lab"
+      ],
+      "future_tools": [
+        "document-index",
+        "sha256",
+        "artifact-bundle"
+      ],
+      "needs": [
+        {
+          "id": "N1",
+          "priority": "must",
+          "need": "Fast local index and search without uploading content",
+          "status": "partially_available"
+        },
+        {
+          "id": "N2",
+          "priority": "must",
+          "need": "SHA-256 file integrity, not CRC32 as a security claim",
+          "status": "planned"
+        },
+        {
+          "id": "N3",
+          "priority": "should",
+          "need": "Source citations, tagged records, import/export and schema migration",
+          "status": "planned"
+        },
+        {
+          "id": "N4",
+          "priority": "later",
+          "need": "Versioned optional encrypted archives and trusted sharing",
+          "status": "planned"
+        }
+      ],
+      "gates": [
+        {
+          "gate": "R0",
+          "title": "Curated archive desk",
+          "deliverables": [
+            "Library, notes and byte-lab tools"
+          ],
+          "acceptance": [
+            "Notes remain local/plaintext with warnings",
+            "References and URLs preserve third-party licensing context"
+          ],
+          "dependencies": [],
+          "status": "code_present_ci_pending"
+        },
+        {
+          "gate": "R1",
+          "title": "Integrity workflow",
+          "deliverables": [
+            "Read-only, bounded SHA-256 streaming file hash",
+            "Source tag, timestamp, provenance and searchable index"
+          ],
+          "acceptance": [
+            "NIST SHA-256 golden vectors pass",
+            "Malformed/oversized records never corrupt archive"
+          ],
+          "dependencies": [
+            "R0"
+          ],
+          "status": "planned"
+        },
+        {
+          "gate": "R2",
+          "title": "Reproducible packages",
+          "deliverables": [
+            "Versioned export manifest with checksums and import validation",
+            "Restorable snapshots and conflict-safe updates"
+          ],
+          "acceptance": [
+            "Tampered archive refuses silent import",
+            "Import/export preserves source and author metadata"
+          ],
+          "dependencies": [
+            "R1"
+          ],
+          "status": "planned"
+        },
+        {
+          "gate": "R3",
+          "title": "Optional private archives",
+          "deliverables": [
+            "Per-user encryption architecture and key-loss recovery policy",
+            "Auditable, opt-in external sharing"
+          ],
+          "acceptance": [
+            "No credentials or contents copied to logs",
+            "Recovery and migration tests pass before encrypted storage claim"
+          ],
+          "dependencies": [
+            "R2",
+            "PLUGIN_SECURITY"
+          ],
+          "status": "planned"
+        }
+      ]
+    },
+    {
+      "id": "custom",
+      "name": "Custom Workbench",
+      "fidelity": "rust_boy_original",
+      "source_ids": [
+        "RB-01"
+      ],
+      "mission": "An empty, user-configured developer playground with explicit capabilities and pluggable modules.",
+      "baseline_tools": [],
+      "future_tools": [
+        "layout-editor",
+        "module-sdk",
+        "sandbox-runtime"
+      ],
+      "needs": [
+        {
+          "id": "N1",
+          "priority": "must",
+          "need": "Start truly empty and pin/unpin tools without execution",
+          "status": "code_present_ci_pending"
+        },
+        {
+          "id": "N2",
+          "priority": "must",
+          "need": "Save/load layout and preserve profile compatibility",
+          "status": "partially_available"
+        },
+        {
+          "id": "N3",
+          "priority": "should",
+          "need": "Custom dashboard layout, typed module manifests and safe tooling",
+          "status": "planned"
+        },
+        {
+          "id": "N4",
+          "priority": "later",
+          "need": "Isolated user extensions, access reviews and portable profiles",
+          "status": "planned"
+        }
+      ],
+      "gates": [
+        {
+          "gate": "R0",
+          "title": "Blank advanced profile",
+          "deliverables": [
+            "Custom profile with zero pinned tools; CLI and TUI palette picker",
+            "Local versioned workspace storage and strict IDs"
+          ],
+          "acceptance": [
+            "Switching to Custom requires explicit replacement and leaves an empty board",
+            "No side effects until a tool is invoked"
+          ],
+          "dependencies": [],
+          "status": "code_present_ci_pending"
+        },
+        {
+          "gate": "R1",
+          "title": "Composable developer workspace",
+          "deliverables": [
+            "Saved tile/order/visibility layout, 4-inch and desktop variants",
+            "Import/export versioned profile JSON with dry-run validator"
+          ],
+          "acceptance": [
+            "Schema migration preserves existing board and rejects unknown privilege fields",
+            "Every tile supports keyboard selection"
+          ],
+          "dependencies": [
+            "R0"
+          ],
+          "status": "planned"
+        },
+        {
+          "gate": "R2",
+          "title": "Typed extension SDK",
+          "deliverables": [
+            "Manifest and capability declaration with signed/verified packages",
+            "WASM-isolated pure computations before OS device adapters"
+          ],
+          "acceptance": [
+            "Invalid plugin schema and unsupported capabilities fail closed",
+            "No external execution or network via profile import"
+          ],
+          "dependencies": [
+            "R1",
+            "PLUGIN_SECURITY"
+          ],
+          "status": "planned"
+        },
+        {
+          "gate": "R3",
+          "title": "Advanced hardware playground",
+          "deliverables": [
+            "Per-module operating-system scoped broker permissions and lease expiry",
+            "Recovery from plugin crash and device unplug"
+          ],
+          "acceptance": [
+            "Capability revocation immediately closes OS resource handles",
+            "Unsafe module cannot escape its declared interface"
+          ],
+          "dependencies": [
+            "R2",
+            "OS_BROKER"
+          ],
+          "status": "planned"
+        }
+      ]
+    }
+  ]
+}
