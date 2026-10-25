@@ -37,7 +37,7 @@
 
 ### `notes` — Offline field notes
 
-Storage pass: read-only search, bounded schema-1 loading, writer lock and staged replacement are locally tested. See [storage contract](STORAGE.md) and evidence L35/L36.
+Storage pass: read-only search/export, bounded schema-1 loading, locked import merge and staged replacement are locally tested. See [storage contract](STORAGE.md) and evidence L35/L36.
 
 **Purpose:** core · **Gate:** G0 · **Priority:** P0 · **Status:** implemented_unverified.  
 **Requested capabilities:** `files.write`.
@@ -74,7 +74,7 @@ Partial implementation: TUI and finite NDJSON use a lazy `HostTelemetryModule` t
 
 ### `storage` — Storage and schema service
 
-Notes persistence now has locked transactions, validated limits and failure fixtures. General collection migration, import/export and backup are still planned.
+Notes persistence now has locked transactions, validated limits and failure fixtures. Notes export/import is implemented and locally tested; general collection migration and stable cross-device identity remain planned.
 
 **Purpose:** core · **Gate:** G1 · **Priority:** P0 · **Status:** planned.  
 **Requested capabilities:** `files.read`, `files.write`.

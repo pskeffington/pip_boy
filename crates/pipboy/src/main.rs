@@ -10,7 +10,7 @@ mod tui;
 
 fn help() {
     println!("{PRODUCT_NAME} | {PRODUCT_DESCRIPTOR}");
-    println!("usage: {CLI_COMMAND} [tui|status [--json]|sample [--count N --interval-ms MS]|sources [query]|modules|plan [G0..G4]|evidence [query]|doctor|notes <list|add TEXT|search QUERY>|help]");
+    println!("usage: {CLI_COMMAND} [tui|status [--json]|sample [--count N --interval-ms MS]|sources [query]|modules|plan [G0..G4]|evidence [query]|doctor|notes <list|add TEXT|search QUERY|export|import FILE>|help]");
 }
 
 fn main() {
@@ -180,13 +180,35 @@ fn run() -> Result<(), Box<dyn Error>> {
                     }
                     Ok(())
                 }
+                Some("export") => {
+                    if args.next().is_some() {
+                        return Err("usage: pipboy notes export".into());
+                    }
+                    store.export_to(std::io::stdout().lock())?;
+                    Ok(())
+                }
+                Some("import") => {
+                    let path = args.next().ok_or("usage: pipboy notes import FILE")?;
+                    if args.next().is_some() {
+                        return Err("usage: pipboy notes import FILE".into());
+                    }
+                    let report = store.import_from(std::fs::File::open(path)?)?;
+                    println!(
+                        "Imported {} notes; skipped {} matching records; {} total",
+                        report.imported, report.skipped, report.total
+                    );
+                    Ok(())
+                }
                 Some("add") => {
                     let text = args.collect::<Vec<_>>().join(" ");
                     let note = store.add(&text)?;
                     println!("Saved local note #{}", note.id);
                     Ok(())
                 }
-                _ => Err(format!("usage: {CLI_COMMAND} notes <list|add TEXT|search QUERY>").into()),
+                _ => Err(format!(
+                    "usage: {CLI_COMMAND} notes <list|add TEXT|search QUERY|export|import FILE>"
+                )
+                .into()),
             }
         }
         Some(other) => Err(format!("unknown command: {other}. Use {CLI_COMMAND} help.").into()),

@@ -15,12 +15,12 @@ Module IDs: `stat`, `telemetry`. Existing evidence IDs: L03, L19, L31, L32, L33.
 | `python3 tools/validate_catalog.py` | PASS: 27 modules, 37 evidence records, 14 external sources, 8 runtime entries |
 | `cargo fmt --all -- --check` | PASS |
 | `cargo check --workspace --all-targets --locked` | PASS on stable |
-| `cargo test --workspace --locked` | PASS: 10 executable + 46 core tests |
+| `cargo test --workspace --locked` | PASS: 10 executable + 53 core tests |
 | `cargo clippy --workspace --all-targets --locked -- -D warnings` | PASS |
-| `cargo +1.81.0 test --workspace --locked` | PASS: same 56 tests |
+| `cargo +1.81.0 test --workspace --locked` | PASS: same 63 tests |
 | `cargo build --workspace --locked` | PASS |
 | `cargo check --workspace --all-targets --target x86_64-pc-windows-gnu --locked` | PASS on stable: cross-compilation check only, no native execution |
-| `python3 tools/smoke_notes.py` | PASS: 24 concurrent CLI appends with retry, unique IDs, no lost notes, search and schema preservation |
+| `python3 tools/smoke_notes.py` | PASS: 24 concurrent CLI appends with retry, unique IDs, no lost notes, search, export/import/re-import and schema preservation |
 | `python3 tools/smoke_runtime.py` | PASS: timed NDJSON, closed pipe, no telemetry files, TUI pause/resume, reload/oldest-note selection, resize fallback/recovery and exit/error restoration |
 
 Stable toolchain: rustc 1.99.1 (58cf8f9c3, 2026-10-13). Minimum toolchain: rustc 1.81.0 (eeb90cda1, 2024-09-04).
@@ -49,7 +49,15 @@ Four new memory-backed tests cover navigation bounds/preserved selection, empty/
 
 The runtime PTY smoke test also modifies the temporary notes file externally, verifies explicit R reload, reaches the oldest note with End, shrinks to 20x5 for fallback guidance, grows back to 80x24 with selection intact, and exits without modifying the notes file. Notes are no longer re-read on each redraw, and no fixed 12-note display limit remains. Ratatui's locked 0.29.0 rendered-line-info feature is used for matching scroll bounds to the actual word wrapper.
 
-Stable and Rust 1.81.0 now pass 56 tests. The updated workspace also passes the Windows GNU target compile check; native execution is not established. See [console contract](CONSOLE.md).
+The console pass passed 56 tests on stable and Rust 1.81.0. The updated workspace also passes the Windows GNU target compile check; native execution is not established. See [console contract](CONSOLE.md).
+
+## Notes portability pass
+
+Seven additional core tests verify source-preserving export, ID remapping into an existing collection, timestamp/text preservation, repeat-safe re-import, repeated-identical-note multiplicity, invalid/oversized/empty input with no write side effects, writer exclusion, corrupted canonical-file preservation, capacity/ID overflow and combined encoded-size failure without partial commit, and output failure without source changes.
+
+The CLI smoke suite exports all 25 notes created by its append/concurrency checks, imports them into a second collection with an existing note, verifies 26 unique sequential local IDs, re-imports without rewriting, and rejects malformed/future backup input and extra/missing arguments while preserving data. The temporary input file is separate from live notes.json. No network, backup scheduler or automatic migration was added.
+
+Current local verification: 63 tests on stable and Rust 1.81.0, Clippy, format, Windows GNU all-target compile check and both CLI/PTY smoke suites. Details: [storage contract](STORAGE.md).
 
 ## Earlier Linux smoke checks (commit 04f4f0f)
 
@@ -66,4 +74,4 @@ A Python subprocess/PTY harness used the built `target/debug/pipboy` with a temp
 
 ## Remaining acceptance work
 
-Remote GitHub Actions previously failed before jobs started; its current success is not established by these local checks. Storage is published as 2223c2c; verify subsequent console revisions separately in Actions. macOS/Windows smoke checks, assistive-technology/contrast acceptance, panic/signal paths, native Windows/macOS note replacement, locking and durability, observation schema migrations/field-level units, persistent per-adapter consent, and device-broker enforcement remain open. G0/G1 are not declared complete, and no hardware readiness is claimed.
+Remote GitHub Actions previously failed before jobs started; its current success is not established by these local checks. Storage is published as 2223c2c. Console and portability work remain local while the automatic approval reviewer rejects publication; no approval setting was changed. Verify any eventual pushed revisions separately in Actions. macOS/Windows smoke checks, assistive-technology/contrast acceptance, panic/signal paths, native Windows/macOS note replacement, locking and durability, observation schema migrations/field-level units, persistent per-adapter consent, and device-broker enforcement remain open. G0/G1 are not declared complete, and no hardware readiness is claimed.

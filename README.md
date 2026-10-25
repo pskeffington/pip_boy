@@ -61,6 +61,8 @@ cargo run -p pipboy -- doctor
 cargo run -p pipboy -- notes add "Field observation"
 cargo run -p pipboy -- notes list
 cargo run -p pipboy -- notes search "battery"
+cargo run -p pipboy -- notes export > notes-backup.json
+cargo run -p pipboy -- notes import notes-backup.json
 
 python3 tools/validate_catalog.py
 cargo fmt --all -- --check

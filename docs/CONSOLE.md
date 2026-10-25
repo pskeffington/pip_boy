@@ -14,7 +14,7 @@ The TUI supports keyboard navigation with static presentation and explicit statu
 
 ## Collections and freshness
 
-LIBRARY and NOTES show an item selector above a scrollable detail pane. Every stored note is reachable, newest first; the old 12-note display cutoff is removed. The selected note's entire text can be paged, including content wrapping below a narrow viewport. LIBRARY details show repository, license status, reference-only disposition, URL and summary. Selecting a URL does not open it or initiate network access.
+LIBRARY and NOTES show an item selector above a scrollable detail pane. Every stored note is reachable, most recently stored first; the old 12-note display cutoff is removed. The selected note's entire text can be paged, including content wrapping below a narrow viewport. LIBRARY details show repository, license status, reference-only disposition, URL and summary. Selecting a URL does not open it or initiate network access.
 
 The selected position is marked by `>` and bold text, not color alone. Item and text-position counters indicate the current location. Selecting another item resets its detail scroll; resizing clamps the current scroll to the resized text bounds. Empty collections and planned modules use explicit text.
 

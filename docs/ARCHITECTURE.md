@@ -49,7 +49,7 @@ Future feature-gated adapters attach beneath core capability interfaces:
 
 ## User data
 
-PIPBOY_HOME overrides the data directory. Otherwise, use $HOME/.pipboy on Unix and %USERPROFILE%/.pipboy on Windows. Notes use a stable advisory writer lock, a flushed staging file in the data directory, and replacement of notes.json without deleting it first. Unix also syncs the containing directory; native Windows/macOS durability acceptance remains open. Reads/search create no files. No background synchronization. See [storage contract](STORAGE.md). Delete the folder to remove locally stored notes. Content is not encrypted.
+PIPBOY_HOME overrides the data directory. Otherwise, use $HOME/.pipboy on Unix and %USERPROFILE%/.pipboy on Windows. Notes use a stable advisory writer lock, a flushed staging file in the data directory, and replacement of notes.json without deleting it first. Unix also syncs the containing directory; native Windows/macOS durability acceptance remains open. Reads/search/export create no files. Explicit notes import validates its named input, locks the merge transaction, assigns fresh local IDs and commits only a complete bounded result. No background synchronization. See [storage contract](STORAGE.md). Delete the folder to remove locally stored notes. Content is not encrypted.
 
 ## Release gates
 

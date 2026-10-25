@@ -1,7 +1,7 @@
 //! Local plaintext journal with bounded reads, locked writes and staged replacement.
 
 use serde::{Deserialize, Serialize};
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::env;
 use std::fs;
 use std::io::{self, Read, Write};
@@ -41,6 +41,35 @@ fn valid_text(text: &str) -> bool {
 }
 
 impl Document {
+    fn read(reader: impl Read) -> io::Result<Self> {
+        let mut bytes = Vec::new();
+        reader
+            .take(MAX_DOCUMENT_BYTES + 1)
+            .read_to_end(&mut bytes)?;
+        if bytes.len() as u64 > MAX_DOCUMENT_BYTES {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "notes document exceeds 8 MiB",
+            ));
+        }
+        let document: Self = serde_json::from_slice(&bytes)
+            .map_err(|error| io::Error::new(io::ErrorKind::InvalidData, error))?;
+        document.validate()?;
+        Ok(document)
+    }
+
+    fn encoded(&self) -> io::Result<Vec<u8>> {
+        self.validate()?;
+        let data = serde_json::to_vec_pretty(self).map_err(io::Error::other)?;
+        if data.len() as u64 > MAX_DOCUMENT_BYTES {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "notes document exceeds 8 MiB",
+            ));
+        }
+        Ok(data)
+    }
+
     fn validate(&self) -> io::Result<()> {
         if self.schema_version != NOTES_SCHEMA_VERSION {
             return Err(io::Error::new(
@@ -65,6 +94,13 @@ impl Document {
         }
         Ok(())
     }
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct ImportReport {
+    pub imported: usize,
+    pub skipped: usize,
+    pub total: usize,
 }
 
 pub struct NoteStore {
@@ -151,18 +187,7 @@ impl NoteStore {
             Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(Document::default()),
             Err(error) => return Err(error),
         };
-        let mut bytes = Vec::new();
-        file.take(MAX_DOCUMENT_BYTES + 1).read_to_end(&mut bytes)?;
-        if bytes.len() as u64 > MAX_DOCUMENT_BYTES {
-            return Err(io::Error::new(
-                io::ErrorKind::InvalidData,
-                "notes document exceeds 8 MiB",
-            ));
-        }
-        let document: Document = serde_json::from_slice(&bytes)
-            .map_err(|error| io::Error::new(io::ErrorKind::InvalidData, error))?;
-        document.validate()?;
-        Ok(document)
+        Document::read(file)
     }
 
     /// Reads are side-effect free and see either the old or replaced document.
@@ -183,6 +208,69 @@ impl NoteStore {
             .into_iter()
             .filter(|note| note.text.to_lowercase().contains(&query))
             .collect())
+    }
+
+    /// Validated schema-1 JSON; only the caller's writer receives output.
+    /// No export file, data directory or lock is opened by this operation.
+    pub fn export_to(&self, mut output: impl Write) -> io::Result<()> {
+        output.write_all(&self.load()?.encoded()?)?;
+        output.flush()
+    }
+
+    /// Merge validated records without replacing existing notes. Source IDs are
+    /// local to the backup and are reassigned when records are appended here.
+    /// For equal timestamp/text pairs retain the greater occurrence count from
+    /// either collection, preserving repeats while making re-import idempotent.
+    pub fn import_from(&self, input: impl Read) -> io::Result<ImportReport> {
+        let incoming = Document::read(input)?; // Reject bad input before any write.
+        if incoming.notes.is_empty() {
+            return Ok(ImportReport {
+                imported: 0,
+                skipped: 0,
+                total: self.load()?.notes.len(),
+            });
+        }
+        let _lock = self.writer_lock()?;
+        let mut document = self.load()?;
+        let mut existing = HashMap::new();
+        for note in &document.notes {
+            *existing
+                .entry((note.created_unix_s, note.text.clone()))
+                .or_insert(0usize) += 1;
+        }
+        let mut seen = HashMap::new();
+        let mut next_id = document.notes.iter().map(|note| note.id).max().unwrap_or(0);
+        let mut imported = 0;
+        let mut skipped = 0;
+        for mut note in incoming.notes {
+            let key = (note.created_unix_s, note.text.clone());
+            let ordinal = seen.entry(key.clone()).or_insert(0usize);
+            *ordinal += 1;
+            if existing.get(&key).copied().unwrap_or(0) >= *ordinal {
+                skipped += 1;
+                continue;
+            }
+            if document.notes.len() >= MAX_NOTES {
+                return Err(io::Error::new(
+                    io::ErrorKind::InvalidData,
+                    "import would exceed 10000 notes; original file preserved",
+                ));
+            }
+            next_id = next_id
+                .checked_add(1)
+                .ok_or_else(|| io::Error::other("note id overflow; original file preserved"))?;
+            note.id = next_id;
+            document.notes.push(note);
+            imported += 1;
+        }
+        if imported > 0 {
+            self.save_with(&document, |file, bytes| file.write_all(bytes))?;
+        }
+        Ok(ImportReport {
+            imported,
+            skipped,
+            total: document.notes.len(),
+        })
     }
 
     pub fn add(&self, text: &str) -> io::Result<Note> {
@@ -228,14 +316,7 @@ impl NoteStore {
         document: &Document,
         write: impl FnOnce(&mut fs::File, &[u8]) -> io::Result<()>,
     ) -> io::Result<()> {
-        document.validate()?;
-        let data = serde_json::to_vec_pretty(document).map_err(io::Error::other)?;
-        if data.len() as u64 > MAX_DOCUMENT_BYTES {
-            return Err(io::Error::new(
-                io::ErrorKind::InvalidData,
-                "notes document exceeds 8 MiB",
-            ));
-        }
+        let data = document.encoded()?;
         let mut temporary = tempfile::Builder::new()
             .prefix(".notes-")
             .tempfile_in(self.parent())?;
@@ -449,5 +530,189 @@ mod tests {
         assert_eq!(store.add("next committed").unwrap().id, 2);
         assert_eq!(store.list().unwrap().len(), 2);
         assert_eq!(fs::read(orphan).unwrap(), b"partial uncommitted document");
+    }
+    fn backup(notes: Vec<Note>) -> Vec<u8> {
+        Document {
+            schema_version: NOTES_SCHEMA_VERSION,
+            notes,
+        }
+        .encoded()
+        .unwrap()
+    }
+
+    #[test]
+    fn export_import_preserves_content_and_reimport_does_not_rewrite() {
+        let temporary = tempfile::tempdir().unwrap();
+        let source = NoteStore::new(temporary.path().join("source"));
+        source.add("alpha café").unwrap();
+        source.add("beta").unwrap();
+        let source_before = fs::read(source.path()).unwrap();
+        let mut output = Vec::new();
+        source.export_to(&mut output).unwrap();
+        assert_eq!(fs::read(source.path()).unwrap(), source_before);
+        let target = NoteStore::new(temporary.path().join("target"));
+        target.add("existing unrelated note").unwrap();
+        assert_eq!(
+            target.import_from(output.as_slice()).unwrap(),
+            ImportReport {
+                imported: 2,
+                skipped: 0,
+                total: 3
+            }
+        );
+        let merged = target.list().unwrap();
+        assert_eq!(merged[1].id, 2);
+        assert_eq!(merged[2].id, 3);
+        assert_eq!(merged[1].text, "alpha café");
+        assert_eq!(
+            merged[1].created_unix_s,
+            source.list().unwrap()[0].created_unix_s
+        );
+        let before = fs::read(target.path()).unwrap();
+        assert_eq!(
+            target.import_from(output.as_slice()).unwrap(),
+            ImportReport {
+                imported: 0,
+                skipped: 2,
+                total: 3
+            }
+        );
+        assert_eq!(fs::read(target.path()).unwrap(), before);
+    }
+
+    #[test]
+    fn merge_preserves_repeated_identical_notes_and_ignores_backup_ids() {
+        let temporary = tempfile::tempdir().unwrap();
+        let store = NoteStore::new(temporary.path().to_owned());
+        let repeated = |id| Note {
+            id,
+            created_unix_s: 42,
+            text: "same timestamp and text".into(),
+        };
+        fs::write(store.path(), backup(vec![repeated(1), repeated(9)])).unwrap();
+        let input = backup(vec![repeated(100), repeated(200), repeated(u64::MAX)]);
+        assert_eq!(
+            store.import_from(input.as_slice()).unwrap(),
+            ImportReport {
+                imported: 1,
+                skipped: 2,
+                total: 3
+            }
+        );
+        assert_eq!(
+            store
+                .list()
+                .unwrap()
+                .iter()
+                .map(|note| note.id)
+                .collect::<Vec<_>>(),
+            vec![1, 9, 10]
+        );
+        assert_eq!(store.import_from(input.as_slice()).unwrap().imported, 0);
+    }
+
+    #[test]
+    fn empty_exports_and_invalid_or_empty_imports_have_no_write_side_effects() {
+        let temporary = tempfile::tempdir().unwrap();
+        let root = temporary.path().join("absent");
+        let store = NoteStore::new(root.clone());
+        let mut empty = Vec::new();
+        store.export_to(&mut empty).unwrap();
+        assert!(Document::read(empty.as_slice()).unwrap().notes.is_empty());
+        assert_eq!(store.import_from(empty.as_slice()).unwrap().total, 0);
+        for input in [
+            b"{broken".as_slice(),
+            br#"{"schema_version":2,"notes":[]}"#.as_slice(),
+            br#"{"schema_version":1,"notes":[{"id":0,"created_unix_s":1,"text":"bad"}]}"#
+                .as_slice(),
+        ] {
+            assert!(store.import_from(input).is_err());
+        }
+        assert!(store
+            .import_from(io::repeat(0).take(MAX_DOCUMENT_BYTES + 10))
+            .is_err());
+        assert!(!root.exists());
+    }
+
+    #[test]
+    fn imports_obey_existing_writer_lock_and_preserve_canonical_errors() {
+        let temporary = tempfile::tempdir().unwrap();
+        let store = NoteStore::new(temporary.path().to_owned());
+        store.add("original").unwrap();
+        let input = backup(vec![Note {
+            id: 1,
+            created_unix_s: 2,
+            text: "new".into(),
+        }]);
+        let before = fs::read(store.path()).unwrap();
+        let lock = store.writer_lock().unwrap();
+        assert_eq!(
+            store.import_from(input.as_slice()).unwrap_err().kind(),
+            io::ErrorKind::WouldBlock
+        );
+        assert_eq!(fs::read(store.path()).unwrap(), before);
+        drop(lock);
+        fs::write(store.path(), b"{broken").unwrap();
+        assert!(store.import_from(input.as_slice()).is_err());
+        assert_eq!(fs::read(store.path()).unwrap(), b"{broken");
+    }
+
+    #[test]
+    fn import_capacity_and_id_overflow_are_all_or_nothing() {
+        let temporary = tempfile::tempdir().unwrap();
+        let store = NoteStore::new(temporary.path().to_owned());
+        let note = |id| Note {
+            id,
+            created_unix_s: 1,
+            text: "existing".into(),
+        };
+        let input = backup(vec![Note {
+            id: 1,
+            created_unix_s: 2,
+            text: "new".into(),
+        }]);
+        for notes in [
+            vec![note(u64::MAX)],
+            (1..=MAX_NOTES as u64).map(note).collect(),
+        ] {
+            fs::write(store.path(), backup(notes)).unwrap();
+            let before = fs::read(store.path()).unwrap();
+            assert!(store.import_from(input.as_slice()).is_err());
+            assert_eq!(fs::read(store.path()).unwrap(), before);
+        }
+    }
+
+    #[test]
+    fn combined_import_size_limit_preserves_previous_notes() {
+        let temporary = tempfile::tempdir().unwrap();
+        let store = NoteStore::new(temporary.path().to_owned());
+        let records = |text: &str, count| {
+            (1..=count)
+                .map(|id| Note {
+                    id,
+                    created_unix_s: 1,
+                    text: text.repeat(180),
+                })
+                .collect()
+        };
+        let original = backup(records("local", 5000));
+        let input = backup(records("other", 4500));
+        fs::write(store.path(), &original).unwrap();
+        assert!(store.import_from(input.as_slice()).is_err());
+        assert_eq!(fs::read(store.path()).unwrap(), original);
+    }
+
+    #[test]
+    fn export_output_failures_never_change_notes() {
+        let temporary = tempfile::tempdir().unwrap();
+        let store = NoteStore::new(temporary.path().to_owned());
+        store.add("original").unwrap();
+        let before = fs::read(store.path()).unwrap();
+        let mut short = [0u8; 4];
+        assert_eq!(
+            store.export_to(&mut short[..]).unwrap_err().kind(),
+            io::ErrorKind::WriteZero
+        );
+        assert_eq!(fs::read(store.path()).unwrap(), before);
     }
 }

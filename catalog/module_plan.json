@@ -73,12 +73,14 @@
       "Local JSON persistence",
       "Bounded validated schema-1 notes, locked write transactions and flushed staged replacement (locally tested)",
       "Read-only case-insensitive text search",
-      "All notes selectable in TUI, newest first; explicit R reload and scrollable full text"
+      "All notes selectable in TUI, newest first; explicit R reload and scrollable full text",
+      "Explicit schema-1 JSON export and locked import merge with reassigned local IDs and repeat-safe matching (locally tested)"
     ],
     "acceptance": [
       "No write without explicit user action",
       "Malformed notes rejected",
-      "Concurrent successful appends have unique IDs and no lost entries; invalid/future documents are preserved"
+      "Concurrent successful appends have unique IDs and no lost entries; invalid/future documents are preserved",
+      "Export/import round-trip, repeated backup import, record multiplicity and combined size/count/ID failures preserve existing data"
     ]
   },
   {
@@ -145,12 +147,14 @@
       "Versioned local collections",
       "Import/export and backup",
       "Atomic write validation",
-      "Bounded validated schema-1 notes, locked write transactions and flushed staged replacement (locally tested)"
+      "Bounded validated schema-1 notes, locked write transactions and flushed staged replacement (locally tested)",
+      "Explicit schema-1 JSON export and locked import merge with reassigned local IDs and repeat-safe matching (locally tested)"
     ],
     "acceptance": [
       "Old schemas migrate with fixtures",
       "Interrupted write never silently destroys existing notes",
-      "Concurrent successful appends have unique IDs and no lost entries; invalid/future documents are preserved"
+      "Concurrent successful appends have unique IDs and no lost entries; invalid/future documents are preserved",
+      "Export/import round-trip, repeated backup import, record multiplicity and combined size/count/ID failures preserve existing data"
     ]
   },
   {

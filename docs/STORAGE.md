@@ -4,9 +4,19 @@
 
 The existing `PIPBOY_HOME/notes.json` path, schema version 1, and note fields (`id`, `created_unix_s`, `text`) are retained. Valid existing documents require no conversion. Data remains plaintext.
 
-Reads are limited to 8 MiB plus one byte for size detection. Documents contain at most 10,000 notes, unique positive u64 identifiers, and 1–1024 characters of nonempty text without control characters per note. Unknown schema versions, unknown fields, duplicate/zero IDs and invalid text fail with an error; Rust-Boy does not rewrite or silently normalize them. Future schema changes require an explicit migration and backup design. No general migration/import/export service is implemented yet.
+Reads are limited to 8 MiB plus one byte for size detection. Documents contain at most 10,000 notes, unique positive u64 identifiers, and 1–1024 characters of nonempty text without control characters per note. Unknown schema versions, unknown fields, duplicate/zero IDs and invalid text fail with an error; Rust-Boy does not rewrite or silently normalize them. Future schema changes require an explicit migration and backup design. Notes export/import uses schema 1; a general migration service for other collections remains planned.
 
 `notes list` and `notes search "query"` do not create directories, lock files or data files. Search trims the query and compares Unicode lowercase substrings; it is not locale-aware collation or full Unicode case folding. Empty/invalid search input is rejected. Search preserves original note text and IDs.
+
+## Explicit backup and import
+
+`pipboy notes export` writes one validated schema-1 JSON document to stdout. It does not create an export file or user directory, and validation finishes before any output is emitted. Output/write failures propagate without changing notes. Redirect stdout to a separate backup file, never to the live notes.json path (shell redirection happens before Rust-Boy can validate it).
+
+`pipboy notes import FILE` reads only the named local file with the same 8 MiB/schema limits. Invalid input is rejected before any writer lock/directory is created. Empty valid imports do not create data. For nonempty imports, the local read/merge/save transaction uses the same exclusive lock and staged replacement as appends. Existing notes are never edited or deleted. Imported timestamps and text are preserved; newly appended records receive fresh IDs above the current local maximum.
+
+Matching uses exact timestamp plus exact text. For repeated identical notes, the merged document keeps the larger occurrence count from the current and incoming collections. For example, two local copies and three backup copies yield three copies, not one or five. This supports repeat-safe re-import without discarding multiplicity, but does not infer globally unique note identity across devices. A future cross-device schema would need an explicit stable identity design.
+
+The command reports imported, skipped and total counts. Re-importing the same backup does not append duplicates or rewrite the canonical file. If the combined record count, encoded size or local ID space would overflow, the whole import fails before replacement; no subset is committed. Future schema versions are preserved and rejected rather than guessed or auto-converted.
 
 ## Write transaction
 
@@ -31,4 +41,4 @@ The implementation uses `fs2` 0.4.3 and `tempfile` 3.27.0; see [L35/L36](LITERAT
 
 ## Acceptance evidence
 
-Unit fixtures cover lock contention/release, interrupted staging, failed replacement, orphaned staging, invalid schemas/records, size/count/ID limits, private Unix modes, read-only access and search. `python3 tools/smoke_notes.py` invokes real CLI processes concurrently and verifies every successful note and unique sequential ID, plus search and error preservation. See [VALIDATION.md](VALIDATION.md) for executed platform results.
+Unit fixtures cover lock contention/release, interrupted staging, failed replacement, orphaned staging, invalid schemas/records, size/count/ID limits, private Unix modes, read-only access and search. `python3 tools/smoke_notes.py` invokes real CLI processes concurrently and verifies every successful note and unique sequential ID, plus search, export/import/re-import and error preservation. See [VALIDATION.md](VALIDATION.md) for executed platform results.
