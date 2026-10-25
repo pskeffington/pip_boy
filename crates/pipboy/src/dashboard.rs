@@ -842,73 +842,102 @@ fn device_sync(req: &Request, store: &WorkbenchStore) -> Result<Response, Respon
 }
 
 fn messenger_store(store: &WorkbenchStore) -> MessageStore {
-    let root = store.path().parent().unwrap_or_else(|| std::path::Path::new("."));
+    let root = store
+        .path()
+        .parent()
+        .unwrap_or_else(|| std::path::Path::new("."));
     MessageStore::new(root.to_path_buf())
 }
 
 fn messenger_peers(store: &WorkbenchStore) -> PeerStore {
-    let root = store.path().parent().unwrap_or_else(|| std::path::Path::new("."));
+    let root = store
+        .path()
+        .parent()
+        .unwrap_or_else(|| std::path::Path::new("."));
     PeerStore::new(root.to_path_buf())
 }
 
 fn messages_read(store: &WorkbenchStore) -> Result<Response, Response> {
-    let peers = messenger_peers(store).load()
+    let peers = messenger_peers(store)
+        .load()
         .map_err(|_| Response::error(409, "Messenger pairing configuration unavailable"))?;
-    let book = messenger_store(store).load()
+    let book = messenger_store(store)
+        .load()
         .map_err(|_| Response::error(409, "Messenger journal unavailable; original preserved"))?;
     let aliases: Vec<&str> = peers.peers.iter().map(|peer| peer.alias.as_str()).collect();
-    Ok(Response::json(200, &json!({
-        "schema_version": 1,
-        "device_id": peers.device_id,
-        "ready": peers.device_id.is_some() && !aliases.is_empty(),
-        "peers": aliases,
-        "messages": book.messages,
-        "transport": "pinned_openssh_explicit",
-        "storage": "plaintext_local_only",
-        "e2ee": false,
-        "automatic_connections": false
-    })))
+    Ok(Response::json(
+        200,
+        &json!({
+            "schema_version": 1,
+            "device_id": peers.device_id,
+            "ready": peers.device_id.is_some() && !aliases.is_empty(),
+            "peers": aliases,
+            "messages": book.messages,
+            "transport": "pinned_openssh_explicit",
+            "storage": "plaintext_local_only",
+            "e2ee": false,
+            "automatic_connections": false
+        }),
+    ))
 }
 
 fn messages_send(req: &Request, store: &WorkbenchStore) -> Result<Response, Response> {
     let input = parse_json_body(req, &["alias", "body", "confirm"])?;
     if input.get("confirm").and_then(Value::as_bool) != Some(true) {
-        return Err(Response::error(422, "Explicit Messenger send confirmation required"));
+        return Err(Response::error(
+            422,
+            "Explicit Messenger send confirmation required",
+        ));
     }
     let alias = str_field(&input, "alias")?;
     let body = str_field(&input, "body")?;
     if !valid_text(body) {
-        return Err(Response::error(422, "Message must be 1-1024 UTF-8 bytes without control characters"));
+        return Err(Response::error(
+            422,
+            "Message must be 1-1024 UTF-8 bytes without control characters",
+        ));
     }
     let journal = messenger_store(store);
     let peers = messenger_peers(store);
     let (message, stored) = peer::queue_message_from_store(&journal, &peers, alias, body)
         .map_err(|_| Response::error(409, "Messenger device not paired or journal unavailable"))?;
-    Ok(Response::json(200, &json!({
-        "message": message,
-        "stored_on_receiver": stored,
-        "transport": "pinned_openssh_explicit",
-        "read_by_human": false
-    })))
+    Ok(Response::json(
+        200,
+        &json!({
+            "message": message,
+            "stored_on_receiver": stored,
+            "transport": "pinned_openssh_explicit",
+            "read_by_human": false
+        }),
+    ))
 }
 
 fn messages_retry(req: &Request, store: &WorkbenchStore) -> Result<Response, Response> {
     let input = parse_json_body(req, &["id", "confirm"])?;
     if input.get("confirm").and_then(Value::as_bool) != Some(true) {
-        return Err(Response::error(422, "Explicit Messenger retry confirmation required"));
+        return Err(Response::error(
+            422,
+            "Explicit Messenger retry confirmation required",
+        ));
     }
     let id = positive_integer(&input, "id")?;
     let journal = messenger_store(store);
-    let entry = journal.load().map_err(|_| Response::error(409, "Messenger journal unavailable"))?
-        .messages.into_iter().find(|message| message.id == id
-            && message.direction == Direction::Outgoing)
+    let entry = journal
+        .load()
+        .map_err(|_| Response::error(409, "Messenger journal unavailable"))?
+        .messages
+        .into_iter()
+        .find(|message| message.id == id && message.direction == Direction::Outgoing)
         .ok_or_else(|| Response::error(404, "Outgoing message not found"))?;
     let peers = messenger_peers(store);
     let message = peer::send_message_from_store(&journal, &peers, id, &entry.peer)
         .map_err(|_| Response::error(409, "Messenger retry failed; queued message preserved"))?;
-    Ok(Response::json(200, &json!({
-        "message": message, "stored_on_receiver": true, "read_by_human": false
-    })))
+    Ok(Response::json(
+        200,
+        &json!({
+            "message": message, "stored_on_receiver": true, "read_by_human": false
+        }),
+    ))
 }
 
 fn scan_network(req: &Request, store: &WorkbenchStore) -> Result<Response, Response> {
@@ -1120,10 +1149,14 @@ fn dispatch(req: &Request, store: &WorkbenchStore, port: u16) -> Response {
         ("GET", "/assets/map.css") => {
             Response::new(200, "text/css; charset=utf-8", MAP_CSS.as_bytes())
         }
-        ("GET", "/assets/messenger.js") => Response::new(200,
-            "text/javascript; charset=utf-8", MESSENGER_JS.as_bytes()),
-        ("GET", "/assets/messenger.css") => Response::new(200,
-            "text/css; charset=utf-8", MESSENGER_CSS.as_bytes()),
+        ("GET", "/assets/messenger.js") => Response::new(
+            200,
+            "text/javascript; charset=utf-8",
+            MESSENGER_JS.as_bytes(),
+        ),
+        ("GET", "/assets/messenger.css") => {
+            Response::new(200, "text/css; charset=utf-8", MESSENGER_CSS.as_bytes())
+        }
         ("GET", "/assets/tasks.js") => {
             Response::new(200, "text/javascript; charset=utf-8", TASKS_JS.as_bytes())
         }
@@ -1842,24 +1875,26 @@ mod tests {
             json!({"alias":"not-paired","body":"Hello","confirm":true}),
             json!({"alias":"scout-one","body":"Hello","confirm":false}),
         ] {
-            let response = dispatch(
-                &request("POST", "/api/messages/send", input), &store, 8765,
-            );
+            let response = dispatch(&request("POST", "/api/messages/send", input), &store, 8765);
             assert_ne!(response.status, 200);
             assert!(!dir.path().join("private/messages.json").exists());
         }
 
         let retry = dispatch(
             &request("POST", "/api/messages/retry", json!({"id":1})),
-            &store, 8765,
+            &store,
+            8765,
         );
         assert_eq!(retry.status, 422);
 
         let mut cross = request(
-            "POST", "/api/messages/send",
+            "POST",
+            "/api/messages/send",
             json!({"alias":"scout-one","body":"Hello","confirm":true}),
         );
-        cross.headers.insert("origin".into(), "https://hostile.invalid".into());
+        cross
+            .headers
+            .insert("origin".into(), "https://hostile.invalid".into());
         assert_eq!(dispatch(&cross, &store, 8765).status, 403);
         assert!(!dir.path().join("private/messages.json").exists());
     }
