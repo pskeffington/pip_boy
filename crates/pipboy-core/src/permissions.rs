@@ -1,7 +1,7 @@
 //! Persisted adapter preferences. Requests are NOT active capability grants.
 //! No hardware, socket, radio or device handle is opened by this module.
 
-use crate::capability::{Capability, PermissionSet};
+use crate::capability::Capability;
 use crate::notes::NoteStore;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
@@ -180,11 +180,6 @@ impl PreferenceStore {
         Ok(self.load()?.entries)
     }
 
-    /// Preferences never grant an actual capability, even when requested.
-    pub fn effective_session_grants(&self) -> PermissionSet {
-        PermissionSet::offline_read_only()
-    }
-
     fn ensure_directory(&self) -> io::Result<()> {
         #[cfg(unix)]
         {
@@ -302,8 +297,9 @@ mod tests {
         let store = PreferenceStore::new(home.clone());
         assert!(store.list().unwrap().is_empty());
         assert!(!home.exists());
+        let host = crate::runtime::ModuleHost::new(crate::capability::PermissionSet::offline_read_only());
         for capability in ADAPTER_CAPABILITIES {
-            assert!(!store.effective_session_grants().allows(*capability));
+            assert!(!host.permissions().allows(*capability));
         }
     }
 
@@ -320,7 +316,8 @@ mod tests {
             .unwrap());
         assert_eq!(fs::read(store.path()).unwrap(), initial);
         assert_eq!(store.list().unwrap()[0].preference, Preference::Requested);
-        assert!(!store.effective_session_grants().allows(Capability::SdrReceive));
+        let host = crate::runtime::ModuleHost::new(crate::capability::PermissionSet::offline_read_only());
+        assert!(!host.permissions().allows(Capability::SdrReceive));
         assert!(store
             .set(Capability::SdrReceive, Preference::Denied)
             .unwrap());
