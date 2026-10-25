@@ -276,8 +276,8 @@ mod tests {
     #[test]
     fn serial_reader_is_explicitly_injected_not_discovered() {
         let bytes = [0x52, 0x42, 0x00, 0xff];
-        let mut serial = MockSerialReader::open(&[], SessionConfirmation::Confirmed, &bytes)
-            .unwrap();
+        let mut serial =
+            MockSerialReader::open(&[], SessionConfirmation::Confirmed, &bytes).unwrap();
         let reader: &mut dyn SerialReader = &mut serial;
         let event = reader.read_frame().unwrap();
         assert_eq!(event.fixture_bytes, bytes);
@@ -343,8 +343,8 @@ mod tests {
         assert_eq!(input.poll_input().unwrap().sequence, 1);
         assert!(input.revoke());
         assert!(input.poll_input().is_err());
-        let mut serial = MockSerialReader::open(&[], SessionConfirmation::Confirmed, &[0x42])
-            .unwrap();
+        let mut serial =
+            MockSerialReader::open(&[], SessionConfirmation::Confirmed, &[0x42]).unwrap();
         assert!(serial.revoke());
         assert!(serial.read_frame().is_err());
     }
@@ -360,8 +360,8 @@ mod tests {
     #[test]
     fn adapter_outputs_are_byte_stable_for_fixed_fixtures() {
         fn one_run() -> Vec<u8> {
-            let mut serial = MockSerialReader::open(&[], SessionConfirmation::Confirmed, &[82, 66])
-                .unwrap();
+            let mut serial =
+                MockSerialReader::open(&[], SessionConfirmation::Confirmed, &[82, 66]).unwrap();
             serde_json::to_vec(&serial.read_frame().unwrap()).unwrap()
         }
         assert_eq!(one_run(), one_run());
