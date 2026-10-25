@@ -205,7 +205,7 @@
         const x = f64(dv, pointsAt + i*16);
         const y = f64(dv, pointsAt + i*16 + 8);
         if (!finite(x)||!finite(y)||Math.abs(x)>180||Math.abs(y)>90)
-          bad("County SHP requires WGS84 coordinates");
+          bad("County SHP contains invalid geographic NAD83 coordinates");
         coords.push([x,y]);
         west=Math.min(west,x);east=Math.max(east,x);
         south=Math.min(south,y);north=Math.max(north,y);
@@ -240,7 +240,8 @@
     }
     if (offset!==raw.length || !shapes.length)
       bad("County SHP contains no supported real geometry");
-    return {shapes,features:shapes.length,vertices,bounds:bbox,layer,records};
+    return {shapes,features:shapes.length,vertices,bounds:bbox,layer,records,
+      sourceCrs:"GCS_NAD83",datumTransform:"not_applied"};
   }
 
   async function parsePackage(buffer, geoid, source) {
