@@ -19,7 +19,7 @@
 | Virtual broker prototype | device_simulator.rs, simulator_replay.rs; CLI simulate | 11 fixed fixtures, explicit confirmation, fail-closed denial, scoped leases, disconnect/recovery and 3 deterministic logical-time traces authored (tests pending) | True OS broker, trusted UX, physical adapters and real event replay |
 | Console navigation | console.rs / tui.rs | Compact layout, scrolling, explicit note reload and Linux resize smoke checks | Native platforms, assistive-tech and contrast acceptance |
 | Research consistency | tools/validate_catalog.py | Passing locally | Keep catalog and Rust registry aligned |
-| Quality checks | rust.yml | Python + stable + Rust 1.81.0 matrix | Local quality checks pass; remote Actions still unverified |
+| Quality checks | rust.yml | Prior feature-branch Ubuntu run 40160220866 passed Python catalog, stable/1.81.0 (92 tests each), fmt, Clippy and five smoke suites | New mock cancellation/timeout tests and native macOS/Windows verification |
 
 See [VALIDATION.md](VALIDATION.md) for executed Linux checks. TUI and NDJSON use `ModuleHost` with a lazy telemetry adapter; the status CLI has now been routed through the same host (new tests not yet executed). TUI P controls local host-read grant/revocation. Preference persistence is authored but is not an active grant; session authorization, general adapter consent and OS brokering remain planned.
 
@@ -76,13 +76,13 @@ G1 module-plan statuses remain **planned** until integration and acceptance test
 
 | Priority | Work item | Blocking dependency |
 | --- | --- | --- |
-| P0 | Investigate Actions startup failure and capture passing CI | Runner/entitlement investigation |
+| P0 | Done on Ubuntu: removed problematic third-party setup/cache actions and captured passing full CI | Native platform release acceptance remains |
 | P0 | Run stable/MSRV and real CLI checks for STATUS, scoped LIBRARY/NOTES and preference commands | G1-A/G1-D |
 | P0 | Validate preference store and virtual broker fixtures; build trusted real-device authorization UI and OS handle broker | G1-D/G2 |
 | P0 | Extend tested notes portability to general collection migrations and backup identities | G1-E |
 | P1 | Build testable host telemetry timing and source-quality dashboard | G1-C |
 | P1 | Native platform, assistive-tech and contrast acceptance | G1-E |
-| P2 | Extend three authored fixed-trace scenarios into simulated transport contracts with injected clocks, cancellation/disconnect fixtures and golden traces; no hardware enablement | G2 |
+| P2 | Validate new mock cancel/timeout scenarios, then implement isolated simulated transport contracts without hardware enablement | G1-D/G2 |
 
 ## Acceptance evidence format
 

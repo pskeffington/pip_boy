@@ -67,6 +67,8 @@ cargo run -p pipboy -- simulate run sim:gpio --confirm
 cargo run -p pipboy -- simulate replay sim:gpio nominal --confirm
 cargo run -p pipboy -- simulate replay sim:serial disconnect-recover --confirm
 cargo run -p pipboy -- simulate replay sim:sdr revoke --confirm
+cargo run -p pipboy -- simulate replay sim:ble cancel --confirm
+cargo run -p pipboy -- simulate replay sim:network timeout --confirm
 cargo run -p pipboy -- notes add "Field observation"
 cargo run -p pipboy -- notes list
 cargo run -p pipboy -- notes search "battery"
@@ -93,6 +95,8 @@ The new `permissions` CLI records `unset`, `requested`, or `denied` intent in a 
 ## G1 virtual-device simulator
 
 `simulate list` reports 11 **hard-coded virtual fixtures**, never real connected devices. `simulate run sim:gpio --confirm` requires explicit confirmation for that one in-memory event and emits JSON with `simulated: true`, no hardware readings. Saved `requested` preferences do not satisfy confirmation; saved `denied` preferences block the fixture. Revocation invalidates old simulated sessions in the core API. This precursor does **not** implement any G2 device adapter, OS broker, active real-device grant or physical I/O. See [simulation contract](docs/SIMULATION.md). The `simulate replay` command now provides three fixed, bounded, logical-time traces: `nominal`, `disconnect-recover`, and `revoke`. A disconnected fixture refuses further opens, reconnecting does not revive its old lease, and a revoked fixture requires new explicit confirmation. Traces are simulated evidence of the state-machine behavior, not measurements. New Rust and CLI tests await execution.
+
+Two new fixed mock replay scenarios exercise cancellation and bounded logical-time expiration. They invalidate virtual leases without activating real hardware or using wall-clock timers. [Simulator documentation](docs/SIMULATION.md) describes the test-only contract.
 
 ## Repository navigation
 

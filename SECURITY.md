@@ -20,6 +20,8 @@ The in-process Rust `ModuleHost` provides **lifecycle and capability policy chec
 
 `SimulatedBroker` and `pipboy simulate` operate only on 11 fixed, in-memory `sim:*` fixtures. A session requires `--confirm` in the CLI, and a saved `denied` preference always wins. Requested intent never grants a session. The simulation emits `simulated: true` and no device readings; cross-broker and revoked leases are invalid. Fixed `simulate replay` scenarios use synthetic logical milliseconds and record explicit stale-token rejection following virtual disconnect/recovery or revocation; they do not use physical clocks or recorded signals. This **cooperative in-process harness is not an OS privilege broker**, and `--confirm` must never be reused to open real devices. Real trusted consent, OS handle isolation and physical adapters remain planned. See [simulation contract](docs/SIMULATION.md).
 
+Virtual lease cancellation and deadlines are only in-memory mock behavior. The broker accepts manually injected logical milliseconds rather than wall-clock time, and backward ticks invalidate the active mock lease. Neither operation is an OS-enforced device watchdog or protection for physical transports.
+
 ## Future devices
 
 Location, serial ports, GPIO, SDR/radio, BLE, Wi-Fi, and mesh transports require separate adapters, permission gates, simulator tests, and user-facing indicators. Do not silently initiate scans, pair devices, transmit, or modify settings. No interference, jamming, credential interception, or covert collection features.

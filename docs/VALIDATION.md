@@ -2,7 +2,13 @@
 
 Review date: October 24, 2026 (America/New_York). Environment: Linux x86_64 container. These are local results; they do not establish remote Actions success or macOS/Windows support.
 
-## Current G1-D follow-on: deterministic virtual replay (not yet executed)
+## Verified Ubuntu baseline and follow-on tests
+
+[Actions run 40160220866](https://github.com/pskeffington/pip_boy/actions/runs/40160220866) passed the complete Linux quality matrix at `e36fd59`: catalog validation, formatting, stable Clippy and compile, 13 CLI + 79 core unit tests on stable and Rust 1.81.0 (**92 each**), and five CLI/TUI smoke suites. GitHub Actions were enabled throughout; the earlier zero-job failure reproduced when an external Rust setup action was used, and resolved when setup/cache used runner-native `rustup`. The account-level action policy was not directly inspected.
+
+The follow-on adds a cancel-safe lease and a bounded, manually injected logical timeout (1–60,000 ms), rejects clock rewinds and counter overflows, and defines `cancel` and `timeout` golden replay scenarios. These new tests need their own passing run; neither virtual deadline nor mock cancellation is an OS-enforced watchdog or real device behavior. MacOS/Windows and physical hardware acceptance remain outstanding.
+
+## Historical initial deterministic replay work (before verified CI)
 
 New `device_simulator.rs` behavior models virtual disconnect/reconnect without reviving a stale broker lease. An explicit `Unavailable` error distinguishes a disconnected device from a revoked token. The new `simulator_replay.rs` implements bounded, fixed `nominal`, `disconnect-recover`, and `revoke` logical-time traces; the CLI exposes `pipboy simulate replay ID SCENARIO [--confirm]`. Each trace is labeled `simulated: true`, uses `synthetic_logical_ms` (never wall time), emits one mock-only event before simulated failures, records subsequent rejection reasons, and does not automatically restart a lease. A requested preference is insufficient, while a saved denial remains blocking.
 

@@ -65,12 +65,14 @@ There are no synthetic CPU, environmental, coordinates, RF signal levels or othe
 
 ## Deterministic logical-time replay (new, unverified)
 
-Three **fixed source-defined scenarios** are provided by `simulator_replay.rs`. Replay does not load arbitrary user scripts, files or real device data, and never sleeps or reads a wall clock:
+Five **fixed source-defined scenarios** are provided by `simulator_replay.rs`. Replay does not load arbitrary user scripts, files or real device data, and never sleeps or reads a wall clock:
 
 ```bash
 pipboy simulate replay sim:gpio nominal --confirm
 pipboy simulate replay sim:serial disconnect-recover --confirm
 pipboy simulate replay sim:sdr revoke --confirm
+pipboy simulate replay sim:ble cancel --confirm
+pipboy simulate replay sim:network timeout --confirm
 ```
 
 | Scenario | Synthetic logical times (ms) | State-transition assertions |
@@ -78,12 +80,18 @@ pipboy simulate replay sim:sdr revoke --confirm
 | `nominal` | 0, 100, 200 | Confirm/open, one fixture event, close |
 | `disconnect-recover` | 0, 100, 200, 300, 400, 500, 600, 700 | Initial fixture event; virtual disconnect invalidates lease; stale reads and opens while disconnected reject; reconnect leaves the fixture inactive; missing renewed confirmation rejects |
 | `revoke` | 0, 100, 200, 300, 400 | Initial fixture event; capability revoke invalidates lease; stale read and unconfirmed new open reject |
+| `cancel` | 0, 100, 200, 300, 400 | Cancellation invalidates the virtual lease and blocks stale reads and implicit restart |
+| `timeout` | 0, 100, 200, 300, 400 | A 200 ms injected logical TTL expires at its exact boundary; stale reads and unconfirmed restart are rejected |
 
 Output is a version-1 `ReplayTrace` object carrying `simulated: true`, `source: "rust-boy/deterministic-simulator"`, `clock: "synthetic_logical_ms"`, scenario, fixture ID/capability and at most eight ordered steps. Each step provides `logical_ms`, `action`, `state`, `outcome` and, where applicable, an explicit error code or the original labeled `SimulationEvent`. Replays do **not** fabricate readings or GPS coordinates. The same scenario is designed to serialize identically across repeated invocations.
 
 A single `--confirm` authorizes the **mock scenario as a whole**. The replay intentionally **does not automatically reopen** a fixture after disconnect, reconnect or revoke; any later CLI simulation requires its own explicit `--confirm`. These scenario scripts demonstrate expected policy behavior but are not fresh individual user approvals, hardware tests, or proof of OS-level isolation.
 
 New `SimulatedBroker::disconnect/reconnect` methods only toggle virtual availability. Disconnection invalidates an active lease immediately; reconnection alone cannot restore it. The `Unavailable` error is distinct from `InvalidLease` and `ConfirmationRequired`, and all are represented by stable machine-readable replay error codes.
+
+## Cancellation and virtual time boundaries
+
+`SimulatedBroker` now exposes `cancel(&lease)`, `open_with_timeout(..., ttl_ms)` and `advance_to(logical_ms)`. The TTL must be 1–60,000 injected logical milliseconds; invalid bounds fail before opening a lease. An exact deadline expires the mock session. Clock rewinds fail closed by clearing the session; overflow is rejected. This is a deterministic test clock, **not** a wall-clock watchdog, physical device timeout, OS broker, or automatically scheduled task. No receiver/network/device APIs are opened. Newly authored cancellation/timeout tests require CI verification on their current commit.
 
 ## Lease and preference invariants
 
