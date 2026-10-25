@@ -118,12 +118,13 @@ function renderRoles() {
     desc.append(el("span", "role-desc", role.id === "custom" ? "BLANK / ADVANCED" : role.description));
     button.append(numeral, desc);
     if (snapshot.active.profile === role.id) {
-      button.append(el("span", "role-activated", "ON"));
+      button.append(el("span", "role-activated", "SAVED"));
     }
     button.addEventListener("click", () => {
       previewId = role.id;
       selectedTool = null;
       selectedCamera = null;
+      lastOutput = "";
       renderAll();
     });
     ui.roles.append(button);
@@ -425,6 +426,8 @@ function loadSelected() {
   ui.confirmText.textContent = "Replace the current pinned modules with " + current.title +
     "? This changes only the local workspace layout. Notes, game sessions, camera connections and saved permissions are not touched.";
   if (typeof ui.confirm.showModal === "function") {
+    // Reset each time: dismissing via Escape must never reuse a prior approval.
+    ui.confirm.returnValue = "cancel";
     ui.confirm.showModal();
   } else if (window.confirm(ui.confirmText.textContent)) {
     changeProfile(current.id);
@@ -475,6 +478,7 @@ async function runLab(event) {
   ui.output.textContent = "Executing the selected allowlisted local tool.";
   try {
     const result = await api("/api/experiment", { tool, ...input });
+    if (selectedTool !== tool || !selectedAvailable()) return;
     lastOutput = result.output;
     ui.output.textContent = lastOutput;
     ui.outputKind.textContent = result.kind.toUpperCase();
@@ -483,6 +487,7 @@ async function runLab(event) {
       ? "Local result computed; no external data uploaded"
       : "Information only; no connection established";
   } catch (error) {
+    if (selectedTool !== tool || !selectedAvailable()) return;
     lastOutput = "";
     ui.output.textContent = error.message;
     ui.outputKind.textContent = "ERROR";
@@ -490,9 +495,11 @@ async function runLab(event) {
     notify(error.message, true);
   } finally {
     working = false;
-    ui.run.disabled = false;
-    const info = toolInfo(tool);
-    ui.run.textContent = info?.availability === "ready" ? "Run local test" : "Show safe handoff";
+    if (selectedTool === tool && selectedAvailable()) {
+      ui.run.disabled = false;
+      const info = toolInfo(tool);
+      ui.run.textContent = info?.availability === "ready" ? "Run local test" : "Show safe handoff";
+    }
   }
 }
 
