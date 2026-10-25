@@ -26,6 +26,10 @@ The bounded `VirtualTransport` queue only holds synthetic `sim:*` events; explic
 
 The typed mock input/display/serial adapters also remain in-memory only: they reject missing confirmation or saved denials, return explicit simulated records and never measure a GPIO pin, render to a physical screen, or read serial hardware. The mock display rejects control bytes/escape sequences. The serial payload is an explicitly injected fixture, not information received over a port. No real adapter authorization, encrypted channel or OS isolation is implied by these trait interfaces. See [typed adapter contract](docs/MOCK_ADAPTERS.md).
 
+## Deny-all physical-request process (new, no hardware access)
+
+`crates/rust-boy-broker` is now a separately built binary that reads **one** at-most-1,024-byte JSON request on standard input only when launched with `--stdio-once`. Its v1 protocol recognizes only the reviewed 11 capability/operation pairs. All responses explicitly say `allowed:false`, including a well-formed request with `operator_intent:true`; no user-controlled string, saved preference, token or identifier is authoritative. The executable has no driver, scanner, socket, device handle, privileged startup, permissions writer or persistent grant. This is a deny-by-default **protocol/process scaffold**, not an independently enforced OS authorization boundary. See [protocol](docs/BROKER_PROTOCOL.md).
+
 ## Actual device-authorization boundary (not implemented)
 
 The project now specifies [G2 OS device broker requirements](docs/OS_DEVICE_BROKER.md): explicit device identity, trusted per-operation consent, a separately enforced OS permission boundary, ephemeral scoped handles, actual deadline/close-on-revoke behavior, and fail-closed hot-unplug and process error handling. **None of those features are enabled merely because their design is written.** Windows ConPTY validation exercises only terminal behavior and cannot grant peripheral access.

@@ -2,6 +2,12 @@
 
 Updated October 25, 2026 (America/New_York). The latest verified evidence includes Windows ConPTY, macOS PTY and Linux stable/MSRV GitHub-hosted CI; older sections below are historical snapshots and are not the current project status. The previous native macOS/Windows build/test/offline-smoke matrix passed at [run 40161267203](https://github.com/pskeffington/pip_boy/actions/runs/40161267203); further TUI/platform and real-device acceptance remain open.
 
+## G2-A physical broker protocol precursor — new CI pending
+
+`crates/rust-boy-broker` is a **separate**, explicitly invoked, one-shot Rust executable whose only exposed channel is inherited stdin/stdout; it never starts on the normal TUI/status/doctor/notes paths. Its v1 input is a bounded 1,024-byte JSON record with strict capability/operation, opaque `device:` selector, request identifier, duration and purpose rules. It always returns a fixed five-field `allowed:false` response; even `operator_intent:true` cannot authorize a physical interface. It does not read a real port, device, radio, BLE, network or filesystem. No OS-enforced caller identity, broker privilege boundary, trusted user confirmation or physical handle exists.
+
+Twelve new Rust unit tests and `tools/smoke_broker.py` cover strict deny-all behavior, unknown/future fields, malformed/oversize requests, capability-direction restrictions, invalid selectors, redaction, one-shot argument handling and no unintended data-directory writes. The quality workflow now builds **both** CLI and broker with `cargo build --workspace --locked` and runs the broker smoke on Ubuntu, native macOS and native Windows. The offline catalog validator checks the broker roster against declared adapter capabilities and rejects direct physical I/O imports in the virtual-only modules. **Do not mark this development delta accepted before the exact-commit CI run passes.** Passing parser/deny tests will not authorize any actual device. See [broker protocol](BROKER_PROTOCOL.md) and [OS broker requirements](OS_DEVICE_BROKER.md).
+
 ## Native Windows ConPTY acceptance — verified on hosted Windows runner
 
 Previous [push run 40162057807](https://github.com/pskeffington/pip_boy/actions/runs/40162057807) and [PR run 40162059963](https://github.com/pskeffington/pip_boy/actions/runs/40162059963) passed all five jobs at `8a4f7c5`, including Linux stable/MSRV, macOS native PTY and native Windows unit/CLI tests (**115 Rust tests per toolchain**, plus eight Linux smoke scripts). That green baseline did **not** exercise Windows interactive TUI ConPTY.

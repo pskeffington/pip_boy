@@ -17,6 +17,7 @@ Rust-Boy is the public product name. The existing `pip_boy` repository, `pipboy`
 - [Typed adapter interfaces](MOCK_ADAPTERS.md) — input/display/serial mock contracts and OS limitations.
 - [Architecture](ARCHITECTURE.md) — host / UI / core / adapter boundaries.
 - [OS device broker contract](OS_DEVICE_BROKER.md) — independent privilege boundary and real-device acceptance requirements.
+- [Deny-all process protocol](BROKER_PROTOCOL.md) — standalone strict request parser; no active grant or OS-bound device handle.
 - [Research library](RESEARCH_LIBRARY.md) — external open-source Pip-Boy implementation references.
 
 ## Sequencing rules
@@ -51,7 +52,8 @@ The build is a directed acyclic dependency plan, **not** a schedule. All module 
 - [ ] Establish explicit retention/erase policies and schema migration for stored observations. Notes now support explicit schema-1 export/import; observation storage/migration remains planned.
 - [x] Author a pure module lifecycle state machine and existing deny-before-poll host prechecks (**in-process only; unverified**).
 - [x] Author a bounded version-1 **preference-only** adapter request/deny/clear store and CLI, with no implicit runtime grants (**new tests unexecuted**).
-- [ ] Implement independently enforced, per-device OS broker and trusted real-device consent. The [broker threat-model/acceptance contract](OS_DEVICE_BROKER.md) is defined; no physical I/O implementation or authorization is enabled. A stored preference and virtual CLI `--confirm` are **not** grants.
+- [x] Scaffold a separate `rust-boy-broker` executable with **deny-all** schema-1 physical-device request protocol, strict cap/operation/selector checks and bounded stdio; authored unit/CLI test fixtures are pending exact-commit CI. It opens no OS device handle and is not an authorization broker. See [protocol](BROKER_PROTOCOL.md).
+- [ ] Implement an independently OS-enforced, per-device authorization broker with authenticated caller identity, trusted consent, scoped handles and real revocation. The [broker threat model](OS_DEVICE_BROKER.md) is defined but **not** enforced. A saved preference and virtual `--confirm` are **not** grants.
 - [ ] Add battery, thermal, disk and network-interface status only where supported, with `Unknown` rather than guessed values.
 - [ ] Complete accessibility acceptance across platforms. Keyboard collection/detail navigation, compact 40x12 rendering and smaller-screen fallback are locally tested; motion remains static, with no decorative animation.
 - [x] Author state/quality/overflow and sample-argument unit tests (**not yet executed**).
@@ -61,7 +63,7 @@ The build is a directed acyclic dependency plan, **not** a schedule. All module 
 
 ### G2: Physical device and wearable compatibility — **planned**
 
-**P0: device broker and simulator**; **P1: GPIO, display, serial**.
+**P0: trusted OS device-broker boundary (only the deny-all stdio protocol precursor exists) and simulator**; **P1: GPIO, display, serial after broker acceptance**.
 
 - [ ] Select concrete Raspberry Pi and display board revisions with documented wiring, connector limits and operating supply.
 - [x] Introduce typed `InputSource`, `DisplayBackend`, `SerialReader` traits and bounded simulated implementations (new source/tests undergoing CI); no platform-specific OS dependency.

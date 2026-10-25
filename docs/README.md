@@ -13,6 +13,7 @@ Rust-Boy is an offline-first, Rust-native field systems console. This directory 
 | [Virtual transport](VIRTUAL_TRANSPORT.md) | Bounded fake event queue, revocation and platform validation |
 | [Typed mock adapters](MOCK_ADAPTERS.md) | Input/display/serial trait contracts, fixed fixtures and OS boundaries |
 | [OS device authorization](OS_DEVICE_BROKER.md) | Required real-device broker trust model and acceptance gates (not implemented) |
+| [Deny-all broker protocol](BROKER_PROTOCOL.md) | One-shot separate process, strict request vocabulary and no physical authorization |
 | [Scoped local operations](LOCAL_OPERATIONS.md) | LIBRARY/NOTES in-process permission prechecks |
 | [Literature matrix](LITERATURE_MATRIX.md) | Primary research and standards mapped to module decisions and tests |
 | [Module catalog](MODULE_CATALOG.md) | Features, dependency edges, permission requirements and acceptance criteria |

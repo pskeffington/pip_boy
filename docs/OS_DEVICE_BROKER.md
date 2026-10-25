@@ -1,8 +1,6 @@
 # Rust-Boy | OS device authorization boundary
 
-**Status:** design and acceptance gates only. No OS broker, physical device
-driver, authorization service, privileged helper, or hardware probe has been
-implemented. The in-process virtual brokers do not supply this boundary.
+**Status:** an isolated, **deny-all** one-shot stdio process with a bounded protocol is now authored (see [BROKER_PROTOCOL.md](BROKER_PROTOCOL.md)); there is still **no authenticated OS-enforced broker**, live device driver, trusted consent service, privileged helper or hardware probe. The in-process simulator and separate deny-only process do not supply real authorization.
 
 ## Principle: saved preference is never an active grant
 
@@ -17,7 +15,7 @@ filename, and a cryptographically unprotected JSON flag do **not** constrain
 untrusted linked code. There is no universal "device permission" API across
 Linux, macOS and Windows.
 
-## Proposed design contract (not a runnable service)
+## Proposed real authorization design (not implemented)
 
 ```text
 Keyboard / user request
@@ -72,9 +70,7 @@ or started as a side effect of TUI launch, `doctor`, `status`, or library reads.
 
 ## Required gates before real adapters
 
-- **G2-A — design review:** threat model, selected device models,
-  OS-specific handle boundary, fail-closed IPC grammar, documented minimal
-  permissions, and static audit for direct OS I/O paths.
+- **G2-A — design review:** deny-all stdio grammar and source-level no-I/O gates are authored; selected device models, OS-specific handle boundary, authenticated IPC, documented minimal permissions and threat model review remain open. The stand-alone parser does not meet the full gate.
 - **G2-B — isolated authorization:** dedicated trusted consent UI,
   per-device session scope, hard OS permission check, structured denial and
   revocation tests, secure update/install route. This gate is not met.
