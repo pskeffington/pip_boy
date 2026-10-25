@@ -27,7 +27,7 @@ The build is a directed acyclic dependency plan, **not** a schedule. All module 
 - [x] CI quality workflow and local Python catalog validator authored; baseline unit tests defined (**unverified**).
 - [x] Add manual workflow trigger and stable/1.81.0 compatibility matrix (**not yet executed**).
 - [ ] **Unblock GitHub Actions startup failure**; capture passing fmt/test/clippy logs.
-- [ ] Validate dependency lockfile and pinned toolchain compatibility.
+- [x] Validate dependency lockfile and pinned toolchain compatibility. **Local Linux: passed; lockfile committed.**
 - [ ] Smoke test launch, navigation, exit, and data persistence on Linux, macOS and Windows.
 - [ ] Verify terminal restoration on panic/error and note persistence during interrupted writes.
 
@@ -93,8 +93,10 @@ The build is a directed acyclic dependency plan, **not** a schedule. All module 
 
 ## G0 and G1 status summary
 
-**G0:** blocked by GitHub Actions startup_failure with zero executed jobs; compilation, fmt, Clippy and runtime acceptance are not verified.  
-**G1:** typed observation, bounded sample buffer, lifecycle transitions, finite NDJSON command and offline catalog validator have initial source implementations but are not integrated as one verified host runtime.  
+**G0:** remote Actions previously reported startup_failure with zero executed jobs; local Linux stable/MSRV compilation, 36 tests, fmt, Clippy and CLI/TUI smoke checks now pass; remote CI and remaining platform acceptance are still open.
+
+**G1:** typed observation, bounded sample buffer, lifecycle transitions, finite NDJSON command and offline catalog validator have initial source implementations with telemetry now shared by TUI and finite NDJSON through a bounded session. Lifecycle and ModuleHost orchestration remain separate. See [validation evidence](VALIDATION.md).
+
 **G2–G4:** still planned, with no external hardware, location, scanning or transmission enabled.
 
 The next engineering handoff is [G1_EXECUTION_PLAN.md](G1_EXECUTION_PLAN.md). Do not merge or release based on static files alone.

@@ -38,7 +38,11 @@ impl ModuleLifecycle {
         }
         Ok(Self {
             module_id: id.to_owned(),
-            state: if implemented { State::Disabled } else { State::Planned },
+            state: if implemented {
+                State::Disabled
+            } else {
+                State::Planned
+            },
             transitions: 0,
         })
     }
@@ -75,7 +79,12 @@ impl ModuleLifecycle {
             | (State::Degraded, Event::Revoke)
             | (State::Unavailable, Event::Revoke)
             | (State::Disabled, Event::Stop | Event::Revoke) => State::Disabled,
-            _ => return Err(format!("invalid {event:?} while {:?} ({})", self.state, self.module_id)),
+            _ => {
+                return Err(format!(
+                    "invalid {event:?} while {:?} ({})",
+                    self.state, self.module_id
+                ))
+            }
         };
         if self.state != next {
             self.transitions = self.transitions.saturating_add(1);
@@ -101,7 +110,10 @@ mod tests {
     fn transitions_require_grant_and_revocation_stops_activity() {
         let mut item = ModuleLifecycle::new("stat", true).unwrap();
         assert!(item.apply(Event::StartSucceeded).is_err());
-        assert_eq!(item.apply(Event::GrantConfirmed).unwrap(), State::Authorized);
+        assert_eq!(
+            item.apply(Event::GrantConfirmed).unwrap(),
+            State::Authorized
+        );
         assert_eq!(item.apply(Event::StartSucceeded).unwrap(), State::Running);
         assert_eq!(item.apply(Event::DataDegraded).unwrap(), State::Degraded);
         assert_eq!(item.apply(Event::DataRecovered).unwrap(), State::Running);
@@ -116,7 +128,10 @@ mod tests {
     fn unavailability_requires_explicit_recovery() {
         let mut item = ModuleLifecycle::new("gpio", true).unwrap();
         item.apply(Event::GrantConfirmed).unwrap();
-        assert_eq!(item.apply(Event::DeviceUnavailable).unwrap(), State::Unavailable);
+        assert_eq!(
+            item.apply(Event::DeviceUnavailable).unwrap(),
+            State::Unavailable
+        );
         assert!(item.apply(Event::DataRecovered).is_err());
         assert_eq!(item.apply(Event::Stop).unwrap(), State::Disabled);
     }

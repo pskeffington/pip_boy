@@ -101,7 +101,8 @@
     "features": [
       "Provenance-tagged samples",
       "NDJSON export and interval controls",
-      "Bounded in-memory buffers"
+      "Bounded in-memory buffers",
+      "Shared TUI/finite NDJSON session with bounded history and freshness (locally tested; lifecycle integration pending)"
     ],
     "acceptance": [
       "Tests cover source, clock and sample freshness",

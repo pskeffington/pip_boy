@@ -1,10 +1,10 @@
 //! Real host measurements via sysinfo. Unknown hardware adapters are not faked.
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::time::{SystemTime, UNIX_EPOCH};
 use sysinfo::{System, MINIMUM_CPU_UPDATE_INTERVAL};
 
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Snapshot {
     pub observed_unix_s: u64,
     pub os: String,

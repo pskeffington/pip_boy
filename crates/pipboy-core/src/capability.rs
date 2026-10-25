@@ -119,14 +119,27 @@ mod tests {
     #[test]
     fn emitted_permission_keys_match_manifest_vocabulary() {
         for key in [
-            "host.read", "files.read", "files.write", "device.enumerate",
-            "gpio.read", "display.write", "serial.read", "gnss.read",
-            "sdr.receive", "ble.discover", "mesh.transmit", "sensor.read",
-            "audio.play", "network.fetch",
+            "host.read",
+            "files.read",
+            "files.write",
+            "device.enumerate",
+            "gpio.read",
+            "display.write",
+            "serial.read",
+            "gnss.read",
+            "sdr.receive",
+            "ble.discover",
+            "mesh.transmit",
+            "sensor.read",
+            "audio.play",
+            "network.fetch",
         ] {
             let capability = Capability::from_key(key).expect("permission must exist");
             assert_eq!(capability.key(), key);
-            assert_eq!(serde_json::to_string(&capability).unwrap(), format!("\"{key}\""));
+            assert_eq!(
+                serde_json::to_string(&capability).unwrap(),
+                format!("\"{key}\"")
+            );
         }
     }
 

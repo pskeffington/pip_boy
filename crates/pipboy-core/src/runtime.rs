@@ -3,8 +3,8 @@
 //! Important: PermissionSet is an application policy check, **not** an
 //! operating system sandbox. No untrusted native code may be loaded here.
 
-use crate::registry::{Readiness, MODULES};
 pub use crate::capability::{Capability, PermissionSet};
+use crate::registry::{Readiness, MODULES};
 use serde::Serialize;
 use std::collections::HashSet;
 
@@ -74,13 +74,19 @@ impl ModuleHost {
             return Err(format!("module {id} is not implemented"));
         }
         if module.capabilities() != declared.required_capabilities {
-            return Err(format!("module {id} capability declaration differs from registry"));
+            return Err(format!(
+                "module {id} capability declaration differs from registry"
+            ));
         }
         if self.modules.iter().any(|item| item.id() == id) {
             return Err(format!("duplicate module {id}"));
         }
         let mut seen = HashSet::new();
-        if !module.capabilities().iter().all(|capability| seen.insert(*capability)) {
+        if !module
+            .capabilities()
+            .iter()
+            .all(|capability| seen.insert(*capability))
+        {
             return Err(format!("module {id} declares duplicate capabilities"));
         }
         self.modules.push(module);
@@ -173,7 +179,11 @@ mod tests {
         }
     }
 
-    fn mock(id: &'static str, required: &'static [Capability], calls: &Arc<AtomicUsize>) -> Box<dyn RuntimeModule> {
+    fn mock(
+        id: &'static str,
+        required: &'static [Capability],
+        calls: &Arc<AtomicUsize>,
+    ) -> Box<dyn RuntimeModule> {
         Box::new(MockModule {
             id,
             required,
@@ -187,15 +197,24 @@ mod tests {
         let mut host = ModuleHost::new(PermissionSet::offline_read_only());
         host.register(mock("notes", WRITE, &calls)).unwrap();
 
-        assert!(matches!(&host.poll_once()[0].outcome, PollOutcome::Denied { .. }));
+        assert!(matches!(
+            &host.poll_once()[0].outcome,
+            PollOutcome::Denied { .. }
+        ));
         assert_eq!(calls.load(Ordering::SeqCst), 0);
 
         host.permissions_mut().grant(Capability::FilesWrite);
-        assert!(matches!(&host.poll_once()[0].outcome, PollOutcome::Sample { .. }));
+        assert!(matches!(
+            &host.poll_once()[0].outcome,
+            PollOutcome::Sample { .. }
+        ));
         assert_eq!(calls.load(Ordering::SeqCst), 1);
 
         host.permissions_mut().revoke(Capability::FilesWrite);
-        assert!(matches!(host.poll_once()[0].outcome, PollOutcome::Denied { .. }));
+        assert!(matches!(
+            host.poll_once()[0].outcome,
+            PollOutcome::Denied { .. }
+        ));
         assert_eq!(calls.load(Ordering::SeqCst), 1);
     }
 
@@ -204,11 +223,16 @@ mod tests {
         let calls = Arc::new(AtomicUsize::new(0));
         let mut host = ModuleHost::new(PermissionSet::offline_read_only());
         host.register(mock("stat", READ, &calls)).unwrap();
-        host.register(Box::new(LibraryFixture { calls: Arc::clone(&calls) })).unwrap();
+        host.register(Box::new(LibraryFixture {
+            calls: Arc::clone(&calls),
+        }))
+        .unwrap();
 
         let output = host.poll_once();
         assert_eq!(output.len(), 2);
-        assert!(output.iter().all(|entry| matches!(&entry.outcome, PollOutcome::Sample { .. })));
+        assert!(output
+            .iter()
+            .all(|entry| matches!(&entry.outcome, PollOutcome::Sample { .. })));
         assert_eq!(calls.load(Ordering::SeqCst), 2);
     }
 
@@ -226,7 +250,10 @@ mod tests {
 
     #[test]
     fn permission_vocabulary_does_not_accept_undeclared_operations() {
-        assert_eq!(Capability::from_key("mesh.transmit"), Some(Capability::MeshTransmit));
+        assert_eq!(
+            Capability::from_key("mesh.transmit"),
+            Some(Capability::MeshTransmit)
+        );
         assert_eq!(Capability::from_key("network.scan"), None);
         assert!(!PermissionSet::offline_read_only().allows(Capability::NetworkFetch));
     }

@@ -1,11 +1,15 @@
+use crate::sampling::wall_ms;
 use crossterm::event::{self, Event, KeyCode, KeyEventKind};
 use crossterm::execute;
-use crossterm::terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen};
+use crossterm::terminal::{
+    disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen,
+};
 use pipboy_core::branding::{CLI_COMMAND, PRODUCT_NAME};
 use pipboy_core::catalog::sources;
 use pipboy_core::metrics::Collector;
 use pipboy_core::notes::NoteStore;
 use pipboy_core::registry::{Readiness, MODULES};
+use pipboy_core::telemetry::TelemetrySession;
 use ratatui::prelude::*;
 use ratatui::widgets::{Block, Borders, Paragraph, Tabs, Wrap};
 use std::error::Error;
@@ -37,7 +41,9 @@ const PANELS: &[&str] = &["STAT", "LIBRARY", "NOTES", "MAP", "RADIO", "MESH"];
 pub fn run() -> Result<(), Box<dyn Error>> {
     let mut collector = Collector::new();
     collector.prime();
-    let mut snapshot = collector.sample();
+    let session_start = Instant::now();
+    let mut telemetry = TelemetrySession::new(collector, 60, Duration::from_secs(4))?;
+    telemetry.poll(0, wall_ms())?;
     let library = sources()?;
     let store = NoteStore::from_environment()?;
     let mut panel = 0usize;
@@ -46,7 +52,16 @@ pub fn run() -> Result<(), Box<dyn Error>> {
     let _guard = TerminalGuard::enter()?;
     let mut terminal = Terminal::new(CrosstermBackend::new(io::stdout()))?;
     loop {
-        let notes = if panel == 2 { Some(store.list()?) } else { None };
+        let notes = if panel == 2 {
+            Some(store.list()?)
+        } else {
+            None
+        };
+        let session_ms = u64::try_from(session_start.elapsed().as_millis()).unwrap_or(u64::MAX);
+        let observation = telemetry
+            .latest(session_ms)
+            .ok_or("missing host observation")?;
+        let snapshot = observation.value.as_ref().ok_or("missing host snapshot")?;
         terminal.draw(|frame| {
             let sections = Layout::vertical([
                 Constraint::Length(3),
@@ -63,9 +78,12 @@ pub fn run() -> Result<(), Box<dyn Error>> {
 
             let body = match panel {
                 0 => format!(
-                    "HOST: {} / {}\nCPU: {:.1}% ({} logical cores)\nRAM: {} / {} MiB\nUPTIME: {} seconds\nSOURCE: local sysinfo\n\nNo device, geolocation or network access.",
+                    "HOST: {} / {}\nCPU: {:.1}% ({} logical cores)\nRAM: {} / {} MiB\nUPTIME: {} seconds\nSOURCE: {} | {:?} | age {} ms\nHISTORY: {} retained / {} dropped (memory only)\n\nNo device, geolocation or network access.",
                     snapshot.os, snapshot.arch, snapshot.cpu_percent, snapshot.logical_cores,
-                    snapshot.memory_used_mib, snapshot.memory_total_mib, snapshot.uptime_s
+                    snapshot.memory_used_mib, snapshot.memory_total_mib, snapshot.uptime_s,
+                    observation.provenance, observation.quality,
+                    session_ms.saturating_sub(observation.captured_session_ms),
+                    telemetry.retained(), telemetry.dropped()
                 ),
                 1 => {
                     let mut text = format!("{} linked source projects | metadata snapshot only\n\n", library.len());
@@ -115,13 +133,16 @@ pub fn run() -> Result<(), Box<dyn Error>> {
                 match key.code {
                     KeyCode::Char('q') | KeyCode::Char('Q') | KeyCode::Esc => break,
                     KeyCode::Right | KeyCode::Tab => panel = (panel + 1) % PANELS.len(),
-                    KeyCode::Left | KeyCode::BackTab => panel = (panel + PANELS.len() - 1) % PANELS.len(),
+                    KeyCode::Left | KeyCode::BackTab => {
+                        panel = (panel + PANELS.len() - 1) % PANELS.len()
+                    }
                     _ => {}
                 }
             }
         }
         if last_sample.elapsed() >= Duration::from_secs(2) {
-            snapshot = collector.sample();
+            let now = u64::try_from(session_start.elapsed().as_millis()).unwrap_or(u64::MAX);
+            telemetry.poll(now, wall_ms())?;
             last_sample = Instant::now();
         }
     }

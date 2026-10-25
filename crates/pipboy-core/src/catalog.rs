@@ -104,7 +104,9 @@ mod tests {
         let entries = sources().unwrap();
         assert!(entries.iter().any(|entry| entry.matches("ratatui")));
         assert!(entries.iter().any(|entry| entry.matches("Raspberry")));
-        assert!(!entries.iter().any(|entry| entry.matches("unlikely-query-8173")));
+        assert!(!entries
+            .iter()
+            .any(|entry| entry.matches("unlikely-query-8173")));
     }
 
     #[test]

@@ -36,9 +36,9 @@ jobs:
         if: matrix.toolchain == 'stable'
         run: cargo fmt --all -- --check
       - name: Compile all targets
-        run: cargo check --workspace --all-targets
+        run: cargo check --workspace --all-targets --locked
       - name: Unit tests
-        run: cargo test --workspace
+        run: cargo test --workspace --locked
       - name: Clippy
         if: matrix.toolchain == 'stable'
-        run: cargo clippy --workspace --all-targets -- -D warnings
+        run: cargo clippy --workspace --all-targets --locked -- -D warnings

@@ -111,9 +111,10 @@ impl NoteStore {
     }
 
     fn save(&self, document: &Document) -> io::Result<()> {
-        let parent = self.path.parent().ok_or_else(|| {
-            io::Error::new(io::ErrorKind::InvalidInput, "invalid notes path")
-        })?;
+        let parent = self
+            .path
+            .parent()
+            .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidInput, "invalid notes path"))?;
 
         #[cfg(unix)]
         {

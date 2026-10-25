@@ -92,14 +92,20 @@ impl<T> Observation<T> {
         if self.provenance.trim().is_empty() || self.provenance.len() > 256 {
             return Err("provenance must contain 1-256 bytes".into());
         }
-        if self.unit.as_deref().is_some_and(|unit| unit.trim().is_empty() || unit.len() > 48) {
+        if self
+            .unit
+            .as_deref()
+            .is_some_and(|unit| unit.trim().is_empty() || unit.len() > 48)
+        {
             return Err("unit must contain 1-48 bytes when provided".into());
         }
         if self.expires_after_ms == Some(0) {
             return Err("sample expiry cannot be zero".into());
         }
         if matches!(self.quality, Quality::Valid | Quality::Stale) != self.value.is_some() {
-            return Err("valid or stale needs a value; unknown or invalid must not carry a value".into());
+            return Err(
+                "valid or stale needs a value; unknown or invalid must not carry a value".into(),
+            );
         }
         Ok(())
     }
@@ -107,9 +113,9 @@ impl<T> Observation<T> {
     /// Only a valid measurement may transition into stale.
     pub fn update_freshness(&mut self, session_now_ms: u64) {
         if self.quality == Quality::Valid
-            && self.expires_after_ms.is_some_and(|ttl| {
-                session_now_ms.saturating_sub(self.captured_session_ms) >= ttl
-            })
+            && self
+                .expires_after_ms
+                .is_some_and(|ttl| session_now_ms.saturating_sub(self.captured_session_ms) >= ttl)
         {
             self.quality = Quality::Stale;
         }
@@ -122,8 +128,28 @@ mod tests {
 
     #[test]
     fn unknown_is_not_zero() {
-        let zero = Observation::new("host.cpu", "fixture", Some(1000), 50, Some("%".into()), Some(0_u8), Quality::Valid, Some(500)).unwrap();
-        let unknown = Observation::new("host.cpu", "fixture", None, 50, None, None::<u8>, Quality::Unknown, None).unwrap();
+        let zero = Observation::new(
+            "host.cpu",
+            "fixture",
+            Some(1000),
+            50,
+            Some("%".into()),
+            Some(0_u8),
+            Quality::Valid,
+            Some(500),
+        )
+        .unwrap();
+        let unknown = Observation::new(
+            "host.cpu",
+            "fixture",
+            None,
+            50,
+            None,
+            None::<u8>,
+            Quality::Unknown,
+            None,
+        )
+        .unwrap();
         assert_eq!(zero.value, Some(0));
         assert_eq!(unknown.value, None);
         assert_ne!(zero.quality, unknown.quality);
@@ -131,7 +157,17 @@ mod tests {
 
     #[test]
     fn expiry_is_monotonic_and_one_way() {
-        let mut item = Observation::new("rx", "fixture", None, 100, None, Some(1_u8), Quality::Valid, Some(300)).unwrap();
+        let mut item = Observation::new(
+            "rx",
+            "fixture",
+            None,
+            100,
+            None,
+            Some(1_u8),
+            Quality::Valid,
+            Some(300),
+        )
+        .unwrap();
         item.update_freshness(399);
         assert_eq!(item.quality, Quality::Valid);
         item.update_freshness(400);
@@ -142,14 +178,46 @@ mod tests {
 
     #[test]
     fn absent_value_and_invalid_provenance_are_rejected() {
-        assert!(Observation::new("rx", "fixture", None, 0, None, None::<u8>, Quality::Valid, None).is_err());
-        assert!(Observation::new("rx", "", None, 0, None, Some(1_u8), Quality::Valid, None).is_err());
-        assert!(Observation::new("rx", "fixture", None, 0, None, Some(1_u8), Quality::Unknown, None).is_err());
+        assert!(Observation::new(
+            "rx",
+            "fixture",
+            None,
+            0,
+            None,
+            None::<u8>,
+            Quality::Valid,
+            None
+        )
+        .is_err());
+        assert!(
+            Observation::new("rx", "", None, 0, None, Some(1_u8), Quality::Valid, None).is_err()
+        );
+        assert!(Observation::new(
+            "rx",
+            "fixture",
+            None,
+            0,
+            None,
+            Some(1_u8),
+            Quality::Unknown,
+            None
+        )
+        .is_err());
     }
 
     #[test]
     fn round_trip_and_schema_validation() {
-        let item = Observation::new("cpu", "local:sysinfo", Some(1234), 42, Some("%".into()), Some(22_u8), Quality::Valid, Some(1000)).unwrap();
+        let item = Observation::new(
+            "cpu",
+            "local:sysinfo",
+            Some(1234),
+            42,
+            Some("%".into()),
+            Some(22_u8),
+            Quality::Valid,
+            Some(1000),
+        )
+        .unwrap();
         let text = serde_json::to_string(&item).unwrap();
         let decoded: Observation<u8> = serde_json::from_str(&text).unwrap();
         decoded.validate().unwrap();
@@ -159,7 +227,14 @@ mod tests {
 
     #[test]
     fn locally_measured_values_are_attributed() {
-        let sample = Observation::measured("host.stats", "local:sysinfo", 1_u8, Instant::now(), Duration::from_secs(2)).unwrap();
+        let sample = Observation::measured(
+            "host.stats",
+            "local:sysinfo",
+            1_u8,
+            Instant::now(),
+            Duration::from_secs(2),
+        )
+        .unwrap();
         assert_eq!(sample.schema_version, OBSERVATION_SCHEMA_VERSION);
         assert_eq!(sample.value, Some(1));
         assert!(sample.captured_wall_unix_ms.is_some());

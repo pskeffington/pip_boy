@@ -43,6 +43,10 @@ Future feature-gated adapters attach beneath core capability interfaces:
 6. The catalog holds links and reviews, not third-party copied sources, game assets, or trademarks.
 7. Cross-platform first: Linux, macOS, Windows; add arm64 Raspberry Pi build checks in a later gate.
 
+## Shared telemetry session
+
+`TelemetrySession<SnapshotSource>` owns a bounded in-memory observation history. The TUI retains 60 readings; finite NDJSON retains at most the requested 1–30 readings. Both use the same source/provenance and monotonic expiry logic. Tests inject fixture collectors and timestamps. Reading a freshness view never samples the host. `status --json` keeps its existing raw Snapshot format. This session is not yet managed by the lifecycle/permission host.
+
 ## User data
 
 PIPBOY_HOME overrides the data directory. Otherwise, use $HOME/.pipboy on Unix and %USERPROFILE%/.pipboy on Windows. Notes are written atomically to notes.json; no background synchronization. Delete the folder to remove locally stored notes. Content is not encrypted.

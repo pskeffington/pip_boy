@@ -59,6 +59,8 @@
 
 ### `telemetry` — Telemetry event stream
 
+Partial implementation: TUI and finite NDJSON share a bounded `TelemetrySession`, provenance and freshness views. Local Linux tests pass; lifecycle/permission-host integration and broader G1 acceptance remain open.
+
 **Purpose:** core · **Gate:** G1 · **Priority:** P0 · **Status:** planned.  
 **Requested capabilities:** `host.read`, `files.write`.
 

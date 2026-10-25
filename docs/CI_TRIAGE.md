@@ -29,7 +29,7 @@ Local commands on a machine with Rust installed:
     cargo run -p pipboy -- doctor
     cargo run -p pipboy -- sample --count 2 --interval-ms 1000
 
-The repository currently does **not** contain a Cargo.lock. Generate and inspect one once dependencies resolve on a trusted Rust host and commit it for application releases; do not fabricate one.
+A generated Cargo.lock is now committed and tested locally on stable and Rust 1.81.0. CI uses `--locked`. Modern Cargo uses the MSRV fallback resolver; Cargo 1.81 ignores that newer configuration key but consumes the compatible version-3 lockfile. The lockfile selects instability 0.3.10 and unicode-segmentation 1.12.0 rather than newer versions requiring newer Rust. See [local validation evidence](VALIDATION.md).
 
 ## G0 exit evidence
 

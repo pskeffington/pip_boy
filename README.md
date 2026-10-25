@@ -4,7 +4,7 @@
 
 Rust-Boy is an independent, modular toolkit for desktop terminals and future wearable field computers. It combines local host diagnostics, a curated research library, and a user-controlled offline journal under one minimal native interface. Planned adapters extend it to Raspberry Pi hardware, maps, receive-only radios, and authenticated local communications.
 
-> **Project status — G0 verification blocked; G1 prototypes in progress.** STAT, LIBRARY, and NOTES have initial implementations. Typed observations, bounded sampling, a pure lifecycle state machine, and an explicit finite NDJSON host command have been added but remain uncompiled and unverified. MAP, RADIO, MESH, GPIO, and external device access remain planned. No placeholder implies a real device connection.
+> **Project status — local Linux quality checks pass; G0 platform/CI acceptance remains open.** STAT, LIBRARY, and NOTES have initial implementations. The TUI and finite NDJSON sampling command now share versioned observations and bounded in-memory telemetry. Local tests pass on stable and Rust 1.81.0; see [validation evidence](docs/VALIDATION.md). Lifecycle/consent orchestration, cross-platform smoke tests, and external hardware remain unfinished.
 
 ## Rust-Boy identity
 
@@ -67,7 +67,7 @@ cargo test --workspace
 cargo clippy --workspace --all-targets -- -D warnings
 ```
 
-The `sample` command is intentionally bounded to 1–30 samples at 500–30000 ms intervals, writing NDJSON only to stdout. It does not create a recording or start a background service. Actual CPU sampling is subject to the sysinfo platform-dependent minimum refresh interval.
+The `sample` command is intentionally bounded to 1–30 samples at 500–30000 ms intervals, writing NDJSON only to stdout. It does not create a recording or start a background service. Actual CPU sampling is subject to the sysinfo platform-dependent minimum refresh interval. The TUI retains at most 60 observations in memory and displays source, freshness, reading age, and dropped-record counts. Closing an NDJSON output pipe stops collection cleanly.
 
 Use **Left/Right** or **Tab** to change console panels and **Q** to exit. Note files are plaintext and stored under `PIPBOY_HOME` or the platform's default Rust-Boy data directory. Do not store passwords, credentials, or sensitive records in notes.
 

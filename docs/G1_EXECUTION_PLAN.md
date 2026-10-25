@@ -8,15 +8,17 @@
 
 | Slice | Existing code | Status | Verification still needed |
 | --- | --- | --- | --- |
-| Host measurements | metrics.rs | Existing, unverified | OS fixtures, sampling interval accuracy |
-| Typed observation | observation.rs | Initial implementation, unverified | Schema compatibility, downstream integration |
-| Bounded sample buffer | buffer.rs | Initial implementation, unverified | Integration with real host loop |
+| Host measurements | metrics.rs | Linux smoke tested | macOS/Windows fixtures and platform timing |
+| Typed observation | observation.rs | Integrated with TUI and finite NDJSON; locally tested | Schema migration and field-level units |
+| Bounded sample buffer | buffer.rs | Integrated with TUI and finite NDJSON; locally tested | Lifecycle host integration |
 | Lifecycle state | lifecycle.rs | Pure transition model, unverified | Host/permission service integration |
 | Capability prechecks | capability.rs and runtime.rs | Prototype, unverified | Explicit grant/revoke UI and device broker |
-| Finite NDJSON export | sampling.rs | User-triggered stdout-only command, unverified | Interruption behavior, host-specific clock checks |
+| Finite NDJSON export | sampling.rs | Locally tested, including writer failures | Signal cancellation and other OS clock checks |
 | Local notes | notes.rs | Existing, unverified | Crash recovery, migration and Windows overwrite |
-| Research consistency | tools/validate_catalog.py | Static validator authored | Execute and capture result |
-| Quality checks | rust.yml | Python + stable + Rust 1.81.0 matrix | Fix Actions startup and record real logs |
+| Research consistency | tools/validate_catalog.py | Passing locally | Keep catalog and Rust registry aligned |
+| Quality checks | rust.yml | Python + stable + Rust 1.81.0 matrix | Local quality checks pass; remote Actions still unverified |
+
+See [VALIDATION.md](VALIDATION.md) for executed Linux checks. The shared `TelemetrySession` is used by frontends directly; it is not yet orchestrated by `ModuleHost`.
 
 G1 module-plan statuses remain **planned** until integration and acceptance tests are verified. File presence is not proof of a functioning runtime.
 
@@ -72,7 +74,7 @@ G1 module-plan statuses remain **planned** until integration and acceptance test
 | Priority | Work item | Blocking dependency |
 | --- | --- | --- |
 | P0 | Investigate Actions startup failure and capture passing CI | Runner/entitlement investigation |
-| P0 | Connect typed observations and bounded buffer to existing UI/module host | G1-B, G1-C |
+| P0 | Connect the shared frontend telemetry session to lifecycle/module host | G1-D |
 | P0 | Integrate lifecycle and true user consent/revoke pathways | G1-D |
 | P0 | Fix notes overwrite/recovery and design schema migrations | G1-A |
 | P1 | Build testable host telemetry timing and source-quality dashboard | G1-C |

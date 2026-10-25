@@ -3,8 +3,8 @@
 //! Both catalogs are compiled into the binary; reading them makes no
 //! network requests and does not grant any OS or hardware permissions.
 
-use crate::registry::{Readiness, MODULES};
 use crate::capability::Capability;
+use crate::registry::{Readiness, MODULES};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 
@@ -31,7 +31,10 @@ impl Literature {
         self.id.to_lowercase().contains(&term)
             || self.title.to_lowercase().contains(&term)
             || self.design.to_lowercase().contains(&term)
-            || self.modules.iter().any(|item| item.to_lowercase().contains(&term))
+            || self
+                .modules
+                .iter()
+                .any(|item| item.to_lowercase().contains(&term))
     }
 }
 
@@ -57,7 +60,10 @@ impl ModulePlan {
             || self.name.to_lowercase().contains(&term)
             || self.gate.to_lowercase().contains(&term)
             || self.domain.to_lowercase().contains(&term)
-            || self.features.iter().any(|feature| feature.to_lowercase().contains(&term))
+            || self
+                .features
+                .iter()
+                .any(|feature| feature.to_lowercase().contains(&term))
     }
 }
 
@@ -93,17 +99,28 @@ pub fn validate_blueprint(modules: &[ModulePlan], literature: &[Literature]) -> 
         if module.id.trim().is_empty() || !ids.insert(module.id.as_str()) {
             return Err(format!("empty/duplicate module id: {}", module.id));
         }
-        if gate_number(&module.gate).is_none() || !matches!(module.priority.as_str(), "P0" | "P1" | "P2") {
+        if gate_number(&module.gate).is_none()
+            || !matches!(module.priority.as_str(), "P0" | "P1" | "P2")
+        {
             return Err(format!("invalid gate or priority for module {}", module.id));
         }
         if !matches!(module.status.as_str(), "planned" | "implemented_unverified") {
             return Err(format!("invalid implementation status for {}", module.id));
         }
         if module.status == "implemented_unverified" && module.gate != "G0" {
-            return Err(format!("only G0 implemented modules are currently supported: {}", module.id));
+            return Err(format!(
+                "only G0 implemented modules are currently supported: {}",
+                module.id
+            ));
         }
-        if module.name.trim().is_empty() || module.features.is_empty() || module.acceptance.len() < 2 {
-            return Err(format!("module {} lacks features or acceptance criteria", module.id));
+        if module.name.trim().is_empty()
+            || module.features.is_empty()
+            || module.acceptance.len() < 2
+        {
+            return Err(format!(
+                "module {} lacks features or acceptance criteria",
+                module.id
+            ));
         }
         if module.evidence.is_empty() {
             return Err(format!("module {} lacks evidence references", module.id));
@@ -111,7 +128,10 @@ pub fn validate_blueprint(modules: &[ModulePlan], literature: &[Literature]) -> 
         let mut capabilities = HashSet::new();
         for key in &module.capabilities {
             if Capability::from_key(key).is_none() || !capabilities.insert(key) {
-                return Err(format!("module {} has invalid/repeated capability: {key}", module.id));
+                return Err(format!(
+                    "module {} has invalid/repeated capability: {key}",
+                    module.id
+                ));
             }
         }
         by_id.insert(module.id.as_str(), index);
@@ -133,7 +153,10 @@ pub fn validate_blueprint(modules: &[ModulePlan], literature: &[Literature]) -> 
             .map(|key| Capability::from_key(key).expect("capabilities validated above"))
             .collect::<Vec<_>>();
         if planned_capabilities.as_slice() != runtime.required_capabilities {
-            return Err(format!("capability drift for runtime module {}", runtime.id));
+            return Err(format!(
+                "capability drift for runtime module {}",
+                runtime.id
+            ));
         }
     }
 
@@ -157,7 +180,12 @@ pub fn validate_blueprint(modules: &[ModulePlan], literature: &[Literature]) -> 
         }
         if !matches!(
             item.r#type.as_str(),
-            "peer_reviewed" | "official_docs" | "language_spec" | "platform_spec" | "standard" | "license_policy"
+            "peer_reviewed"
+                | "official_docs"
+                | "language_spec"
+                | "platform_spec"
+                | "standard"
+                | "license_policy"
         ) {
             return Err(format!("unrecognized evidence type {}", item.id));
         }
@@ -178,14 +206,25 @@ pub fn validate_blueprint(modules: &[ModulePlan], literature: &[Literature]) -> 
             let earlier = by_id
                 .get(prerequisite.as_str())
                 .map(|index| &modules[*index])
-                .ok_or_else(|| format!("{} references unknown prerequisite {}", module.id, prerequisite))?;
+                .ok_or_else(|| {
+                    format!(
+                        "{} references unknown prerequisite {}",
+                        module.id, prerequisite
+                    )
+                })?;
             if gate_number(&earlier.gate).expect("validated above") > current {
-                return Err(format!("{} depends on later gate {}", module.id, prerequisite));
+                return Err(format!(
+                    "{} depends on later gate {}",
+                    module.id, prerequisite
+                ));
             }
         }
         for evidence in &module.evidence {
             if !evidence_ids.contains(evidence.as_str()) {
-                return Err(format!("module {} references unknown evidence {}", module.id, evidence));
+                return Err(format!(
+                    "module {} references unknown evidence {}",
+                    module.id, evidence
+                ));
             }
         }
     }
@@ -195,7 +234,11 @@ pub fn validate_blueprint(modules: &[ModulePlan], literature: &[Literature]) -> 
     loop {
         let before = completed.len();
         for module in modules {
-            if module.depends_on.iter().all(|dependency| completed.contains(dependency.as_str())) {
+            if module
+                .depends_on
+                .iter()
+                .all(|dependency| completed.contains(dependency.as_str()))
+            {
                 completed.insert(&module.id);
             }
         }
