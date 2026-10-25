@@ -1742,6 +1742,71 @@ mod tests {
     }
 
     #[test]
+    fn county_source_api_is_allowlisted_local_and_explicit() {
+        let temp = tempfile::tempdir().unwrap();
+        let store = WorkbenchStore::new(temp.path().join("state"));
+        let index = dispatch(&request("GET", "/api/map/sources", Value::Null), &store, 8765);
+        assert_eq!(index.status, 200);
+        let sources: Value = serde_json::from_slice(&index.body).unwrap();
+        assert_eq!(sources["sources"].as_array().unwrap().len(), 3);
+        let cache = dispatch(&request("GET", "/api/map/cache", Value::Null), &store, 8765);
+        assert_eq!(cache.status, 200);
+        let manifest: Value = serde_json::from_slice(&cache.body).unwrap();
+        assert_eq!(manifest["active_geoid"], Value::Null);
+        assert!(!temp.path().join("state/county_cache").exists());
+
+        let cases = [
+            json!({"geoid":"25025","source":"tiger-roads"}),
+            json!({"geoid":"../../secret","source":"tiger-roads","confirm":true}),
+            json!({"geoid":"25025","source":"https://evil.invalid","confirm":true}),
+        ];
+        for (i, body) in cases.into_iter().enumerate() {
+            let response = dispatch(
+                &request("POST", "/api/map/package", body),
+                &store,
+                8765,
+            );
+            assert_eq!(response.status, if i == 0 { 403 } else { 422 });
+            assert!(!temp.path().join("state/county_cache").exists());
+        }
+        let response = dispatch(
+            &request("POST", "/api/map/package",
+                json!({"geoid":"25025","source":"tiger-roads","cache_only":true})),
+            &store,
+            8765,
+        );
+        assert_eq!(response.status, 404);
+        assert!(!temp.path().join("state/county_cache").exists());
+
+        let mut malicious = request(
+            "POST",
+            "/api/map/package",
+            json!({"geoid":"25025","source":"tiger-roads","confirm":true}),
+        );
+        malicious.headers.insert(
+            "origin".to_owned(),
+            "https://untrusted.invalid".to_owned(),
+        );
+        assert_eq!(dispatch(&malicious, &store, 8765).status, 403);
+        assert!(!temp.path().join("state/county_cache").exists());
+
+        let cached_dir = temp.path().join("state/county_cache");
+        std::fs::create_dir_all(&cached_dir).unwrap();
+        std::fs::write(
+            cached_dir.join("tl_2025_25025_roads.zip"),
+            b"PK\x03\x04local-cached-test",
+        ).unwrap();
+        let response = dispatch(
+            &request("POST", "/api/map/package",
+                json!({"geoid":"25025","source":"tiger-roads","cache_only":true})),
+            &store, 8765
+        );
+        assert_eq!(response.status, 200);
+        assert_eq!(response.content_type, "application/zip");
+        assert_eq!(response.body, b"PK\x03\x04local-cached-test");
+    }
+
+    #[test]
     fn csp_headers_deny_external_scripts_and_framing() {
         let response = Response::new(200, "text/plain", b"ok".to_vec());
         let header = format!(
