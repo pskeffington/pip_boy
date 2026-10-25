@@ -81,7 +81,9 @@ impl CountyCache {
             return Err(invalid("Cached county archive exceeds bound or is empty"));
         }
         let mut bytes = Vec::with_capacity(size as usize);
-        File::open(path)?.take(MAX_ARCHIVE + 1).read_to_end(&mut bytes)?;
+        File::open(path)?
+            .take(MAX_ARCHIVE + 1)
+            .read_to_end(&mut bytes)?;
         if bytes.len() as u64 != size || !bytes.starts_with(b"PK\x03\x04") {
             return Err(invalid("Cached county ZIP invalid; original preserved"));
         }
@@ -119,7 +121,9 @@ impl CountyCache {
             }
         }
         if counties.len() >= MAX_COUNTIES && !counties.contains(geoid) {
-            return Err(invalid("County cache limit reached; choose an existing county"));
+            return Err(invalid(
+                "County cache limit reached; choose an existing county",
+            ));
         }
         Ok(())
     }
@@ -158,20 +162,20 @@ impl CountyCache {
         }))
     }
 
-    pub fn fetch(
-        &self,
-        geoid: &str,
-        source_id: &str,
-        allow_network: bool,
-    ) -> io::Result<Vec<u8>> {
+    pub fn fetch(&self, geoid: &str, source_id: &str, allow_network: bool) -> io::Result<Vec<u8>> {
         if !geoid_valid(geoid) {
-            return Err(invalid("GEOID must be a valid five-digit county identifier"));
+            return Err(invalid(
+                "GEOID must be a valid five-digit county identifier",
+            ));
         }
         let (folder, layer) = source(source_id)?;
         let path = self.path(geoid, layer);
         let lock = FETCH_LOCK.get_or_init(|| Mutex::new(()));
         let _guard = lock.try_lock().map_err(|_| {
-            io::Error::new(io::ErrorKind::WouldBlock, "Another county fetch is in progress")
+            io::Error::new(
+                io::ErrorKind::WouldBlock,
+                "Another county fetch is in progress",
+            )
         })?;
         match Self::read_zip(&path) {
             Ok(bytes) => {
@@ -180,12 +184,15 @@ impl CountyCache {
                     self.remember(geoid)?;
                 }
                 return Ok(bytes);
-            },
+            }
             Err(error) if error.kind() == io::ErrorKind::NotFound => {}
             Err(error) => return Err(error),
         }
         if !allow_network {
-            return Err(io::Error::new(io::ErrorKind::NotFound, "County archive is not cached"));
+            return Err(io::Error::new(
+                io::ErrorKind::NotFound,
+                "County archive is not cached",
+            ));
         }
         self.limit_new_county(geoid)?;
         self.ensure_root()?;
@@ -201,10 +208,22 @@ impl CountyCache {
         let cmd = if cfg!(windows) { "curl.exe" } else { "curl" };
         let ok = Command::new(cmd)
             .args([
-                "--fail", "--silent", "--show-error", "--proto", "=https",
-                "--max-redirs", "0", "--connect-timeout", "8",
-                "--max-time", "40", "--max-filesize", "12582912",
-                "--retry", "0", "--output",
+                "--fail",
+                "--silent",
+                "--show-error",
+                "--proto",
+                "=https",
+                "--max-redirs",
+                "0",
+                "--connect-timeout",
+                "8",
+                "--max-time",
+                "40",
+                "--max-filesize",
+                "12582912",
+                "--retry",
+                "0",
+                "--output",
             ])
             .arg(tmp.path())
             .arg(url)
@@ -246,7 +265,10 @@ mod tests {
         let cache = CountyCache::new(tmp.path().to_path_buf());
         let path = cache.path("25025", "roads");
         fs::write(&path, b"PK\x03\x04test").unwrap();
-        assert_eq!(cache.fetch("25025", "tiger-roads", false).unwrap(), b"PK\x03\x04test");
+        assert_eq!(
+            cache.fetch("25025", "tiger-roads", false).unwrap(),
+            b"PK\x03\x04test"
+        );
         assert!(cache.fetch("25025", "tiger-areawater", false).is_err());
         cache.remember("25025").unwrap();
         let active = cache.active().unwrap();
