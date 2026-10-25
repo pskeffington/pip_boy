@@ -288,6 +288,8 @@ sys.exit(result.returncode)
         assert code == 200 and len(receiver_chat["messages"]) == 1
         assert receiver_chat["messages"][0]["direction"] == "incoming"
         assert receiver_chat["messages"][0]["peer"] == "overseer-a"
+        assert receiver_chat["conversations"] == ["overseer-a"]
+        assert receiver_chat["peers"] == [], "A receiving-only device has no sender key"
         code, scoped = api(remote_port, "GET", "/api/tasks")
         assert code == 200 and scoped["manager"] is False
         assert len(scoped["board"]["tasks"]) == 1
