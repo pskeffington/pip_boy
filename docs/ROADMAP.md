@@ -7,6 +7,12 @@ Rust-Boy is the public product name. The existing `pip_boy` repository, `pipboy`
 
 > **Verified integration baseline:** [Five-job Linux/macOS/Windows CI](https://github.com/pskeffington/pip_boy/actions/runs/40164915215) passed at `e7d1090`, including macOS PTY, Windows ConPTY, and the strict deny-all broker suite. **This does not complete a packaged release or enable physical devices.** The catalog's `implemented_unverified` status denotes a pending module acceptance review, not an absence of CI execution.
 
+## G1 graphical dashboard / job-template experiment station
+
+The [local graphical dashboard](DASHBOARD_UI.md) is the first experimental UI shell. A Rust-only loopback HTTP service hosts original responsive assets; job templates and availability labels come from `PRESETS`/`PALETTE`, with seven ready-made profiles and Custom last. The UI saves explicitly confirmed template changes via the existing WorkbenchStore and exposes allowlisted **offline** GIS, CIDR, hex and user-invoked host experiments. Test coverage includes same-origin denial, local-only bind, persistence and responsive assets; final viewport readability still requires real browser and Pi-screen checks.
+
+**Integration order:** (1) accept Rust dashboard CI on macOS, Windows and 1.90; (2) manually validate Safari/Firefox at desktop, 800×480 and 480×320; (3) improve job-specific widgets and safe input; (4) prototype RustGIS process/renderer integration in Scout; (5) pursue OS-enforced camera/GNSS/TAK access gates. The current Scout viewport is a labeled **reference grid**, not functioning RustGIS navigation; Security Chief cameras are **focus-layout fixtures**, not streams. No embedded runtime module executes on profile load.
+
 ## Role-specific roadmap — R0 through R3
 
 The [eight-role workbench plan](ROLE_ROADMAP.md) and [machine-readable role matrix](../catalog/role_roadmap.json) define per-job needs, preloaded tools, new modules, dependencies and objective acceptance tests. The [Vault-Tec lore matrix](VAULT_TEC_LORE_MATRIX.md) distinguishes canon from themed adaptations. **Security Chief** prioritizes a user-requested [2×2 camera wall with focused single-feed view](SECURITY_CAMERA_WALL.md) after deterministic offline mocks; real streams and ONVIF compatibility require separately accepted device and privacy gates.

@@ -15,6 +15,12 @@ cargo run --locked -p pipboy -- doctor
 
 Core layout: `crates/pipboy` (CLI/TUI), `crates/pipboy-core` (local core and mock adapters), `crates/rust-boy-broker` (separate **deny-only** process), `catalog/` (evidence and planned modules), `tools/` (validation), and `docs/` (technical contracts).
 
+## Dashboard development
+
+The [graphical dashboard](docs/DASHBOARD_UI.md) is a local browser shell served by `crates/pipboy/src/dashboard.rs`. UI assets live under `crates/pipboy/assets/`; do not add external font/CDN/API references or new network routes without review. The job-template source of truth is `pipboy-core::workbench::PRESETS`, and physical/simulated availability is `PALETTE`. Do **not** add a hard-coded duplicate role list to JavaScript; keep Custom last.
+
+Start with `cargo run --locked -p pipboy -- dashboard --open` on Mac; run `python3 tools/smoke_dashboard.py` after building the binary. Only allowlisted, bounded, explicitly requested Rust core operations can run from the dashboard. Scope non-loopback access, device transport, authentication, RustGIS/TAK/video integration and any storage of sensitive user information as separate changes.
+
 ## Run the checks
 
 ```bash

@@ -18,6 +18,10 @@ This is the authoritative product-naming reference for this repository. The bran
 
 Do not invent a general-purpose `rust-boy` CLI or a new storage path: the interactive command is still `pipboy`, and `rust-boy-broker` is a separate **deny-only** protocol binary. User-facing prose always says **Rust-Boy**; code and paths must accurately reflect the current implementation.
 
+## Dashboard visual identity
+
+The local dashboard adopts its own charcoal and green phosphor visual language, a generic `RB/` mark, original typography and responsive module cards. It uses no official Fallout, Pip-Boy or Vault-Tec images, icons, proprietary interface code or font assets. Seven role titles are inspired by the documented job taxonomy and Custom is an original advanced-workbench designation. Distinguish a dashboard **template** from an approved capability: the appearance of a camera tile or map viewport cannot imply a live video feed or working navigation. See [graphical UI guide](docs/DASHBOARD_UI.md).
+
 ## Lore-inspired station naming
 
 The user-facing Vault-Tec occupational terms are **theme inspiration**, not a claim of sponsorship, brand license or exact game-function replication. Explicitly classify canonical jobs (Overseer, Head Engineer, Security Chief, Doctor) versus original adaptations (University Researcher, Reclamation Scout, Records Custodian, Custom). Code/tool descriptions must remain accurate for their implemented real-world behavior; do not copy game graphics, logos or recorded dialogue. See [source-backed lore matrix](docs/VAULT_TEC_LORE_MATRIX.md) and [role requirements](docs/ROLE_ROADMAP.md).

@@ -6,13 +6,29 @@
 
 **Offline first. Native by design.**
 
-Rust-Boy is an independent, Rust-native, role-configurable developer workbench for desktop terminals, with a modular foundation for future 4-inch wearable and handheld applications. It brings local host diagnostics, a curated research library and user-controlled field notes together in a keyboard-driven interface.
+Rust-Boy is an independent, Rust-native, role-configurable developer workbench with a local graphical dashboard and terminal console, designed as a modular foundation for future 4-inch handheld applications. It brings local host diagnostics, a curated research library and user-controlled field notes together in a keyboard-driven interface.
 
 **Current stage:** development preview. The terminal console and offline workflows are implemented and tested on Linux, macOS and Windows. Physical GPIO, serial, SDR, Bluetooth, mesh, GNSS, live maps and physical device integrations are **not enabled**. Offline WGS84 GeoJSON Point tools are provided for the Reclamation Scout. An explicitly requested Fallout 4 TCP companion browser is available for validation. No packaged production release is claimed.
 
+## Try the graphical dashboard
+
+<small>**Developer preview branch: `feat/dashboard-ui-shell`**. Local browser window; Rust executable handles the service on 127.0.0.1. No cloud deployment or remote port.</small>
+
+```bash
+git clone --branch feat/dashboard-ui-shell https://github.com/pskeffington/pip_boy.git
+cd pip_boy
+./scripts/launch-dashboard.command
+```
+
+Alternatively run `cargo run --locked -p pipboy -- dashboard --open` on macOS. The launcher opens your browser to **http://127.0.0.1:8765/**. Press **Ctrl+C** in the launching Terminal to stop it. Other operating systems can use `cargo run --locked -p pipboy -- dashboard` and open the displayed local URL.
+
+The working UI uses the authoritative Rust job templates: **Overseer, Head Engineer, Security Chief, Vault Doctor, University Researcher, Reclamation Scout, Records Custodian, then Custom**. Click a role to preview it; explicitly confirm loading the profile. Custom starts empty and offers a tool palette. Interactive local labs calculate **GeoJSON waypoints/distance, IPv4/CIDR and hex inspection**; other modules show accurate permission/availability labels. Security Chief has a four-camera **layout fixture only** and Reclamation Scout an **empty RustGIS viewport**, both plainly marked as unconnected. No real video, game link, GNSS or TAK activity starts from the dashboard.
+
+See the [graphical dashboard guide](docs/DASHBOARD_UI.md) for keyboard/touch layout, Mac instructions, API/privacy boundaries and acceptance tests.
+
 ## Vault-Tec occupational workbenches
 
-**Seven ready-made roles + one empty Custom mode.** On a fresh workbench, **Overseer Operations** is the default; users can switch between complete, pre-pinned stations. Each preloaded tool must still be invoked explicitly. No saved role opens cameras or devices by itself. The workbench branch was CI-green at `d7ee200`; the Scout GIS branch requires its own exact-SHA verification. A profile present in source is not a certified release.
+**Seven ready-made roles + one empty Custom mode.** On a fresh workbench, **Overseer Operations** is the default; users can switch between complete, pre-pinned stations. Each preloaded tool must still be invoked explicitly. No saved role opens cameras or devices by itself. The base workbench/Scout compiler migration has passed its exact-SHA CI baseline; the new dashboard branch requires its own successful checks. A rendered module is not a certified physical-device integration.
 
 | Role | Real-world station focus | Readiness |
 | --- | --- | --- |
@@ -26,7 +42,7 @@ Rust-Boy is an independent, Rust-native, role-configurable developer workbench f
 | Custom | Truly empty expert workspace with user-selected modules | Tool pinning code present; plugin sandbox planned |
 
 ```bash
-# On the feat/reclamation-scout-gis-tak development branch:
+# On the feat/dashboard-ui-shell development branch:
 cargo run --locked -p pipboy -- workbench profiles
 cargo run --locked -p pipboy -- workbench list
 cargo run --locked -p pipboy -- workbench use security-chief --replace

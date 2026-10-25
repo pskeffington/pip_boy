@@ -2,6 +2,10 @@
 
 **Implementation status:** The Scout branch implements offline WGS84 GeoJSON **Point** export, point-file inspection and spherical distance estimates. This is an **interoperability bridge**, not a full RustGIS port. No built-in live map renderer, position sensor, TAK transport, TAK Server or ATAK application is included.
 
+## Dashboard viewport before navigation
+
+The [local dashboard](DASHBOARD_UI.md) now reserves a dedicated **Scout navigation viewport** and loads the Scout job template and its real offline WGS84 tools from Rust. The viewport is an **empty reference grid**, with `RUSTGIS NOT ATTACHED` plainly visible. No map controls, RustGIS application binary, live location, GNSS, offline tiles or TAK transport are embedded in this UI pass. The eventual goal is to **launch/embed the actual RustGIS mapping app or reviewed map renderer** behind this viewport, so field operators can navigate from real layers and positions—not from a simulated picture. Support process/IPC or native renderer contracts only after actual RustGIS ARM64 and macOS interoperability tests.
+
 ## Why this architecture
 
 | Software | Can it run on Raspberry Pi 5 / 64-bit Pi OS? | Usage decision |

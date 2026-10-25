@@ -2,6 +2,14 @@
 
 This file records notable changes to Rust-Boy. This repository is in **development preview**; the Rust workspace version `0.1.0` is not a published production release. Dates are in UTC unless otherwise stated.
 
+## Unreleased — local graphical dashboard shell (2026-10-25)
+
+- Add a **Rust-served localhost-only dashboard** with original responsive field-console styling, desktop/4-inch reference layouts, and no new frontend or network-service dependencies.
+- Load the exact `PRESETS` and `PALETTE` from Rust; seven preloaded occupational profiles are followed by blank Custom. Role previews are non-mutating; actual replacements are confirmed and persisted through the existing WorkbenchStore.
+- Provide interactive, allowlisted offline tool experiments (Scout WGS84 waypoint and distance; IPv4/CIDR; hex inspection; one-shot local host reports), plus clearly marked mock-layout/placeholder ports for real RustGIS and IP-camera integrations.
+- Provide a Mac double-click launcher, [dashboard operator guide](docs/DASHBOARD_UI.md), and real loopback HTTP smoke acceptance in Linux/macOS/Windows CI. The service requires strict Host/Origin/JSON request rules and deliberately exposes no arbitrary shell execution.
+- This is a **development UI**, not a packaged native desktop app or a working TAK, camera, GNSS, game or RustGIS graphical integration. Exact-head CI and physical handheld/browser acceptance are separately gated.
+
 ## Unreleased — Rust 1.90 minimum compiler upgrade (2026-10-25)
 
 - Raise the workspace minimum supported Rust compiler from **1.81** to **1.90** across all three inheriting crates; CI tests Rust **1.90.0** and current stable, plus native macOS/Windows.

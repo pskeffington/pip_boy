@@ -10,6 +10,10 @@ Reviewed: **2026-10-25**. Repository: `pip_boy`; product: **Rust-Boy**. This is 
 4. **Truthful states:** Distinguish static layout, simulation, real local tools, explicit opt-in connectors, stale data, and entirely unimplemented features. A pinned icon is not proof of a live feed.
 5. **No IP confusion:** Vault-Tec terminology and citations inspire the profile names; tool design, UX, code, and visuals are original. No Vault-Tec affiliation or game artwork license is claimed. See [lore matrix](VAULT_TEC_LORE_MATRIX.md).
 
+## Base dashboard and template activation
+
+The [graphical dashboard implementation](DASHBOARD_UI.md) provides a shared UI foundation **before** role-specific extensions. Its left rail lists the seven preconfigured roles in canonical order with **Custom last**, offers non-mutating role previews and explicitly confirmed loading, and places pinned modules in a responsive deck. Custom is empty until deliberately populated. Reclamation Scout reserves a viewport for a future **real RustGIS launcher/renderer**; Security Chief currently uses four camera **mock-layout controls**, not network video. The Rust service is local only and uses the established WorkbenchStore, so CLI/TUI/web selections share one source of truth. Browser usability, accessibility and 4-inch hardware acceptance remain independent gates.
+
 ## Shared program gates and prerequisites
 
 | ID | Deliverable | Hard exit criterion |

@@ -12,11 +12,17 @@ Rust-Boy is an **experimental local field console**, not a safety-of-life, secur
 
 The `ModuleHost` capability checks and mock leases are cooperative **in-process** controls; they are **not** an OS sandbox for untrusted native code. A separate deny-only process is likewise **not** a working OS permission broker.
 
+## Local graphical dashboard security
+
+The optional `pipboy dashboard` command creates a **local-only HTTP listener bound to 127.0.0.1**, serving embedded original HTML/CSS/JS and strictly allowlisted JSON routes. It does not bind to LAN interfaces. Browser requests have an exact Host requirement; changing saved workbench state requires a same-origin JSON POST from `http://127.0.0.1:<port>`, explicit confirmation for role replacement and bounded input (8 KiB headers, 4 KiB bodies). The response uses restrictive CSP, `nosniff`, frame denial, no CORS and no-store. No arbitrary commands, general file browsing, exposed note contents, hidden streams or credentials are part of this service.
+
+**Limitations:** same-origin headers and loopback binding protect against common remote web attacks, but are not a security sandbox against other local applications or a compromised user account. Do not proxy, port-forward or expose this development interface publicly. A remote device/web deployment needs authenticated sessions, stronger CSRF protection, authorization and an independent review. The browser's Scout viewport is a *not-connected* reference grid and the Security Chief camera fixture does not receive video. See [dashboard guide](docs/DASHBOARD_UI.md).
+
 ## Occupational profiles and future camera sources
 
 Profiles are declarative UI configurations only. Choosing Overseer, Security Chief, or Custom cannot grant any capability, run user code, discover a device, open a network endpoint or authenticate to a camera. The new R0 profile code is still subject to CI acceptance. The workbench state is a local JSON description of pinned tools, **not** an authorization token.
 
-The requested Security Chief **four-camera wall** is [currently a plan](docs/SECURITY_CAMERA_WALL.md). Live IP-camera integration must use explicit allowlisted endpoints, reviewed JPEG/MJPEG/RTSP decoders, credential storage outside plaintext JSON (macOS Keychain when available), TLS validation and per-feed stream limits. Disabling a feed must release resources. No background video recording, audio capture, automatic ONVIF discovery, default-password attempts, PTZ control or upload is permitted by profile activation. Retained frames must be clearly marked stale, never live.
+The requested Security Chief **four-camera wall** is still an [integration plan](docs/SECURITY_CAMERA_WALL.md); the dashboard has a purely local four-tile focus/back layout fixture, not working IP-camera streams. Live IP-camera integration must use explicit allowlisted endpoints, reviewed JPEG/MJPEG/RTSP decoders, credential storage outside plaintext JSON (macOS Keychain when available), TLS validation and per-feed stream limits. Disabling a feed must release resources. No background video recording, audio capture, automatic ONVIF discovery, default-password attempts, PTZ control or upload is permitted by profile activation. Retained frames must be clearly marked stale, never live.
 
 ## Scout GIS and future TAK bridge
 

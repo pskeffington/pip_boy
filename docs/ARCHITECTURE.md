@@ -11,6 +11,28 @@ Rust-Boy is the public name of the modular console. The repository, executable, 
 
 The current `ModuleHost` is an **in-process testable policy precheck** and does not isolate untrusted code. Physical device access, OS-enforced permissions and transport isolation remain planned, not implemented.
 
+## Local graphical UI and template state
+
+The new `pipboy dashboard [--port N] [--open]` command runs a loopback-only HTTP service and serves static, embedded original UI assets. The browser is a **presentation client**, not a device broker. `GET /api/state` projects `pipboy-core::workbench::{PRESETS, PALETTE, Workbench}` to the UI; profile activation and Custom pin/unpin go through the same versioned, atomic WorkbenchStore used by the TUI and CLI. Explicitly invoked GIS/NET/HEX calculations call the existing Rust core functions and **never** shell out arbitrary commands. The service neither exposes note contents nor automatically opens live devices.
+
+```text
+Mac/Pi local browser (keyboard, mouse, touch)
+              |
+         127.0.0.1 only
+              |
+       pipboy dashboard (Rust)
+         /              \
+  GET projection      approved JSON POST
+         |              |
+       PRESETS      WorkbenchStore + offline tools
+         \              /
+           pipboy-core
+                  |
+        no device broker grants
+```
+
+The 4-inch reference layouts and mock camera focus are **visual UX fixtures**. A future RustGIS process/renderer integration in Reclamation Scout is a separate gate and must not be substituted with a simulated map. See [dashboard contract](DASHBOARD_UI.md) and [Scout GIS interoperability](SCOUT_GIS_TAK.md).
+
 ## Boundaries
 
     User keyboard / physical controls (future)
