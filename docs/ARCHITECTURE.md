@@ -23,6 +23,10 @@ The Rust `pipboy-core::tasks` module persists a distinct, versioned `tasks.json`
 
 Task records include expected-revision optimistic concurrency, bounded events and explicit manual `sent_at` / `acknowledged_at` tracking. Clipboard handoffs and email drafts are only prepared after operator action; no automatic sending or receipt inference is performed. The local store rejects invalid/future schemas without replacing them. See [Task Control contract](TASK_CONTROL.md).
 
+## Compact handheld renderer
+
+`assets/micro.{html,css,js}` owns the 480×320 page and tab layout. `RustBoyTasks.mount(..., {compact:true})` selects an independently paginated micro task presentation; desktop continues using the full component. The shared Rust REST API, task store, peer SSH transport, role catalog and capability checks are not duplicated. The normal micro root view suppresses vertical scrolling; long technical outputs and detail accessibility fallbacks remain reachable. No hardware action occurs simply by displaying a screen.
+
 ## Dual graphical presentation: desktop and micro
 
 The Rust `pipboy dashboard` process serves two intentionally distinct local views: `/` for the desktop workstation and `/micro` for the dedicated handheld frame (or use `dashboard --micro --open` on Mac). Both send requests to the **same** bounded JSON API and authoritative `pipboy-core::workbench::PRESETS` / `PALETTE` / WorkbenchStore. A role change in one view is reflected in the other after reload. Neither view may acquire new permissions merely by displaying a tile.

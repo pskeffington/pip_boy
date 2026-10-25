@@ -2,6 +2,10 @@
 
 Task Control is the Overseer's preloaded **management** module and is also available by explicit Custom pin. It creates, prioritizes and reassigns operational work across the seven job titles and tracks the work's life cycle on the manager's device. Other job HUDs display only their locally recorded assigned tasks. A job profile is an operational view, **not a login identity or security privilege**.
 
+## Compact handheld task workflow
+
+At 480×320, Task Control uses **two task rows per page** with explicit Prev/Next navigation. **+ NEW** opens a two-step assignment form instead of a long scrolling editor. An opened task has **INFO / STATUS / DEVICE / LOG** views and optional **ASSIGN** for reassignment. Return using the in-screen back control or Escape. The desktop task editor retains its original full view.
+
 ## Assignments and device delivery
 
 1. Open `./scripts/launch-micro.command` on Mac or the desktop dashboard. Select Overseer and **TASK CONTROL**. On an installation with an older saved Overseer profile, deliberately reload its profile to receive the new tool pin.

@@ -86,6 +86,19 @@ with tempfile.TemporaryDirectory() as work:
         assert b"/api/experiment" in js and b"/api/custom/remove" in js
         assert b"eval(" not in js and b"innerHTML" not in js
         assert b"RustBoyMap.mount" in js and b"NO SIGNAL" in js
+        assert b"function pagedTiles(" in js
+        assert b"function renderRolePage(" in js
+        assert b'root.classList.add("micro-home")' in js
+        assert b'data-depth="root"' in css and b'overflow:hidden' in css
+        assert b'id="role-prev"' in html and b'id="role-next"' in html
+        assert b"LOAD ROLE" in js
+        assert b"MutationObserver(ensureVisible)" in js
+        assert b'micro-overflow[data-depth="root"]' in css
+        assert b'micro-overflow[data-depth="tasks"]' in css
+        assert b"function compactBoard()" in request(port, "GET", "/assets/tasks.js")[2]
+        assert b"function compactCreate()" in request(port, "GET", "/assets/tasks.js")[2]
+        assert b"function compactDetail(task)" in request(port, "GET", "/assets/tasks.js")[2]
+        assert b"MAILTO:" not in js.upper()
         assert b"/assets/map.js" in html and b"/assets/map-import.js" in html
         for asset, marker in [
             ("/assets/map.js", b"watchPosition"),

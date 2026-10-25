@@ -10,6 +10,18 @@ Rust-Boy is an independent, Rust-native developer workbench with separate local 
 
 **Current stage:** development preview. The terminal console and offline workflows are implemented and tested on Linux, macOS and Windows. Physical GPIO, serial, SDR, Bluetooth, mesh and hardware GNSS are **not enabled**. The browser MAP viewport can display local RustGIS vector maps and opt-in browser location; native RustGIS rendering and raster basemaps remain unavailable. Offline WGS84 GeoJSON Point tools are provided for the Reclamation Scout. An explicitly requested Fallout 4 TCP companion browser is available for validation. No packaged production release is claimed.
 
+## Compact handheld HUD — no scrolling on primary screens
+
+The new micro view is built around a **480×320** screen: short labels, one-action focus, live task counts and a fixed six-tab rail. GEAR/DATA paginate six tools at a time; Custom's palette and the role selector paginate four at a time. Overseer TASKS uses two-task pages, a two-step assignment form, and INFO/STATUS/DEVICE/LOG (plus optional ASSIGN) screens. Input and result views are separate for offline labs.
+
+```bash
+git fetch origin
+git switch --track origin/feat/micro-compact-hud
+./scripts/launch-micro.command
+```
+
+Primary tabs are designed not to scroll. At very small widths, browser zoom or with long technical output, **detail-only scrolling remains available** so controls are not hidden. Desktop rendering and the existing Rust APIs are unchanged. [Micro screen guide](docs/MICRO_UI.md).
+
 ## RustGIS-native field maps and GPS (feature branch)
 
 Rust-Boy's MAP screen now imports actual data in RustGIS `.rgismap`, `.rgis`, `.rgislyr`, mobile `.rgismpk`, project `.rgispkg`, and GeoJSON files. Its independent WGS84 canvas renderer preserves embedded vector geography, source names, visible layers, and basic styling, and aligns an explicitly authorized browser location fix to that geometry. **RustGIS data remains primary.** An optional OpenStreetMap/Overpass road and landmark **reference overlay** appears underneath native GIS layers only after the operator taps **WEB ON**; no external roads are represented as official government data. On MAP entry the connector can make a coordinate-free provider reachability ping. It reports missing raster/streamed layers instead of inventing them. Select `RUSTGIS` from MAP to load a local export, and expand **DATA SOURCES** to inspect its provenance.

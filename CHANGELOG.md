@@ -2,6 +2,14 @@
 
 This file records notable changes to Rust-Boy. This repository is in **development preview**; the Rust workspace version `0.1.0` is not a published production release. Dates are in UTC unless otherwise stated.
 
+## Unreleased — minimalist micro HUD (2026-10-25)
+
+- Reduce the handheld STAT page to one short role heading, action buttons and live task counters; remove redundant descriptions and decorative instrument blocks.
+- Keep fixed six-tab navigation with no scrolling on normal 480×320 root pages. Paginate role selection, GEAR/DATA tools and Custom palette rather than silently clipping content.
+- Use a separate compact Overseer Task Control: two-task pages, staged New Task entry, tabbed details, explicit peer-device send and status synchronization. Desktop task workflow remains unchanged.
+- Offline lab input and results are separate views. Long outputs and unusual accessibility/zoom sizes may scroll within detail views to keep controls reachable.
+- Add smoke checks for new concise disconnected-camera and map labels. Manual Pi and Mac browser visual acceptance is still open.
+
 ## Unreleased — authenticated peer task transfer prototype (2026-10-25)
 
 - Replace the Overseer's email-draft controls with a **paired Rust-Boy device selector**, explicit **SEND TO DEVICE** confirmation, stored-delivery receipt, receiver-side acknowledgment and manual progress refresh.

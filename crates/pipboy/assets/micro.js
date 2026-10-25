@@ -257,12 +257,12 @@ function showStat() {
 }
 
 /** Paging is bounded to the visible screen; modules are not hidden offscreen. */
-function pagedTiles(root, ids, key, renderItem = toolTile) {
-  const count = Math.max(1, Math.ceil(ids.length / MICRO_PAGE_SIZE));
+function pagedTiles(root, ids, key, renderItem = toolTile, pageSize = MICRO_PAGE_SIZE) {
+  const count = Math.max(1, Math.ceil(ids.length / pageSize));
   viewPage[key] = Math.min(viewPage[key], count - 1);
-  const offset = viewPage[key] * MICRO_PAGE_SIZE;
+  const offset = viewPage[key] * pageSize;
   const grid = make("div", "tile-grid");
-  ids.slice(offset, offset + MICRO_PAGE_SIZE).forEach((id, index) =>
+  ids.slice(offset, offset + pageSize).forEach((id, index) =>
     grid.append(renderItem(id, offset + index)));
   root.append(grid);
   if (count > 1) {
@@ -408,7 +408,7 @@ function showConf() {
         make("small", "", item.availability === "planned"
           ? "PLANNED" : exists ? "PINNED" : "ADD"));
       return tile;
-    });
+    }, 4);
     return root;
   }
   root.append(sectionTop("SETTINGS", "LOCAL"));
@@ -698,7 +698,20 @@ function back() {
   }
 }
 
+function ensureVisible() {
+  // Primary pages are normally no-scroll. At zoom or with unexpected content,
+  // recover scroll access rather than clipping actions.
+  ui.screen.classList.remove("micro-overflow");
+  if (["root", "tasks"].includes(ui.screen.dataset.depth)
+      && ui.content.scrollHeight > ui.viewport.clientHeight + 1) {
+    ui.screen.classList.add("micro-overflow");
+  }
+}
+
 function init() {
+  const observer = new MutationObserver(ensureVisible);
+  observer.observe(ui.content, { childList: true, subtree: true });
+  window.addEventListener("resize", ensureVisible);
   ui.tabs.forEach((item) => item.addEventListener("click", () => setTab(item.dataset.tab)));
   ui.roleSwitch.addEventListener("click", openRoles);
   ui.closeRoles.addEventListener("click", () => ui.rolesDialog.close());
