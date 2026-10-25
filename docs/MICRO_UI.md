@@ -1,6 +1,6 @@
 # Rust-Boy | Micro handheld shell
 
-**Status:** functional local micro UI preview. The desktop dashboard remains available and unchanged except for a **MICRO** entry. The micro view shares the same Rust service, `PRESETS` registry, `PALETTE`, atomic `WorkbenchStore`, and allowlisted offline tool APIs. It is **not** a wearable hardware image, a working RustGIS navigation viewer or a live camera client.
+**Status:** functional local micro UI preview. The desktop dashboard remains available and unchanged except for a **MICRO** entry. The micro view shares the same Rust service, `PRESETS` registry, `PALETTE`, atomic `WorkbenchStore`, and allowlisted offline tool APIs. It is **not** a wearable hardware image, native RustGIS raster renderer, production GNSS service or live camera client. On the GIS feature branch, MAP can import native RustGIS vector maps and display an explicitly approved browser location.
 
 ## Launch on Mac
 
@@ -39,7 +39,7 @@ See [Task Control and manual dispatch](TASK_CONTROL.md). Neither the task HUD no
 
 ## Operation
 
-**Tabs** (large bottom controls): **STAT** current profile/local status and shortcuts; **GEAR** pins and tool launcher; **MAP** reserved RustGIS port with functioning offline GIS/waypoint/distance lab when pinned; **DATA** local reference and research tools; **LINK** disconnected transport summary, or Security Chief's four-camera mock interaction; **CONF** role switch, CRT effects toggle, reload and Custom tool palette.
+**Tabs** (large bottom controls): **STAT** current profile/local status and shortcuts; **GEAR** pins and tool launcher; **MAP** local WGS84 map viewport with imported RustGIS vector layers and explicit browser geolocation (GIS waypoint/distance lab available when pinned); **DATA** local reference and research tools; **LINK** disconnected transport summary, or Security Chief's four-camera mock interaction; **CONF** role switch, CRT effects toggle, reload and Custom tool palette.
 
 **Keyboard:** 1–6 jumps directly to pages when not editing a text field; **Escape** exits a focused module or camera, then returns to STAT. Standard Tab/Shift+Tab focus and Enter/Space activate controls. Security Chief LINK uses **1–4** for camera placeholder focus; Escape returns to the four-tile grid. The role-switch control in the header opens a scrollable modal of all seven prebuilt job templates with **Custom last**.
 
@@ -69,4 +69,4 @@ The new smoke script starts an actual Rust loopback server with `--micro --port 
 
 ## GPS map preview (feature branch)
 
-MAP now mounts the shared offline [GPS and GeoJSON viewer](SCOUT_GPS_MAP.md): explicit browser GPS permission, optional WGS84 RustGIS GeoJSON layer import, follow, accuracy and pan/zoom. It does not embed native RustGIS, supply basemap tiles or open USB serial GNSS.
+MAP mounts the shared offline [RustGIS-native map and GPS viewer](SCOUT_GPS_MAP.md): explicit browser GPS permission, native RustGIS JSON/map/mobile-package and GeoJSON imports, source manifest, follow, accuracy and pan/zoom. It does not embed native RustGIS, supply basemap tiles or open USB serial GNSS.
