@@ -47,7 +47,7 @@ const roleStations = Object.freeze({
   "head-engineer": {
     heading: "ENGINEER",
     purpose: "NETWORK / HEALTH",
-    quick: "HEALTH", tool: "net-lab", mode: "health"
+    quick: "HEALTH", tool: "net-lab", mode: "icmp"
   },
   "security-chief": {
     heading: "SECURITY",
@@ -537,6 +537,7 @@ function inputForm(root, id) {
   const run = make("button", "micro-button solid",
     id === "net-lab" && netMode === "tcp" ? "CONNECT" :
     id === "net-lab" && netMode === "health" ? "TEST" :
+    id === "net-lab" && netMode === "icmp" ? "PING" :
     id === "net-lab" && netMode === "unifi" ? "READ" :
     id === "host" ? "SAMPLE" :
     ["game", "notes", "simulator", "library"].includes(id) ? "INFO" : "RUN");
@@ -566,6 +567,8 @@ function inputForm(root, id) {
     if (busy) return;
     if (id === "net-lab" && netMode === "tcp" &&
         !window.confirm("Connect once to this IP and TCP port? Only test endpoints you administer.")) return;
+    if (id === "net-lab" && netMode === "icmp" &&
+        !window.confirm("Send 3–8 ICMP echo requests to this IP and measure true RTT, reply loss and variation?")) return;
     if (id === "net-lab" && netMode === "health" &&
         !window.confirm("Run 3–8 TCP connection timing probes to this one endpoint? Failed connects are NOT packet loss.")) return;
     if (id === "net-lab" && netMode === "unifi" &&
@@ -582,19 +585,19 @@ function inputForm(root, id) {
     if (id === "geo-lab") payload.mode = geoMode;
     if (id === "net-lab") {
       payload.mode = netMode;
-      if (["tcp", "health", "unifi"].includes(netMode)) payload.confirm = true;
+      if (["tcp", "health", "icmp", "unifi"].includes(netMode)) payload.confirm = true;
     }
     for (const [key, val] of new FormData(form).entries()) payload[key] = val;
     try {
       const result = await api("/api/experiment", payload);
       if (openedTool === id) {
         output.textContent = result.output;
-        if (result.kind === "health" && result.metrics) {
+        if (["health", "icmp"].includes(result.kind) && result.metrics) {
           metrics.hidden = false;
           const values = [
-            ["MEAN", result.metrics.mean_ms, "ms"],
+            [result.kind === "icmp" ? "RTT" : "MEAN", result.metrics.mean_ms, "ms"],
             ["VAR", result.metrics.variation_ms, "ms"],
-            ["FAIL", result.metrics.failure_percent, "%"]
+            [result.kind === "icmp" ? "LOSS" : "FAIL", result.metrics.failure_percent, "%"]
           ];
           values.forEach(([label, value, unit]) => {
             const item = make("div", "net-health-metric");
@@ -621,7 +624,8 @@ function inputForm(root, id) {
             .map((item) => item.name + " / " + item.state).join("\n");
         }
       }
-      ui.foot.textContent = result.kind === "health" ? "HEALTH / TCP SAMPLES"
+      ui.foot.textContent = result.kind === "icmp" ? "PING / ICMP REPLIES"
+        : result.kind === "health" ? "HEALTH / TCP SAMPLES"
         : result.kind === "unifi" ? "UNIFI / READ-ONLY"
         : result.kind === "probe" ? "TCP CHECK / CONNECT ATTEMPT"
         : result.kind === "computed" ? "RESULT / LOCAL ONLY" : "INFO / OFFLINE";

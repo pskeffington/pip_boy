@@ -333,15 +333,16 @@ const forms = Object.freeze({
 function renderNetworkMetrics(result) {
   const old = document.getElementById("network-health-summary");
   if (old) old.remove();
-  if (!result || !["health", "unifi"].includes(result.kind)) return;
+  if (!result || !["health", "icmp", "unifi"].includes(result.kind)) return;
   const section = el("div", "net-health-summary");
   section.id = "network-health-summary";
-  const data = result.kind === "health" ? [
-    ["MEAN CONNECT", result.metrics?.mean_ms == null ? "N/A" :
+  const data = ["health", "icmp"].includes(result.kind) ? [
+    [result.kind === "icmp" ? "MEAN ICMP RTT" : "MEAN CONNECT", result.metrics?.mean_ms == null ? "N/A" :
       result.metrics.mean_ms.toFixed(2) + " ms"],
-    ["VARIATION", result.metrics?.variation_ms == null ? "N/A" :
+    ["JITTER PROXY", result.metrics?.variation_ms == null ? "N/A" :
       result.metrics.variation_ms.toFixed(2) + " ms"],
-    ["CONNECT FAIL", result.metrics?.failure_percent.toFixed(1) + "%"],
+    [result.kind === "icmp" ? "ICMP LOSS" : "CONNECT FAIL",
+      result.metrics?.failure_percent.toFixed(1) + "%"],
     ["ATTEMPTS", result.metrics?.attempts]
   ] : [
     ["SITE", result.site?.name || "NONE"],
@@ -354,7 +355,7 @@ function renderNetworkMetrics(result) {
     card.append(el("small", "", label), el("strong", "", value ?? "N/A"));
     section.append(card);
   }
-  if (result.kind === "health") {
+  if (["health", "icmp"].includes(result.kind)) {
     const samples = el("div", "net-samples");
     samples.setAttribute("aria-label", "Per-attempt connection times (failed attempts marked separately)");
     const successful = result.metrics.samples_ms.filter((v) => v !== null);
@@ -448,12 +449,15 @@ function renderNetworkForm() {
         samples.querySelector("input").inputMode = "numeric";
         inputs.append(samples);
       }
-      inputs.append(el("p", "net-mode-notice", op.id === "health"
+      inputs.append(el("p", "net-mode-notice", op.id === "icmp"
+        ? "NATIVE ICMP ECHO · REAL RTT AND REPLY LOSS · NO BACKGROUND PING"
+        : op.id === "health"
         ? "LIVE TCP HANDSHAKE MEASUREMENTS · NOT ICMP PACKET LOSS"
         : op.id === "tcp" ? "ONE TCP CONNECTION · CONFIRMATION REQUIRED"
         : "OFFLINE CALCULATION · NO PACKETS SENT"));
     }
-    ui.run.textContent = op.id === "health" ? "Test network"
+    ui.run.textContent = op.id === "icmp" ? "Ping now"
+      : op.id === "health" ? "Test network"
       : op.id === "unifi" ? "Read UniFi"
       : op.id === "tcp" ? "Connect once" : "Calculate";
     ui.kind.textContent = op.active ? "ACTIVE / CONFIRM" : "OFFLINE";
@@ -658,10 +662,12 @@ async function runLab(event) {
   if (!selectedTool || !selectedAvailable() || working) return;
   const tool = selectedTool;
   const input = Object.fromEntries(new FormData(ui.form).entries());
-  if (tool === "net-lab" && ["tcp", "health", "unifi"].includes(input.mode)) {
+  if (tool === "net-lab" && ["tcp", "health", "icmp", "unifi"].includes(input.mode)) {
     const prompt = input.mode === "unifi"
       ? "Read UniFi sites and device status from the configured local console? GET only, no changes."
-      : input.mode === "health"
+      : input.mode === "icmp"
+        ? "Send 3–8 native ICMP echoes to this IP? Measure actual RTT, reply loss and variation."
+        : input.mode === "health"
         ? "Measure TCP connection time to this one IP and port for 3–8 probes? Failed connects are NOT packet loss."
         : "Attempt one TCP connection to this IP and port?";
     if (!window.confirm(prompt)) return;
@@ -686,7 +692,9 @@ async function runLab(event) {
     ui.outputKind.textContent = result.kind.toUpperCase();
     renderNetworkMetrics(result);
     ui.copy.disabled = false;
-    ui.footer.textContent = result.kind === "health"
+    ui.footer.textContent = result.kind === "icmp"
+      ? "Measured ICMP reply loss and RTT variation, not a sustained SLA sample"
+      : result.kind === "health"
       ? "Measured TCP connect time and variation; not ICMP packet loss"
       : result.kind === "unifi" ? "Read-only UniFi local API snapshot; no changes"
       : result.kind === "probe" ? "One explicitly requested TCP connect attempt completed"
@@ -706,6 +714,7 @@ async function runLab(event) {
       const info = toolInfo(tool);
       ui.run.textContent = tool === "net-lab"
         ? netMode === "tcp" ? "Connect once"
+          : netMode === "icmp" ? "Ping now"
           : netMode === "health" ? "Test network"
           : netMode === "unifi" ? "Read UniFi" : "Calculate"
         : info?.availability === "ready" ? "Run local test" : "Show safe handoff";
