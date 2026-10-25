@@ -351,7 +351,7 @@
       return;
     }
     if (Date.now() - webProbeAt < 10 * 60 * 1000 && webProbeSuccess !== null) {
-      view.webStatus = webProbeSuccess ? "WEB AVAILABLE / TAP WEB ON" : "WEB STATUS UNAVAILABLE";
+      view.webStatus = webProbeSuccess ? "WEB READY / WEB ON SENDS MAP AREA" : "WEB STATUS UNAVAILABLE";
       refresh(view);
       return;
     }
@@ -368,7 +368,7 @@
         webProbeSuccess = true;
         webProbeAt = Date.now();
         if (active === view && !view.webEnabled) {
-          view.webStatus = "WEB AVAILABLE / TAP WEB ON";
+          view.webStatus = "WEB READY / WEB ON SENDS MAP AREA";
         }
       } catch (_) {
         if (!controller.signal.aborted || active === view) {
