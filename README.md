@@ -8,7 +8,19 @@
 
 Rust-Boy is an independent, Rust-native developer workbench with separate local desktop and micro-handheld graphical shells plus a terminal console, built toward a future 4-inch device. It brings local host diagnostics, a curated research library and user-controlled field notes together in a keyboard-driven interface.
 
-**Current stage:** development preview. The terminal console and offline workflows are implemented and tested on Linux, macOS and Windows. Physical GPIO, serial, SDR, Bluetooth, mesh, GNSS, live maps and physical device integrations are **not enabled**. Offline WGS84 GeoJSON Point tools are provided for the Reclamation Scout. An explicitly requested Fallout 4 TCP companion browser is available for validation. No packaged production release is claimed.
+**Current stage:** development preview. The terminal console and offline workflows are implemented and tested on Linux, macOS and Windows. Physical GPIO, serial, SDR, Bluetooth, mesh and hardware GNSS are **not enabled**. The browser MAP viewport can display local RustGIS vector maps and opt-in browser location; native RustGIS rendering and raster basemaps remain unavailable. Offline WGS84 GeoJSON Point tools are provided for the Reclamation Scout. An explicitly requested Fallout 4 TCP companion browser is available for validation. No packaged production release is claimed.
+
+## RustGIS-native field maps and GPS (feature branch)
+
+Rust-Boy's MAP screen now imports actual data in RustGIS `.rgismap`, `.rgis`, `.rgislyr`, mobile `.rgismpk`, project `.rgispkg`, and GeoJSON files. Its independent WGS84 canvas renderer preserves embedded vector geography, source names, visible layers, and basic styling, and aligns an explicitly authorized browser location fix to that geometry. **No OSM proxy or alternative street tiles replace your RustGIS source data**; the viewer reports missing raster/streamed layers instead of inventing a basemap. Select `RUSTGIS` from MAP to load a local export, and expand **DATA SOURCES** to inspect its provenance.
+
+```bash
+git clone --branch feat/scout-gps-rustgis-map https://github.com/pskeffington/pip_boy.git
+cd pip_boy
+cargo run --locked -p pipboy -- dashboard --micro --open
+```
+
+See the [RustGIS native map/GPS field guide](docs/SCOUT_GPS_MAP.md). This branch remains a preview: upstream RustGIS's rendering engine, terrain/raster layer integration, native serial GNSS and physical Raspberry Pi tests are separate work.
 
 ## Peer-to-peer assignments — Mac ↔ handheld
 
@@ -41,7 +53,7 @@ See the [Task Control operator and security contract](docs/TASK_CONTROL.md). The
 
 ## Micro handheld shell — test on Mac
 
-The **micro mode** is a separate phosphor-style 4-inch-inspired interface, not a collapsed desktop sidebar. It has a top status strip, a single scrolling viewport, six bottom tabs (**STAT / GEAR / MAP / DATA / LINK / CONF**) and a touch/keyboard-friendly occupational profile picker. Seven preloaded jobs and **Custom last** all use the existing Rust data store. Offline Scout waypoint/distance, CIDR and byte inspection work from the micro controls. The Scout viewport says **RUSTGIS NOT ATTACHED**; the Security Chief 2×2 camera focus view says **NO VIDEO** until real drivers exist.
+The **micro mode** is a separate phosphor-style 4-inch-inspired interface, not a collapsed desktop sidebar. It has a top status strip, a single scrolling viewport, six bottom tabs (**STAT / GEAR / MAP / DATA / LINK / CONF**) and a touch/keyboard-friendly occupational profile picker. Seven preloaded jobs and **Custom last** all use the existing Rust data store. Offline Scout waypoint/distance, CIDR and byte inspection work from the micro controls. The Scout viewport can load RustGIS maps on the GPS feature branch; the earlier micro-only branch still shows a placeholder; the Security Chief 2×2 camera focus view says **NO VIDEO** until real drivers exist.
 
 ```bash
 git clone --branch feat/micro-handheld-shell https://github.com/pskeffington/pip_boy.git
