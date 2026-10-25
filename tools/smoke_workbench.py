@@ -38,7 +38,7 @@ with tempfile.TemporaryDirectory() as temporary:
     assert initial["profile"] == "overseer"
     assert initial["title"] == "Overseer Operations"
     assert [slot["tool"] for slot in initial["slots"]] == [
-        "host", "notes", "library", "game"
+        "mission-board", "host", "notes", "library", "game"
     ]
     profiles = json.loads(call(env, "profiles", "--json"))
     assert [item["id"] for item in profiles] == [

@@ -56,6 +56,13 @@ pub const PALETTE: &[Tool] = &[
         command: "pipboy workbench bytes inspect 48656c6c6f",
     },
     Tool {
+        id: "mission-board",
+        name: "TASK CONTROL",
+        description: "Persistent Overseer assignments, priority, due date, status and manual handoff.",
+        availability: Availability::Ready,
+        command: "pipboy dashboard --micro",
+    },
+    Tool {
         id: "host",
         name: "HOST STAT",
         description: "Opt-in local CPU/RAM and field quality. No collection by pinning.",
@@ -163,10 +170,10 @@ pub const PRESETS: &[Preset] = &[
     Preset {
         id: "overseer",
         title: "Overseer Operations",
-        description: "Vault oversight: host condition, mission notes, reference library and optional game link.",
+        description: "Operations command desk: assign work, track deadlines, log acknowledgments and manage handoffs.",
         lore_evidence: "VT-01",
         role_fidelity: "canonical_job",
-        tools: &["host", "notes", "library", "game"],
+        tools: &["mission-board", "host", "notes", "library", "game"],
     },
     Preset {
         id: "head-engineer",
@@ -722,7 +729,7 @@ mod tests {
         let board = store.load().unwrap();
         assert_eq!(board.schema_version, 1);
         assert_eq!(board.profile, "overseer");
-        assert_eq!(board.slots.len(), 4);
+        assert_eq!(board.slots.len(), 5);
         assert!(!root.exists());
         assert!(!store.remove(77).unwrap());
         assert!(!root.exists());
@@ -810,7 +817,7 @@ mod tests {
     fn canonical_profiles_are_full_ready_boards_and_custom_is_opt_in() {
         let board = Workbench::default();
         assert_eq!(board.profile, "overseer");
-        assert_eq!(board.slots.len(), 4);
+        assert_eq!(board.slots.len(), 5);
         for profile in PRESETS {
             let board = Workbench::from_preset(profile);
             board.validate().unwrap();

@@ -33,7 +33,7 @@ The [graphical dashboard implementation](DASHBOARD_UI.md) provides a shared UI f
 
 | Profile ID | Job station | Lore type | Existing palette tools | Future modules |
 | --- | --- | --- | --- | --- |
-| `overseer` | Overseer Operations | canonical job | `host`, `notes`, `library`, `game` | `mission-board`, `alerts`, `reports` |
+| `overseer` | Overseer Operations | canonical job | `mission-board`, `host`, `notes`, `library`, `game` | `alerts`, `reports` |
 | `head-engineer` | Head Engineer Station | canonical job | `host`, `net-lab`, `byte-lab`, `simulator`, `notes` | `serial-console`, `sensor-console`, `device-graph` |
 | `security-chief` | Security Chief Station | canonical job | `host`, `net-lab`, `byte-lab`, `notes` | `camera-wall`, `camera-health`, `event-log` |
 | `vault-doctor` | Vault Doctor Station | canonical job | `library`, `notes`, `host` | `environment`, `checklists`, `reference-index` |
@@ -48,20 +48,20 @@ The [graphical dashboard implementation](DASHBOARD_UI.md) provides a shared UI f
 
 **Purpose:** Coordinate people, systems and incidents from a concise command dashboard.  
 **Lore:** canonical job · `VT-01`, `VT-03`, `RB-01`  
-**Preloaded now:** `host`, `notes`, `library`, `game`  
-**New modules:** `mission-board`, `alerts`, `reports`
+**Preloaded now:** `mission-board`, `host`, `notes`, `library`, `game`  
+**New modules:** `alerts`, `reports`
 
 **Operational needs**
 
 - **must — At-a-glance system/companion health and truthful stale states** (`partially_available`).
-- **must — Local mission tasks with owner, priority, due state and acknowledgment** (`planned`).
-- **should — Cross-role handoff and incident notes** (`planned`).
+- **must — Persistent delegated mission tasks with assignee, role, priority, due date, status, and manual acknowledgment** (`code_present_ci_pending`).
+- **should — Manual email/clipboard task handoff, local status tracking, immutable-revision edit conflicts, and audit history** (`partially_available`).
 - **later — Opt-in live sources and redacted report export** (`planned`).
 
 | Gate | Deliverable | Acceptance test | State |
 | --- | --- | --- | --- |
-| **R0** Preset, launch and honest status | Overseer selected by default on a fresh install; Four pre-pinned tools are visible and inert until launched; Existing boards survive upgrade | Fresh install shows Overseer profile without writing until user changes it; No automatic PlayStation/network connection; Linux/macOS/Windows CI passes | code present ci pending |
-| **R1** Offline command desk | Mission/task cards with statuses and manual alerts; Role and tool switcher with clear source-quality labels | Create, complete, reassign and export ten sample tasks offline; No alert displayed without an actual event or manual entry | planned |
+| **R0** Preset, launch and honest status | Overseer selected by default on a fresh install; Five pre-pinned tools including Task Control are visible and inert until launched; Existing boards survive upgrade | Fresh install shows Overseer profile without writing until user changes it; No automatic PlayStation/network connection; Linux/macOS/Windows CI passes | code present ci pending |
+| **R1** Offline command desk | Persistent local Task Control: create/assign/reassign, priority, due dates, status and acknowledgment; Explicit copy/email-draft handoffs and manually confirmed sending; local event log and revision conflicts; At-a-glance micro/desktop role-aware task queues and operator summaries | Create, complete and reassign ten tasks offline with restart persistence and validation; Attempted stale revisions fail without overwriting; corrupt/future board preserved; No mail, camera, network or background notification is sent by loading a profile; delivery is not inferred | code present ci pending |
 | **R2** Consent-based integrations | Explicitly connected game observations and permitted sensor status; Incident-to-task linking and event acknowledgment | Disconnect immediately marks readings stale; No network activity until a user explicitly connects | planned |
 | **R3** Field command acceptance | Resource-aware handheld overview; Signed/redacted local reports and restore | Operator completes status-task-report journey on 4-inch target; Storage rollback and interrupted write are tested | planned |
 

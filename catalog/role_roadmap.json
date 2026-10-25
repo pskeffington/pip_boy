@@ -139,15 +139,15 @@
         "VT-03",
         "RB-01"
       ],
-      "mission": "Coordinate people, systems and incidents from a concise command dashboard.",
+      "mission": "Lead operations: create and prioritize assignments, track completion, assign staff by job, and record manual task handoffs and acknowledgments.",
       "baseline_tools": [
+        "mission-board",
         "host",
         "notes",
         "library",
         "game"
       ],
       "future_tools": [
-        "mission-board",
         "alerts",
         "reports"
       ],
@@ -161,14 +161,14 @@
         {
           "id": "N2",
           "priority": "must",
-          "need": "Local mission tasks with owner, priority, due state and acknowledgment",
-          "status": "planned"
+          "need": "Persistent delegated mission tasks with assignee, role, priority, due date, status, and manual acknowledgment",
+          "status": "code_present_ci_pending"
         },
         {
           "id": "N3",
           "priority": "should",
-          "need": "Cross-role handoff and incident notes",
-          "status": "planned"
+          "need": "Manual email/clipboard task handoff, local status tracking, immutable-revision edit conflicts, and audit history",
+          "status": "partially_available"
         },
         {
           "id": "N4",
@@ -183,7 +183,7 @@
           "title": "Preset, launch and honest status",
           "deliverables": [
             "Overseer selected by default on a fresh install",
-            "Four pre-pinned tools are visible and inert until launched",
+            "Five pre-pinned tools including Task Control are visible and inert until launched",
             "Existing boards survive upgrade"
           ],
           "acceptance": [
@@ -198,17 +198,19 @@
           "gate": "R1",
           "title": "Offline command desk",
           "deliverables": [
-            "Mission/task cards with statuses and manual alerts",
-            "Role and tool switcher with clear source-quality labels"
+            "Persistent local Task Control: create/assign/reassign, priority, due dates, status and acknowledgment",
+            "Explicit copy/email-draft handoffs and manually confirmed sending; local event log and revision conflicts",
+            "At-a-glance micro/desktop role-aware task queues and operator summaries"
           ],
           "acceptance": [
-            "Create, complete, reassign and export ten sample tasks offline",
-            "No alert displayed without an actual event or manual entry"
+            "Create, complete and reassign ten tasks offline with restart persistence and validation",
+            "Attempted stale revisions fail without overwriting; corrupt/future board preserved",
+            "No mail, camera, network or background notification is sent by loading a profile; delivery is not inferred"
           ],
           "dependencies": [
             "R0"
           ],
-          "status": "planned"
+          "status": "code_present_ci_pending"
         },
         {
           "gate": "R2",
