@@ -84,6 +84,31 @@
       const own = options.role && !response.manager
         ? all.filter((task) => task.role === options.role) : all;
       const count = counts(own);
+      if (options.compact) {
+        const panel = node("section", "task-summary compact");
+        const meter = node("div", "task-counts");
+        for (const [name, value, tone] of [
+          ["OPEN", count.open, ""],
+          ["LATE", count.due, "warn"],
+          ["BLOCK", count.blocked, "warn"]
+        ]) {
+          const item = node("div", "task-count");
+          item.append(node("span", "", name), node("strong", tone, value));
+          meter.append(item);
+        }
+        panel.append(meter);
+        const top = sortTasks(own.filter((task) => !done(task)))[0];
+        const line = node("div", "task-compact-focus", top
+          ? shortId(top.id) + "  " + top.title : "NO ACTIVE TASKS");
+        line.title = top?.title || "No active assignments";
+        panel.append(line);
+        if (typeof options.onOpen === "function") {
+          panel.append(button(response.manager ? "TASK BOARD ▶" : "MY DUTIES ▶",
+            options.onOpen, "solid"));
+        }
+        root.replaceChildren(panel);
+        return;
+      }
       const panel = node("section", "task-summary");
       const title = node("div", "task-heading");
       title.append(node("strong", "", response.manager ? "OPERATIONS / TASK CONTROL" : "ASSIGNED DUTIES"));
@@ -122,7 +147,8 @@
   async function mount(root, options = {}) {
     const state = {
       data: null, peers: null, view: "board", filter: "open", selected: null,
-      editor: null, action: false, status: "", error: ""
+      editor: null, action: false, status: "", error: "",
+      page: 0, part: "info", createStep: 0, draft: {}, logPage: 0
     };
     let epochs = 0;
 
@@ -406,8 +432,309 @@
       return row;
     }
 
+
+    // The 4-inch task board is paginated, including detail panels and forms.
+    // The full desktop editor remains unchanged.
+    function compactCreate() {
+      const form = node("form", "task-edit-form task-compact-form");
+      const head = node("div", "task-heading");
+      head.append(node("strong", "", state.createStep ? "NEW / DETAILS" : "NEW / ASSIGN"),
+        button("CANCEL", () => {
+          state.view = "board";
+          state.createStep = 0;
+          state.draft = {};
+          render();
+        }, "ghost"));
+      form.append(head);
+      const values = state.draft;
+      const fields = node("div", "task-form-grid");
+      if (state.createStep === 0) {
+        fields.append(label("title", "TASK", 96, values.title || ""));
+        fields.append(label("assignee", "OPERATOR", 64, values.assignee || ""));
+        fields.append(fieldSelect("role", "ROLE",
+          (options.profiles || []).map((r) => [r.id, r.title]),
+          values.role || "head-engineer"));
+        fields.append(fieldSelect("priority", "PRIORITY",
+          [["normal", "Normal"], ["low", "Low"], ["high", "High"], ["critical", "Critical"]],
+          values.priority || "normal"));
+        form.append(fields);
+      } else {
+        const date = label("due", "DUE (OPTIONAL)", 10, values.due || "");
+        date.querySelector("input").type = "date";
+        fields.append(date);
+        const description = node("label", "task-field task-wide", "INSTRUCTIONS");
+        const area = node("textarea");
+        area.name = "details";
+        area.maxLength = 400;
+        area.rows = 2;
+        area.value = values.details || "";
+        area.addEventListener("input", () => {
+          area.value = area.value.replace(/[\r\n]+/g, " ");
+        });
+        description.append(area);
+        fields.append(description);
+        form.append(fields);
+      }
+      const bar = node("div", "task-actions");
+      if (state.createStep) bar.append(button("◀ BACK", () => {
+        Object.assign(state.draft, Object.fromEntries(new FormData(form)));
+        state.createStep = 0;
+        render();
+      }, "ghost"));
+      const go = node("button", "task-button solid",
+        state.createStep ? "SAVE TASK" : "NEXT ▶");
+      go.type = "submit";
+      bar.append(go);
+      form.append(bar);
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        if (state.action) return;
+        Object.assign(state.draft, Object.fromEntries(new FormData(form)));
+        if (!state.createStep) {
+          state.createStep = 1;
+          render();
+          return;
+        }
+        const payload = {
+          title: state.draft.title,
+          assignee: state.draft.assignee,
+          role: state.draft.role,
+          priority: state.draft.priority,
+          due: state.draft.due || null,
+          details: state.draft.details || ""
+        };
+        await execute(() => get("/api/tasks/create", payload), "TASK SAVED");
+        if (!state.error) {
+          state.view = "board";
+          state.createStep = 0;
+          state.draft = {};
+          state.page = 0;
+        }
+        render();
+      });
+      return form;
+    }
+
+    function compactDetail(task) {
+      const box = node("div", "task-compact-detail");
+      const heading = node("div", "task-heading");
+      heading.append(
+        button("◀", () => { state.selected = null; state.part = "info"; render(); }, "ghost"),
+        node("strong", "task-compact-heading", shortId(task.id) + "  " + task.title)
+      );
+      box.append(heading);
+      const tabs = [
+        ["info", "INFO"], ["status", "STATUS"],
+        ["device", "DEVICE"], ["log", "LOG"]
+      ];
+      if (state.data.manager && !task.origin && !task.delivery) {
+        tabs.push(["move", "ASSIGN"]);
+      }
+      const rail = node("div", "task-mini-tabs");
+      tabs.forEach(([key, name]) => {
+        const item = button(name, () => {
+          state.part = key;
+          state.logPage = 0;
+          render();
+        }, state.part === key ? "selected" : "ghost");
+        item.setAttribute("aria-pressed", String(state.part === key));
+        rail.append(item);
+      });
+      box.append(rail);
+      const body = node("div", "task-compact-body");
+      if (state.part === "info") {
+        const tags = node("div", "task-tags");
+        tags.append(badge(task.priority.toUpperCase(), task.priority === "critical" ? "warn" : ""),
+          badge(statusText(task.status)),
+          badge(task.due ? (overdue(task) ? "LATE " : "DUE ") + task.due : "NO DUE DATE",
+            overdue(task) ? "warn" : ""));
+        body.append(tags);
+        body.append(node("div", "task-compact-line", "TO  " + task.assignee + " / " +
+          task.role.replace(/-/g, " ")));
+        if (task.details) {
+          const notes = node("p", "task-compact-notes", task.details);
+          notes.title = task.details;
+          body.append(notes);
+        }
+        body.append(node("div", "task-compact-line",
+          task.origin ? "FROM  " + task.origin.device
+            : task.delivery ? "AT  " + task.delivery.peer : "LOCAL / NOT SENT"));
+      } else if (state.part === "status") {
+        body.append(statusControl(task));
+        if (task.origin && !task.acknowledged_at && task.sent_at) {
+          body.append(button("ACKNOWLEDGE RECEIPT", () => {
+            if (!window.confirm("Record receipt of " + shortId(task.id) + "?")) return;
+            execute(() => get("/api/tasks/change", {
+              id: task.id, revision: task.revision, operation: "acknowledge"
+            }), "ACKNOWLEDGED / SYNC TO SENDER");
+          }, "solid"));
+        }
+      } else if (state.part === "device") {
+        if (task.origin) {
+          body.append(node("p", "task-compact-line", "FROM  " + task.origin.device));
+          body.append(node("p", "task-compact-line", task.acknowledged_at
+            ? "ACKNOWLEDGED" : "AWAITING ACKNOWLEDGMENT"));
+        } else if (!state.data.manager) {
+          body.append(infoText("NO DEVICE CONTROL"));
+        } else if (task.delivery) {
+          const peer = task.delivery.peer;
+          body.append(node("p", "task-compact-line",
+            "STORED  " + peer + " / " + shortId(task.delivery.remote_task_id)));
+          body.append(node("p", "task-compact-line", task.remote_progress
+            ? "REMOTE  " + statusText(task.remote_progress.status) +
+              (task.remote_progress.acknowledged ? " · ACK" : " · NO ACK")
+            : "NO REMOTE UPDATE"));
+          body.append(button("SYNC STATUS", () => {
+            if (!window.confirm("Connect to " + peer + " for task status?")) return;
+            execute(() => get("/api/peer/sync", {alias: peer, confirm: true}),
+              "REMOTE STATUS UPDATED");
+          }, "solid"));
+        } else {
+          const peers = state.peers?.peers || [];
+          if (!peers.length) {
+            body.append(node("p", "task-compact-line", "NO PAIRED DEVICE"));
+            body.append(infoText("PAIR DEVICES IN THE PEER CLI."));
+          } else {
+            const target = fieldSelect("alias", "DESTINATION",
+              peers.map((peer) => [peer.alias, peer.alias]), peers[0].alias);
+            body.append(target);
+            body.append(button("SEND TO DEVICE", () => {
+              const alias = target.querySelector("select").value;
+              if (!window.confirm("Send " + shortId(task.id) + " to " +
+                alias + "? Stored delivery is not an operator acknowledgment.")) return;
+              execute(() => get("/api/peer/send", {
+                id: task.id, revision: task.revision, alias, confirm: true
+              }), "STORED ON RECEIVER / AWAITING ACK");
+            }, "solid"));
+          }
+        }
+      } else if (state.part === "move") {
+        body.append(reassignForm(task));
+      } else {
+        const history = task.events.slice().reverse();
+        const pageCount = Math.max(1, Math.ceil(history.length / 2));
+        state.logPage = Math.min(state.logPage, pageCount - 1);
+        const entries = history.slice(state.logPage * 2, state.logPage * 2 + 2);
+        entries.forEach((item) => {
+          const line = node("div", "task-compact-event");
+          line.append(node("strong", "", item.kind.toUpperCase()),
+            node("span", "", "  " + relativeTime(item.at)),
+            node("p", "", item.detail));
+          body.append(line);
+        });
+        if (pageCount > 1) {
+          const pager = node("div", "task-mini-pager");
+          const prev = button("◀", () => { state.logPage--; render(); }, "ghost");
+          const next = button("▶", () => { state.logPage++; render(); }, "ghost");
+          prev.disabled = state.logPage === 0;
+          next.disabled = state.logPage >= pageCount - 1;
+          pager.append(prev, node("span", "", (state.logPage + 1) + "/" + pageCount), next);
+          body.append(pager);
+        }
+      }
+      box.append(body);
+      return box;
+    }
+
+    function compactBoard() {
+      const data = state.data;
+      const all = data.board.tasks;
+      const box = node("div", "task-control task-control-micro");
+      if (state.error || state.status) {
+        const message = node("div", "task-compact-message", state.error || state.status);
+        message.title = state.error || state.status;
+        message.setAttribute("role", "status");
+        box.append(message);
+      }
+      if (state.view === "new" && data.manager) {
+        box.append(compactCreate());
+        return box;
+      }
+      const selected = all.find((task) => task.id === state.selected);
+      if (selected) {
+        box.append(compactDetail(selected));
+        return box;
+      }
+      const top = node("div", "task-heading");
+      top.append(node("strong", "", data.manager ? "TASK CONTROL" : "MY DUTIES"));
+      if (data.manager) {
+        top.append(button("+ NEW", () => {
+          state.view = "new";
+          state.createStep = 0;
+          state.draft = {};
+          state.error = "";
+          render();
+        }, "solid"));
+      } else top.append(button("↻", refresh, "ghost"));
+      box.append(top);
+      const tally = counts(all);
+      const meter = node("div", "task-counts");
+      for (const [label, number] of [
+        ["OPEN", tally.open], ["LATE", tally.due],
+        ["BLOCK", tally.blocked], ["ACK", tally.awaiting]
+      ]) {
+        const item = node("div", "task-count");
+        item.append(node("span", "", label),
+          node("strong", number && label !== "OPEN" ? "warn" : "", number));
+        meter.append(item);
+      }
+      box.append(meter);
+      const filter = fieldSelect("filter", "SHOW", [
+        ["open", "ACTIVE"], ["overdue", "LATE"], ["blocked", "BLOCK"],
+        ["done", "DONE"], ["all", "ALL"]
+      ], state.filter);
+      filter.querySelector("select").addEventListener("change", (event) => {
+        state.filter = event.target.value;
+        state.page = 0;
+        render();
+      });
+      box.append(filter);
+      const filtered = sortTasks(all).filter((task) => {
+        if (state.filter === "open") return !done(task);
+        if (state.filter === "overdue") return overdue(task);
+        if (state.filter === "blocked") return task.status === "blocked";
+        if (state.filter === "done") return done(task);
+        return true;
+      });
+      const pageSize = 2;
+      const pages = Math.max(1, Math.ceil(filtered.length / pageSize));
+      state.page = Math.min(state.page, pages - 1);
+      const rows = node("div", "task-list");
+      const visible = filtered.slice(state.page * pageSize, (state.page + 1) * pageSize);
+      if (!visible.length) rows.append(node("div", "task-empty", "NO TASKS"));
+      visible.forEach((task) => {
+        const row = button("", () => {
+          state.selected = task.id;
+          state.part = "info";
+          render();
+        }, "task-row");
+        const line = node("div", "task-row-head");
+        line.append(node("strong", "", shortId(task.id) + " " + task.title),
+          badge(statusText(task.status), task.status === "blocked" ? "warn" : ""));
+        row.append(line);
+        row.append(node("div", "task-row-foot",
+          task.assignee + (overdue(task) ? " · OVERDUE" : "")));
+        rows.append(row);
+      });
+      box.append(rows);
+      if (pages > 1) {
+        const pager = node("div", "task-mini-pager");
+        const previous = button("◀", () => { state.page--; render(); }, "ghost");
+        const next = button("▶", () => { state.page++; render(); }, "ghost");
+        previous.disabled = state.page === 0;
+        next.disabled = state.page >= pages - 1;
+        pager.append(previous, node("span", "", (state.page + 1) + " / " + pages), next);
+        box.append(pager);
+      }
+      return box;
+    }
+
     function render() {
       if (!root.isConnected) return;
+      if (options.compact && state.data) {
+        root.replaceChildren(compactBoard());
+        return;
+      }
       root.replaceChildren();
       const wrap = node("div", "task-control");
       if (state.error) wrap.append(node("p", "task-message error", state.error));
@@ -481,7 +808,25 @@
       root.append(wrap);
     }
     await refresh();
-    return { refresh };
+    return {
+      refresh,
+      back: () => {
+        if (!options.compact) return false;
+        if (state.view === "new") {
+          if (state.createStep) state.createStep = 0;
+          else state.view = "board";
+          render();
+          return true;
+        }
+        if (state.selected !== null) {
+          state.selected = null;
+          state.part = "info";
+          render();
+          return true;
+        }
+        return false;
+      }
+    };
   }
 
   window.RustBoyTasks = Object.freeze({ mount, summary });
