@@ -114,7 +114,7 @@ def main():
         )
         assert "unsupported preferences schema" in corrupt.stderr
         assert preference_path.read_bytes() == original
-        assert "fixed in-memory device fixtures" in command(
+        assert "fixed in-memory fixtures" in command(
             env, "simulate", "list"
         ).stdout
 
