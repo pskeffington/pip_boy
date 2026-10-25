@@ -180,7 +180,9 @@ mod tests {
             responder
                 .send_to(br#"{"IsBusy":true,"MachineType":"PS4"}"#, sender)
                 .unwrap();
-            responder.send_to(br#"{"IsBusy":true,"MachineType":"PS4"}"#, sender).unwrap();
+            responder
+                .send_to(br#"{"IsBusy":true,"MachineType":"PS4"}"#, sender)
+                .unwrap();
         });
         let found = discover_to(destination, Duration::from_millis(200)).unwrap();
         reply.join().unwrap();

@@ -284,7 +284,10 @@ impl Workbench {
                 "unsupported workbench schema; original file preserved",
             ));
         }
-        if preset(&self.profile).is_none() || !valid_title(&self.title) || self.slots.len() > MAX_SLOTS {
+        if preset(&self.profile).is_none()
+            || !valid_title(&self.title)
+            || self.slots.len() > MAX_SLOTS
+        {
             return Err(io::Error::new(
                 io::ErrorKind::InvalidData,
                 "invalid title or too many workbench slots; original file preserved",
@@ -311,7 +314,10 @@ impl Workbench {
         let mut bytes = Vec::new();
         reader.take(MAX_BYTES + 1).read_to_end(&mut bytes)?;
         if bytes.len() as u64 > MAX_BYTES {
-            return Err(io::Error::new(io::ErrorKind::InvalidData, "workbench exceeds 64 KiB"));
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "workbench exceeds 64 KiB",
+            ));
         }
         let board: Self = serde_json::from_slice(&bytes)
             .map_err(|error| io::Error::new(io::ErrorKind::InvalidData, error))?;
@@ -323,7 +329,10 @@ impl Workbench {
         self.validate()?;
         let data = serde_json::to_vec_pretty(self).map_err(io::Error::other)?;
         if data.len() as u64 > MAX_BYTES {
-            return Err(io::Error::new(io::ErrorKind::InvalidData, "workbench exceeds 64 KiB"));
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "workbench exceeds 64 KiB",
+            ));
         }
         Ok(data)
     }
@@ -395,7 +404,10 @@ impl WorkbenchStore {
             if error.kind() == io::ErrorKind::WouldBlock
                 || error.raw_os_error() == fs2::lock_contended_error().raw_os_error()
             {
-                io::Error::new(io::ErrorKind::WouldBlock, "workbench is in use by another writer")
+                io::Error::new(
+                    io::ErrorKind::WouldBlock,
+                    "workbench is in use by another writer",
+                )
             } else {
                 error
             }
@@ -422,10 +434,16 @@ impl WorkbenchStore {
         let _lock = self.writer_lock()?;
         let mut board = self.load()?;
         if board.slots.iter().any(|slot| slot.tool == id) {
-            return Err(io::Error::new(io::ErrorKind::AlreadyExists, "tool is already pinned"));
+            return Err(io::Error::new(
+                io::ErrorKind::AlreadyExists,
+                "tool is already pinned",
+            ));
         }
         if board.slots.len() >= MAX_SLOTS {
-            return Err(io::Error::new(io::ErrorKind::InvalidInput, "workbench is full"));
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "workbench is full",
+            ));
         }
         let next_id = board
             .slots
@@ -545,14 +563,20 @@ fn parse_hex(input: &str) -> io::Result<Vec<u8>> {
         }
         for pair in part.as_bytes().chunks_exact(2) {
             if data.len() >= 4096 {
-                return Err(io::Error::new(io::ErrorKind::InvalidInput, "max 4096 bytes"));
+                return Err(io::Error::new(
+                    io::ErrorKind::InvalidInput,
+                    "max 4096 bytes",
+                ));
             }
             let digit = std::str::from_utf8(pair).expect("validated ASCII");
             data.push(u8::from_str_radix(digit, 16).expect("validated hex digits"));
         }
     }
     if data.is_empty() {
-        return Err(io::Error::new(io::ErrorKind::InvalidInput, "hex input cannot be empty"));
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "hex input cannot be empty",
+        ));
     }
     Ok(data)
 }
@@ -585,17 +609,97 @@ pub fn inspect_hex(input: &str) -> io::Result<String> {
     Ok(output)
 }
 
+/// Offline IPv4/CIDR arithmetic only. Does not inspect interfaces or send packets.
+pub fn ipv4_cidr(value: &str) -> io::Result<String> {
+    use std::net::Ipv4Addr;
+
+    let (address, prefix) = value.split_once('/').ok_or_else(|| {
+        io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "expected IPv4/prefix, e.g. 192.168.1.50/24",
+        )
+    })?;
+    if address.is_empty()
+        || address.trim() != address
+        || prefix.is_empty()
+        || !prefix.bytes().all(|byte| byte.is_ascii_digit())
+    {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "invalid IPv4/CIDR input",
+        ));
+    }
+    let ip: Ipv4Addr = address
+        .parse()
+        .map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "invalid IPv4 address"))?;
+    let bits: u8 = prefix
+        .parse()
+        .map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "prefix must be 0..32"))?;
+    if bits > 32 {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "prefix must be 0..32",
+        ));
+    }
+    let mask = if bits == 0 {
+        0
+    } else {
+        u32::MAX << (32 - bits)
+    };
+    let network = u32::from(ip) & mask;
+    let broadcast = network | !mask;
+    let (first, last, usable) = if bits <= 30 {
+        (network + 1, broadcast - 1, (1u64 << (32 - bits)) - 2)
+    } else if bits == 31 {
+        (network, broadcast, 2)
+    } else {
+        (network, network, 1)
+    };
+    Ok(format!(
+        "NET LAB / OFFLINE IPv4\nInput: {ip}/{bits}\nNetwork: {}/{}\nMask: {}\nBroadcast: {}\nHost range: {} - {}\nUsable addresses: {usable}\nNo network packets sent.",
+        Ipv4Addr::from(network),
+        bits,
+        Ipv4Addr::from(mask),
+        Ipv4Addr::from(broadcast),
+        Ipv4Addr::from(first),
+        Ipv4Addr::from(last)
+    ))
+}
+
+/// CRC32/IEEE detects accidental corruption; it is not cryptographic integrity.
+pub fn crc32_hex(input: &str) -> io::Result<String> {
+    let bytes = parse_hex(input)?;
+    let mut state = !0u32;
+    for byte in &bytes {
+        state ^= u32::from(*byte);
+        for _ in 0..8 {
+            state = if state & 1 != 0 {
+                (state >> 1) ^ 0xedb8_8320
+            } else {
+                state >> 1
+            };
+        }
+    }
+    Ok(format!(
+        "CRC32/IEEE: {:08x}\nBytes: {}\nNONCRYPTOGRAPHIC: not suitable for security or authentication.",
+        !state,
+        bytes.len()
+    ))
+}
+
 pub fn encode_hex(text: &str) -> io::Result<String> {
     if text.is_empty() || text.len() > 4096 {
-        return Err(io::Error::new(io::ErrorKind::InvalidInput, "text must be 1..4096 bytes"));
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "text must be 1..4096 bytes",
+        ));
     }
     Ok(text
         .as_bytes()
         .iter()
         .map(|byte| format!("{byte:02x}"))
         .collect::<Vec<_>>()
-        .join(" "))
-}
+        .join(" "))}
 
 #[cfg(test)]
 mod tests {
@@ -664,7 +768,10 @@ mod tests {
         #[cfg(unix)]
         {
             use std::os::unix::fs::PermissionsExt;
-            assert_eq!(fs::metadata(store.path()).unwrap().permissions().mode() & 0o777, 0o600);
+            assert_eq!(
+                fs::metadata(store.path()).unwrap().permissions().mode() & 0o777,
+                0o600
+            );
             assert_eq!(
                 fs::metadata(store.path().parent().unwrap())
                     .unwrap()
@@ -704,7 +811,9 @@ mod tests {
                 assert!(tool(&slot.tool).unwrap().availability.can_pin());
             }
         }
-        assert!(Workbench::from_preset(preset("custom").unwrap()).slots.is_empty());
+        assert!(Workbench::from_preset(preset("custom").unwrap())
+            .slots
+            .is_empty());
         assert!(PRESETS.iter().all(|entry| entry.lore_evidence.len() == 5));
     }
 
@@ -728,7 +837,11 @@ mod tests {
         assert_eq!(fs::read(store.path()).unwrap(), existing);
 
         // Existing version-1 boards lacked a profile and must remain readable.
-        fs::write(store.path(), r#"{"schema_version":1,"title":"Legacy","slots":[{"id":1,"tool":"notes"}]}"#).unwrap();
+        fs::write(
+            store.path(),
+            r#"{"schema_version":1,"title":"Legacy","slots":[{"id":1,"tool":"notes"}]}"#,
+        )
+        .unwrap();
         let legacy = store.load().unwrap();
         assert_eq!(legacy.profile, "custom");
         assert_eq!(legacy.slots[0].tool, "notes");
@@ -740,13 +853,26 @@ mod tests {
         assert!(result.contains("192.168.1.0/24"));
         assert!(result.contains("192.168.1.255"));
         assert!(result.contains("192.168.1.1 - 192.168.1.254"));
-        assert!(ipv4_cidr("10.0.0.4/31").unwrap().contains("Usable addresses: 2"));
-        assert!(ipv4_cidr("10.0.0.4/32").unwrap().contains("Usable addresses: 1"));
+        assert!(ipv4_cidr("10.0.0.4/31")
+            .unwrap()
+            .contains("Usable addresses: 2"));
+        assert!(ipv4_cidr("10.0.0.4/32")
+            .unwrap()
+            .contains("Usable addresses: 1"));
         assert!(ipv4_cidr("0.0.0.0/0").unwrap().contains("0.0.0.0/0"));
-        for bad in ["", "host/24", "192.168.1.5/33", "192.168.1.5/a", "1.2.3.4", "1.2.3.4/-1"] {
+        for bad in [
+            "",
+            "host/24",
+            "192.168.1.5/33",
+            "192.168.1.5/a",
+            "1.2.3.4",
+            "1.2.3.4/-1",
+        ] {
             assert!(ipv4_cidr(bad).is_err(), "{bad}");
         }
-        assert!(crc32_hex("313233343536373839").unwrap().contains("cbf43926"));
+        assert!(crc32_hex("313233343536373839")
+            .unwrap()
+            .contains("cbf43926"));
         assert!(crc32_hex("gg").is_err());
         assert!(crc32_hex(&"01".repeat(4097)).is_err());
     }

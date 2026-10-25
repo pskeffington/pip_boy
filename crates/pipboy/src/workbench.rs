@@ -1,5 +1,7 @@
 //! Explicit local workbench management. No pin operation executes a tool.
-use pipboy_core::workbench::{crc32_hex, encode_hex, inspect_hex, ipv4_cidr, tool, WorkbenchStore, PALETTE};
+use pipboy_core::workbench::{
+    crc32_hex, encode_hex, inspect_hex, ipv4_cidr, tool, WorkbenchStore, PALETTE,
+};
 use std::error::Error;
 
 pub fn run(args: Vec<String>) -> Result<(), Box<dyn Error>> {
@@ -13,17 +15,26 @@ pub fn run(args: Vec<String>) -> Result<(), Box<dyn Error>> {
                 [] => {
                     println!("Rust-Boy / ready-to-use occupational profiles");
                     for profile in pipboy_core::workbench::PRESETS {
-                        println!("{:<24} {:<28} {}",
-                            profile.id, profile.title, profile.description);
-                        println!("  {} / {} tools / lore {}",
-                            profile.role_fidelity, profile.tools.len(), profile.lore_evidence);
+                        println!(
+                            "{:<24} {:<28} {}",
+                            profile.id, profile.title, profile.description
+                        );
+                        println!(
+                            "  {} / {} tools / lore {}",
+                            profile.role_fidelity,
+                            profile.tools.len(),
+                            profile.lore_evidence
+                        );
                     }
                     println!("Select one: pipboy workbench use overseer --replace");
                     println!("Advanced builders: pipboy workbench use custom --replace");
                     Ok(())
                 }
                 [flag] if flag == "--json" => {
-                    println!("{}", serde_json::to_string_pretty(pipboy_core::workbench::PRESETS)?);
+                    println!(
+                        "{}",
+                        serde_json::to_string_pretty(pipboy_core::workbench::PRESETS)?
+                    );
                     Ok(())
                 }
                 _ => Err(usage.into()),
@@ -32,7 +43,9 @@ pub fn run(args: Vec<String>) -> Result<(), Box<dyn Error>> {
         "use" => {
             let key = args.next().ok_or(usage)?;
             if args.collect::<Vec<_>>() != ["--replace"] {
-                return Err("usage: pipboy workbench use PROFILE --replace (replaces current pins)".into());
+                return Err(
+                    "usage: pipboy workbench use PROFILE --replace (replaces current pins)".into(),
+                );
             }
             let changed = WorkbenchStore::from_environment()?.apply_preset(&key)?;
             println!(
@@ -74,13 +87,25 @@ pub fn run(args: Vec<String>) -> Result<(), Box<dyn Error>> {
             if flags.as_slice() == ["--json"] {
                 println!("{}", serde_json::to_string_pretty(&board)?);
             } else {
-                println!("{} | {} profile | {} pinned tools", board.title, board.profile, board.slots.len());
+                println!(
+                    "{} | {} profile | {} pinned tools",
+                    board.title,
+                    board.profile,
+                    board.slots.len()
+                );
                 if board.slots.is_empty() {
-                    println!("EMPTY / Press A in the WORKBENCH panel, or use: pipboy workbench palette");
+                    println!(
+                        "EMPTY / Press A in the WORKBENCH panel, or use: pipboy workbench palette"
+                    );
                 }
                 for slot in &board.slots {
                     if let Some(entry) = tool(&slot.tool) {
-                        println!("#{} {:<14} {}", slot.id, entry.name, entry.availability.label());
+                        println!(
+                            "#{} {:<14} {}",
+                            slot.id,
+                            entry.name,
+                            entry.availability.label()
+                        );
                         println!("   {}", entry.command);
                     }
                 }

@@ -8,7 +8,15 @@ use pipboy_core::workbench::{tool, Workbench, PALETTE, PRESETS};
 use ratatui::prelude::*;
 use ratatui::widgets::{Block, Borders, List, ListItem, ListState, Paragraph, Tabs, Wrap};
 
-pub const PANELS: &[&str] = &["STAT", "LIBRARY", "NOTES", "WORKBENCH", "MAP", "RADIO", "MESH"];
+pub const PANELS: &[&str] = &[
+    "STAT",
+    "LIBRARY",
+    "NOTES",
+    "WORKBENCH",
+    "MAP",
+    "RADIO",
+    "MESH",
+];
 
 #[derive(Clone, Copy)]
 pub enum Action {
@@ -226,8 +234,9 @@ pub fn render(frame: &mut Frame, navigation: &mut Navigation, view: View<'_>) {
         }
         3 => {
             if navigation.profiles_open {
-                navigation.profile_selected =
-                    navigation.profile_selected.min(PRESETS.len().saturating_sub(1));
+                navigation.profile_selected = navigation
+                    .profile_selected
+                    .min(PRESETS.len().saturating_sub(1));
                 let selected = navigation.profile_selected;
                 let labels = PRESETS
                     .iter()
@@ -280,15 +289,17 @@ pub fn render(frame: &mut Frame, navigation: &mut Navigation, view: View<'_>) {
                 );
                 (labels, detail)
             } else {
-                let selected = navigation.selected[3]
-                    .min(view.workbench.slots.len().saturating_sub(1));
+                let selected =
+                    navigation.selected[3].min(view.workbench.slots.len().saturating_sub(1));
                 navigation.selected[3] = selected;
                 let labels = view
                     .workbench
                     .slots
                     .iter()
                     .map(|slot| {
-                        let name = tool(&slot.tool).map(|entry| entry.name).unwrap_or("UNKNOWN");
+                        let name = tool(&slot.tool)
+                            .map(|entry| entry.name)
+                            .unwrap_or("UNKNOWN");
                         format!("#{} {name}", slot.id)
                     })
                     .collect();
@@ -580,5 +591,4 @@ mod tests {
         assert!(!navigation.profiles_open);
         assert!(!navigation.profile_confirm);
     }
-
 }

@@ -11,8 +11,8 @@ use pipboy_core::lifecycle::State;
 use pipboy_core::metrics::Collector;
 use pipboy_core::notes::NoteStore;
 use pipboy_core::observation::Observation;
-use pipboy_core::workbench::{WorkbenchStore, PALETTE, PRESETS};
 use pipboy_core::runtime::{Capability, LocalOperation, ModuleHost, PermissionSet, PollOutcome};
+use pipboy_core::workbench::{WorkbenchStore, PALETTE, PRESETS};
 use ratatui::prelude::*;
 use std::error::Error;
 use std::io;
@@ -139,9 +139,7 @@ pub fn run() -> Result<(), Box<dyn Error>> {
                         KeyCode::Home => navigation.palette_move(Action::Home),
                         KeyCode::End => navigation.palette_move(Action::End),
                         KeyCode::Tab | KeyCode::Right => navigation.apply(Action::Next, 0),
-                        KeyCode::BackTab | KeyCode::Left => {
-                            navigation.apply(Action::Previous, 0)
-                        }
+                        KeyCode::BackTab | KeyCode::Left => navigation.apply(Action::Previous, 0),
                         _ if exit_requested(key) => break,
                         _ => {}
                     }
