@@ -637,6 +637,7 @@
       view.sourceLines.textContent = (view.countyPackage ?
         "COUNTY GEOID " + view.countyPackage.geoid +
         " / U.S. Census TIGER/Line 2025\n" +
+        "Source datum: GCS NAD83 (geographic lon/lat); no datum shift applied.\n" +
         Object.entries(view.countyPackage.layers).map(([id,d]) =>
           id + ": " + d.features + " features, " + d.vertices +
           " original vertices / county-wide source").join("\n") +
