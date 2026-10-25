@@ -1,6 +1,6 @@
 # Rust-Boy | OS device authorization boundary
 
-**Status:** an isolated, **deny-all** one-shot stdio process with a bounded protocol is now authored (see [BROKER_PROTOCOL.md](BROKER_PROTOCOL.md)); there is still **no authenticated OS-enforced broker**, live device driver, trusted consent service, privileged helper or hardware probe. The in-process simulator and separate deny-only process do not supply real authorization.
+**Status:** an isolated, **deny-all** one-shot stdio process with a bounded protocol is [cross-platform CI-verified](https://github.com/pskeffington/pip_boy/actions/runs/40164717116) (see [BROKER_PROTOCOL.md](BROKER_PROTOCOL.md)); there is still **no authenticated OS-enforced broker**, live device driver, trusted consent service, privileged helper or hardware probe. The in-process simulator and separate deny-only process do not supply real authorization.
 
 ## Principle: saved preference is never an active grant
 

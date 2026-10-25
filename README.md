@@ -4,7 +4,7 @@
 
 Rust-Boy is an independent, modular toolkit for desktop terminals and future wearable field computers. It combines local host diagnostics, a curated research library, and a user-controlled offline journal under one minimal native interface. Planned adapters extend it to Raspberry Pi hardware, maps, receive-only radios, and authenticated local communications.
 
-> **Project status — cross-platform native console and mock-adapter CI verified.** The latest pre-broker [push](https://github.com/pskeffington/pip_boy/actions/runs/40163143659) and [PR](https://github.com/pskeffington/pip_boy/actions/runs/40163148435) workflows passed all five jobs at `e7c5e3f`, including native Windows ConPTY and macOS PTY. The newly added **standalone, deny-all physical-request broker** and its strict protocol tests are undergoing CI verification on this branch. Every real-device request is denied; **no privileged OS helper, trusted consent service, physical driver, real radio/network access or OS-enforced device authorization is implemented**. See [broker protocol](docs/BROKER_PROTOCOL.md) and [validation](docs/VALIDATION.md).
+> **Project status — five-job CI green on Linux, macOS and Windows, including the new deny-all broker executable.** [GitHub Actions run 40164717116](https://github.com/pskeffington/pip_boy/actions/runs/40164717116) passed catalog validation, Linux stable and Rust 1.81.0, native macOS PTY, Windows ConPTY, and the separate broker's strict JSON/denial regression suite at `6713885`. The broker always rejects physical device access; **no real OS authorization broker, trusted consent service, device driver, radio/network acquisition or privileged helper exists**. The subsequent documentation-only head requires a separate CI result. See [broker protocol](docs/BROKER_PROTOCOL.md) and [validation](docs/VALIDATION.md).
 
 ## Rust-Boy identity
 
@@ -118,7 +118,7 @@ Three new Rust core traits (`InputSource`, `DisplayBackend`, and `SerialReader`)
 
 ## Deny-all external device request broker (G2-A precursor)
 
-A separate `rust-boy-broker` executable now implements a bounded, one-request **deny-only** JSON protocol. It accepts an explicit `--stdio-once` invocation, validates the named device/capability/operation and returns `allowed:false` even when operator intent is supplied. It creates no persistent grants or device handles and never opens a port, sensor or network socket. This is a process/protocol foundation, **not** an authenticated or OS-enforced device authorization service. For a sample request and the strict contract, see [broker protocol](docs/BROKER_PROTOCOL.md). Its new compile and regression tests are pending full acceptance.
+A separate `rust-boy-broker` executable now implements a bounded, one-request **deny-only** JSON protocol. It accepts an explicit `--stdio-once` invocation, validates the named device/capability/operation and returns `allowed:false` even when operator intent is supplied. It creates no persistent grants or device handles and never opens a port, sensor or network socket. This is a process/protocol foundation, **not** an authenticated or OS-enforced device authorization service. For a sample request and the strict contract, see [broker protocol](docs/BROKER_PROTOCOL.md). Its compile, unit and subprocess regression tests passed the cross-platform [quality matrix](https://github.com/pskeffington/pip_boy/actions/runs/40164717116).
 
 ```bash
 cargo build --workspace --locked

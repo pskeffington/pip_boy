@@ -1,8 +1,6 @@
 # Rust-Boy | Deny-all physical broker protocol v1
 
-**Gate:** G2-A protocol precursor. **Status:** separate binary with no device
-backends; not a real OS-permission broker. Every request returns `allowed:
-false`, including well-formed requests declaring explicit operator intent.
+**Gate:** G2-A protocol precursor. **Status:** separate deny-only binary, verified by [Linux/macOS/Windows CI](https://github.com/pskeffington/pip_boy/actions/runs/40164717116), with no device backends; not a real OS-permission broker. Every request returns `allowed:false`, including well-formed requests declaring explicit operator intent.
 
 ## Run explicitly
 

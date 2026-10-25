@@ -23,7 +23,7 @@
 | Research consistency | tools/validate_catalog.py | Passing locally | Keep catalog and Rust registry aligned |
 | Quality checks | rust.yml | Five-job Linux stable/MSRV, macOS PTY and Windows ConPTY matrix green at `4d27208` in run 40162936734 | Release/accessibility acceptance and selected actual hardware |
 | OS broker trust model | docs/OS_DEVICE_BROKER.md | Independent broker IPC, per-device identity/consent, real deadline and revocation acceptance specified | No real OS-enforced broker code, user authorization UX or physical adapter yet |
-| Physical broker deny-all precursor | crates/rust-boy-broker; tools/smoke_broker.py | Separate executable; 1 KiB strict request frame, 11 closed capability/operation pairs, 12 Rust fixtures and OS-native subprocess tests **authored** | Exact-commit CI verification, authenticated OS IPC, caller identity, real consent/handle isolation (all still absent) |
+| Physical broker deny-all precursor | crates/rust-boy-broker; tools/smoke_broker.py | Separate executable; 1 KiB strict request frame, 11 closed capability/operation pairs, 12 Rust fixtures and OS-native subprocess tests passed [run 40164717116](https://github.com/pskeffington/pip_boy/actions/runs/40164717116) | Authenticated OS IPC, caller identity, trusted consent and physical handle isolation (all still absent) |
 
 See [VALIDATION.md](VALIDATION.md) for executed Linux checks. TUI and NDJSON use `ModuleHost` with a lazy telemetry adapter; the status CLI has now been routed through the same host (validated in Ubuntu CI at `f445814`). TUI P controls local host-read grant/revocation. Preference persistence is authored but is not an active grant; session authorization, general adapter consent and OS brokering remain planned.
 
