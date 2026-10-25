@@ -317,10 +317,14 @@ const forms = Object.freeze({
   "net-lab":
     '<label for="lab-mode">OPERATION<select name="mode" id="lab-mode">' +
     '<option value="scan">LIVE PRIVATE LAN SCAN</option>' +
+    '<option value="unifi-sites">UNIFI / LIST SITES</option>' +
+    '<option value="unifi-clients">UNIFI / CONNECTED CLIENTS</option>' +
+    '<option value="unifi-compare">UNIFI / COMPARE WITH LAN</option>' +
     '<option value="cidr">OFFLINE CIDR CALCULATOR</option></select></label>' +
     field("input", "LAN CIDR OR LOCAL", "local", 'autocomplete="off" spellcheck="false"') +
+    field("site", "UNIFI SITE UUID", "", 'autocomplete="off" spellcheck="false"') +
     '<label class="scan-consent"><input type="checkbox" name="authorized" value="yes">' +
-    'I am authorized to probe this private network</label>' +
+    'Authorized for this network/controller</label>' +
     '<label class="scan-consent"><input type="checkbox" name="monitor" value="yes">' +
     'Refresh every 60 seconds while NET ENGINEER is open</label>',
   "byte-lab":
@@ -416,15 +420,33 @@ function toggleGeoMode() {
 function toggleNetMode() {
   if (selectedTool !== "net-lab") return;
   const selector = byId("lab-mode");
-  const input = byId("lab-input");
-  if (!selector || !input) return;
-  const scanning = selector.value === "scan";
-  const consent = input.closest("form")?.querySelectorAll(".scan-consent");
-  if (consent) for (const label of consent) label.hidden = !scanning;
-  input.labels[0].firstChild.textContent = scanning ? "LAN CIDR OR LOCAL" : "IPV4 / CIDR";
-  if (!scanning && input.value === "local") input.value = "192.168.1.50/24";
-  if (scanning && input.value === "192.168.1.50/24") input.value = "local";
-  ui.run.textContent = scanning ? "SCAN PRIVATE LAN" : "CALCULATE CIDR";
+  const ip = byId("lab-input");
+  const site = byId("lab-site");
+  if (!selector || !ip || !site) return;
+  const mode = selector.value;
+  const needsCidr = ["scan", "unifi-compare", "cidr"].includes(mode);
+  const needsSite = ["unifi-clients", "unifi-compare"].includes(mode);
+  const needsConsent = mode !== "cidr";
+  const ipLabel = ip.closest("label");
+  const siteLabel = site.closest("label");
+  ipLabel.hidden = !needsCidr;
+  siteLabel.hidden = !needsSite;
+  ip.required = needsCidr;
+  site.required = needsSite;
+  for (const label of ui.form.querySelectorAll(".scan-consent")) {
+    label.hidden = !needsConsent;
+  }
+  const consent = ui.form.querySelector('input[name="authorized"]');
+  if (consent) consent.required = needsConsent;
+  if (mode === "cidr" && ip.value === "local") ip.value = "192.168.1.50/24";
+  if (mode !== "cidr" && ip.value === "192.168.1.50/24") ip.value = "local";
+  const labels = {
+    scan: "SCAN PRIVATE LAN", "unifi-sites": "LIST UNIFI SITES",
+    "unifi-clients": "GET CONNECTED CLIENTS",
+    "unifi-compare": "COMPARE CONTROLLER / LAN", cidr: "CALCULATE CIDR"
+  };
+  ui.run.textContent = labels[mode] || "RUN";
+  ui.kind.textContent = needsConsent ? "AUTHORIZED / READ ONLY" : "OFFLINE";
 }
 
 function renderAll() {
@@ -542,37 +564,53 @@ async function runLab(event) {
   }
   const tool = selectedTool;
   const input = Object.fromEntries(new FormData(ui.form).entries());
-  const activeScan = tool === "net-lab" && input.mode === "scan";
+  const mode = input.mode;
+  const activeScan = tool === "net-lab" && mode === "scan";
+  const unifi = tool === "net-lab" && mode.startsWith("unifi-");
+  const external = activeScan || unifi;
   working = true;
   ui.run.disabled = true;
-  ui.run.textContent = activeScan ? "SCANNING PRIVATE LAN…" : "Processing locally…";
+  ui.run.textContent = external ? "CHECKING AUTHORIZED NETWORK…" : "Processing locally…";
   ui.outputKind.textContent = "RUNNING";
-  ui.output.textContent = activeScan
-    ? "Sending bounded ICMP/TCP probes on the authorized private scope. No Internet targets."
+  ui.output.textContent = external
+    ? "Collecting explicitly requested network evidence. No credentials leave Rust-Boy."
     : "Executing the selected allowlisted local tool.";
   try {
-    if (activeScan && input.authorized !== "yes") {
-      throw new Error("Check authorization for this private network before scanning.");
+    if (external && input.authorized !== "yes") {
+      throw new Error("Confirm authorization for this private network/controller.");
     }
-    const result = activeScan
-      ? await api("/api/net/scan", { cidr: input.input, confirm: true })
-      : await api("/api/experiment",
-          tool === "net-lab" ? { tool, input: input.input } : { tool, ...input });
+    let result;
+    if (activeScan) {
+      result = await api("/api/net/scan", { cidr: input.input, confirm: true });
+    } else if (unifi) {
+      const operation = mode.substring("unifi-".length);
+      const payload = { operation, confirm: true };
+      if (operation !== "sites") payload.site = input.site.trim();
+      if (operation === "compare") payload.cidr = input.input;
+      result = await api("/api/net/unifi", payload);
+    } else {
+      result = await api("/api/experiment",
+        tool === "net-lab" ? { tool, input: input.input } : { tool, ...input });
+    }
     if (selectedTool !== tool || !selectedAvailable()) return;
     lastOutput = result.output;
     ui.output.textContent = lastOutput;
     ui.outputKind.textContent = result.kind.toUpperCase().replaceAll("_", " ");
     ui.copy.disabled = false;
-    ui.footer.textContent = activeScan
-      ? "Active LAN scan complete. Counts are detected, not total connected."
-      : result.kind === "computed"
-        ? "Local result computed; no external data uploaded"
-        : "Information only; no connection established";
-    if (activeScan && input.monitor === "yes") {
+    ui.footer.textContent = unifi
+      ? result.inventory?.connected_clients !== undefined
+        ? "UniFi connected: " + result.inventory.connected_clients +
+          ". Controller inventory, not all LAN devices."
+        : "UniFi sites retrieved. Read-only."
+      : activeScan ? "LAN scan complete. Detected count is not total clients."
+        : result.kind === "computed"
+          ? "Local result computed; no external data uploaded"
+          : "Information only; no connection established";
+    if (external && input.monitor === "yes") {
       networkWatchTimer = window.setTimeout(() => {
         networkWatchTimer = null;
         if (selectedTool === "net-lab" && selectedAvailable() && !working &&
-            byId("lab-mode")?.value === "scan" &&
+            byId("lab-mode")?.value === mode &&
             ui.form.querySelector('input[name="monitor"]')?.checked) {
           runLab({ preventDefault() {} });
         }
@@ -589,9 +627,9 @@ async function runLab(event) {
     working = false;
     if (selectedTool === tool && selectedAvailable()) {
       ui.run.disabled = false;
-      ui.run.textContent = activeScan ? "SCAN PRIVATE LAN" :
-        tool === "net-lab" ? "CALCULATE CIDR" :
-        toolInfo(tool)?.availability === "ready" ? "Run local test" : "Show safe handoff";
+      if (tool === "net-lab") toggleNetMode();
+      else ui.run.textContent = toolInfo(tool)?.availability === "ready"
+        ? "Run local test" : "Show safe handoff";
     }
   }
 }
