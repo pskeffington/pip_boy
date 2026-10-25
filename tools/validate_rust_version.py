@@ -35,6 +35,11 @@ for path in (
 ci = read(".github/workflows/rust.yml")
 require('toolchain: ["stable", "1.90.0"]' in ci,
         "CI must test latest stable and exact Rust 1.90.0")
+require("RUSTUP_TOOLCHAIN: ${{ matrix.toolchain }}" in ci,
+        "CI must override the stable toolchain file")
+require("Assert active matrix compiler" in ci
+        and r"rustc 1\.90\.0 " in ci,
+        "CI must assert actual Rust 1.90.0 instead of trusting matrix job labels")
 require("python3 tools/validate_rust_version.py" in ci,
         "version-policy validator must be part of CI")
 toolchain = read("rust-toolchain.toml")

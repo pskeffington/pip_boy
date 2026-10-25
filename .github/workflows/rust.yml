@@ -24,6 +24,10 @@ jobs:
   rust:
     name: Rust ${{ matrix.toolchain }}
     runs-on: ubuntu-latest
+    # The checked-in rust-toolchain.toml selects stable; override that here
+    # so the exact MSRV job genuinely compiles with its requested toolchain.
+    env:
+      RUSTUP_TOOLCHAIN: ${{ matrix.toolchain }}
     strategy:
       fail-fast: false
       matrix:
@@ -36,6 +40,16 @@ jobs:
           rustup default "${{ matrix.toolchain }}"
           rustc --version
           cargo --version
+      - name: Assert active matrix compiler
+        run: |
+          current="$(rustup show active-toolchain)"
+          case "$current" in
+            "${{ matrix.toolchain }}"-*) ;;
+            *) printf 'Wrong toolchain: %s\n' "$current"; exit 1 ;;
+          esac
+          if [ "${{ matrix.toolchain }}" = "1.90.0" ]; then
+            rustc --version | grep -Eq '^rustc 1\.90\.0 '
+          fi
       - name: Formatting
         if: matrix.toolchain == 'stable'
         run: cargo fmt --all -- --check
