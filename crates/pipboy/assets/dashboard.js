@@ -49,7 +49,9 @@ let selectedTool = null;
 let selectedCamera = null;
 let working = false;
 let lastOutput = "";
-let netMode = "cidr4";
+let netMode = "health";
+let unifiSites = [];
+let unifiSiteId = null;
 let toastTimer = null;
 
 const el = (tag, className, text) => {
@@ -328,6 +330,54 @@ const forms = Object.freeze({
   "simulator": '<p class="workspace-subtitle">Use deterministic fixtures. No physical interface is enabled.</p>'
 });
 
+function renderNetworkMetrics(result) {
+  const old = document.getElementById("network-health-summary");
+  if (old) old.remove();
+  if (!result || !["health", "unifi"].includes(result.kind)) return;
+  const section = el("div", "net-health-summary");
+  section.id = "network-health-summary";
+  const data = result.kind === "health" ? [
+    ["MEAN CONNECT", result.metrics?.mean_ms == null ? "N/A" :
+      result.metrics.mean_ms.toFixed(2) + " ms"],
+    ["VARIATION", result.metrics?.variation_ms == null ? "N/A" :
+      result.metrics.variation_ms.toFixed(2) + " ms"],
+    ["CONNECT FAIL", result.metrics?.failure_percent.toFixed(1) + "%"],
+    ["ATTEMPTS", result.metrics?.attempts]
+  ] : [
+    ["SITE", result.site?.name || "NONE"],
+    ["DEVICES", result.devices_listed + " / " + result.devices_total],
+    ["ONLINE SHOWN", result.online_on_page],
+    ["OFFLINE SHOWN", result.offline_on_page]
+  ];
+  for (const [label, value] of data) {
+    const card = el("div", "net-metric");
+    card.append(el("small", "", label), el("strong", "", value ?? "N/A"));
+    section.append(card);
+  }
+  if (result.kind === "health") {
+    const samples = el("div", "net-samples");
+    samples.setAttribute("aria-label", "Per-attempt connection times (failed attempts marked separately)");
+    const successful = result.metrics.samples_ms.filter((v) => v !== null);
+    const scale = Math.max(...successful, 1);
+    for (const sample of result.metrics.samples_ms) {
+      const bar = el("div", "net-sample" + (sample === null ? " failed" : ""));
+      bar.style.height = sample === null ? "4px" : Math.max(5, Math.round(sample / scale * 45)) + "px";
+      bar.title = sample === null ? "Connect failed" : sample.toFixed(2) + " ms";
+      samples.append(bar);
+    }
+    section.append(samples);
+  } else {
+    const devices = el("div", "net-devices");
+    for (const item of (result.devices || []).slice(0, 20)) {
+      const line = el("div", "net-device");
+      line.append(el("strong", "", item.name), el("span", "", item.state + " / " + item.model));
+      devices.append(line);
+    }
+    section.append(devices);
+  }
+  ui.output.before(section);
+}
+
 function renderNetworkForm() {
   const operations = snapshot?.net_operations || [];
   if (!operations.length) {
@@ -368,15 +418,44 @@ function renderNetworkForm() {
       wrapper.append(field);
       return wrapper;
     };
-    inputs.append(makeField("input", op.input_label, op.example, 256));
-    if (op.extra_label && op.extra_example) {
-      inputs.append(makeField("extra", op.extra_label, op.extra_example,
-        op.id === "route" ? 1024 : 256));
+    renderNetworkMetrics(null);
+    if (op.id === "unifi") {
+      inputs.append(el("p", "net-mode-notice", snapshot.unifi?.configured
+        ? "UNIFI CONFIGURED · MANUAL READ ONLY · VERIFIED TLS"
+        : "SET RUSTBOY_UNIFI_IP AND RUSTBOY_UNIFI_API_KEY ON MAC"));
+      if (unifiSites.length > 1) {
+        const chooser = el("label", "", "SITE");
+        const sites = el("select");
+        sites.name = "site";
+        for (const option of unifiSites) {
+          const item = el("option", "", option.name);
+          item.value = option.id;
+          sites.append(item);
+        }
+        sites.value = unifiSiteId || unifiSites[0].id;
+        sites.addEventListener("change", () => { unifiSiteId = sites.value; });
+        chooser.append(sites);
+        inputs.append(chooser);
+      }
+    } else {
+      inputs.append(makeField("input", op.input_label, op.example, 256));
+      if (op.extra_label && op.extra_example) {
+        inputs.append(makeField("extra", op.extra_label, op.extra_example,
+          op.id === "route" ? 1024 : 256));
+      }
+      if (op.id === "health") {
+        const samples = makeField("samples", "SAMPLES (3–8)", "5", 1);
+        samples.querySelector("input").inputMode = "numeric";
+        inputs.append(samples);
+      }
+      inputs.append(el("p", "net-mode-notice", op.id === "health"
+        ? "LIVE TCP HANDSHAKE MEASUREMENTS · NOT ICMP PACKET LOSS"
+        : op.id === "tcp" ? "ONE TCP CONNECTION · CONFIRMATION REQUIRED"
+        : "OFFLINE CALCULATION · NO PACKETS SENT"));
     }
-    inputs.append(el("p", "net-mode-notice", op.active
-      ? "ONE TCP CONNECTION · LITERAL IP · CONFIRMATION REQUIRED"
-      : "OFFLINE CALCULATION · NO PACKETS SENT"));
-    ui.run.textContent = op.active ? "Connect once" : "Calculate";
+    ui.run.textContent = op.id === "health" ? "Test network"
+      : op.id === "unifi" ? "Read UniFi"
+      : op.id === "tcp" ? "Connect once" : "Calculate";
     ui.kind.textContent = op.active ? "ACTIVE / CONFIRM" : "OFFLINE";
     ui.output.textContent = "Ready / " + op.name;
     ui.outputKind.textContent = "IDLE";
@@ -579,9 +658,13 @@ async function runLab(event) {
   if (!selectedTool || !selectedAvailable() || working) return;
   const tool = selectedTool;
   const input = Object.fromEntries(new FormData(ui.form).entries());
-  if (tool === "net-lab" && input.mode === "tcp") {
-    if (!window.confirm("Attempt one TCP connection to " + input.input + ":" +
-        input.extra + "? Only test endpoints you administer.")) return;
+  if (tool === "net-lab" && ["tcp", "health", "unifi"].includes(input.mode)) {
+    const prompt = input.mode === "unifi"
+      ? "Read UniFi sites and device status from the configured local console? GET only, no changes."
+      : input.mode === "health"
+        ? "Measure TCP connection time to this one IP and port for 3–8 probes? Failed connects are NOT packet loss."
+        : "Attempt one TCP connection to this IP and port?";
+    if (!window.confirm(prompt)) return;
     input.confirm = true;
   }
   working = true;
@@ -593,15 +676,22 @@ async function runLab(event) {
   try {
     const result = await api("/api/experiment", { tool, ...input });
     if (selectedTool !== tool || !selectedAvailable()) return;
+    if (result.kind === "unifi") {
+      unifiSites = Array.isArray(result.sites) ? result.sites : [];
+      unifiSiteId = result.site?.id || null;
+      renderNetworkForm();
+    }
     lastOutput = result.output;
     ui.output.textContent = lastOutput;
     ui.outputKind.textContent = result.kind.toUpperCase();
+    renderNetworkMetrics(result);
     ui.copy.disabled = false;
-    ui.footer.textContent = result.kind === "probe"
-      ? "One explicitly requested TCP connect attempt completed"
-      : result.kind === "computed"
-        ? "Local result computed; no external data uploaded"
-        : "Information only; no connection established";
+    ui.footer.textContent = result.kind === "health"
+      ? "Measured TCP connect time and variation; not ICMP packet loss"
+      : result.kind === "unifi" ? "Read-only UniFi local API snapshot; no changes"
+      : result.kind === "probe" ? "One explicitly requested TCP connect attempt completed"
+      : result.kind === "computed" ? "Local result computed; no external data uploaded"
+      : "Information only; no connection established";
   } catch (error) {
     if (selectedTool !== tool || !selectedAvailable()) return;
     lastOutput = "";
@@ -615,7 +705,9 @@ async function runLab(event) {
       ui.run.disabled = false;
       const info = toolInfo(tool);
       ui.run.textContent = tool === "net-lab"
-        ? netMode === "tcp" ? "Connect once" : "Calculate"
+        ? netMode === "tcp" ? "Connect once"
+          : netMode === "health" ? "Test network"
+          : netMode === "unifi" ? "Read UniFi" : "Calculate"
         : info?.availability === "ready" ? "Run local test" : "Show safe handoff";
     }
   }
