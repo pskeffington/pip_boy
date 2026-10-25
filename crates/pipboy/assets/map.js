@@ -994,7 +994,7 @@
       view.layerName = "";
       view.mapName = "";
       view.mapFormat = "";
-      view.gpsState = "MAP DATA CLEARED";
+      view.gpsState = view.baseVisible ? "IMPORTS CLEARED / BOSTON BASE" : "MAP DATA CLEARED";
       refresh(view);
     }, "Discard imported geography from this browser session");
     sourceBox.append(sourceSummary, sourceLines, clearMap);
