@@ -9,6 +9,7 @@ use pipboy_core::network_probe;
 use pipboy_core::network_suite;
 use pipboy_core::peers::PeerStore;
 use pipboy_core::scout_gis::{distance_meters, waypoint, Point};
+use pipboy_core::reclamation::{NewSite, SiteStatus, SiteStore};
 use pipboy_core::tasks::{NewTask, Status, TaskStore};
 use pipboy_core::unifi;
 use pipboy_core::workbench::{inspect_hex, tool, WorkbenchStore, PALETTE, PRESETS};
@@ -40,6 +41,8 @@ const NETWORK_JS: &str = include_str!("../assets/network.js");
 const NETWORK_CSS: &str = include_str!("../assets/network.css");
 const TASKS_JS: &str = include_str!("../assets/tasks.js");
 const TASKS_CSS: &str = include_str!("../assets/tasks.css");
+const RECLAMATION_JS: &str = include_str!("../assets/reclamation.js");
+const RECLAMATION_CSS: &str = include_str!("../assets/reclamation.css");
 
 struct Request {
     method: String,
@@ -428,6 +431,68 @@ fn experiment(body: &Value, store: &WorkbenchStore) -> Result<Response, Response
             "output": output
         }),
     ))
+}
+
+
+fn reclamation_store(store: &WorkbenchStore) -> SiteStore {
+    SiteStore::new(store.path().parent().unwrap_or_else(|| std::path::Path::new(".")).to_path_buf())
+}
+
+fn reclamation_allowed(store: &WorkbenchStore) -> Result<(), Response> {
+    let board = store.load().map_err(|_| Response::error(409, "Workbench unavailable"))?;
+    if board.slots.iter().any(|slot| slot.tool == "reclamation") {
+        Ok(())
+    } else {
+        Err(Response::error(403, "Pin Reclamation or load Reclamation Scout first"))
+    }
+}
+
+fn reclamation_read(store: &WorkbenchStore, export: bool) -> Result<Response, Response> {
+    reclamation_allowed(store)?;
+    let book = reclamation_store(store)
+        .load()
+        .map_err(|_| Response::error(409, "Site register unavailable; original preserved"))?;
+    if export {
+        let geojson = book.geojson().map_err(|_| Response::error(409, "Cannot export site register"))?;
+        Ok(Response::json(200, &geojson))
+    } else {
+        Ok(Response::json(200, &json!({"book": book, "location": "manual_only", "network_used": false})))
+    }
+}
+
+fn reclamation_create(req: &Request, store: &WorkbenchStore) -> Result<Response, Response> {
+    reclamation_allowed(store)?;
+    let body = parse_json_body(req, &["name", "kind", "condition", "priority", "latitude", "longitude", "accuracy_m", "notes"])?;
+    let input: NewSite = serde_json::from_value(body)
+        .map_err(|_| Response::error(422, "Invalid site fields"))?;
+    let site = reclamation_store(store)
+        .create(input)
+        .map_err(|_| Response::error(422, "Invalid site or local storage unavailable"))?;
+    Ok(Response::json(200, &json!({"site": site})))
+}
+
+fn reclamation_change(req: &Request, store: &WorkbenchStore) -> Result<Response, Response> {
+    reclamation_allowed(store)?;
+    let body = parse_json_body(req, &["id", "revision", "status", "notes"])?;
+    let id = positive_integer(&body, "id")?;
+    let revision = positive_integer(&body, "revision")?;
+    let status: SiteStatus = serde_json::from_value(body.get("status").cloned().ok_or_else(|| Response::error(422, "Missing status"))?)
+        .map_err(|_| Response::error(422, "Invalid site status"))?;
+    let notes = match body.get("notes") {
+        Some(Value::String(value)) => Some(value.as_str()),
+        None => None,
+        _ => return Err(Response::error(422, "Invalid notes")),
+    };
+    let site = reclamation_store(store).change(id, revision, status, notes).map_err(|error| {
+        if error.kind() == io::ErrorKind::AlreadyExists {
+            Response::error(409, "Site changed elsewhere; refresh before updating")
+        } else if error.kind() == io::ErrorKind::NotFound {
+            Response::error(404, "Site not found")
+        } else {
+            Response::error(422, "Invalid site update or storage unavailable")
+        }
+    })?;
+    Ok(Response::json(200, &json!({"site": site})))
 }
 
 /// Task records are in a separate local file and survive job-template changes.
@@ -873,6 +938,8 @@ fn dispatch(req: &Request, store: &WorkbenchStore, port: u16) -> Response {
         ("GET", "/assets/network.css") => {
             Response::new(200, "text/css; charset=utf-8", NETWORK_CSS.as_bytes())
         }
+        ("GET", "/assets/reclamation.js") => Response::new(200, "text/javascript; charset=utf-8", RECLAMATION_JS.as_bytes()),
+        ("GET", "/assets/reclamation.css") => Response::new(200, "text/css; charset=utf-8", RECLAMATION_CSS.as_bytes()),
         ("GET", "/assets/tasks.css") => {
             Response::new(200, "text/css; charset=utf-8", TASKS_CSS.as_bytes())
         }
@@ -884,6 +951,10 @@ fn dispatch(req: &Request, store: &WorkbenchStore, port: u16) -> Response {
         }
         ("GET", "/favicon.ico") => Response::new(204, "text/plain; charset=utf-8", Vec::new()),
         ("GET", "/api/state") => state(store).unwrap_or_else(|error| error),
+        ("GET", "/api/reclamation") => reclamation_read(store, false).unwrap_or_else(|error| error),
+        ("GET", "/api/reclamation/geojson") => reclamation_read(store, true).unwrap_or_else(|error| error),
+        ("POST", "/api/reclamation/create") => reclamation_create(req, store).unwrap_or_else(|error| error),
+        ("POST", "/api/reclamation/change") => reclamation_change(req, store).unwrap_or_else(|error| error),
         ("GET", "/api/tasks") => tasks_read(store).unwrap_or_else(|error| error),
         ("GET", "/api/peers") => peers_read(store).unwrap_or_else(|error| error),
         ("POST", "/api/net/scan") => scan_network(req, store).unwrap_or_else(|error| error),
