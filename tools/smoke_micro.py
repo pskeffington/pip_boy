@@ -85,7 +85,17 @@ with tempfile.TemporaryDirectory() as work:
         assert b"/api/profile" in js and b"/api/custom/add" in js
         assert b"/api/experiment" in js and b"/api/custom/remove" in js
         assert b"eval(" not in js and b"innerHTML" not in js
-        assert b"RUSTGIS NOT ATTACHED" in js and b"NO VIDEO / NO SOURCE" in js
+        assert b"RustBoyMap.mount" in js and b"NO SIGNAL" in js
+        assert b"/assets/map.js" in html and b"/assets/map-import.js" in html
+        for asset, marker in [
+            ("/assets/map.js", b"watchPosition"),
+            ("/assets/map-import.js", b"parseRustGIS"),
+            ("/assets/map.css", b".rb-map"),
+        ]:
+            status, headers, data = request(port, "GET", asset)
+            assert status == 200, (asset, status)
+            assert marker in data, asset
+            assert "no-store" in headers["Cache-Control"]
         assert b"https://" not in js, "Micro UI must not include third-party fetch targets"
 
         status, headers, state = api(port, "GET", "/api/state")
@@ -163,7 +173,7 @@ with tempfile.TemporaryDirectory() as work:
         if os.name != "nt":
             assert (root / "workbench.json").stat().st_mode & 0o777 == 0o600
         print("PASS: micro HTML/CSS/JS on loopback, six tabs, seven roles + Custom, "
-              "scope-safe switching, Scout GIS, Custom lab, CSP, static placeholders "
+              "scope-safe switching, RustGIS MAP assets, Custom lab, CSP, offline defaults "
               "and no implicit network/device activity")
     finally:
         server.terminate()
