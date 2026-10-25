@@ -644,7 +644,6 @@ mod tests {
         for (path, body) in [
             ("/api/custom/add", json!({"id":"radio"})),
             ("/api/custom/add", json!({"id":"geo-lab"})),
-            ("/api/experiment", json!({"tool":"game","input":"scan"})),
             ("/api/shell", json!({"cmd":"echo hi"})),
         ] {
             assert_ne!(
@@ -652,6 +651,20 @@ mod tests {
                 200
             );
         }
+        // Overseer has a Game Link tile. Its safe handoff is intentionally
+        // informational (200), but never opens a LAN/console connection.
+        let game = dispatch(
+            &request("POST", "/api/experiment", json!({"tool":"game"})),
+            &store,
+            8765,
+        );
+        assert_eq!(game.status, 200);
+        let handoff: Value = serde_json::from_slice(&game.body).unwrap();
+        assert_eq!(handoff["kind"], "information");
+        assert!(handoff["output"]
+            .as_str()
+            .unwrap()
+            .contains("does not connect"));
         assert_eq!(
             dispatch(&request("GET", "/api/unknown", Value::Null), &store, 8765).status,
             404
