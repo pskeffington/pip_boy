@@ -49,6 +49,7 @@ Requires a stable Rust toolchain and a modern terminal on macOS, Linux, or Windo
 ```bash
 git clone https://github.com/pskeffington/pip_boy.git
 cd pip_boy
+git switch feat/rust-native-foundation  # PR #1; development code not yet in main
 cargo run -p pipboy -- tui
 cargo run -p pipboy -- status --json
 cargo run -p pipboy -- sample --count 3 --interval-ms 1000
