@@ -1,6 +1,6 @@
 # Rust-Boy | Evidence-to-implementation literature matrix
 
-**Review snapshot:** 2026-10-24. **Evidence entries:** 25. Authoritative machine-readable index: [`catalog/literature.json`](../catalog/literature.json).
+**Review snapshot:** 2026-10-24. **Evidence entries:** 30. Authoritative machine-readable index: [`catalog/literature.json`](../catalog/literature.json).
 
 ## Method
 
@@ -40,6 +40,16 @@ This is an **engineering evidence matrix**, not a claim of systematic-review com
 | <a id="l24"></a>**L24** | [SoapySDR Rust bindings documentation](https://docs.rs/soapysdr/latest/soapysdr/) | rust-soapysdr maintainers · rust-soapysdr project | Official docs, 2026 | `radio`, `adsb`, `devices` | Consider a receiver-only abstraction over supported SDR hardware. | FFI and native drivers require per-platform auditing; TX APIs must not be enabled by default. **Gate:** Mock IQ source; document library and driver prerequisites. |
 | <a id="l25"></a>**L25** | [The Rust Programming Language: trait objects](https://doc.rust-lang.org/book/ch18-02-trait-objects.html) | Rust Project contributors · Rust Project | Official docs, 2026 | `telemetry`, `plugins`, `simulator` | Use Box<dyn Trait> for heterogeneous internal modules; generics for homogeneous hot paths. | Trait objects are runtime polymorphism, not a stable cross-language plugin ABI. **Gate:** Test two module types under a shared host without dynamic library loading. |
 
+| <a id="l26"></a>**L26** | [QuickCheck: A lightweight tool for random testing of Haskell programs](https://doi.org/10.1145/351240.351266) | Koen Claessen; John Hughes · ACM / ICFP 2000 | Peer-reviewed, 2000 · DOI: [10.1145/351240.351266](https://doi.org/10.1145/351240.351266) | `simulator`, `diagnostics`, `storage` | Use property-based generators and invariants to stress schema, event and permission contracts beyond handpicked fixtures. | Published for Haskell, not a guarantee that a specific Rust test generator or harness is correctly applied. **Gate:** Introduce generator-based tests for event ordering, corrupted payloads and round-trip storage. |
+
+| <a id="l27"></a>**L27** | [Energy Efficiency across Programming Languages: How do Energy, Time, and Memory Relate?](https://doi.org/10.1145/3136014.3136031) | Rui Pereira; Marco Couto; Francisco Ribeiro; Rui Rua; Jácome Cunha; João Paulo Fernandes; João Saraiva · ACM / SLE 2017 | Peer-reviewed, 2017 · DOI: [10.1145/3136014.3136031](https://doi.org/10.1145/3136014.3136031) | `power`, `telemetry`, `release` | Measure latency, peak memory and power on actual wearable hardware; do not optimize from language choice alone. | Benchmark tasks and language-level comparisons do not predict Rust-Boy battery life or SDR load. **Gate:** Record idle/active power and CPU baselines on selected Raspberry Pi, with reproducible workloads. |
+
+| <a id="l28"></a>**L28** | [Bluetooth Low Energy Mesh Networks: Survey of Communication and Security Protocols](https://doi.org/10.3390/s20123590) | Muhammad Rizwan Ghori; Tat-Chee Wan; Gian Chand Sodhy · Sensors 20(12), 3590 | Peer-reviewed, 2020 · DOI: [10.3390/s20123590](https://doi.org/10.3390/s20123590) | `mesh`, `ble` | Evaluate topology, broadcast behavior, cryptographic trust and provisioning before choosing a BLE mesh implementation. | Survey literature does not imply interoperation with a specific BLE central crate or Meshtastic device. **Gate:** Compare two selected candidate transports using threat model, throughput and energy criteria. |
+
+| <a id="l29"></a>**L29** | [Bluetooth Low Energy Mesh: Applications, Considerations and Current State-of-the-Art](https://doi.org/10.3390/s23041826) | Iynkaran Natgunanathan; Niroshinie Fernando; Seng W. Loke; Charitha Weerasuriya · Sensors 23(4), 1826 | Peer-reviewed, 2023 · DOI: [10.3390/s23041826](https://doi.org/10.3390/s23041826) | `mesh`, `sensors`, `power` | Treat wearables and IoT meshes as constrained systems with range, energy and operational trade-offs. | Review across use cases does not validate Rust-Boy hardware or specific link budget. **Gate:** Set peer density, battery budget, range and reconnection fixtures before selecting radio hardware. |
+
+| <a id="l30"></a>**L30** | [Bringing Up OpenSky: A Large-scale ADS-B Sensor Network for Research](https://opensky-network.org/about/publications) | Matthias Schäfer; Martin Strohmeier; Vincent Lenders; Ivan Martinovic; Matthias Wilhelm · ACM/IEEE IPSN 2014 | Peer-reviewed, 2014 | `adsb`, `radio`, `telemetry` | Model aircraft observations as received sensor measurements with coverage, receiver source and timestamp, not authoritative global tracks. | Research network deployment does not establish GNSS accuracy or validate a local dongle decoder. **Gate:** Compare recorded receive-only ADS-B fixtures with known decoder outputs and explicit coverage gaps. |
+
 ## Interpretation and conflicts
 
 1. **Rust polymorphism:** object safety/dyn compatibility [L01, L02, L25] favors dynamic dispatch for a fixed internal module runtime; do **not** treat a Rust trait as a stable C/plugin ABI. Memory safety findings [L03] do not cover unchecked FFI or third-party device drivers.
@@ -47,7 +57,9 @@ This is an **engineering evidence matrix**, not a claim of systematic-review com
 3. **Offline maps vs. online community tile servers:** [L09–L11] support standards-based geometry and lawful map provenance. OSM's public raster tile policy explicitly forbids offline prefetch; offline bundles must come from licensed downloads, self-hosted datasets, or user-provided sources with verified rights.
 4. **Sensor connectivity vs. permissions:** [L06–L08, L12–L14, L24] identify APIs and formats but cannot establish that a device is present. Replaying recorded fixtures is required before physical access; opt-in permission gates are separate.
 5. **Receive-only radio vs. mesh messaging:** [L20, L23, L24] justify distinct RX-only SDR/ADS-B adapters. [L12, L15, L21, L22] inform cryptographic and transport requirements for peer messaging but do not establish a completed secure protocol.
-6. **Access and supply-chain assurance:** [L05, L16–L18] call for real keyboard/contrast tests, reproducible CI checks, and build provenance. No WCAG or SLSA certification is asserted by the roadmap.
+6. **Testing and measured performance:** [L26–L27] support property-based tests and device-specific energy benchmarks; do not claim power efficiency by language choice alone.
+7. **BLE mesh and ADS-B source reliability:** [L28–L30] add literature reviews and receiver-network case evidence, not an automatic approval to transmit or perform unconsented sensing.
+8. **Access and supply-chain assurance:** [L05, L16–L18] call for real keyboard/contrast tests, reproducible CI checks, and build provenance. No WCAG or SLSA certification is asserted by the roadmap.
 
 ## Missing evidence to resolve before implementation
 

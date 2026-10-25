@@ -465,5 +465,99 @@
     "reviewed_on": "2026-10-24",
     "contributors": "Rust Project contributors",
     "publisher": "Rust Project"
+  },
+  {
+    "id": "L26",
+    "title": "QuickCheck: A lightweight tool for random testing of Haskell programs",
+    "contributors": "Koen Claessen; John Hughes",
+    "publisher": "ACM / ICFP 2000",
+    "year": 2000,
+    "type": "peer_reviewed",
+    "url": "https://doi.org/10.1145/351240.351266",
+    "doi": "10.1145/351240.351266",
+    "modules": [
+      "simulator",
+      "diagnostics",
+      "storage"
+    ],
+    "design": "Use property-based generators and invariants to stress schema, event and permission contracts beyond handpicked fixtures.",
+    "limitation": "Published for Haskell, not a guarantee that a specific Rust test generator or harness is correctly applied.",
+    "acceptance": "Introduce generator-based tests for event ordering, corrupted payloads and round-trip storage.",
+    "reviewed_on": "2026-10-24"
+  },
+  {
+    "id": "L27",
+    "title": "Energy Efficiency across Programming Languages: How do Energy, Time, and Memory Relate?",
+    "contributors": "Rui Pereira; Marco Couto; Francisco Ribeiro; Rui Rua; Jácome Cunha; João Paulo Fernandes; João Saraiva",
+    "publisher": "ACM / SLE 2017",
+    "year": 2017,
+    "type": "peer_reviewed",
+    "url": "https://doi.org/10.1145/3136014.3136031",
+    "doi": "10.1145/3136014.3136031",
+    "modules": [
+      "power",
+      "telemetry",
+      "release"
+    ],
+    "design": "Measure latency, peak memory and power on actual wearable hardware; do not optimize from language choice alone.",
+    "limitation": "Benchmark tasks and language-level comparisons do not predict Rust-Boy battery life or SDR load.",
+    "acceptance": "Record idle/active power and CPU baselines on selected Raspberry Pi, with reproducible workloads.",
+    "reviewed_on": "2026-10-24"
+  },
+  {
+    "id": "L28",
+    "title": "Bluetooth Low Energy Mesh Networks: Survey of Communication and Security Protocols",
+    "contributors": "Muhammad Rizwan Ghori; Tat-Chee Wan; Gian Chand Sodhy",
+    "publisher": "Sensors 20(12), 3590",
+    "year": 2020,
+    "type": "peer_reviewed",
+    "url": "https://doi.org/10.3390/s20123590",
+    "doi": "10.3390/s20123590",
+    "modules": [
+      "mesh",
+      "ble"
+    ],
+    "design": "Evaluate topology, broadcast behavior, cryptographic trust and provisioning before choosing a BLE mesh implementation.",
+    "limitation": "Survey literature does not imply interoperation with a specific BLE central crate or Meshtastic device.",
+    "acceptance": "Compare two selected candidate transports using threat model, throughput and energy criteria.",
+    "reviewed_on": "2026-10-24"
+  },
+  {
+    "id": "L29",
+    "title": "Bluetooth Low Energy Mesh: Applications, Considerations and Current State-of-the-Art",
+    "contributors": "Iynkaran Natgunanathan; Niroshinie Fernando; Seng W. Loke; Charitha Weerasuriya",
+    "publisher": "Sensors 23(4), 1826",
+    "year": 2023,
+    "type": "peer_reviewed",
+    "url": "https://doi.org/10.3390/s23041826",
+    "doi": "10.3390/s23041826",
+    "modules": [
+      "mesh",
+      "sensors",
+      "power"
+    ],
+    "design": "Treat wearables and IoT meshes as constrained systems with range, energy and operational trade-offs.",
+    "limitation": "Review across use cases does not validate Rust-Boy hardware or specific link budget.",
+    "acceptance": "Set peer density, battery budget, range and reconnection fixtures before selecting radio hardware.",
+    "reviewed_on": "2026-10-24"
+  },
+  {
+    "id": "L30",
+    "title": "Bringing Up OpenSky: A Large-scale ADS-B Sensor Network for Research",
+    "contributors": "Matthias Schäfer; Martin Strohmeier; Vincent Lenders; Ivan Martinovic; Matthias Wilhelm",
+    "publisher": "ACM/IEEE IPSN 2014",
+    "year": 2014,
+    "type": "peer_reviewed",
+    "url": "https://opensky-network.org/about/publications",
+    "doi": null,
+    "modules": [
+      "adsb",
+      "radio",
+      "telemetry"
+    ],
+    "design": "Model aircraft observations as received sensor measurements with coverage, receiver source and timestamp, not authoritative global tracks.",
+    "limitation": "Research network deployment does not establish GNSS accuracy or validate a local dongle decoder.",
+    "acceptance": "Compare recorded receive-only ADS-B fixtures with known decoder outputs and explicit coverage gaps.",
+    "reviewed_on": "2026-10-24"
   }
 ]

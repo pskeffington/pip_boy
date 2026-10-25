@@ -7,7 +7,7 @@ Rust-Boy is the public product name. The existing `pip_boy` repository, `pipboy`
 
 ## Navigate the build
 
-- [Literature matrix](LITERATURE_MATRIX.md) — 25 traceable primary/official references, limitations and corresponding tests.
+- [Literature matrix](LITERATURE_MATRIX.md) — 30 traceable primary/official references, limitations and corresponding tests.
 - [Module and feature catalog](MODULE_CATALOG.md) — 27 modules, dependency gates, capability needs, acceptance criteria.
 - [Rust object model](OBJECT_MODEL.md) — object boundaries, traits, composition and runtime access policy.
 - [Architecture](ARCHITECTURE.md) — host / UI / core / adapter boundaries.
@@ -36,7 +36,7 @@ The build is a directed acyclic dependency plan, **not** a schedule. All module 
 
 - [ ] Define versioned `Observation<T>` envelope: source ID, monotonic time + wall clock, units, state, expiry, and quality flags.
 - [ ] Separate local read-only metrics from user-initiated notes/storage writes.
-- [ ] Implement bounded samples, optional NDJSON export, explicit retention/erase policies.
+- [ ] Implement bounded samples, property-based state invariants, optional NDJSON export, explicit retention/erase policies.
 - [ ] Build permission manifest with deny-by-default broker. Document that a Rust trait is **not** a security sandbox.
 - [ ] Add battery, thermal, disk and network-interface status only where supported, with `Unknown` rather than guessed values.
 - [ ] Provide keyboard-only paths, reduced motion and terminal-size fallback.

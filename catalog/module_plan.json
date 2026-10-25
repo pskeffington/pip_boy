@@ -90,7 +90,9 @@
       "L02",
       "L03",
       "L19",
-      "L25"
+      "L25",
+      "L27",
+      "L30"
     ],
     "features": [
       "Provenance-tagged samples",
@@ -119,7 +121,8 @@
     "evidence": [
       "L04",
       "L09",
-      "L19"
+      "L19",
+      "L26"
     ],
     "features": [
       "Versioned local collections",
@@ -145,7 +148,9 @@
       "host.read"
     ],
     "evidence": [
-      "L03"
+      "L03",
+      "L27",
+      "L29"
     ],
     "features": [
       "Battery state if OS provides it",
@@ -253,7 +258,8 @@
     ],
     "evidence": [
       "L16",
-      "L17"
+      "L17",
+      "L26"
     ],
     "features": [
       "Schema checks and adapter readiness",
@@ -390,7 +396,8 @@
     "capabilities": [],
     "evidence": [
       "L05",
-      "L25"
+      "L25",
+      "L26"
     ],
     "features": [
       "Deterministic event playback",
@@ -476,7 +483,8 @@
     ],
     "evidence": [
       "L20",
-      "L24"
+      "L24",
+      "L30"
     ],
     "features": [
       "Explicit selected receive-only device",
@@ -504,7 +512,8 @@
     ],
     "evidence": [
       "L23",
-      "L24"
+      "L24",
+      "L30"
     ],
     "features": [
       "Receive-only 1090ES / optional 978 UAT decoders",
@@ -533,7 +542,8 @@
     "evidence": [
       "L12",
       "L13",
-      "L22"
+      "L22",
+      "L28"
     ],
     "features": [
       "User-initiated discovery",
@@ -565,7 +575,9 @@
       "L12",
       "L15",
       "L21",
-      "L22"
+      "L22",
+      "L28",
+      "L29"
     ],
     "features": [
       "Manually selected peers and transport",
@@ -593,7 +605,8 @@
     ],
     "evidence": [
       "L06",
-      "L20"
+      "L20",
+      "L29"
     ],
     "features": [
       "Temperature/pressure/air quality on approved hardware",
@@ -739,7 +752,8 @@
     "evidence": [
       "L03",
       "L16",
-      "L17"
+      "L17",
+      "L27"
     ],
     "features": [
       "Signed multi-platform builds",

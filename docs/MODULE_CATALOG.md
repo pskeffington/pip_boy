@@ -49,13 +49,13 @@
 
 | ID | Module | Priority | State | Prerequisites | Evidence |
 | --- | --- | --- | --- | --- | --- |
-| `telemetry` | Telemetry event stream | P0 | planned | `stat` | [L01](LITERATURE_MATRIX.md#l01), [L02](LITERATURE_MATRIX.md#l02), [L03](LITERATURE_MATRIX.md#l03), [L19](LITERATURE_MATRIX.md#l19), [L25](LITERATURE_MATRIX.md#l25) |
-| `storage` | Storage and schema service | P0 | planned | `notes` | [L04](LITERATURE_MATRIX.md#l04), [L09](LITERATURE_MATRIX.md#l09), [L19](LITERATURE_MATRIX.md#l19) |
-| `power` | Power and resources | P1 | planned | `stat` | [L03](LITERATURE_MATRIX.md#l03) |
+| `telemetry` | Telemetry event stream | P0 | planned | `stat` | [L01](LITERATURE_MATRIX.md#l01), [L02](LITERATURE_MATRIX.md#l02), [L03](LITERATURE_MATRIX.md#l03), [L19](LITERATURE_MATRIX.md#l19), [L25](LITERATURE_MATRIX.md#l25), [L27](LITERATURE_MATRIX.md#l27), [L30](LITERATURE_MATRIX.md#l30) |
+| `storage` | Storage and schema service | P0 | planned | `notes` | [L04](LITERATURE_MATRIX.md#l04), [L09](LITERATURE_MATRIX.md#l09), [L19](LITERATURE_MATRIX.md#l19), [L26](LITERATURE_MATRIX.md#l26) |
+| `power` | Power and resources | P1 | planned | `stat` | [L03](LITERATURE_MATRIX.md#l03), [L27](LITERATURE_MATRIX.md#l27), [L29](LITERATURE_MATRIX.md#l29) |
 | `network` | Local network link status | P1 | planned | `stat` | [L20](LITERATURE_MATRIX.md#l20) |
 | `settings` | Settings and permission UI | P0 | planned | `storage` | [L16](LITERATURE_MATRIX.md#l16), [L22](LITERATURE_MATRIX.md#l22) |
 | `accessibility` | Accessible console | P0 | planned | `stat`, `settings` | [L05](LITERATURE_MATRIX.md#l05), [L18](LITERATURE_MATRIX.md#l18) |
-| `diagnostics` | Diagnostics and evidence audit | P0 | planned | `library`, `settings` | [L16](LITERATURE_MATRIX.md#l16), [L17](LITERATURE_MATRIX.md#l17) |
+| `diagnostics` | Diagnostics and evidence audit | P0 | planned | `library`, `settings` | [L16](LITERATURE_MATRIX.md#l16), [L17](LITERATURE_MATRIX.md#l17), [L26](LITERATURE_MATRIX.md#l26) |
 
 ### `telemetry` — Telemetry event stream
 
@@ -135,7 +135,7 @@
 | `devices` | Device broker | P0 | planned | `settings`, `diagnostics` | [L02](LITERATURE_MATRIX.md#l02), [L03](LITERATURE_MATRIX.md#l03), [L07](LITERATURE_MATRIX.md#l07), [L14](LITERATURE_MATRIX.md#l14) |
 | `display` | Wearable display layer | P1 | planned | `accessibility`, `gpio` | [L05](LITERATURE_MATRIX.md#l05), [L18](LITERATURE_MATRIX.md#l18) |
 | `serial` | Serial transport | P1 | planned | `devices` | [L14](LITERATURE_MATRIX.md#l14) |
-| `simulator` | Hardware event simulator | P0 | planned | `gpio`, `display` | [L05](LITERATURE_MATRIX.md#l05), [L25](LITERATURE_MATRIX.md#l25) |
+| `simulator` | Hardware event simulator | P0 | planned | `gpio`, `display` | [L05](LITERATURE_MATRIX.md#l05), [L25](LITERATURE_MATRIX.md#l25), [L26](LITERATURE_MATRIX.md#l26) |
 
 ### `gpio` — Physical controls
 
@@ -193,11 +193,11 @@
 | --- | --- | --- | --- | --- | --- |
 | `gnss` | GNSS navigation input | P1 | planned | `devices`, `storage` | [L08](LITERATURE_MATRIX.md#l08), [L09](LITERATURE_MATRIX.md#l09) |
 | `map` | Offline cartography | P1 | planned | `storage`, `gnss`, `display` | [L09](LITERATURE_MATRIX.md#l09), [L10](LITERATURE_MATRIX.md#l10), [L11](LITERATURE_MATRIX.md#l11) |
-| `radio` | Receive-only SDR | P2 | planned | `devices`, `telemetry` | [L20](LITERATURE_MATRIX.md#l20), [L24](LITERATURE_MATRIX.md#l24) |
-| `adsb` | ADS-B receiver overlay | P2 | planned | `radio`, `map` | [L23](LITERATURE_MATRIX.md#l23), [L24](LITERATURE_MATRIX.md#l24) |
-| `ble` | Nearby BLE adapter | P2 | planned | `devices`, `settings` | [L12](LITERATURE_MATRIX.md#l12), [L13](LITERATURE_MATRIX.md#l13), [L22](LITERATURE_MATRIX.md#l22) |
-| `mesh` | Authenticated local messaging | P2 | planned | `ble`, `serial`, `settings` | [L04](LITERATURE_MATRIX.md#l04), [L12](LITERATURE_MATRIX.md#l12), [L15](LITERATURE_MATRIX.md#l15), [L21](LITERATURE_MATRIX.md#l21), [L22](LITERATURE_MATRIX.md#l22) |
-| `sensors` | Environmental sensor adapters | P2 | planned | `devices`, `telemetry` | [L06](LITERATURE_MATRIX.md#l06), [L20](LITERATURE_MATRIX.md#l20) |
+| `radio` | Receive-only SDR | P2 | planned | `devices`, `telemetry` | [L20](LITERATURE_MATRIX.md#l20), [L24](LITERATURE_MATRIX.md#l24), [L30](LITERATURE_MATRIX.md#l30) |
+| `adsb` | ADS-B receiver overlay | P2 | planned | `radio`, `map` | [L23](LITERATURE_MATRIX.md#l23), [L24](LITERATURE_MATRIX.md#l24), [L30](LITERATURE_MATRIX.md#l30) |
+| `ble` | Nearby BLE adapter | P2 | planned | `devices`, `settings` | [L12](LITERATURE_MATRIX.md#l12), [L13](LITERATURE_MATRIX.md#l13), [L22](LITERATURE_MATRIX.md#l22), [L28](LITERATURE_MATRIX.md#l28) |
+| `mesh` | Authenticated local messaging | P2 | planned | `ble`, `serial`, `settings` | [L04](LITERATURE_MATRIX.md#l04), [L12](LITERATURE_MATRIX.md#l12), [L15](LITERATURE_MATRIX.md#l15), [L21](LITERATURE_MATRIX.md#l21), [L22](LITERATURE_MATRIX.md#l22), [L28](LITERATURE_MATRIX.md#l28), [L29](LITERATURE_MATRIX.md#l29) |
+| `sensors` | Environmental sensor adapters | P2 | planned | `devices`, `telemetry` | [L06](LITERATURE_MATRIX.md#l06), [L20](LITERATURE_MATRIX.md#l20), [L29](LITERATURE_MATRIX.md#l29) |
 | `weather` | Local weather panel | P2 | planned | `sensors` | [L04](LITERATURE_MATRIX.md#l04), [L19](LITERATURE_MATRIX.md#l19) |
 | `audio` | Field audio outputs | P2 | planned | `settings` | [L18](LITERATURE_MATRIX.md#l18) |
 
@@ -297,7 +297,7 @@
 | --- | --- | --- | --- | --- | --- |
 | `plugins` | Versioned module API | P1 | planned | `devices`, `simulator`, `diagnostics` | [L01](LITERATURE_MATRIX.md#l01), [L02](LITERATURE_MATRIX.md#l02), [L15](LITERATURE_MATRIX.md#l15), [L16](LITERATURE_MATRIX.md#l16), [L17](LITERATURE_MATRIX.md#l17), [L25](LITERATURE_MATRIX.md#l25) |
 | `feeds` | Opt-in external data connectors | P2 | planned | `settings`, `storage`, `network` | [L04](LITERATURE_MATRIX.md#l04), [L11](LITERATURE_MATRIX.md#l11), [L19](LITERATURE_MATRIX.md#l19) |
-| `release` | Reproducible release pipeline | P0 | planned | `plugins`, `accessibility`, `simulator` | [L03](LITERATURE_MATRIX.md#l03), [L16](LITERATURE_MATRIX.md#l16), [L17](LITERATURE_MATRIX.md#l17) |
+| `release` | Reproducible release pipeline | P0 | planned | `plugins`, `accessibility`, `simulator` | [L03](LITERATURE_MATRIX.md#l03), [L16](LITERATURE_MATRIX.md#l16), [L17](LITERATURE_MATRIX.md#l17), [L27](LITERATURE_MATRIX.md#l27) |
 
 ### `plugins` — Versioned module API
 
