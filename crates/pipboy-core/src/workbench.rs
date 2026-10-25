@@ -99,11 +99,18 @@ pub const PALETTE: &[Tool] = &[
         command: "pipboy game --ps4 IP --confirm",
     },
     Tool {
-        id: "net-lab",
-        name: "NET LAB",
-        description: "Offline IPv4/CIDR planner for LAN setup; no probing or sockets.",
+        id: "diag",
+        name: "DIAG",
+        description: "Read-only scoped evidence analysis and one-shot host checks. No probes.",
         availability: Availability::Ready,
-        command: "pipboy workbench net cidr 192.168.1.50/24",
+        command: "pipboy diag host",
+    },
+    Tool {
+        id: "net-lab",
+        name: "NET ENGINEER",
+        description: "Active, operator-authorized private LAN discovery: responding hosts, RTT and cache sightings; offline CIDR planning retained.",
+        availability: Availability::Ready,
+        command: "pipboy net scan local --confirm",
     },
     Tool {
         id: "geo-lab",
@@ -182,7 +189,7 @@ pub const PRESETS: &[Preset] = &[
         description: "Systems engineering: health telemetry, subnet calculations, byte analysis and synthetic rigs.",
         lore_evidence: "VT-01",
         role_fidelity: "canonical_job",
-        tools: &["host", "net-lab", "byte-lab", "simulator", "notes"],
+        tools: &["host", "diag", "net-lab", "byte-lab", "simulator", "notes"],
     },
     Preset {
         id: "security-chief",
@@ -190,7 +197,7 @@ pub const PRESETS: &[Preset] = &[
         description: "Defensive triage: local status, offline network planning, packet bytes and incident notes.",
         lore_evidence: "VT-01",
         role_fidelity: "canonical_job",
-        tools: &["host", "net-lab", "byte-lab", "notes"],
+        tools: &["host", "diag", "net-lab", "byte-lab", "notes"],
     },
     Preset {
         id: "vault-doctor",
@@ -842,7 +849,7 @@ mod tests {
         assert!(!store.path().exists());
         assert!(store.apply_preset("head-engineer").unwrap());
         assert!(!store.apply_preset("head-engineer").unwrap());
-        assert_eq!(store.load().unwrap().slots.len(), 5);
+        assert_eq!(store.load().unwrap().slots.len(), 6);
         assert_eq!(store.load().unwrap().profile, "head-engineer");
         assert!(store.apply_preset("custom").unwrap());
         assert!(store.load().unwrap().slots.is_empty());

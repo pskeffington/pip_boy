@@ -151,6 +151,8 @@ p { line-height: 1.5; }
 .lab-fields label { display:block; color:var(--sub); font:10px var(--mono); letter-spacing:.04em; }
 .lab-fields input, .lab-fields select { display:block; background:#0b110d; color:var(--text); border:1px solid #476040; border-radius:7px; width:100%; padding:10px; margin-top:7px; font:12px var(--mono); }
 .lab-fields input::placeholder { color:#6c7a6c; }
+.lab-fields .scan-consent {display:flex;align-items:center;gap:10px;color:var(--text);font-size:11px;letter-spacing:normal;}
+.lab-fields .scan-consent input[type="checkbox"] {display:inline-block;flex:0 0 auto;width:16px;height:16px;margin:0;accent-color:#a9e88a;}
 .lab-row { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:9px; }
 .full { width:100%; }
 .output-head { margin:25px 0 9px; display:flex; justify-content:space-between; align-items:center; gap:10px; font:10px var(--mono); letter-spacing:.08em; color:var(--muted); }

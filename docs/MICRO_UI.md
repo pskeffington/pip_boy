@@ -49,6 +49,8 @@ See [Task Control and manual dispatch](TASK_CONTROL.md). Neither the task HUD no
 
 **Profile state:** Selecting a job in the modal is only a preview. **LOAD ROLE** activates it and replaces only pinned module tiles. The change is persisted to the same workbench file used by desktop and TUI; no tools are executed and no extra permissions are granted. Custom begins empty, and only tools supported by the palette can be pinned. A documented "RESET CUSTOM" action clears Custom's pins after explicit confirmation.
 
+**Active local tools:** NET ENGINEER performs real, explicitly authorized private-LAN ICMP/TCP sweeps (with detected-device counts, RTT and optional 60-second refresh while open). It never scans just because the user opens a role or tab. The same tool supports controller-connected client counts, UniFi site IDs and probe-versus-controller comparison when the server is explicitly configured with local TLS credentials. Other labs remain offline. See [network diagnostics](NETWORK_ENGINEERING.md).
+
 **Active offline labs:** For a profile containing the relevant tool, tap **GEAR** → **SCOUT GIS**, **NET LAB**, **BYTE LAB** or **HOST STAT**. The result is computed locally when **RUN** is pressed, using the existing Rust `/api/experiment` endpoint. The browser never auto-fetches host telemetry. Notes/library/simulator/game display safe manual handoffs, not arbitrary command execution. Scout's MAP page can open **WAYPOINT** or **DISTANCE** directly.
 
 **Security Chief fixture:** LINK displays four clearly disconnected camera tiles. Tap a tile to focus; tap it again, press BACK or Escape to return to the 2×2 wall. No stream URLs, snapshots, IP probing, video decoding, recording or camera sessions are present.

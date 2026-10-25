@@ -35,7 +35,7 @@ const pageTitles = {
 };
 const glyphs = {
   "mission-board": "▣", "host": "⌁", "notes": "≡", "library": "▤", "game": "▣",
-  "net-lab": "⌘", "byte-lab": "0x", "simulator": "◈",
+  "diag": "!", "net-lab": "⌘", "byte-lab": "0x", "simulator": "◈",
   "geo-lab": "⌖"
 };
 const roleStations = Object.freeze({
@@ -47,7 +47,7 @@ const roleStations = Object.freeze({
   "head-engineer": {
     heading: "ENGINEER",
     purpose: "SYSTEM / NET",
-    quick: "NET LAB", tool: "net-lab"
+    quick: "SCAN LAN", tool: "net-lab"
   },
   "security-chief": {
     heading: "SECURITY",
@@ -334,7 +334,7 @@ function showMap() {
 function showData() {
   const root = panel();
   const tools = allPinned().filter((id) =>
-    ["notes", "library", "byte-lab", "simulator", "geo-lab", "net-lab"].includes(id));
+    ["notes", "library", "byte-lab", "simulator", "geo-lab", "net-lab", "diag"].includes(id));
   root.append(sectionTop("DATA", String(tools.length) + " TOOLS"));
   if (snapshot.active.profile !== "overseer") {
     root.append(button("MY DUTIES", openDuties, "micro-button solid"));
@@ -470,16 +470,70 @@ function inputForm(root, id) {
     }
     form.append(fields);
   } else if (id === "net-lab") {
-    form.append(field("input", "IPV4 / CIDR", "192.168.1.50/24"));
+    const modeLabel = make("label", "field", "OPERATION");
+    const mode = make("select");
+    mode.name = "mode";
+    for (const [value, name] of [["scan", "SCAN PRIVATE LAN"], ["unifi-sites", "UNIFI SITES"], ["unifi-clients", "UNIFI CLIENTS"], ["unifi-compare", "UNIFI / LAN CHECK"], ["cidr", "CIDR CALCULATOR"]]) {
+      const option = make("option", "", name);
+      option.value = value;
+      mode.append(option);
+    }
+    modeLabel.append(mode);
+    form.append(modeLabel);
+    const scope = field("input", "PRIVATE CIDR / LOCAL", "local");
+    form.append(scope);
+    const site = field("site", "UNIFI SITE UUID", "", { maxLength: 36 });
+    site.hidden = true;
+    site.querySelector("input").required = false;
+    form.append(site);
+    const consent = make("label", "micro-consent");
+    const check = make("input");
+    check.type = "checkbox";
+    check.name = "authorized";
+    check.value = "yes";
+    consent.append(check, make("span", "", "AUTHORIZED NETWORK / OPT-IN"));
+    form.append(consent);
+    const monitor = make("label", "micro-consent");
+    const watch = make("input");
+    watch.type = "checkbox";
+    watch.name = "monitor";
+    watch.value = "yes";
+    monitor.append(watch, make("span", "", "REFRESH EVERY 60 SEC"));
+    form.append(monitor);
+    mode.addEventListener("change", () => {
+      const selection = mode.value;
+      const external = selection !== "cidr";
+      const withScope = ["scan", "unifi-compare", "cidr"].includes(selection);
+      const withSite = ["unifi-clients", "unifi-compare"].includes(selection);
+      consent.hidden = !external;
+      monitor.hidden = !external;
+      scope.hidden = !withScope;
+      site.hidden = !withSite;
+      const input = scope.querySelector("input");
+      const siteInput = site.querySelector("input");
+      input.required = withScope;
+      siteInput.required = withSite;
+      check.required = external;
+      if (selection !== "cidr" && input.value === "192.168.1.50/24") input.value = "local";
+      if (selection === "cidr" && input.value === "local") input.value = "192.168.1.50/24";
+      const labels = {
+        scan: "SCAN PRIVATE LAN", "unifi-sites": "LIST UNIFI SITES",
+        "unifi-clients": "CONNECTED CLIENTS", "unifi-compare": "COMPARE / LAN",
+        cidr: "CALCULATE CIDR"
+      };
+      run.textContent = labels[selection] || "RUN";
+    });
   } else if (id === "byte-lab") {
     form.append(field("input", "HEXADECIMAL BYTES", "48656c6c6f", { maxLength: 3000, hex: true }));
   }
   const row = make("div", "form-actions");
-  const run = make("button", "micro-button solid", id === "host" ? "SAMPLE LOCAL STATUS" :
+  const run = make("button", "micro-button solid", id === "net-lab" ? "SCAN PRIVATE LAN" : id === "diag" ? "CHECK LOCAL HOST" : id === "host" ? "SAMPLE LOCAL STATUS" :
     ["game", "notes", "simulator", "library"].includes(id) ? "VIEW SAFE HANDOFF" : "RUN LOCAL TOOL");
   run.type = "submit";
   row.append(run);
   form.append(row);
+  const netSummary = id === "net-lab" ? make("div", "net-summary", "NO NETWORK SWEEP") : null;
+  if (netSummary) form.append(netSummary);
   const output = make("pre", "mono-output", "Awaiting explicit operator action.");
   output.setAttribute("aria-live", "polite");
   form.append(output);
@@ -492,10 +546,53 @@ function inputForm(root, id) {
     const payload = { tool: id };
     if (id === "geo-lab") payload.mode = geoMode;
     for (const [key, val] of new FormData(form).entries()) payload[key] = val;
+    const scanning = id === "net-lab" && payload.mode === "scan";
+    const unifi = id === "net-lab" && payload.mode?.startsWith("unifi-");
+    const external = scanning || unifi;
     try {
-      const result = await api("/api/experiment", payload);
+      if (external && payload.authorized !== "yes") {
+        throw new Error("Confirm authorization for this private network/controller");
+      }
+      let result;
+      if (scanning) {
+        result = await api("/api/net/scan", { cidr: payload.input, confirm: true });
+      } else if (unifi) {
+        const operation = payload.mode.slice("unifi-".length);
+        const params = { operation, confirm: true };
+        if (operation !== "sites") params.site = payload.site.trim();
+        if (operation === "compare") params.cidr = payload.input;
+        result = await api("/api/net/unifi", params);
+      } else {
+        result = await api("/api/experiment", id === "net-lab"
+          ? { tool: id, input: payload.input } : payload);
+      }
       if (openedTool === id) output.textContent = result.output;
-      ui.foot.textContent = result.kind === "computed" ? "RESULT / LOCAL ONLY" : "INFORMATION / NO CONNECTION";
+      if (netSummary) {
+        if (scanning && result.report) {
+          const rep = result.report;
+          netSummary.textContent = rep.responding_devices + " RESPONDING / " +
+            rep.cached_only_devices + " CACHE / " + rep.scanned_hosts + " SCANNED";
+        } else if (unifi && result.comparison) {
+          const cmp = result.comparison;
+          netSummary.textContent = cmp.controller_clients + " UNIFI / " +
+            cmp.matched_active_probe + " MATCHED";
+        } else if (unifi && result.inventory?.connected_clients !== undefined) {
+          netSummary.textContent = result.inventory.connected_clients + " CONTROLLER CLIENTS";
+        } else if (unifi && result.inventory?.sites) {
+          netSummary.textContent = result.inventory.sites.length + " UNIFI SITES";
+        }
+      }
+      ui.foot.textContent = external ? "NETWORK / READ-ONLY" :
+        result.kind === "computed" ? "RESULT / LOCAL ONLY" : "INFORMATION / NO CONNECTION";
+      if (external && payload.monitor === "yes") {
+        window.setTimeout(() => {
+          if (openedTool === id && form.isConnected && !busy &&
+              form.querySelector('input[name="monitor"]')?.checked &&
+              form.querySelector('select[name="mode"]')?.value === payload.mode) {
+            form.requestSubmit();
+          }
+        }, 60000);
+      }
     } catch (error) {
       if (openedTool === id) output.textContent = "ERROR / " + error.message;
       notify(error.message, true);
@@ -540,7 +637,7 @@ function showTool() {
   }
   // The module title is already in the page heading; keep advanced help on
   // the dedicated tool screen rather than repeating long descriptions.
-  const supported = ["geo-lab", "net-lab", "byte-lab", "host", "notes", "library", "simulator", "game"];
+  const supported = ["geo-lab", "net-lab", "byte-lab", "host", "diag", "notes", "library", "simulator", "game"];
   if (supported.includes(openedTool)) {
     inputForm(root, openedTool);
   } else {

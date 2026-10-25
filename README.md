@@ -10,6 +10,17 @@ Rust-Boy is an independent, Rust-native developer workbench with separate local 
 
 **Current stage:** development preview. The terminal console and offline workflows are implemented and tested on Linux, macOS and Windows. Physical GPIO, serial, SDR, Bluetooth, mesh and hardware GNSS are **not enabled**. The browser MAP viewport can display local RustGIS vector maps and opt-in browser location; native RustGIS rendering and raster basemaps remain unavailable. Offline WGS84 GeoJSON Point tools are provided for the Reclamation Scout. An explicitly requested Fallout 4 TCP companion browser is available for validation. No packaged production release is claimed.
 
+## NET ENGINEER — operator-approved live LAN discovery
+
+Head Engineer and Security Chief now include a real private-LAN probe tool in the desktop and micro shell. Select NET ENGINEER, choose a private CIDR (or local to select a conservative local-route /24), confirm authorization and scan. The result reports detected responders, ICMP/TCP RTT and separate neighbor-cache observations. Optionally refresh every 60 seconds while the tool view remains open. The offline CIDR calculator is retained.
+
+```bash
+cargo run --locked -p pipboy -- net scan local --confirm
+cargo run --locked -p pipboy -- net watch 192.168.1.0/24 --confirm --interval-sec 60 --count 5
+```
+
+Scans do not prove how many devices are connected: sleeping clients, separate VLANs and filtered probes can be missed. A read-only UniFi Network Integration API adapter is available on this development branch; it can enumerate controller-connected clients and compare them with active probes. Controller configuration and TLS trust must be provided explicitly. See [NET ENGINEER scope and evidence guide](docs/NETWORK_ENGINEERING.md).
+
 ## Compact handheld HUD — no scrolling on primary screens
 
 The new micro view is built around a **480×320** screen: short labels, one-action focus, live task counts and a fixed six-tab rail. GEAR/DATA paginate six tools at a time; Custom's palette and the role selector paginate four at a time. Overseer TASKS uses two-task pages, a two-step assignment form, and INFO/STATUS/DEVICE/LOG (plus optional ASSIGN) screens. Input and result views are separate for offline labs.
