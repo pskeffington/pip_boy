@@ -1,16 +1,15 @@
-# Rust-Boy | Research and module catalogs
+# Rust-Boy research and module catalogs
 
-These are version-controlled **planning and provenance manifests**. They are not executable adapters, vendor source archives, or permissions grants.
+These version-controlled JSON files document **engineering evidence and planned capabilities**. They do not contain hardware drivers, bundled third-party source code, active device grants or a permission sandbox.
 
-- [`literature.json`](literature.json): 34 primary/official-source references with verification dates, research-to-module mapping, limitations, and acceptance tests.
-- [`module_plan.json`](module_plan.json): 27 proposed software modules, release gates, dependency edges, capabilities, features, evidence IDs, and verification criteria.
-- [`sources.json`](sources.json): external GitHub implementation references with licensing gates.
+| Manifest | Contents |
+| --- | --- |
+| [`literature.json`](literature.json) | 37 cited research/official-source records with IDs, limitations and engineering implications |
+| [`module_plan.json`](module_plan.json) | 27 module definitions: 3 implemented module sources with additional acceptance gates, 24 planned modules |
+| [`sources.json`](sources.json) | Curated external GitHub/reference projects and licensing dispositions |
 
-Field definitions:
-- `status=implemented_unverified` indicates a G0 implementation is present, **not** that CI has passed; `planned` means no implementation claim.
-- `gate=G0..G4` identifies sequencing, not a scheduled date or a release version.
-- `capabilities` records permissions that a future adapter would require; it is **not** an OS sandbox or proof of enforcement.
-- `evidence` links to `literature.json` entries, not to source code to copy.
-- `acceptance` items become test/inspection gates when a feature is implemented.
+The `status` field is a development/acceptance label: `implemented_unverified` does **not** mean no CI exists, and `planned` does not mean an adapter is available. `gate` (G0–G4) indicates sequencing rather than a release date. `capabilities` describes future permission requirements, not authorization. `evidence` links to source records, not licensed source code ready to copy.
 
-All upstream works retain their own copyright. Consult [the literature matrix](../docs/LITERATURE_MATRIX.md), [module catalog](../docs/MODULE_CATALOG.md), and [architecture](../docs/OBJECT_MODEL.md) before implementation.
+The [offline catalog validator](../tools/validate_catalog.py) checks IDs, dependency relationships, declared capabilities and the deny-only broker vocabulary. See the [module catalog](../docs/MODULE_CATALOG.md), [literature matrix](../docs/LITERATURE_MATRIX.md) and [security policy](../SECURITY.md) before enabling any new component.
+
+All upstream repositories and creative works retain their respective copyright and license conditions. A reference is not permission to reuse code, trade dress, artwork or firmware.

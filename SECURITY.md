@@ -1,51 +1,36 @@
-# Rust-Boy | Security and privacy
+# Security and privacy
 
-Rust-Boy is an experimental offline-first field systems console, not a safety-of-life product.
+Rust-Boy is an **experimental local field console**, not a safety-of-life, security-monitoring or production hardware-control system. The public code is MIT-licensed; that does not imply a warranty or security certification.
 
-## Default permissions
+## What the current version does
 
-- No telemetry uploads, analytics endpoints, automatic network scans, tracking, or background device access.
-- The STAT panel reads host status through the sysinfo crate.
-- The catalog is bundled at build time; viewing it does not connect to GitHub.
-- Explicit finite host sampling emits NDJSON to stdout only; it does not automatically save data, transmit measurements, or access external hardware.
-- Notes are created only through an explicit user command. They are stored in JSON under PIPBOY_HOME or the user's home directory.
-- Notes are plaintext and must not contain passwords, tokens, sensitive medical records, or restricted information.
-- Saved adapter preferences are separate from active permissions; `requested` does not open a device, access the network or authorize a receiver/transmitter.
+- **Offline by default.** STAT uses local host telemetry; LIBRARY reads a bundled catalog. No account, analytics, telemetry upload, device scan or background network service is required.
+- **Local notes.** NOTES stores plaintext JSON under `PIPBOY_HOME` or the platform's data directory. Do **not** store secrets, private medical records, credentials or protected field logs there. Writers use cooperative locks and atomic-replacement techniques, but external edits, power loss and untrusted local code are outside those guarantees.
+- **Preference is not permission.** `permissions.json` holds `requested` or `denied` intent. Neither it nor `simulate --confirm` grants a physical device capability.
+- **Simulators are synthetic.** Fixed `sim:*` fixtures, typed mock input/display/serial adapters and bounded virtual queues do not open real devices, capture live radio data, contact peers or transmit signals.
+- **The separate broker denies everything.** `rust-boy-broker --stdio-once` validates one bounded JSON request and always returns `allowed:false`. It has no hardware backend, device credentials, privileged helper or authenticated IPC endpoint.
 
-## Capability architecture
+The `ModuleHost` capability checks and mock leases are cooperative **in-process** controls; they are **not** an OS sandbox for untrusted native code. A separate deny-only process is likewise **not** a working OS permission broker.
 
-The in-process Rust `ModuleHost` provides **lifecycle and capability policy checks** for built-in trusted modules, not operating-system isolation. The static manifest cannot prevent malicious linked code from invoking OS functions. Hardware operations will require a separate device broker with explicit user consent and scoped handles before those adapters can be enabled. See [docs/OBJECT_MODEL.md](docs/OBJECT_MODEL.md).
+## Trust boundaries and planned hardware
 
-## G1 simulated broker (no real authorization)
+| Boundary | Current protection | Not yet available |
+| --- | --- | --- |
+| Local telemetry | Explicit in-process host-read grant; finite sampling | Hostile-process isolation |
+| Notes and preferences | Bounded schema validation, side-effect-free reads, cooperative write locking | Encrypted storage or protection against compromised users/processes |
+| Simulated adapters | Explicit mock confirmation, saved-denial precedence, revocation/expiry fixtures | Real device I/O or OS-enforced grants |
+| Physical broker | Strict, one-shot, deny-only request parser | Trusted caller identity, scoped OS handles, privilege separation, real timeouts/revocation |
 
-`SimulatedBroker` and `pipboy simulate` operate only on 11 fixed, in-memory `sim:*` fixtures. A session requires `--confirm` in the CLI, and a saved `denied` preference always wins. Requested intent never grants a session. The simulation emits `simulated: true` and no device readings; cross-broker and revoked leases are invalid. Fixed `simulate replay` scenarios use synthetic logical milliseconds and record explicit stale-token rejection following virtual disconnect/recovery or revocation; they do not use physical clocks or recorded signals. This **cooperative in-process harness is not an OS privilege broker**, and `--confirm` must never be reused to open real devices. Real trusted consent, OS handle isolation and physical adapters remain planned. See [simulation contract](docs/SIMULATION.md).
+**Before enabling a physical adapter**, Rust-Boy needs reviewed platform-specific device identity, a trusted authorization interface, independently enforced operating-system permissions, a minimal broker IPC protocol, hard timeouts, handle cleanup on revoke/crash/hot-unplug, and denial-path tests on supported devices. No GPIO, SDR, GNSS, serial, mesh, Bluetooth, radio or network interface can be enabled by the current broker.
 
-Virtual lease cancellation and deadlines are only in-memory mock behavior. The broker accepts manually injected logical milliseconds rather than wall-clock time, and backward ticks invalidate the active mock lease. Neither operation is an OS-enforced device watchdog or protection for physical transports.
+Read the detailed [OS authorization threat model](docs/OS_DEVICE_BROKER.md), [deny-only protocol](docs/BROKER_PROTOCOL.md), [adapter preference contract](docs/PERMISSIONS.md) and [test evidence](docs/VALIDATION.md).
 
-The bounded `VirtualTransport` queue only holds synthetic `sim:*` events; explicit CLI `--confirm` is for a single simulation and is never persisted as a device grant. The current in-process queue checks broker session state before reads and clears data after mock cancellation or revocation, but this **does not** protect against untrusted native code, enforce OS permissions, or implement encrypted/authenticated communications. A physical transport needs a separate broker, secure peer identity and real-world timeout/revocation semantics.
+## Reporting security issues
 
-The typed mock input/display/serial adapters also remain in-memory only: they reject missing confirmation or saved denials, return explicit simulated records and never measure a GPIO pin, render to a physical screen, or read serial hardware. The mock display rejects control bytes/escape sequences. The serial payload is an explicitly injected fixture, not information received over a port. No real adapter authorization, encrypted channel or OS isolation is implied by these trait interfaces. See [typed adapter contract](docs/MOCK_ADAPTERS.md).
+Use [GitHub's private vulnerability reporting / security advisory](https://github.com/pskeffington/pip_boy/security/advisories) when available. If private reporting is unavailable, contact the repository maintainer through a suitable private channel. Do not put credentials, exploit artifacts containing personal data, location traces or sensitive disclosure details in public issues.
 
-## Deny-all physical-request process (new, no hardware access)
+Please include the affected revision, platform, reproduction steps and security impact. No response-time or coordinated-disclosure service level is promised.
 
-`crates/rust-boy-broker` is now a separately built binary that reads **one** at-most-1,024-byte JSON request on standard input only when launched with `--stdio-once`. Its v1 protocol recognizes only the reviewed 11 capability/operation pairs. All responses explicitly say `allowed:false`, including a well-formed request with `operator_intent:true`; no user-controlled string, saved preference, token or identifier is authoritative. The executable has no driver, scanner, socket, device handle, privileged startup, permissions writer or persistent grant. This is a deny-by-default **protocol/process scaffold**, not an independently enforced OS authorization boundary. See [protocol](docs/BROKER_PROTOCOL.md).
+## Third-party code and assets
 
-## Actual device-authorization boundary (not implemented)
-
-The project now specifies [G2 OS device broker requirements](docs/OS_DEVICE_BROKER.md): explicit device identity, trusted per-operation consent, a separately enforced OS permission boundary, ephemeral scoped handles, actual deadline/close-on-revoke behavior, and fail-closed hot-unplug and process error handling. **None of those features are enabled merely because their design is written.** Windows ConPTY validation exercises only terminal behavior and cannot grant peripheral access.
-
-## Future devices
-
-Location, serial ports, GPIO, SDR/radio, BLE, Wi-Fi, and mesh transports require separate adapters, permission gates, simulator tests, and user-facing indicators. Do not silently initiate scans, pair devices, transmit, or modify settings. No interference, jamming, credential interception, or covert collection features.
-
-## Third-party materials
-
-Never import source or media solely because it is visible on GitHub. Capture repo URL, exact revision, license and notice requirements, provenance, and any asset-specific terms before reuse. Missing/ambiguous licensing means reference-only.
-
-## Reports
-
-File a private security report using GitHub's security advisory feature when available. Avoid publishing credentials, location traces, or sensitive sample files in issues.
-
-Local host telemetry starts only after the host checks its read grant. TUI P revokes that grant immediately, drops the collector/history, and clears the displayed reading. Resume grants host read access for the current session and explicitly restarts collection. Grants are not persisted. STAT is lifecycle-managed, while trusted LIBRARY and NOTES operations use scoped `run_local` prechecks. `permissions.json` saves only future adapter intent; it is never loaded as active grants, and there is no OS broker or actual external-adapter authorization yet. See [adapter preferences](docs/PERMISSIONS.md) and [local operation controls](docs/LOCAL_OPERATIONS.md).
-
-Notes writers use a cooperative OS lock. Readers/search are side-effect free. Schema checks reject future versions, extra fields, duplicate/zero IDs, control characters and oversized data before rewriting. Ordinary staging errors preserve the current document. Locking does not constrain external editors or untrusted code; do not delete notes.lock while any writer may be active. See [storage limits and recovery](docs/STORAGE.md).
+A research-catalog link is not a license grant. Review source licenses, dependency provenance, hardware rights and media restrictions before importing material. Do not add copyrighted game artwork, unlicensed firmware, live geolocation traces or secrets to this repository.
