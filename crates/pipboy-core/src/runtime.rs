@@ -394,7 +394,10 @@ mod tests {
     #[test]
     fn local_operation_errors_propagate() {
         let host = ModuleHost::new(PermissionSet::offline_read_only());
-        assert!(host.run_local(LocalOperation::NotesRead, || Err::<(), _>("fixture failure")).unwrap_err().contains("fixture failure"));
+        let result = host.run_local(LocalOperation::NotesRead, || {
+            Err::<(), _>("fixture failure")
+        });
+        assert!(result.unwrap_err().contains("fixture failure"));
     }
 
     #[test]

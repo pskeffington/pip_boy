@@ -297,7 +297,9 @@ mod tests {
         let store = PreferenceStore::new(home.clone());
         assert!(store.list().unwrap().is_empty());
         assert!(!home.exists());
-        let host = crate::runtime::ModuleHost::new(crate::capability::PermissionSet::offline_read_only());
+        let host = crate::runtime::ModuleHost::new(
+            crate::capability::PermissionSet::offline_read_only(),
+        );
         for capability in ADAPTER_CAPABILITIES {
             assert!(!host.permissions().allows(*capability));
         }
@@ -316,7 +318,9 @@ mod tests {
             .unwrap());
         assert_eq!(fs::read(store.path()).unwrap(), initial);
         assert_eq!(store.list().unwrap()[0].preference, Preference::Requested);
-        let host = crate::runtime::ModuleHost::new(crate::capability::PermissionSet::offline_read_only());
+        let host = crate::runtime::ModuleHost::new(
+            crate::capability::PermissionSet::offline_read_only(),
+        );
         assert!(!host.permissions().allows(Capability::SdrReceive));
         assert!(store
             .set(Capability::SdrReceive, Preference::Denied)

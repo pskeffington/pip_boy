@@ -2,7 +2,9 @@ use pipboy_core::blueprint::{literature, plans, validate_blueprint};
 use pipboy_core::branding::{CLI_COMMAND, PRODUCT_DESCRIPTOR, PRODUCT_NAME};
 use pipboy_core::catalog::{sources, validate_sources};
 use pipboy_core::notes::NoteStore;
-use pipboy_core::permissions::{adapter_capability, Preference, PreferenceStore, ADAPTER_CAPABILITIES};
+use pipboy_core::permissions::{
+    adapter_capability, Preference, PreferenceStore, ADAPTER_CAPABILITIES,
+};
 use pipboy_core::runtime::{Capability, LocalOperation, ModuleHost, PermissionSet};
 use std::error::Error;
 mod console;
@@ -204,7 +206,10 @@ fn run() -> Result<(), Box<dyn Error>> {
             let store = NoteStore::from_environment()?;
             println!("INFO: notes location {}", store.path().display());
             let preferences = PreferenceStore::from_environment()?;
-            println!("PASS: {} persisted adapter preferences validated", preferences.list()?.len());
+            println!(
+                "PASS: {} persisted adapter preferences validated",
+                preferences.list()?.len()
+            );
             println!("INFO: map, radio, mesh, GPIO and device I/O are not implemented");
             println!("INFO: doctor does not probe or connect to nearby devices");
             Ok(())
@@ -213,7 +218,10 @@ fn run() -> Result<(), Box<dyn Error>> {
             let mut host = ModuleHost::new(PermissionSet::offline_read_only());
             match args.next().as_deref() {
                 Some("list") if args.next().is_none() => {
-                    for note in host.run_local(LocalOperation::NotesRead, || NoteStore::from_environment()?.list())? {
+                    let entries = host.run_local(LocalOperation::NotesRead, || {
+                        NoteStore::from_environment()?.list()
+                    })?;
+                    for note in entries {
                         println!("#{} [{}] {}", note.id, note.created_unix_s, note.text);
                     }
                     Ok(())
@@ -223,7 +231,10 @@ fn run() -> Result<(), Box<dyn Error>> {
                     if args.next().is_some() {
                         return Err("usage: pipboy notes search QUERY".into());
                     }
-                    for note in host.run_local(LocalOperation::NotesRead, || NoteStore::from_environment()?.search(&query))? {
+                    let entries = host.run_local(LocalOperation::NotesRead, || {
+                        NoteStore::from_environment()?.search(&query)
+                    })?;
+                    for note in entries {
                         println!("#{} [{}] {}", note.id, note.created_unix_s, note.text);
                     }
                     Ok(())
@@ -232,7 +243,9 @@ fn run() -> Result<(), Box<dyn Error>> {
                     if args.next().is_some() {
                         return Err("usage: pipboy notes export".into());
                     }
-                    host.run_local(LocalOperation::NotesRead, || NoteStore::from_environment()?.export_to(std::io::stdout().lock()))?;
+                    host.run_local(LocalOperation::NotesRead, || {
+                        NoteStore::from_environment()?.export_to(std::io::stdout().lock())
+                    })?;
                     Ok(())
                 }
                 Some("import") => {
@@ -241,7 +254,9 @@ fn run() -> Result<(), Box<dyn Error>> {
                         return Err("usage: pipboy notes import FILE".into());
                     }
                     host.grant(Capability::FilesWrite);
-                    let report = host.run_local(LocalOperation::NotesWrite, || NoteStore::from_environment()?.import_from(std::fs::File::open(path)?))?;
+                    let report = host.run_local(LocalOperation::NotesWrite, || {
+                        NoteStore::from_environment()?.import_from(std::fs::File::open(path)?)
+                    })?;
                     println!(
                         "Imported {} notes; skipped {} matching records; {} total",
                         report.imported, report.skipped, report.total
@@ -251,7 +266,9 @@ fn run() -> Result<(), Box<dyn Error>> {
                 Some("add") => {
                     let text = args.collect::<Vec<_>>().join(" ");
                     host.grant(Capability::FilesWrite);
-                    let note = host.run_local(LocalOperation::NotesWrite, || NoteStore::from_environment()?.add(&text))?;
+                    let note = host.run_local(LocalOperation::NotesWrite, || {
+                        NoteStore::from_environment()?.add(&text)
+                    })?;
                     println!("Saved local note #{}", note.id);
                     Ok(())
                 }
