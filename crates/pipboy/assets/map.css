@@ -1,0 +1,27 @@
+/* Shared Rust-Boy offline map styling; both shells use the same controls. */
+.rb-map { min-width:0; min-height:0; display:flex; flex-direction:column; gap:5px; height:100%; width:100%; font:11px ui-monospace, SFMono-Regular, Consolas, monospace; color:#caffb5; }
+.rb-map-toolbar { display:flex; flex-wrap:wrap; gap:4px; align-items:center; }
+.rb-map-button { font:inherit; font-weight:bold; cursor:pointer; color:#caffb5; background:#102619; border:1px solid #597d59; border-radius:3px; padding:5px 8px; min-height:32px; }
+.rb-map-button:hover:not(:disabled),.rb-map-button:focus-visible { border-color:#caffb5; background:#22402a; }
+.rb-map-button:disabled { opacity:.42; cursor:default; }
+.rb-map-stage { position:relative; flex:1 1 auto; min-height:100px; border:1px solid #46664a; border-radius:3px; overflow:hidden; background:#0b1a12; }
+.rb-map-canvas { width:100%; height:100%; display:block; touch-action:none; cursor:grab; }
+.rb-map-canvas:active { cursor:grabbing; }
+.rb-map-status { font-size:10px; line-height:1.2; color:#b2d0a7; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:none; }
+.rb-map-manual { display:flex; gap:5px; align-items:center; flex-wrap:wrap; }
+.rb-map-manual[hidden] { display:none; }
+.rb-map-manual input { min-width:0; flex:1 1 100px; width:100px; background:#0b2013; color:#ddffd4; border:1px solid #597d59; padding:6px; }
+.rb-map-micro-host { height:100%; display:flex; flex-direction:column; min-height:0; }
+.rb-map-mount { flex:1; display:flex; min-height:0; }
+.rb-map-desktop-host { min-height:290px; height:360px; padding:9px; background:#101d15; }
+.micro-device[data-depth="root"] .micro-content:has(.rb-map-micro-host) { height:100%; min-height:0; padding:5px 7px; }
+@media (max-width:520px) {
+  .rb-map-toolbar { gap:3px; }
+  .rb-map-button { min-height:29px; padding:4px 6px; font-size:10px; }
+  .rb-map-status { font-size:9px; }
+}
+@media (max-height:360px) {
+  .rb-map-toolbar { flex-wrap:nowrap; }
+  .rb-map-button { min-height:25px; padding:3px 5px; font-size:9px; }
+  .rb-map-stage { min-height:55px; }
+}
