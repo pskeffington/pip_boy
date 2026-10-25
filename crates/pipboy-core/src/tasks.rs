@@ -244,7 +244,7 @@ impl TaskBoard {
         Ok(())
     }
 
-    fn read(mut source: impl Read) -> io::Result<Self> {
+    fn read(source: impl Read) -> io::Result<Self> {
         let mut data = Vec::new();
         source.take(MAX_FILE + 1).read_to_end(&mut data)?;
         if data.len() as u64 > MAX_FILE {
