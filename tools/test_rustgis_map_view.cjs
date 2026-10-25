@@ -75,6 +75,18 @@ async function main() {
   assert.match(view.status.textContent, /FIX/);
   window.RustBoyMap.unmount();
   assert.equal(cancelled, 7);
-  console.log("RustGIS map import + browser GPS alignment lifecycle: PASS");
+  const restored = window.RustBoyMap.mount(new Element("div"));
+  assert.equal(restored.shapes.length, 1, "map data remains in volatile page memory");
+  assert.equal(restored.fix, null, "location fixes never survive a page switch");
+  assert.equal(restored.watchId, null, "GPS watch never resumes automatically");
+  assert.match(restored.sourceLines.textContent, /County GIS/);
+  const erase = restored.sourceBox.children.find((node) => node.textContent === "CLEAR MAP");
+  erase.listeners.click[0]();
+  assert.equal(restored.shapes.length, 0);
+  window.RustBoyMap.unmount();
+  const cleared = window.RustBoyMap.mount(new Element("div"));
+  assert.equal(cleared.shapes.length, 0, "cleared geography must not reappear");
+  window.RustBoyMap.unmount();
+  console.log("RustGIS map import, GPS alignment, volatile reuse and erase: PASS");
 }
 main().catch((error) => { console.error(error); process.exitCode = 1; });
