@@ -6,7 +6,9 @@
 use crate::peer;
 use pipboy_core::peers::PeerStore;
 use pipboy_core::scout_gis::{distance_meters, waypoint, Point};
+use pipboy_core::network_probe;
 use pipboy_core::tasks::{NewTask, Status, TaskStore};
+use std::sync::{atomic::{AtomicUsize, Ordering}, Arc};
 use pipboy_core::workbench::{inspect_hex, ipv4_cidr, tool, WorkbenchStore, PALETTE, PRESETS};
 use serde_json::{json, Value};
 use std::collections::BTreeMap;
@@ -613,6 +615,31 @@ fn device_sync(req: &Request, store: &WorkbenchStore) -> Result<Response, Respon
     ))
 }
 
+
+fn scan_network(req: &Request, store: &WorkbenchStore) -> Result<Response, Response> {
+    let body = parse_json_body(req, &["cidr", "confirm"])?;
+    if body.get("confirm").and_then(Value::as_bool) != Some(true) {
+        return Err(Response::error(422, "Confirm authorization for this private LAN scope"));
+    }
+    let cidr = str_field(&body, "cidr")?;
+    if cidr.len() > 32 {
+        return Err(Response::error(422, "LAN scope exceeds 32 bytes"));
+    }
+    let board = store
+        .load()
+        .map_err(|_| Response::error(409, "Workbench unavailable"))?;
+    if !board.slots.iter().any(|slot| slot.tool == "net-lab") {
+        return Err(Response::error(409, "Activate a role with NET ENGINEER first"));
+    }
+    let report = network_probe::scan(cidr, true)
+        .map_err(|_| Response::error(422, "Invalid network scope or scan already active"))?;
+    Ok(Response::json(200, &json!({
+        "kind": "network_scan",
+        "output": report.render_text(),
+        "report": report
+    })))
+}
+
 fn dispatch(req: &Request, store: &WorkbenchStore, port: u16) -> Response {
     let expected_host = format!("127.0.0.1:{port}");
     if req.header("host") != Some(expected_host.as_str()) {
@@ -667,6 +694,7 @@ fn dispatch(req: &Request, store: &WorkbenchStore, port: u16) -> Response {
         ("GET", "/api/state") => state(store).unwrap_or_else(|error| error),
         ("GET", "/api/tasks") => tasks_read(store).unwrap_or_else(|error| error),
         ("GET", "/api/peers") => peers_read(store).unwrap_or_else(|error| error),
+        ("POST", "/api/net/scan") => scan_network(req, store).unwrap_or_else(|error| error),
         ("POST", "/api/peer/send") => device_send(req, store).unwrap_or_else(|error| error),
         ("POST", "/api/peer/sync") => device_sync(req, store).unwrap_or_else(|error| error),
         ("POST", "/api/tasks/create") => tasks_create(req, store).unwrap_or_else(|error| error),
@@ -809,13 +837,27 @@ pub fn run(args: Vec<String>) -> Result<(), Box<dyn Error>> {
     if open {
         eprintln!("--open is Mac-only; open the printed URL manually.");
     }
-    let store = WorkbenchStore::from_environment()?;
+    // A network sweep can take seconds. Keep the local UI responsive while
+    // bounding concurrent loopback requests to avoid unbounded thread creation.
+    const MAX_CLIENTS: usize = 12;
+    let store = Arc::new(WorkbenchStore::from_environment()?);
+    let active_clients = Arc::new(AtomicUsize::new(0));
     for connection in listener.incoming() {
         match connection {
-            Ok(stream) => {
-                if let Err(error) = serve_client(stream, &store, port) {
-                    eprintln!("Dashboard request ended: {error}");
+            Ok(mut stream) => {
+                if active_clients.fetch_add(1, Ordering::SeqCst) >= MAX_CLIENTS {
+                    active_clients.fetch_sub(1, Ordering::SeqCst);
+                    let _ = Response::error(409, "Local dashboard is busy").write_to(&mut stream);
+                    continue;
                 }
+                let store = Arc::clone(&store);
+                let active = Arc::clone(&active_clients);
+                std::thread::spawn(move || {
+                    if let Err(error) = serve_client(stream, &store, port) {
+                        eprintln!("Dashboard request ended: {error}");
+                    }
+                    active.fetch_sub(1, Ordering::SeqCst);
+                });
             }
             Err(error) => eprintln!("Dashboard connection refused: {error}"),
         }
