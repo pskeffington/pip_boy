@@ -53,6 +53,8 @@ jobs:
           python3 tools/smoke_simulator.py
           python3 tools/smoke_replay.py
           python3 tools/smoke_transport.py
+          python3 tools/smoke_mock_adapters.py
+          python3 tools/smoke_native_cli.py
 
   native:
     name: Native ${{ matrix.os }}
@@ -87,3 +89,9 @@ jobs:
           ${{ matrix.python }} tools/smoke_simulator.py
           ${{ matrix.python }} tools/smoke_replay.py
           ${{ matrix.python }} tools/smoke_transport.py
+          ${{ matrix.python }} tools/smoke_mock_adapters.py
+          ${{ matrix.python }} tools/smoke_native_cli.py
+      - name: Native macOS terminal PTY journey
+        if: matrix.os == 'macos-latest'
+        shell: bash
+        run: python3 tools/smoke_runtime.py
