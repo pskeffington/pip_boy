@@ -201,6 +201,7 @@ function renderCustomPalette() {
 }
 
 function renderExtension() {
+  if (window.RustBoyMap) window.RustBoyMap.unmount();
   ui.extension.replaceChildren();
   const selected = profile();
   if (!selected) return;
@@ -224,18 +225,13 @@ function renderExtension() {
     return;
   }
   if (selected.id === "reclamation-scout") {
-    const map = el("div", "map-preview");
-    const heading = el("div", "map-preview-header");
-    heading.append(
-      el("strong", "", "SCOUT / NAVIGATION VIEWPORT"),
-      el("span", "", "RUSTGIS NOT ATTACHED")
-    );
-    const canvas = el("div", "map-canvas");
-    canvas.setAttribute("role", "img");
-    canvas.setAttribute("aria-label", "Empty reference grid. No live map or position is displayed.");
-    canvas.append(el("span", "map-canvas-label", "REFERENCE GRID ONLY / NO LIVE MAP"));
-    map.append(heading, canvas);
+    const map = el("div", "rb-map-desktop-host");
     ui.extension.append(map);
+    if (window.RustBoyMap) {
+      requestAnimationFrame(() => {
+        if (map.isConnected) window.RustBoyMap.mount(map);
+      });
+    }
     if (selectedAvailable() && window.RustBoyTasks) {
       const queue = el("div", "job-assignments");
       ui.extension.append(queue);
