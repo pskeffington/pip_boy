@@ -5,7 +5,7 @@
 //! by browsing the dashboard or selecting a role.
 use pipboy_core::scout_gis::{distance_meters, waypoint, Point};
 use pipboy_core::workbench::{
-    encode_hex, inspect_hex, ipv4_cidr, tool, WorkbenchStore, PALETTE, PRESETS,
+    inspect_hex, ipv4_cidr, tool, WorkbenchStore, PALETTE, PRESETS,
 };
 use serde_json::{json, Value};
 use std::collections::BTreeMap;
@@ -99,10 +99,6 @@ impl Response {
     }
 }
 
-fn bad_request(message: &'static str) -> io::Error {
-    io::Error::new(io::ErrorKind::InvalidInput, message)
-}
-
 fn receive(stream: &mut TcpStream) -> Result<Request, Response> {
     let mut data = Vec::new();
     let boundary = loop {
@@ -133,8 +129,8 @@ fn receive(stream: &mut TcpStream) -> Result<Request, Response> {
     let mut lines = head.split("\r\n");
     let first = lines.next().unwrap_or_default();
     let mut words = first.split_whitespace();
-    let method = words.next().unwrap_or_default();
-    let path = words.next().unwrap_or_default();
+    let method = words.next().unwrap_or_default().to_owned();
+    let path = words.next().unwrap_or_default().to_owned();
     let version = words.next().unwrap_or_default();
     if words.next().is_some()
         || !matches!(method, "GET" | "POST")
@@ -201,8 +197,8 @@ fn receive(stream: &mut TcpStream) -> Result<Request, Response> {
         data.extend_from_slice(&chunk[..count]);
     }
     Ok(Request {
-        method: method.to_string(),
-        path: path.to_string(),
+        method,
+        path,
         headers,
         body: data[boundary..].to_vec(),
     })
@@ -638,10 +634,5 @@ mod tests {
         assert!(!JS.contains("eval("));
     }
 
-    #[test]
-    fn legacy_hex_helper_is_available_without_network_or_side_effects() {
-        assert_eq!(encode_hex("Hi").unwrap(), "48 69");
-        assert_eq!(inspect_hex("4869").unwrap().contains("Hi"), true);
-        assert!(bad_request("not a request").to_string().contains("not a request"));
-    }
+
 }
