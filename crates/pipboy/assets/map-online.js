@@ -206,7 +206,63 @@
       endpoint: ENDPOINT, license: "ODbL" };
   }
 
-  window.RustBoyOnline = Object.freeze({ ping, roads, boundsFor, qlFor, parseOverpass,
+
+  // Census TIGERweb public county polygon. It is a legal/statistical boundary,
+  // NOT a coastline. The browser must explicitly enable COUNTY once each session.
+  const COUNTY_ENDPOINT =
+    "https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/State_County/MapServer/37/query";
+  async function countyAt(lon, lat, signal) {
+    if (!finite(lon) || !finite(lat) || Math.abs(lon) > 180 || Math.abs(lat) > 90)
+      reject("INVALID COUNTY LOOKUP POSITION");
+    const params = new URLSearchParams({
+      f: "geojson", geometry: JSON.stringify({x:lon,y:lat}),
+      geometryType:"esriGeometryPoint", inSR:"4326", outSR:"4326",
+      spatialRel:"esriSpatialRelIntersects", where:"1=1",
+      outFields:"GEOID,NAME,STATE,COUNTY", returnGeometry:"true",
+      maxAllowableOffset:"0.00015"
+    });
+    const response = await fetch(COUNTY_ENDPOINT + "?" + params.toString(), {
+      method:"GET", mode:"cors", cache:"no-store", credentials:"omit",
+      referrerPolicy:"no-referrer", signal
+    });
+    if (!response.ok) reject("CENSUS COUNTY HTTP " + response.status);
+    const payload = await readBounded(response);
+    if (!payload || !Array.isArray(payload.features) || payload.features.length !== 1)
+      reject("COUNTY NOT FOUND OR AMBIGUOUS");
+    const feature = payload.features[0], props=feature.properties || {};
+    if (!/^\d{5}$/.test(props.GEOID) || typeof props.NAME !== "string" ||
+        props.NAME.length > 100 || !feature.geometry ||
+        !["Polygon","MultiPolygon"].includes(feature.geometry.type))
+      reject("INVALID CENSUS COUNTY GEOMETRY");
+    const polygon=feature.geometry.type==="Polygon"
+      ? [feature.geometry.coordinates] : feature.geometry.coordinates;
+    let vertices=0;
+    const paths=[];
+    for (const part of polygon) {
+      if (!Array.isArray(part) || !part.length) reject("EMPTY COUNTY POLYGON");
+      for (const ring of part) {
+        if (!Array.isArray(ring) || ring.length < 4 || (vertices+=ring.length)>12000)
+          reject("COUNTY GEOMETRY TOO LARGE");
+        const points=ring.map(p => {
+          if (!Array.isArray(p) || p.length<2 || !finite(p[0]) || !finite(p[1]) ||
+              Math.abs(p[0])>180 || Math.abs(p[1])>90) reject("INVALID COUNTY VERTEX");
+          return [p[0],p[1]];
+        });
+        if (points[0][0]!==points.at(-1)[0] || points[0][1]!==points.at(-1)[1])
+          reject("UNCLOSED COUNTY RING");
+        paths.push(points);
+      }
+    }
+    return {
+      id:props.GEOID, name:props.NAME.slice(0,100), paths,
+      source:"U.S. Census TIGERweb State_County ACS 2025 / January 1 2025",
+      vintage:"2025-01-01",
+      shape:{kind:"line",paths,label:"COUNTY "+props.NAME.slice(0,32),
+        style:{stroke:"#ecda94",width:2.1,opacity:0.9}}
+    };
+  }
+
+  window.RustBoyOnline = Object.freeze({ ping, roads, countyAt, boundsFor, qlFor, parseOverpass,
     attribution: "© OpenStreetMap contributors · ODbL",
     copyright: "https://www.openstreetmap.org/copyright" });
 })();
