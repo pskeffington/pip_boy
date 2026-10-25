@@ -18,6 +18,7 @@ Technical contracts, architecture decisions, research provenance and validation 
 | [Quick start](../README.md#quick-start) | Clone, build, run the terminal UI and inspect local status |
 | [Console controls](CONSOLE.md) | Keyboard navigation, resize behavior and terminal restoration |
 | [RustGIS-native map and GPS](SCOUT_GPS_MAP.md) | Native RustGIS map import, GPS, optional Overpass road reference, privacy and provenance |
+| [Reclamation Field Kit](RECLAMATION.md) | Local manual site register, offline markers, GeoJSON export and privacy controls |
 | [Scout GIS + TAK on Pi](SCOUT_GIS_TAK.md) | Offline GeoJSON, RustGIS ARM64 roadmap, Pi TAK server and CoT integration gates |
 | [Role roadmap](ROLE_ROADMAP.md) | Eight occupational workbenches, operational needs and R0-R3 acceptance gates |
 | [Lore/source matrix](VAULT_TEC_LORE_MATRIX.md) | Publisher-source evidence, role name fidelity and technical standards |
@@ -60,4 +61,3 @@ The machine-readable `implemented_unverified` catalog label is a **module accept
 
 The product name is **Rust-Boy**; the existing `pip_boy` repository, `pipboy` CLI and `PIPBOY_HOME` storage variable remain compatibility interfaces. Keep implementation status explicit, preserve data provenance, and obtain separate rights clearance before copying third-party software or art.
 
-- [Reclamation Field Kit](RECLAMATION.md) — manual survey site register, offline markers, GeoJSON export and privacy boundaries.
