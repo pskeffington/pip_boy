@@ -182,6 +182,7 @@ pub fn validate_blueprint(modules: &[ModulePlan], literature: &[Literature]) -> 
             item.r#type.as_str(),
             "peer_reviewed"
                 | "official_docs"
+                | "protocol_reference"
                 | "language_spec"
                 | "platform_spec"
                 | "standard"
