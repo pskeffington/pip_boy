@@ -11,11 +11,11 @@ This is the authoritative product-naming reference for this repository. The bran
 - **Rust-Boy** — product name in all prose, documentation titles, terminal headers, issue/PR descriptions, and release notes. Use the exact spelling, capitalization, and hyphen.
 - **RUST-BOY** — acceptable only as an intentional uppercase, monospaced UI heading.
 - **pip_boy** — existing GitHub repository slug. Do not rename the repository or links as part of a branding-only pass.
-- **pipboy** — stable CLI executable and existing Rust package identifier. Its display header says Rust-Boy; commands remain \`pipboy\` until a separately tested migration is approved.
+- **pipboy** — stable CLI executable and existing Rust package identifier. Its display header says Rust-Boy; commands remain `pipboy` until a separately tested migration is approved.
 - **pipboy-core** — internal library crate; retained to avoid unnecessary dependency and import changes.
-- **PIPBOY_HOME** / \`~/.pipboy\` — existing settings and data paths, retained to protect stored notes and scripts.
+- **PIPBOY_HOME** / `~/.pipboy` — existing settings and data paths, retained to protect stored notes and scripts.
 
-Do not invent a \`rust-boy\` executable or new storage path in instructions before it actually exists. User-facing prose always says **Rust-Boy**; code and paths must accurately reflect the current implementation.
+Do not invent a `rust-boy` executable or new storage path in instructions before it actually exists. User-facing prose always says **Rust-Boy**; code and paths must accurately reflect the current implementation.
 
 ## 2. Standard descriptions
 
@@ -33,13 +33,13 @@ Build an original **instrument-console** design rather than copying Fallout's ar
 
 | Token | Hex | Role |
 | --- | --- | --- |
-| \`--rb-bg\` | \`#0A120D\` | Deep graphite-green foundation |
-| \`--rb-panel\` | \`#13231A\` | Secondary panel surface |
-| \`--rb-accent\` | \`#7BE9A6\` | Active data and focus state |
-| \`--rb-text\` | \`#ECF6EE\` | Primary text |
-| \`--rb-muted\` | \`#AFC8B5\` | Supporting labels |
-| \`--rb-warning\` | \`#E8B96E\` | Caution and degraded state |
-| \`--rb-error\` | \`#F3918B\` | Explicit error state |
+| `--rb-bg` | `#0A120D` | Deep graphite-green foundation |
+| `--rb-panel` | `#13231A` | Secondary panel surface |
+| `--rb-accent` | `#7BE9A6` | Active data and focus state |
+| `--rb-text` | `#ECF6EE` | Primary text |
+| `--rb-muted` | `#AFC8B5` | Supporting labels |
+| `--rb-warning` | `#E8B96E` | Caution and degraded state |
+| `--rb-error` | `#F3918B` | Explicit error state |
 
 These are design intentions, not an assertion that contrast or accessibility compliance has been tested. Verify WCAG text contrast and color-blind legibility when implementing a graphical theme. The existing Ratatui UI uses terminal colors; do not assume it already applies the hex palette.
 
@@ -49,8 +49,8 @@ These are design intentions, not an assertion that contrast or accessibility com
 
 ## 4. Interface language
 
-- Use \`STAT\`, \`LIBRARY\`, \`NOTES\`, \`MAP\`, \`RADIO\`, and \`MESH\` for module identifiers.
-- Use \`READY\`, \`PLANNED\`, \`UNAVAILABLE\`, and \`ERROR\` accurately; never treat missing telemetry as zero.
+- Use `STAT`, `LIBRARY`, `NOTES`, `MAP`, `RADIO`, and `MESH` for module identifiers.
+- Use `READY`, `PLANNED`, `UNAVAILABLE`, and `ERROR` accurately; never treat missing telemetry as zero.
 - Label observed values with source and freshness where practical.
 - Explain when radio is receive-only, device permissions are absent, or location services are off.
 - Keep keyboard navigation and exit instructions visible.
@@ -72,4 +72,4 @@ Do **not** copy Fallout logos, Pip-Boy product trade dress, original game screen
 
 ## 7. Scope
 
-Naming and design conventions are active now. Logo artwork, trademark investigation, command migration to \`rust-boy\`, packaging, and a fully themed GUI require separate review and implementation gates.
+Naming and design conventions are active now. Logo artwork, trademark investigation, command migration to `rust-boy`, packaging, and a fully themed GUI require separate review and implementation gates.

@@ -8,12 +8,12 @@ Read [README.md](README.md), [BRANDING.md](BRANDING.md), [SECURITY.md](SECURITY.
 
 Use the existing package and executable names while they are still part of the public build interface:
 
-\`\`\`bash
+```bash
 cargo fmt --all -- --check
 cargo test --workspace
 cargo clippy --workspace --all-targets -- -D warnings
 cargo run -p pipboy -- doctor
-\`\`\`
+```
 
 ## Change requirements
 
@@ -27,7 +27,7 @@ cargo run -p pipboy -- doctor
 
 ## Pull requests
 
-Describe scope, checks performed, unverified items, permission impacts, and the relevant roadmap gate. A failing or unavailable CI run is **not** a passing validation result. Use **Rust-Boy** for the product name in titles and prose; keep \`pip_boy\` in repository URLs and \`pipboy\` in commands.
+Describe scope, checks performed, unverified items, permission impacts, and the relevant roadmap gate. A failing or unavailable CI run is **not** a passing validation result. Use **Rust-Boy** for the product name in titles and prose; keep `pip_boy` in repository URLs and `pipboy` in commands.
 
 ## Disclaimer
 

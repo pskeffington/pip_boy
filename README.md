@@ -13,9 +13,9 @@ Rust-Boy is an independent, modular toolkit for desktop terminals and future wea
 | **Public product name** | **Rust-Boy** |
 | Product descriptor | Offline-first field systems console |
 | GitHub repository | [pskeffington/pip_boy](https://github.com/pskeffington/pip_boy) |
-| Existing command / executable | \`pipboy\` (retained for compatibility) |
-| Rust workspace packages | \`pipboy\`, \`pipboy-core\` (internal names retained) |
-| Local configuration variable | \`PIPBOY_HOME\` (unchanged) |
+| Existing command / executable | `pipboy` (retained for compatibility) |
+| Rust workspace packages | `pipboy`, `pipboy-core` (internal names retained) |
+| Local configuration variable | `PIPBOY_HOME` (unchanged) |
 
 **Rust-Boy** is the name used in the interface, documentation, and future releases. Technical identifiers remain unchanged during this branding pass so existing commands and local data continue to work. The naming, visual system, and attribution rules are defined in **[BRANDING.md](BRANDING.md)**.
 
@@ -46,7 +46,7 @@ Rust-Boy is an **unofficial, independent project**. It is not affiliated with or
 
 Requires a stable Rust toolchain and a modern terminal on macOS, Linux, or Windows.
 
-\`\`\`bash
+```bash
 git clone https://github.com/pskeffington/pip_boy.git
 cd pip_boy
 cargo run -p pipboy -- tui
@@ -61,9 +61,9 @@ cargo run -p pipboy -- notes list
 cargo fmt --all -- --check
 cargo test --workspace
 cargo clippy --workspace --all-targets -- -D warnings
-\`\`\`
+```
 
-Use **Left/Right** or **Tab** to change console panels and **Q** to exit. Note files are plaintext and stored under \`PIPBOY_HOME\` or the platform's default Rust-Boy data directory. Do not store passwords, credentials, or sensitive records in notes.
+Use **Left/Right** or **Tab** to change console panels and **Q** to exit. Note files are plaintext and stored under `PIPBOY_HOME` or the platform's default Rust-Boy data directory. Do not store passwords, credentials, or sensitive records in notes.
 
 ## Repository navigation
 

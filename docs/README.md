@@ -12,7 +12,7 @@ Rust-Boy is an offline-first, Rust-native field systems console. This directory 
 
 ## Naming rule
 
-The product is **Rust-Boy**. The repository path \`pip_boy\`, CLI \`pipboy\`, internal crate \`pipboy-core\`, and existing \`PIPBOY_HOME\` setting remain stable technical interfaces. Do not confuse naming changes with device capability or validated runtime behavior.
+The product is **Rust-Boy**. The repository path `pip_boy`, CLI `pipboy`, internal crate `pipboy-core`, and existing `PIPBOY_HOME` setting remain stable technical interfaces. Do not confuse naming changes with device capability or validated runtime behavior.
 
 ## Documentation policy
 
