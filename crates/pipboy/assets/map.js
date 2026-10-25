@@ -1221,6 +1221,56 @@
     const apply = make("button", "rb-map-button", "SET CENTER");
     apply.type = "submit";
     manual.append(latitude, longitude, apply);
+
+    const countyPanel=make("form","rb-map-county-form");
+    countyPanel.hidden=true;
+    const countyConsent=make("p","rb-map-county-consent",
+      "AREA / SENDS SELECTED POSITION TO U.S. CENSUS ONLY WHEN LOADED");
+    const countyLat=make("input","","");
+    countyLat.type="number";countyLat.step="any";
+    countyLat.min="-90";countyLat.max="90";countyLat.required=true;
+    countyLat.placeholder="Latitude";
+    countyLat.setAttribute("aria-label","County lookup latitude (manual)");
+    const countyLon=make("input","","");
+    countyLon.type="number";countyLon.step="any";
+    countyLon.min="-180";countyLon.max="180";countyLon.required=true;
+    countyLon.placeholder="Longitude";
+    countyLon.setAttribute("aria-label","County lookup longitude (manual)");
+    const countyGo=make("button","rb-map-button","LOAD COUNTY");
+    countyGo.type="submit";
+    const countyGPS=control("USE GPS",()=>{
+      if(!window.isSecureContext||!navigator.geolocation?.getCurrentPosition){
+        countyStatus.textContent="GPS UNAVAILABLE / USE MANUAL COORDINATES";
+        return;
+      }
+      if(view.countyBusy)return;
+      countyStatus.textContent="WAITING FOR ONE-TIME GPS PERMISSION";
+      navigator.geolocation.getCurrentPosition((position)=>{
+        if(active!==view)return;
+        const coords=position?.coords;
+        if(!coords||!Number.isFinite(coords.latitude)||!Number.isFinite(coords.longitude)||
+           Math.abs(coords.latitude)>90||Math.abs(coords.longitude)>180||
+           !Number.isFinite(position.timestamp)||
+           Date.now()-position.timestamp>60000){
+          countyStatus.textContent="STALE OR INVALID GPS POSITION";
+          return;
+        }
+        countyLat.value=String(coords.latitude);
+        countyLon.value=String(coords.longitude);
+        void requestCounty(view,coords.latitude,coords.longitude);
+      },(error)=>{
+        if(active===view)countyStatus.textContent=error?.code===1?
+          "GPS PERMISSION DENIED / MANUAL INPUT AVAILABLE":"GPS UNAVAILABLE / USE MANUAL INPUT";
+      },{enableHighAccuracy:true,maximumAge:0,timeout:12000});
+    },"One GPS fix, then explicit U.S. Census county download; no continuous watch");
+    const countyBack=control("BOSTON",()=>backToBoston(view),
+      "Return to bundled real Boston roads and coastline; no network calls");
+    countyBack.hidden=true;
+    const countyStatus=make("div","rb-map-county-result","OFFLINE BOSTON READY");
+    const countyStatusNode=make("div","rb-map-zone-status",
+      "BOSTON / VERIFIED ROADS + COAST · OFFLINE");
+    countyPanel.append(countyConsent,countyLat,countyLon,countyGo,countyGPS,
+      countyBack,countyStatus);
     // Separate local marker-list controls allow keyboard/touch selection even
     // though the canvas is a visual layer.
     const sitePanel = make("details", "rb-map-sites");
@@ -1254,8 +1304,8 @@
       landBase: window.RustBoyBostonLandBase || null,
       county: mapMemory ? mapMemory.county || null : null,
       countyBusy:false, countyAbort:null, countyToken:0, countyLoads:0,
-      countyButton:null, countyPanel:null, countyStatus:null, countyStatusNode:null,
-      countyLat:null,countyLon:null,countyGPS:null,countyGo:null,countyBack:null,
+      countyButton:null, countyPanel, countyStatus, countyStatusNode,
+      countyLat, countyLon, countyGPS, countyGo, countyBack,
       baseVisible: Boolean(boston && (!mapMemory || mapMemory.baseVisible !== false)),
       shapes: mapMemory ? mapMemory.shapes : [],
       layers: mapMemory ? mapMemory.layers : [],
@@ -1331,6 +1381,14 @@
       countyPanel, countyStatusNode, sourceBox, manual, file);
     host.replaceChildren(root);
 
+    countyPanel.addEventListener("submit",(event)=>{
+      event.preventDefault();
+      if(!countyLat.value||!countyLon.value){
+        countyStatus.textContent="ENTER LATITUDE AND LONGITUDE FIRST";
+        return;
+      }
+      void requestCounty(view,Number(countyLat.value),Number(countyLon.value));
+    });
     manual.addEventListener("submit", (event) => {
       event.preventDefault();
       const lat = Number(latitude.value), lon = Number(longitude.value);
