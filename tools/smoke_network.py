@@ -51,10 +51,11 @@ def api(port, method, path, payload=None, origin=True):
         connection.close()
 
 
-def launch(home):
+def launch(home, extra_env=None):
     env = {key: value for key, value in os.environ.items()
            if not key.startswith("RUSTBOY_UNIFI_")}
     env["PIPBOY_HOME"] = str(home)
+    env.update(extra_env or {})
     process = subprocess.Popen(
         [str(BIN), "dashboard", "--port", "0", "--micro"],
         cwd=ROOT, env=env,
@@ -232,5 +233,83 @@ with tempfile.TemporaryDirectory() as temp:
             assert not (root / "tasks.json").exists()
             print("PASS: 13-mode network suite, TCP health, consent-gated ICMP RTT, "
                   "explicit consent, UniFi fail-closed without key, no hidden files")
+        finally:
+            stop(process)
+
+
+# Unix fixture: exercise the exact UniFi adapter invocation without using a
+# controller or sending the test key to a network. The temporary fake curl
+# sees stdin, arguments and environment and returns official v1 page shapes.
+if os.name != "nt":
+    with tempfile.TemporaryDirectory() as tmp:
+        work = Path(tmp)
+        executable = work / "curl"
+        log = work / "calls.log"
+        site_id = "01234567-89ab-cdef-0123-456789abcdef"
+        executable.write_text("""#!/usr/bin/env python3
+import json
+import os
+import sys
+args = sys.argv[1:]
+config = sys.stdin.read()
+assert '--insecure' not in args and '-k' not in args
+assert '--noproxy' in args and '--resolve' in args and '--proto' in args
+assert 'mock-test-secret' not in str(args)
+assert os.environ.get('RUSTBOY_UNIFI_API_KEY') is None
+assert 'X-API-Key: mock-test-secret' in config
+assert 'unifi.example.local:443:127.0.0.1' in args
+assert 'GET' in args
+url = args[args.index('--url') + 1]
+with open(os.environ['RUSTBOY_TEST_UNIFI_LOG'], 'a') as fp:
+    fp.write(url + '\\n')
+site = '01234567-89ab-cdef-0123-456789abcdef'
+if url.endswith('/sites?limit=25&offset=0'):
+    print(json.dumps({'data': [{'id': site, 'name': 'Demo site'}],
+                      'count': 1, 'totalCount': 1}))
+elif url.endswith('/sites/' + site + '/devices?limit=50&offset=0'):
+    print(json.dumps({'data': [
+        {'name':'Gateway','model':'UDM','state':'ONLINE',
+         'ipAddress':'192.168.1.1','macAddress':'00:11:22:33:44:55'},
+        {'name':'Lab AP','model':'U6','state':'OFFLINE',
+         'ipAddress':'192.168.1.2','macAddress':'00:11:22:33:44:66'}
+    ], 'count': 2, 'totalCount': 2}))
+else:
+    sys.exit(9)
+""", encoding="utf-8")
+        executable.chmod(0o700)
+        extra_env = {
+            "PATH": str(work) + os.pathsep + os.environ.get("PATH", ""),
+            "RUSTBOY_UNIFI_IP": "127.0.0.1",
+            "RUSTBOY_UNIFI_PORT": "443",
+            "RUSTBOY_UNIFI_TLS_NAME": "unifi.example.local",
+            "RUSTBOY_UNIFI_API_KEY": "mock-test-secret",
+            "RUSTBOY_TEST_UNIFI_LOG": str(log),
+        }
+        process, api_port = launch(work / "unifi-home", extra_env)
+        try:
+            status, state = api(api_port, "GET", "/api/state")
+            assert status == 200 and state["unifi"]["configured"]
+            assert not log.exists(), "GET state contacted UniFi"
+            status, state = api(api_port, "POST", "/api/profile",
+                                {"id": "head-engineer", "confirm": True})
+            assert status == 200 and not log.exists(), "Profile load contacted UniFi"
+            status, denied = api(api_port, "POST", "/api/experiment",
+                                 {"tool":"net-lab", "mode":"unifi"})
+            assert status == 422 and not log.exists(), "Missing consent contacted UniFi"
+            status, summary = api(api_port, "POST", "/api/experiment",
+                                  {"tool":"net-lab", "mode":"unifi", "confirm": True})
+            assert status == 200, summary
+            assert summary["kind"] == "unifi"
+            assert summary["site"]["name"] == "Demo site"
+            assert summary["devices_listed"] == 2
+            assert summary["online_on_page"] == 1
+            assert summary["offline_on_page"] == 1
+            assert "mock-test-secret" not in json.dumps(summary)
+            assert "macAddress" not in json.dumps(summary)
+            assert len(log.read_text().splitlines()) == 2
+            assert all("/integration/v1/" in item for item in log.read_text().splitlines())
+            assert summary["devices"][0]["ip"] == "192.168.1.1"
+            print("PASS: mock UniFi two-route read-only HTTPS adapter, key only on stdin, "
+                  "no GET/profile I/O, sanitized device status, no API secret exposure")
         finally:
             stop(process)
