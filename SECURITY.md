@@ -7,6 +7,7 @@ Rust-Boy is an experimental offline-first field systems console, not a safety-of
 - No telemetry uploads, analytics endpoints, automatic network scans, tracking, or background device access.
 - The STAT panel reads host status through the sysinfo crate.
 - The catalog is bundled at build time; viewing it does not connect to GitHub.
+- Explicit finite host sampling emits NDJSON to stdout only; it does not automatically save data, transmit measurements, or access external hardware.
 - Notes are created only through an explicit user command. They are stored in JSON under PIPBOY_HOME or the user's home directory.
 - Notes are plaintext and must not contain passwords, tokens, sensitive medical records, or restricted information.
 

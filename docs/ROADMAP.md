@@ -1,6 +1,6 @@
 # Rust-Boy | Evidence-based development roadmap
 
-**Working version:** 0.2 planning pass · **Review:** 2026-10-24  
+**Working version:** 0.3 G1 foundation pass · **Review:** 2026-10-24  
 **Release condition:** No phase is complete solely because its files or test definitions exist. CI execution, platform checks, and documented acceptance results must be verified.
 
 Rust-Boy is the public product name. The existing `pip_boy` repository, `pipboy` executable, `pipboy-core` crate and `PIPBOY_HOME` data interface remain stable.
@@ -10,6 +10,8 @@ Rust-Boy is the public product name. The existing `pip_boy` repository, `pipboy`
 - [Literature matrix](LITERATURE_MATRIX.md) — 34 traceable primary/official references, limitations and corresponding tests.
 - [Module and feature catalog](MODULE_CATALOG.md) — 27 modules, dependency gates, capability needs, acceptance criteria.
 - [Rust object model](OBJECT_MODEL.md) — object boundaries, traits, composition and runtime access policy.
+- [G1 execution plan](G1_EXECUTION_PLAN.md) — ordered engineering acceptance packages and next implementation priority.
+- [CI triage](CI_TRIAGE.md) — zero-job startup investigation and required quality evidence.
 - [Architecture](ARCHITECTURE.md) — host / UI / core / adapter boundaries.
 - [Research library](RESEARCH_LIBRARY.md) — external open-source Pip-Boy implementation references.
 
@@ -22,7 +24,8 @@ The build is a directed acyclic dependency plan, **not** a schedule. All module 
 - [x] Curated public GitHub reference catalog with license status.
 - [x] Rust-Boy product identity and documented independent-project IP boundaries.
 - [x] Rust workspace, Ratatui interface, system status, local notes and CLI.
-- [x] CI quality workflow defined; baseline core unit tests authored.
+- [x] CI quality workflow and local Python catalog validator authored; baseline unit tests defined (**unverified**).
+- [x] Add manual workflow trigger and stable/1.81.0 compatibility matrix (**not yet executed**).
 - [ ] **Unblock GitHub Actions startup failure**; capture passing fmt/test/clippy logs.
 - [ ] Validate dependency lockfile and pinned toolchain compatibility.
 - [ ] Smoke test launch, navigation, exit, and data persistence on Linux, macOS and Windows.
@@ -34,13 +37,18 @@ The build is a directed acyclic dependency plan, **not** a schedule. All module 
 
 **P0: telemetry, storage, settings, accessibility, diagnostics**; **P1: power, network link**.
 
-- [ ] Define versioned `Observation<T>` envelope: source ID, monotonic time + wall clock, units, state, expiry, and quality flags.
+- [x] Draft versioned `Observation<T>` envelope with source, provenance, optional wall clock, process-session time, unit, quality and expiry (**unverified prototype**).
+- [ ] Verify schema compatibility, implement field-level units and connect observations to each frontend.
 - [ ] Separate local read-only metrics from user-initiated notes/storage writes.
-- [ ] Implement bounded samples, property-based state invariants, optional NDJSON export, explicit retention/erase policies.
-- [ ] Build permission manifest with deny-by-default broker. Document that a Rust trait is **not** a security sandbox.
+- [x] Author a bounded in-memory sample buffer with drop accounting and a user-triggered finite NDJSON host sampling command (**unverified prototype**).
+- [ ] Integrate sample buffer with actual UI/runtime, add property-based invariants and output/interruption fixtures.
+- [ ] Establish explicit retention/erase policies and schema migration for stored observations.
+- [x] Author a pure module lifecycle state machine and existing deny-before-poll host prechecks (**in-process only; unverified**).
+- [ ] Integrate lifecycle with a user-consent service, enforce revocation, and later build an OS-level device broker. A Rust trait is **not** a security sandbox.
 - [ ] Add battery, thermal, disk and network-interface status only where supported, with `Unknown` rather than guessed values.
 - [ ] Provide keyboard-only paths, reduced motion and terminal-size fallback.
-- [ ] Add deterministic test backend rendering and module lifecycle unit tests.
+- [x] Author state/quality/overflow and sample-argument unit tests (**not yet executed**).
+- [ ] Add deterministic UI render fixtures, inject mock clocks/collectors, execute all lifecycle and permission tests.
 
 **G1 exit:** no silent network/socket access, deterministic fixtures, authenticated UI statuses, explicit capability denial before adapter execution, accessible keyboard journeys, no unreviewed writable side effects.
 
@@ -82,6 +90,14 @@ The build is a directed acyclic dependency plan, **not** a schedule. All module 
 - [ ] Publish operations and privacy notes, disable-by-default connectivity profile and release regression matrix.
 
 **G4 exit:** release checklist and provenance attestations independently verified. Do not claim security certification, SLSA level, or production readiness without evidence.
+
+## G0 and G1 status summary
+
+**G0:** blocked by GitHub Actions startup_failure with zero executed jobs; compilation, fmt, Clippy and runtime acceptance are not verified.  
+**G1:** typed observation, bounded sample buffer, lifecycle transitions, finite NDJSON command and offline catalog validator have initial source implementations but are not integrated as one verified host runtime.  
+**G2–G4:** still planned, with no external hardware, location, scanning or transmission enabled.
+
+The next engineering handoff is [G1_EXECUTION_PLAN.md](G1_EXECUTION_PLAN.md). Do not merge or release based on static files alone.
 
 ## Quality and threat gates (all phases)
 

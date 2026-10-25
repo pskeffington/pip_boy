@@ -4,7 +4,7 @@
 
 Rust-Boy is an independent, modular toolkit for desktop terminals and future wearable field computers. It combines local host diagnostics, a curated research library, and a user-controlled offline journal under one minimal native interface. Planned adapters extend it to Raspberry Pi hardware, maps, receive-only radios, and authenticated local communications.
 
-> **Project status — G0 / experimental.** STAT, LIBRARY, and NOTES have initial implementations. MAP, RADIO, MESH, GPIO, and external device access remain planned. Compilation and runtime acceptance tests are pending. No real device or network capability is implied by a placeholder panel.
+> **Project status — G0 verification blocked; G1 prototypes in progress.** STAT, LIBRARY, and NOTES have initial implementations. Typed observations, bounded sampling, a pure lifecycle state machine, and an explicit finite NDJSON host command have been added but remain uncompiled and unverified. MAP, RADIO, MESH, GPIO, and external device access remain planned. No placeholder implies a real device connection.
 
 ## Rust-Boy identity
 
@@ -61,10 +61,13 @@ cargo run -p pipboy -- doctor
 cargo run -p pipboy -- notes add "Field observation"
 cargo run -p pipboy -- notes list
 
+python3 tools/validate_catalog.py
 cargo fmt --all -- --check
 cargo test --workspace
 cargo clippy --workspace --all-targets -- -D warnings
 ```
+
+The `sample` command is intentionally bounded to 1–30 samples at 500–30000 ms intervals, writing NDJSON only to stdout. It does not create a recording or start a background service. Actual CPU sampling is subject to the sysinfo platform-dependent minimum refresh interval.
 
 Use **Left/Right** or **Tab** to change console panels and **Q** to exit. Note files are plaintext and stored under `PIPBOY_HOME` or the platform's default Rust-Boy data directory. Do not store passwords, credentials, or sensitive records in notes.
 
@@ -78,6 +81,8 @@ Use **Left/Right** or **Tab** to change console panels and **Q** to exit. Note f
 | [docs/README.md](docs/README.md) | Technical documentation index |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Core boundaries, adapters, and data guarantees |
 | [docs/ROADMAP.md](docs/ROADMAP.md) | Phased implementation and acceptance gates |
+| [docs/G1_EXECUTION_PLAN.md](docs/G1_EXECUTION_PLAN.md) | Next G1 engineering slices and testable acceptance criteria |
+| [docs/CI_TRIAGE.md](docs/CI_TRIAGE.md) | GitHub Actions startup investigation and local verification |
 | [docs/LITERATURE_MATRIX.md](docs/LITERATURE_MATRIX.md) | Evidence matrix connecting standards and studies to modules |
 | [docs/MODULE_CATALOG.md](docs/MODULE_CATALOG.md) | Planned modules, features, dependency gates and acceptance criteria |
 | [docs/OBJECT_MODEL.md](docs/OBJECT_MODEL.md) | Rust traits, composition, host policy, and proposed adapters |

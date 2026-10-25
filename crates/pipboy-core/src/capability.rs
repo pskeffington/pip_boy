@@ -7,7 +7,6 @@ use std::collections::HashSet;
 
 /// Explicitly named future I/O surfaces, with no implicit network/device grant.
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq, Serialize)]
-
 pub enum Capability {
     #[serde(rename = "host.read")]
     HostRead,
@@ -112,7 +111,6 @@ impl PermissionSet {
         self.grants.contains(&capability)
     }
 }
-
 
 #[cfg(test)]
 mod tests {

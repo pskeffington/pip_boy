@@ -1,7 +1,7 @@
 //! Testable in-process module polymorphism and capability prechecks.
- //!
- //! Important: PermissionSet is an application policy check, **not** an
- //! operating system sandbox. No untrusted native code may be loaded here.
+//!
+//! Important: PermissionSet is an application policy check, **not** an
+//! operating system sandbox. No untrusted native code may be loaded here.
 
 use crate::registry::{Readiness, MODULES};
 pub use crate::capability::{Capability, PermissionSet};

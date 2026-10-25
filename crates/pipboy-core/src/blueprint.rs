@@ -1,7 +1,7 @@
 //! Research-backed module plan and literature registry.
- //!
- //! Both catalogs are compiled into the binary; reading them makes no
- //! network requests and does not grant any OS or hardware permissions.
+//!
+//! Both catalogs are compiled into the binary; reading them makes no
+//! network requests and does not grant any OS or hardware permissions.
 
 use crate::registry::{Readiness, MODULES};
 use crate::capability::Capability;

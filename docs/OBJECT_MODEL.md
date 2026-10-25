@@ -18,7 +18,7 @@ flowchart TD
     HOST --> STORE[Local Storage / user-owned notes]
 ```
 
-**Current implementation scope:** the `RuntimeModule` interface, host permission precheck and test doubles are an architectural skeleton. G0's current Ratatui/status/notes code still uses direct application calls. Real hardware adapters, broker-enforced OS isolation, third-party plugins, and background schedulers are **not implemented**.
+**Current implementation scope:** `RuntimeModule` and `ModuleHost` provide trusted in-process polymorphism and capability prechecks. A separate pure `ModuleLifecycle` state machine, `Observation<T>` envelope and `SampleBuffer<T>` have been authored for G1. The new CLI can print a finite set of local NDJSON host samples. These implementations remain **uncompiled and unverified** in this workspace; the live TUI and notes code still call existing services directly. There is no OS isolation, physical device broker, background scheduler or loaded third-party plugin.
 
 ## Major objects / responsibilities
 
@@ -83,7 +83,7 @@ crates/
 
 Keep future crates **out of the Cargo workspace** until the corresponding gate has passing tests. File trees are planning targets, not a claim of implemented modules.
 
-## Lifecycle state machine (future)
+## Lifecycle state machine (pure G1 model authored; integration pending)
 
 ```mermaid
 stateDiagram-v2
@@ -102,21 +102,17 @@ stateDiagram-v2
 
 `Ready` (legacy G0 registry) must not mean `Running` or `CI verified`. Roadmap manifests instead use `implemented_unverified` and `planned`. Display separate **implementation** and **runtime connectivity** statuses; avoid conflation.
 
-## Data contract (G1 planned)
+## Data contract (G1 prototype authored; validation pending)
 
-```rust
-struct Observation<T> {
-    source_id: String,
-    captured_wall_unix_ms: Option<u64>,
-    captured_monotonic_ms: u64,
-    value: T,
-    unit: Option<String>,
-    quality: Quality, // Valid | Stale | Unknown | Invalid
-    provenance: String,
-}
-```
+The core now declares a generic observation with schema_version (1), source_id, provenance, captured_wall_unix_ms (optional), captured_session_ms (monotonic-process-relative), unit (optional), value (optional), quality (valid, stale, unknown, invalid) and expires_after_ms (optional).
 
-Do not infer zero for absent sensor values. Capture the unit, type, fix quality, and timestamp; protect location and peer metadata with explicit retention policies. This is a *proposed* sketch, not a published serialization ABI.
+- **Valid/stale** requires a value; **unknown/invalid** must not carry one. A numeric zero is still a real value.
+- Session-relative clock values are only comparable within a single process launch; wall clock may be unavailable or incorrect.
+- A sample can move from valid to stale when its TTL expires, never automatically back to valid.
+- CLI sampling currently writes a finite number of NDJSON host snapshots to stdout. The TUI and full ModuleHost integration are still pending.
+- No data collector, file exporter, device scanner, transmitter, or automatic sync has been enabled by this code.
+
+See core files observation.rs, buffer.rs, lifecycle.rs, and CLI file sampling.rs. Re-run test and formatting checks before accepting these structures as stable data contracts.
 
 ## Testing strategy
 
