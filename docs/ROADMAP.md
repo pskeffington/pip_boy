@@ -7,6 +7,12 @@ Rust-Boy is the public product name. The existing `pip_boy` repository, `pipboy`
 
 > **Verified integration baseline:** [Five-job Linux/macOS/Windows CI](https://github.com/pskeffington/pip_boy/actions/runs/40164915215) passed at `e7d1090`, including macOS PTY, Windows ConPTY, and the strict deny-all broker suite. **This does not complete a packaged release or enable physical devices.** The catalog's `implemented_unverified` status denotes a pending module acceptance review, not an absence of CI execution.
 
+## G1 Overseer management and job-specific work queues
+
+[Task Control](TASK_CONTROL.md) is now an offline real module for Overseer with persistent work assignments, role and person fields, priorities, due dates, statuses, operator-marked sends/acknowledgments, bounded history and expected-revision edit conflict rejection. Both micro and desktop views share the same Rust task store, and non-management jobs show their assigned role queue while retaining their specialized tools. **Sharing is manual via copy/email draft**; no background notification, authenticated delivery or live cross-device synchronization is claimed.
+
+**Next gates:** test all R1 task interactions across macOS/Windows, manually review the 4-inch ergonomics, then separately design a secure roster, authenticated receiving inbox/outbox, replay-safe acknowledgment protocol and optional reminders. Do not describe a handoff preview as an actual transmission.
+
 ## G1 micro display shell — implementation and acceptance
 
 [Micro handheld mode](MICRO_UI.md) now has a distinct `/micro` shell served by the same local Rust dashboard. It uses original phosphor-style scanlines and restrained glow, a dedicated top status ribbon, one scrolling content viewport, and six fixed thumb-sized tabs (**STAT / GEAR / MAP / DATA / LINK / CONF**). Occupational presets are loaded from the real Rust registry; Custom remains the final empty template. Implemented local labs and explicit profile persistence are shared with desktop. The micro `--micro` launcher, route, asset and end-to-end loopback smoke checks are CI-gated.

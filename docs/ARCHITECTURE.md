@@ -11,6 +11,12 @@ Rust-Boy is the public name of the modular console. The repository, executable, 
 
 The current `ModuleHost` is an **in-process testable policy precheck** and does not isolate untrusted code. Physical device access, OS-enforced permissions and transport isolation remain planned, not implemented.
 
+## Task Control data and operational boundaries
+
+The Rust `pipboy-core::tasks` module persists a distinct, versioned `tasks.json` board under `PIPBOY_HOME`; the `workbench.json` file still stores role/pin configuration only. Task create/update requests use the existing loopback API but **never** start a communication channel. A reusable browser component `assets/tasks.js` powers both desktop and handheld mission boards. Overseer/Custom with `mission-board` pinned sees the full local manager board; other job profiles see only their locally assigned queue. These UI scopes are **not authenticated role-based access control**.
+
+Task records include expected-revision optimistic concurrency, bounded events and explicit manual `sent_at` / `acknowledged_at` tracking. Clipboard handoffs and email drafts are only prepared after operator action; no automatic sending or receipt inference is performed. The local store rejects invalid/future schemas without replacing them. See [Task Control contract](TASK_CONTROL.md).
+
 ## Dual graphical presentation: desktop and micro
 
 The Rust `pipboy dashboard` process serves two intentionally distinct local views: `/` for the desktop workstation and `/micro` for the dedicated handheld frame (or use `dashboard --micro --open` on Mac). Both send requests to the **same** bounded JSON API and authoritative `pipboy-core::workbench::PRESETS` / `PALETTE` / WorkbenchStore. A role change in one view is reflected in the other after reload. Neither view may acquire new permissions merely by displaying a tile.

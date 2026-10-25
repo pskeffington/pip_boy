@@ -15,6 +15,10 @@ cargo run --locked -p pipboy -- doctor
 
 Core layout: `crates/pipboy` (CLI/TUI), `crates/pipboy-core` (local core and mock adapters), `crates/rust-boy-broker` (separate **deny-only** process), `catalog/` (evidence and planned modules), `tools/` (validation), and `docs/` (technical contracts).
 
+## Task Control development
+
+The separate `crates/pipboy-core/src/tasks.rs` owns all validation, durable storage, revision-conflict checks and human handoff text. The local browser UI lives in `crates/pipboy/assets/tasks.{js,css}` and is shared by the desktop and micro renderers. Do not duplicate task state inside profile JSON, confuse an email draft with a send, or mark manual acknowledgment as verified. Follow [Task Control security contract](docs/TASK_CONTROL.md); test `python3 tools/smoke_tasks.py` after compiling the Rust binary.
+
 ## Micro UI development
 
 The micro renderer is separately maintained at `crates/pipboy/assets/micro.{html,css,js}`; the Rust server serves it at `/micro` without creating a second backend. Source roles, tools, availability and permission settings **must** continue to come from the Rust API, not a duplicate JavaScript role catalog. The same confirmed profile-change API and local-workbench storage are shared with desktop. Keep bottom tabs and touch targets stable at 480×320 and 800×480, preserve keyboard and reduced-motion behavior, and never display fabricated camera frames, battery charge, GPS fixes or RustGIS maps.

@@ -8,6 +8,7 @@ Technical contracts, architecture decisions, research provenance and validation 
 
 | Guide | Focus |
 | --- | --- |
+| [Overseer Task Control](TASK_CONTROL.md) | Persistent assignments, status, manual handoff and role queues |
 | [Micro handheld shell](MICRO_UI.md) | Six-tab phosphor UI, Mac launcher, 480×320 and 800×480 viewport plan |
 | [Graphical dashboard](DASHBOARD_UI.md) | Run local browser UI on Mac, load role templates, test offline tools and Custom |
 | [Quick start](../README.md#quick-start) | Clone, build, run the terminal UI and inspect local status |
@@ -28,6 +29,7 @@ Technical contracts, architecture decisions, research provenance and validation 
 | Mac → PlayStation | [Launcher, setup and protocol diagnostics](MAC_PLAYSTATION.md) |
 | Reclamation Scout GIS | [RustGIS and Raspberry Pi / TAK architecture](SCOUT_GIS_TAK.md) |
 | Fallout 4 | [Game mode setup and protocol](GAME_MODE.md) |
+| Task management | [Task Control, local persistence and manual dispatch](TASK_CONTROL.md) |
 | Micro handheld | [Launch, controls, themes, safety and acceptance](MICRO_UI.md) |
 | Graphical UI | [Dashboard launcher, API, responsive viewport and test plan](DASHBOARD_UI.md) |
 | Local host and UI | [Host telemetry and field quality](HOST_TELEMETRY.md) · [Object model](OBJECT_MODEL.md) · [Scoped local operations](LOCAL_OPERATIONS.md) · [Console](CONSOLE.md) |

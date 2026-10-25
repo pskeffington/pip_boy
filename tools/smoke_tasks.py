@@ -54,7 +54,7 @@ with tempfile.TemporaryDirectory() as temporary:
         assert port
 
         for path, mime, marker in [
-            ("/assets/tasks.js", "text/javascript", b"RUST-BOY"),
+            ("/assets/tasks.js", "text/javascript", b"RustBoyTasks"),
             ("/assets/tasks.css", "text/css", b".task-control"),
             ("/micro", "text/html", b"/assets/tasks.js"),
             ("/", "text/html", b"/assets/tasks.js"),

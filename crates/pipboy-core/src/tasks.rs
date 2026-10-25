@@ -400,8 +400,8 @@ impl TaskStore {
     }
 
     pub fn set_status(&self, id: u64, revision: u64, status: Status, note: &str) -> io::Result<Task> {
-        if !checked_text(note, 128, false) {
-            return Err(invalid("Status note must be at most 128 printable characters"));
+        if !checked_text(note, 110, false) {
+            return Err(invalid("Status note must be at most 110 printable characters"));
         }
         self.change(id, revision, |task| {
             if task.status == status {

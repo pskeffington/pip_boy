@@ -2,6 +2,14 @@
 
 This file records notable changes to Rust-Boy. This repository is in **development preview**; the Rust workspace version `0.1.0` is not a published production release. Dates are in UTC unless otherwise stated.
 
+## Unreleased — Overseer Task Control and operational job HUDs (2026-10-25)
+
+- Preload `mission-board` / **TASK CONTROL** as the first Overseer module. Role-specific micro STAT screens replace the generic station page; other occupational HUDs have locally assigned task queues.
+- Implement a local task store with role/person assignments, priority, due date, status, manual handoff/sent/acknowledgment fields, bounded event history, atomic writes, schema validation and revision-based conflict rejection.
+- Add shared desktop/micro task board: create, manage, filter, update, reassign, copy an assignment and explicitly open an email draft. No automatic sending or authenticated remote receipt; no network delivery code.
+- Add task API routes, [Task Control operator contract](docs/TASK_CONTROL.md), and cross-platform local HTTP smoke tests for ten task assignments, role filtering, persistence and privacy.
+- Future work: authenticated recipient identities, secure transport and actual cross-device synchronization; UI/manual browser acceptance remains separately gated.
+
 ## Unreleased — dedicated micro handheld shell (2026-10-25)
 
 - Add `pipboy dashboard --micro [--open]` and `/micro` with embedded `micro.html`, `micro.css` and `micro.js`, running inside the existing loopback-only Rust dashboard; the desktop route and API are preserved.

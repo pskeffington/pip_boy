@@ -24,6 +24,10 @@ cargo run --locked -p pipboy -- dashboard --port 8790 --open
 
 On Linux or an appropriately configured Raspberry Pi, omit `--open` and browse to the printed local address **on that same device**. The server intentionally cannot be reached from other LAN computers; the browser and Rust process must run on the same host. `--port 0` selects an ephemeral loopback port, primarily for automated tests.
 
+## Overseer task management
+
+The desktop Overseer Module Viewport now hosts the same task board as the handheld interface, with create/assign/status/reassign, overdue counts and manual handoff/acknowledgment. Task data is separate from profile settings, so switching roles never erases tasks. Other job screens show their locally assigned queue. The clipboard/email-draft workflow is **operator-controlled** and does not imply actual delivery; authenticated remote synchronization is a future gate. See [Task Control](TASK_CONTROL.md).
+
 ## User journey
 
 1. **Job templates:** The left rail contains **seven preconfigured occupations**, followed by **Custom**. Click a role (or use **Alt+Up/Down**) to preview it without modifying the saved workbench.

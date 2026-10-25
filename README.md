@@ -10,6 +10,22 @@ Rust-Boy is an independent, Rust-native developer workbench with separate local 
 
 **Current stage:** development preview. The terminal console and offline workflows are implemented and tested on Linux, macOS and Windows. Physical GPIO, serial, SDR, Bluetooth, mesh, GNSS, live maps and physical device integrations are **not enabled**. Offline WGS84 GeoJSON Point tools are provided for the Reclamation Scout. An explicitly requested Fallout 4 TCP companion browser is available for validation. No packaged production release is claimed.
 
+## Overseer Task Control — delegate and track
+
+The **Overseer** is now a manager, not a generic tool collector. Its first preloaded module is **TASK CONTROL**, a persistent offline assignment board. Create tasks with assignee, target job, due date, priority and instructions; filter overdue/blocked/completed work; reassign and record status and manual acknowledgments with revision-safe audit history. On the handheld, **STAT** provides actual task counts and a task queue, and each operational job sees its own assigned-duty list.
+
+**Handoffs:** Each assignment can generate an operator-controlled copyable message or an **email draft** in your local mail client. Neither action sends it; the user must explicitly send outside Rust-Boy, then mark sent and acknowledgment manually. **Cross-device delivery, authentication and automatic synchronization are not yet implemented.** These are local work records, not a networked multiuser system.
+
+Test the developer branch:
+
+```bash
+git clone --branch feat/overseer-task-ops https://github.com/pskeffington/pip_boy.git
+cd pip_boy
+./scripts/launch-micro.command
+```
+
+See the [Task Control operator and security contract](docs/TASK_CONTROL.md). The regular desktop command `cargo run --locked -p pipboy -- dashboard --open` uses the same board file.
+
 ## Micro handheld shell — test on Mac
 
 The **micro mode** is a separate phosphor-style 4-inch-inspired interface, not a collapsed desktop sidebar. It has a top status strip, a single scrolling viewport, six bottom tabs (**STAT / GEAR / MAP / DATA / LINK / CONF**) and a touch/keyboard-friendly occupational profile picker. Seven preloaded jobs and **Custom last** all use the existing Rust data store. Offline Scout waypoint/distance, CIDR and byte inspection work from the micro controls. The Scout viewport says **RUSTGIS NOT ATTACHED**; the Security Chief 2×2 camera focus view says **NO VIDEO** until real drivers exist.
@@ -44,7 +60,7 @@ See the [graphical dashboard guide](docs/DASHBOARD_UI.md) for keyboard/touch lay
 
 | Role | Real-world station focus | Readiness |
 | --- | --- | --- |
-| Overseer | Local status, notes, research, explicit game companion | Built-in palette; task mission board planned |
+| Overseer | **Task Control: assign, track, reassign and manually hand off work** | Local board and role queues implemented; remote delivery not connected |
 | Head Engineer | Hex/CRC32, IPv4 subnet math, simulated device rigs | Workbench commands present; physical serial/GPIO planned |
 | Security Chief | Security diagnostics, **four-camera 2×2 wall with focus view** | Camera video planned, not connected |
 | Vault Doctor | Research library, environmental observation and safety checklists | Library/notes exist; environmental sensing planned |

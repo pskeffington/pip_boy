@@ -27,6 +27,12 @@ This is an intentionally separate HTML/CSS/JS shell, not a compressed desktop si
 
 No physical screen, Raspberry Pi graphics stack, battery sensor or refresh-rate measurement has yet been validated. **PWR is shown as "NOT DETECTED"**, not a fabricated charge percentage.
 
+## Overseer and role duty displays
+
+On a new install, Overseer begins with **TASK CONTROL** pre-pinned. STAT summarizes actual locally recorded open/overdue/blocked tasks and provides direct access to the task board; GEAR opens the same management module. Creation, reassignment, manual handoff and acknowledgement take explicit clicks. The other job HUDs show their **assigned duties**, filtering by their job ID, rather than a generic management control panel. Older saved Overseer boards need an explicit profile reload to receive the new Task Control pin without resetting task data.
+
+See [Task Control and manual dispatch](TASK_CONTROL.md). Neither the task HUD nor the screen's green styling implies live network delivery or authenticated operators.
+
 ## Operation
 
 **Tabs** (large bottom controls): **STAT** current profile/local status and shortcuts; **GEAR** pins and tool launcher; **MAP** reserved RustGIS port with functioning offline GIS/waypoint/distance lab when pinned; **DATA** local reference and research tools; **LINK** disconnected transport summary, or Security Chief's four-camera mock interaction; **CONF** role switch, CRT effects toggle, reload and Custom tool palette.

@@ -12,6 +12,12 @@ Rust-Boy is an **experimental local field console**, not a safety-of-life, secur
 
 The `ModuleHost` capability checks and mock leases are cooperative **in-process** controls; they are **not** an OS sandbox for untrusted native code. A separate deny-only process is likewise **not** a working OS permission broker.
 
+## Tasks, assignments and manual dispatch
+
+Task Control persists unencrypted `tasks.json` under `PIPBOY_HOME`, separate from notes and workbench preferences. The local task store uses bounded input, explicit schema validation, a cooperative file lock and atomic replacement on accepted writes. On Unix the file is private to the account (`0600`); this **does not protect against other processes running as the same user**. Do not record sensitive patient details, security credentials, private locations or other regulated material.
+
+An assignment copied to clipboard or opened as an email draft has **not been sent or delivered by Rust-Boy**. The separate "Mark sent" and "Record acknowledgment" actions are manual declarations and **not authenticated receipts**. The current operational role selector controls which tasks are shown and edited in the UI but **is not user login or access control**; a local user can change profile. No outbound mail, webhook, LAN sync, TAK transport or automatic task notification is implemented. A future multiuser task network needs authenticated identities, secure transport, encrypted storage/authorization, acknowledgments and replay protection. See [task contract](docs/TASK_CONTROL.md).
+
 ## Micro display and device boundary
 
 The `/micro` view and `dashboard --micro` launch switch only the UI route; they **do not** change the Rust service's loopback binding, expose the app on LAN, or enable any new endpoint or permission. Both UIs use the same strict JSON Host/Origin/CSP rules, atomic profile store and allowlisted Rust experiments. Role changes require a visible **CONFIRM REPLACE** action. The micro CRT effect toggle is cosmetic and remains in memory only.

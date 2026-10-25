@@ -76,10 +76,6 @@
   };
   const badge = (text, type = "") => node("span", "task-tag " + type, text);
   const infoText = (message) => node("p", "task-help", message);
-  const roles = Object.freeze([
-    // No copied profile catalog; the only source for role choices is /api/state.
-  ]);
-
   function summary(root, options = {}) {
     root.replaceChildren(node("p", "task-help", "Loading local assignment summary…"));
     get("/api/tasks").then((response) => {
