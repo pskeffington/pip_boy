@@ -4,6 +4,8 @@
 //! discover nearby devices, or perform radio transmissions.
 
 pub mod branding;
+pub mod blueprint;
+pub mod runtime;
 pub mod catalog;
 pub mod metrics;
 pub mod notes;

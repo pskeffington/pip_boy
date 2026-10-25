@@ -10,6 +10,10 @@ Rust-Boy is an experimental offline-first field systems console, not a safety-of
 - Notes are created only through an explicit user command. They are stored in JSON under PIPBOY_HOME or the user's home directory.
 - Notes are plaintext and must not contain passwords, tokens, sensitive medical records, or restricted information.
 
+## Capability architecture
+
+The in-process Rust `ModuleHost` provides a **best-effort policy precheck** for built-in trusted modules, not operating-system isolation. The static manifest cannot prevent malicious linked code from invoking OS functions. Hardware operations will require a separate device broker with explicit user consent and scoped handles before those adapters can be enabled. See [docs/OBJECT_MODEL.md](docs/OBJECT_MODEL.md).
+
 ## Future devices
 
 Location, serial ports, GPIO, SDR/radio, BLE, Wi-Fi, and mesh transports require separate adapters, permission gates, simulator tests, and user-facing indicators. Do not silently initiate scans, pair devices, transmit, or modify settings. No interference, jamming, credential interception, or covert collection features.

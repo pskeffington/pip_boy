@@ -20,7 +20,7 @@ cargo run -p pipboy -- doctor
 1. Distinguish implemented behavior from planned adapters; never insert fabricated device telemetry.
 2. Keep operations local and read-only by default. Network, GNSS, serial, GPIO, BLE, SDR, and mesh functionality require explicit permission and security review.
 3. Add tests for any data contract, parser, persistence change, or new module.
-4. Update relevant documentation and the [brand guide](BRANDING.md) whenever public names or labels change.
+4. Update relevant documentation and the [brand guide](BRANDING.md) whenever public names or labels change. New or changed modules must update `catalog/module_plan.json` and `catalog/literature.json`, with evidence IDs and concrete acceptance tests.
 5. When proposing upstream integration, include repository, exact revision, SPDX/license text, dependencies, attribution needs, and media restrictions. Missing or incompatible terms mean reference-only.
 6. Do not commit API keys, live geolocation logs, credential captures, copyrighted game assets, or proprietary firmware.
 7. Keep terminal commands valid and backward compatible unless a breaking change is separately approved and documented.

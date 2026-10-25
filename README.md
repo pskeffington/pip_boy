@@ -54,6 +54,8 @@ cargo run -p pipboy -- status --json
 cargo run -p pipboy -- sources
 cargo run -p pipboy -- sources rust
 cargo run -p pipboy -- modules
+cargo run -p pipboy -- plan G3
+cargo run -p pipboy -- evidence Rust
 cargo run -p pipboy -- doctor
 cargo run -p pipboy -- notes add "Field observation"
 cargo run -p pipboy -- notes list

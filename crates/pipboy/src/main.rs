@@ -1,14 +1,14 @@
 use pipboy_core::branding::{CLI_COMMAND, PRODUCT_DESCRIPTOR, PRODUCT_NAME};
 use pipboy_core::catalog::{sources, validate_sources};
+use pipboy_core::blueprint::{literature, plans, validate_blueprint};
 use pipboy_core::metrics::Collector;
 use pipboy_core::notes::NoteStore;
-use pipboy_core::registry::MODULES;
 use std::error::Error;
 mod tui;
 
 fn help() {
     println!("{PRODUCT_NAME} | {PRODUCT_DESCRIPTOR}");
-    println!("usage: {CLI_COMMAND} [tui|status [--json]|sources [query]|modules|doctor|notes <list|add TEXT>|help]");
+    println!("usage: {CLI_COMMAND} [tui|status [--json]|sources [query]|modules|plan [G0..G4]|evidence [query]|doctor|notes <list|add TEXT>|help]");
 }
 
 fn main() {
@@ -57,8 +57,47 @@ fn run() -> Result<(), Box<dyn Error>> {
             Ok(())
         }
         Some("modules") => {
-            for module in MODULES {
-                println!("{:<10} {:<10} {}", module.id, format!("{:?}", module.readiness), module.description);
+            if args.next().is_some() {
+                return Err(format!("usage: {CLI_COMMAND} modules").into());
+            }
+            let modules = plans()?;
+            let references = literature()?;
+            validate_blueprint(&modules, &references)?;
+            for module in modules {
+                println!("{:<16} {:<3} {:<22} {:<3} {}", module.id, module.gate, module.status, module.priority, module.name);
+            }
+            Ok(())
+        }
+        Some("plan") => {
+            let gate = args.next();
+            if args.next().is_some() || gate.as_deref().is_some_and(|item| !matches!(item, "G0" | "G1" | "G2" | "G3" | "G4")) {
+                return Err(format!("usage: {CLI_COMMAND} plan [G0|G1|G2|G3|G4]").into());
+            }
+            let modules = plans()?;
+            let references = literature()?;
+            validate_blueprint(&modules, &references)?;
+            for module in modules.iter().filter(|item| gate.as_deref().is_none_or(|value| value == item.gate)) {
+                println!("{} [{} / {}] {}", module.id, module.gate, module.status, module.name);
+                println!("  Requires: {}", if module.depends_on.is_empty() { "none".to_string() } else { module.depends_on.join(", ") });
+                println!("  Features: {}", module.features.join("; "));
+                println!("  Evidence: {}", module.evidence.join(", "));
+                println!("  Accept: {}", module.acceptance.join(" | "));
+            }
+            Ok(())
+        }
+        Some("evidence") => {
+            let query = args.next().unwrap_or_default();
+            if args.next().is_some() {
+                return Err(format!("usage: {CLI_COMMAND} evidence [query]").into());
+            }
+            let modules = plans()?;
+            let references = literature()?;
+            validate_blueprint(&modules, &references)?;
+            for entry in references.iter().filter(|item| item.matches(&query)) {
+                println!("{} [{} / {}] {}", entry.id, entry.r#type, entry.year, entry.title);
+                println!("  {}", entry.url);
+                println!("  Design: {}", entry.design);
+                println!("  Caveat: {}", entry.limitation);
             }
             Ok(())
         }
@@ -66,7 +105,10 @@ fn run() -> Result<(), Box<dyn Error>> {
             let entries = sources()?;
             validate_sources(&entries)?;
             println!("PASS: catalog parsed; {} distinct references", entries.len());
-            println!("PASS: {} registered modules", MODULES.len());
+            let modules = plans()?;
+            let references = literature()?;
+            validate_blueprint(&modules, &references)?;
+            println!("PASS: {} planned/implemented modules mapped to {} evidence records", modules.len(), references.len());
             let store = NoteStore::from_environment()?;
             println!("INFO: notes location {}", store.path().display());
             println!("INFO: map, radio, mesh, GPIO and device I/O are not implemented");

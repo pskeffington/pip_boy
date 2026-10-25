@@ -3,7 +3,7 @@
 **Working version:** 0.2 planning pass · **Review:** 2026-10-24  
 **Release condition:** No phase is complete solely because its files or test definitions exist. CI execution, platform checks, and documented acceptance results must be verified.
 
-Rust-Boy is the public product name. The existing \`pip_boy\` repository, \`pipboy\` executable, \`pipboy-core\` crate and \`PIPBOY_HOME\` data interface remain stable.
+Rust-Boy is the public product name. The existing `pip_boy` repository, `pipboy` executable, `pipboy-core` crate and `PIPBOY_HOME` data interface remain stable.
 
 ## Navigate the build
 
@@ -34,11 +34,11 @@ The build is a directed acyclic dependency plan, **not** a schedule. All module 
 
 **P0: telemetry, storage, settings, accessibility, diagnostics**; **P1: power, network link**.
 
-- [ ] Define versioned \`Observation<T>\` envelope: source ID, monotonic time + wall clock, units, state, expiry, and quality flags.
+- [ ] Define versioned `Observation<T>` envelope: source ID, monotonic time + wall clock, units, state, expiry, and quality flags.
 - [ ] Separate local read-only metrics from user-initiated notes/storage writes.
 - [ ] Implement bounded samples, optional NDJSON export, explicit retention/erase policies.
 - [ ] Build permission manifest with deny-by-default broker. Document that a Rust trait is **not** a security sandbox.
-- [ ] Add battery, thermal, disk and network-interface status only where supported, with \`Unknown\` rather than guessed values.
+- [ ] Add battery, thermal, disk and network-interface status only where supported, with `Unknown` rather than guessed values.
 - [ ] Provide keyboard-only paths, reduced motion and terminal-size fallback.
 - [ ] Add deterministic test backend rendering and module lifecycle unit tests.
 
@@ -49,7 +49,7 @@ The build is a directed acyclic dependency plan, **not** a schedule. All module 
 **P0: device broker and simulator**; **P1: GPIO, display, serial**.
 
 - [ ] Select concrete Raspberry Pi and display board revisions with documented wiring, connector limits and operating supply.
-- [ ] Introduce \`InputSource\`, \`DisplayBackend\`, \`SerialReader\` traits and simulated implementations; never bind the core to Linux-only APIs.
+- [ ] Introduce `InputSource`, `DisplayBackend`, `SerialReader` traits and simulated implementations; never bind the core to Linux-only APIs.
 - [ ] Support rotary encoder, buttons, and terminal input through one action enum, with debounce/long-press tests.
 - [ ] Set adapter timeouts, request cancellations, hot-unplug recovery and reversible settings.
 - [ ] Make native dependencies optional by compile-time feature / target gating.
@@ -75,7 +75,7 @@ The build is a directed acyclic dependency plan, **not** a schedule. All module 
 
 **P0: release assurance**; **P1: versioned module interface**; **P2: external feeds**.
 
-- [ ] Stable typed module manifest and schema migrations; static linking first, no untrusted native \`dlopen\`.
+- [ ] Stable typed module manifest and schema migrations; static linking first, no untrusted native `dlopen`.
 - [ ] Optional scoped endpoints with offline-first cache and explicit network consent.
 - [ ] Linux/macOS/Windows and selected ARM64 release builds, signed where applicable.
 - [ ] SBOM, license scan, vulnerability audit, traceable build provenance (SLSA guidance), reproducible artifacts when feasible.
