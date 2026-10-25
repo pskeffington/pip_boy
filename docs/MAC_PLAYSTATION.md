@@ -19,6 +19,8 @@ From the repository folder, substituting your PlayStation IP:
 ```bash
 ./scripts/launch-playstation.command 192.168.1.50
 ./scripts/launch-playstation.command 192.168.1.50 --diagnose
+# Prompt for the console IP and emit a diagnostic report:
+./scripts/launch-playstation.command --diagnose
 # Equivalent CLI:
 cargo run --locked -p pipboy -- game --playstation 192.168.1.50 --confirm
 cargo run --locked -p pipboy -- game --playstation 192.168.1.50 --confirm --diagnose
@@ -26,7 +28,9 @@ cargo run --locked -p pipboy -- game --playstation 192.168.1.50 --confirm --diag
 
 The preset uses TCP 27000. An explicit `IP:PORT` is accepted for diagnostics/test fixtures; bare IPv6 uses port 27000, and an IPv6 address with a port must use `[address]:port`. Hostnames are not resolved. Connection consent and saved `network.fetch` denials behave as described in [game mode](GAME_MODE.md).
 
-The diagnostic is a real protocol exchange, not just a port test. It waits for the complete reachable game root and prints JSON containing `status: ready`, endpoint, selected target profile, handshake and available root fields. `console_identity_verified: false` means the selected profile is not authentication or hardware identification; the protocol does not establish either. `game_actions_enabled: false` states that gameplay commands are absent. A diagnostic reads data and responds to heartbeats only; it does not equip/drop/travel or persist game state.
+The diagnostic waits for both a valid language/version announcement and the complete reachable game root, then prints JSON containing `status: ready`, endpoint, selected target profile, handshake and available root fields. A root arriving before the announcement remains pending. Prompt instructions go to standard error, so standard output remains a single JSON report even when the address is entered interactively. Malformed, missing or excessive announcements do not produce a successful report.
+
+`console_identity_verified: false` means the selected profile is not authentication or hardware identification; the protocol does not establish either. `game_actions_enabled: false` states that gameplay commands are absent. A diagnostic reads data and responds to heartbeats only; it does not equip/drop/travel or persist game state. `--diagnose` may precede or follow an explicit IP; repeated options and multiple addresses are rejected.
 
 ## Troubleshoot the actual connection
 
@@ -35,11 +39,14 @@ The diagnostic is a real protocol exchange, not just a port test. It waits for t
 | Connection refused | Correct console IP, Fallout 4 running, and this exact game build exposes the companion service |
 | Timeout / unreachable | Same LAN, guest/client isolation, VPN routing, network permissions if applicable; no internet port forwarding is required |
 | Busy | Close the companion app/device already connected, then launch again |
+| Handshake missing / invalid | The endpoint did not announce a valid Fallout 4 language/version; verify the console address and available game service |
 | Root timeout | Load a save, check App Enabled/service availability, and inspect the actual game build |
 | Saved network denial | Review the saved preference; `pipboy permissions clear network.fetch` explicitly removes it |
 | Build fails / Cargo absent | Use a supported native Rust toolchain; launcher does not install one automatically |
 
 On macOS versions with Local Network privacy controls, review System Settings → Privacy & Security → Local Network if access was denied or a relevant prompt appears. Applicability depends on the macOS release and launching application; do not assume every Terminal build needs a privacy toggle. Rust-Boy never changes privacy settings itself.
+
+The browser labels incomplete game data explicitly. The initial-root timeout applies to startup only: a later incremental update may introduce references in separate packets without terminating an established session. Live stat changes and terminal restoration after a game disconnect are exercised against a controlled peer; the actual PlayStation acceptance gate below remains open.
 
 ## PS4 and PS5 scope
 

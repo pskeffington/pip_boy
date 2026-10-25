@@ -43,6 +43,8 @@ Use `status --details` or `sample --details` for per-field units, quality, missi
 
 ```bash
 ./scripts/launch-playstation.command 192.168.1.50
+# Or prompt for the console IP and check the companion protocol:
+./scripts/launch-playstation.command --diagnose
 ```
 
 Current priority: **Mac → PlayStation**. Double-click `scripts/launch-playstation.command` or substitute your console IP above. See [Mac/PlayStation setup and diagnostics](docs/MAC_PLAYSTATION.md). Enable the game's Pip-Boy App setting on a build that provides it and load a save first. Use the host LAN IP when running Rust-Boy on another computer. Game mode browses live game objects and updates with keyboard navigation; it is currently read-only. **Actual game-build compatibility remains unverified.** See [setup, controls and limits](docs/GAME_MODE.md).
