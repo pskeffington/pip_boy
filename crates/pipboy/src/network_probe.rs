@@ -166,14 +166,12 @@ fn parse_icmp(output: &str, address: &str, expected: u8) -> io::Result<HealthRep
             let parts: Vec<_> = line.split(',').collect();
             let sent = parts
                 .first()?
-                .trim()
                 .split_whitespace()
                 .next()?
                 .parse::<usize>()
                 .ok()?;
             let received = parts
                 .get(1)?
-                .trim()
                 .split_whitespace()
                 .next()?
                 .parse::<usize>()

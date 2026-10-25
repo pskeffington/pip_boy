@@ -23,7 +23,7 @@ fn unavailable(message: &'static str) -> io::Error {
 
 fn valid_name(name: &str) -> bool {
     name.len() <= 253
-        && name.len() >= 1
+        && !name.is_empty()
         && name.split('.').all(|label| {
             label.len() <= 63
                 && !label.is_empty()
