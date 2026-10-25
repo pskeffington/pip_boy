@@ -3,7 +3,7 @@
 ## Mainline integration status — 2026-10-25
 
 - LAN/UniFi connected-client inventory and DIAG ingestion are merged in PR #15; Linux stable, Rust 1.90, native macOS/Windows and catalog validation passed at `badabc5`.
-- The consolidation pass brings nine offline network calculators and bounded ICMP/TCP health into the existing desktop/micro Network Engineer, with a shared paged interface and view-owned refresh. Mainline docs replace obsolete per-feature checkout instructions.
+- The consolidation pass brings nine offline network calculators and bounded ICMP/TCP health into the existing desktop/micro Network Engineer, with a shared paged interface and view-owned refresh. All five code-quality jobs passed at `f77df8c` in run 40217917079. Mainline docs replace obsolete per-feature checkout instructions.
 - Next field gates: real UniFi certificate/key access and inventory comparison, authorized Mac LAN measurements, physical 480×320 Pi touch layout, paired-device SSH acceptance and actual PlayStation/game protocol compatibility. These remain independent of software integration.
 
 **Current milestone:** G0 console verified; G1 local core in progress; G2 deny-only broker precursor · **Review:** 2026-10-25  
