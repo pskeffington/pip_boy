@@ -158,13 +158,13 @@ The [graphical dashboard implementation](DASHBOARD_UI.md) provides a shared UI f
 
 **Purpose:** Build a truly offline WGS84 field kit on Mac and Pi, interoperable with RustGIS and eventually opt-in TAK nodes.  
 **Lore:** role inspired · `VT-02`, `VT-03`, `STD-04`, `STD-07`, `STD-08`, `STD-09`, `STD-10`  
-**Preloaded now:** `geo-lab`, `game`, `net-lab`, `notes`, `host`  
-**New modules:** `map`, `coordinate-lab`, `gnss`, `track-log`, `tak-bridge`, `rustgis-adapter`
+**Preloaded now:** `reclamation`, `geo-lab`, `game`, `net-lab`, `notes`, `host`  
+**New modules:** `reclamation` (site register), `map`, `coordinate-lab`, `gnss`, `track-log`, `tak-bridge`, `rustgis-adapter`
 
 **Operational needs**
 
 - **must — Local WGS84 waypoints, approximate great-circle distances and bounded GeoJSON Point inspection** (`partially_available`).
-- **must — Offline trip notes, saved landmarks and position uncertainty labels** (`planned`).
+- **must — Offline trip notes, saved landmarks and position uncertainty labels** (`partially_available`): bounded manual-position site register, statuses, GeoJSON export; live GNSS still absent.
 - **should — Opt-in GNSS, multi-geometry GeoJSON/GPX exchange and permitted TAK CoT interoperability** (`planned`).
 - **later — Portable RustGIS-style map rendering, offline tile caching and Raspberry Pi display performance** (`planned`).
 
