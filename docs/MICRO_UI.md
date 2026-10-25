@@ -66,3 +66,7 @@ python3 tools/smoke_micro.py
 The new smoke script starts an actual Rust loopback server with `--micro --port 0`, confirms both desktop and micro routes, verifies the six-page markup, responsive breakpoints and no external JS URLs, then exercises profile persistence, Scout GIS, Custom pinning and denial of unauthorized requests. It is part of Linux and native macOS/Windows CI. **A passing static/HTTP test is not a visual certification.** Follow up by checking rendered browser screenshots and touch/keyboard usage at 800×480 and 480×320, including focus order, text legibility, scroll clipping, and modal operation.
 
 **Next:** after micro layout acceptance, expose a real RustGIS process/IPC or embedded mapping renderer in Reclamation Scout; then introduce separately approved GNSS/TAK and camera transports. None are implied by the current mock viewports.
+
+## GPS map preview (feature branch)
+
+MAP now mounts the shared offline [GPS and GeoJSON viewer](SCOUT_GPS_MAP.md): explicit browser GPS permission, optional WGS84 RustGIS GeoJSON layer import, follow, accuracy and pan/zoom. It does not embed native RustGIS, supply basemap tiles or open USB serial GNSS.
