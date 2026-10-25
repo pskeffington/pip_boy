@@ -656,7 +656,11 @@
         return box;
       }
       const top = node("div", "task-heading");
-      top.append(node("strong", "", data.manager ? "TASK CONTROL" : "MY DUTIES"));
+      if (typeof options.onExit === "function") {
+        top.append(button("◀", options.onExit, "ghost"));
+      }
+      top.append(node("strong", "task-compact-heading",
+        data.manager ? "TASKS" : "DUTIES"));
       if (data.manager) {
         top.append(button("+ NEW", () => {
           state.view = "new";

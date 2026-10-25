@@ -96,6 +96,7 @@ let pendingProfile = null;
 let busy = false;
 let toastTimer = null;
 let reducedEffects = false;
+let activeTaskUI = null;
 const viewPage = { gear: 0, data: 0, conf: 0 };
 let paletteOpen = false;
 let rolePage = 0;
@@ -193,6 +194,7 @@ function setTab(next) {
   if (!pages.includes(next) || !snapshot) return;
   tab = next;
   openedTool = null;
+  activeTaskUI = null;
   focusedCamera = null;
   render();
   ui.viewport.scrollTop = 0;
@@ -440,6 +442,7 @@ function openTool(id, mode = "distance") {
     return;
   }
   openedTool = id;
+  activeTaskUI = null;
   geoMode = mode;
   render();
   ui.viewport.scrollTop = 0;
@@ -511,16 +514,20 @@ function inputForm(root, id) {
 function showTool() {
   const root = panel();
   if (openedTool === "assigned-duties" || openedTool === "mission-board") {
-    const actions = make("div", "button-row");
-    actions.append(button("◀ RETURN", () => {
-      openedTool = null;
-      render();
-    }, "micro-button compact"));
-    root.append(actions);
     const container = make("div", "task-manager-viewport");
     root.append(container);
     if (window.RustBoyTasks) {
-      window.RustBoyTasks.mount(container, { profiles: snapshot.profiles });
+      window.RustBoyTasks.mount(container, {
+        profiles: snapshot.profiles,
+        compact: true,
+        onExit: () => {
+          openedTool = null;
+          activeTaskUI = null;
+          render();
+        }
+      }).then((controller) => {
+        if (container.isConnected) activeTaskUI = controller;
+      });
     }
     return root;
   }
@@ -553,7 +560,8 @@ function showTool() {
 function render() {
   if (!snapshot) return;
   renderHeading();
-  ui.screen.dataset.depth = openedTool ? "detail" : "root";
+  ui.screen.dataset.depth = ["assigned-duties", "mission-board"].includes(openedTool)
+    ? "tasks" : openedTool ? "detail" : "root";
   ui.content.replaceChildren(openedTool ? showTool() :
     tab === "stat" ? showStat() :
       tab === "gear" ? showGear() :
@@ -680,7 +688,10 @@ function back() {
   if (ui.rolesDialog.open) {
     ui.rolesDialog.close();
   } else if (openedTool) {
+    if (["assigned-duties", "mission-board"].includes(openedTool)
+        && activeTaskUI?.back()) return;
     openedTool = null;
+    activeTaskUI = null;
     render();
   } else if (focusedCamera !== null) {
     focusedCamera = null;
