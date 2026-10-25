@@ -7,6 +7,7 @@ use pipboy_core::permissions::{
     adapter_capability, Preference, PreferenceStore, ADAPTER_CAPABILITIES,
 };
 use pipboy_core::runtime::{Capability, LocalOperation, ModuleHost, PermissionSet};
+use pipboy_core::simulator_replay::{replay_fixture, ReplayScenario};
 use std::error::Error;
 mod console;
 mod sampling;
@@ -15,7 +16,7 @@ mod tui;
 
 fn help() {
     println!("{PRODUCT_NAME} | {PRODUCT_DESCRIPTOR}");
-    println!("usage: {CLI_COMMAND} [tui|status [--json]|sample [--count N --interval-ms MS]|sources [query]|modules|plan [G0..G4]|evidence [query]|doctor|permissions <list|request KEY|deny KEY|clear KEY>|simulate <list|run ID [--confirm]>|notes <list|add TEXT|search QUERY|export|import FILE>|help]");
+    println!("usage: {CLI_COMMAND} [tui|status [--json]|sample [--count N --interval-ms MS]|sources [query]|modules|plan [G0..G4]|evidence [query]|doctor|permissions <list|request KEY|deny KEY|clear KEY>|simulate <list|run ID [--confirm]|replay ID SCENARIO [--confirm]>|notes <list|add TEXT|search QUERY|export|import FILE>|help]");
 }
 
 fn main() {
@@ -222,7 +223,35 @@ fn run() -> Result<(), Box<dyn Error>> {
                     println!("{}", serde_json::to_string_pretty(&event)?);
                     Ok(())
                 }
-                _ => Err("usage: pipboy simulate <list|run ID [--confirm]>".into()),
+                Some("replay") => {
+                    let id = args
+                        .next()
+                        .ok_or("usage: pipboy simulate replay ID SCENARIO [--confirm]")?;
+                    let scenario_key = args
+                        .next()
+                        .ok_or("usage: pipboy simulate replay ID SCENARIO [--confirm]")?;
+                    let scenario = ReplayScenario::from_key(&scenario_key)
+                        .ok_or("unknown replay scenario (nominal|disconnect-recover|revoke)")?;
+                    let confirmation = match args.next().as_deref() {
+                        Some("--confirm") if args.next().is_none() => {
+                            SessionConfirmation::Confirmed
+                        }
+                        None => SessionConfirmation::Absent,
+                        _ => {
+                            return Err(
+                                "usage: pipboy simulate replay ID SCENARIO [--confirm]".into()
+                            )
+                        }
+                    };
+                    let preferences = PreferenceStore::from_environment()?.list()?;
+                    let trace = replay_fixture(&id, scenario, &preferences, confirmation)?;
+                    println!("{}", serde_json::to_string_pretty(&trace)?);
+                    Ok(())
+                }
+                _ => Err(
+                    "usage: pipboy simulate <list|run ID [--confirm]|replay ID SCENARIO [--confirm]>"
+                        .into(),
+                ),
             }
         }
         Some("doctor") => {
