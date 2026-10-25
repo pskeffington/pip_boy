@@ -209,9 +209,12 @@ class ConPty:
         self.reader.start()
 
     def _close_handle(self, handle):
-        if handle.value:
-            self.api.CloseHandle(handle)
-            handle.value = None
+        # ctypes Structure HANDLE fields may be exposed as plain Python ints.
+        value = handle.value if isinstance(handle, ctypes.c_void_p) else handle
+        if value:
+            self.api.CloseHandle(value)
+            if isinstance(handle, ctypes.c_void_p):
+                handle.value = None
 
     def _drain(self, duration=0.05):
         limit = time.monotonic() + duration
