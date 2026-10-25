@@ -98,6 +98,13 @@ pub const PALETTE: &[Tool] = &[
         command: "pipboy workbench net cidr 192.168.1.50/24",
     },
     Tool {
+        id: "geo-lab",
+        name: "SCOUT GIS",
+        description: "Offline WGS84 GeoJSON waypoints, great-circle distance and local Point inspection.",
+        availability: Availability::Ready,
+        command: "pipboy scout geo waypoint CAMP 42.0 -70.75",
+    },
+    Tool {
         id: "gpio",
         name: "GPIO",
         description: "Physical pin access requires a future OS-enforced broker.",
@@ -195,10 +202,10 @@ pub const PRESETS: &[Preset] = &[
     Preset {
         id: "reclamation-scout",
         title: "Reclamation Field Kit",
-        description: "Offline field records, network setup, computer condition and explicit game companion.",
+        description: "Offline WGS84 field mapping, records, LAN planning, status and explicit game companion.",
         lore_evidence: "VT-02",
         role_fidelity: "role_inspired",
-        tools: &["game", "net-lab", "notes", "host"],
+        tools: &["geo-lab", "game", "net-lab", "notes", "host"],
     },
     Preset {
         id: "records-custodian",
