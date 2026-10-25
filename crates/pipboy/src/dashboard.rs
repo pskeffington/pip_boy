@@ -7,6 +7,7 @@ use crate::peer;
 use pipboy_core::peers::PeerStore;
 use pipboy_core::scout_gis::{distance_meters, waypoint, Point};
 use pipboy_core::network_probe;
+use pipboy_core::unifi;
 use pipboy_core::tasks::{NewTask, Status, TaskStore};
 use std::sync::{atomic::{AtomicUsize, Ordering}, Arc};
 use pipboy_core::workbench::{inspect_hex, ipv4_cidr, tool, WorkbenchStore, PALETTE, PRESETS};
@@ -640,6 +641,102 @@ fn scan_network(req: &Request, store: &WorkbenchStore) -> Result<Response, Respo
     })))
 }
 
+
+fn unifi_request(req: &Request, store: &WorkbenchStore) -> Result<Response, Response> {
+    let body = parse_json_body(req, &["operation", "site", "cidr", "confirm"])?;
+    if body.get("confirm").and_then(Value::as_bool) != Some(true) {
+        return Err(Response::error(422, "Authorize this read-only UniFi controller request"));
+    }
+    let board = store.load().map_err(|_| Response::error(409, "Workbench unavailable"))?;
+    if !board.slots.iter().any(|slot| slot.tool == "net-lab") {
+        return Err(Response::error(409, "Activate NET ENGINEER first"));
+    }
+    let operation = str_field(&body, "operation")?;
+    let site = if matches!(operation, "clients" | "compare") {
+        let value = str_field(&body, "site")?;
+        if !unifi::valid_site_id(value) {
+            return Err(Response::error(422, "Enter a valid UniFi site UUID"));
+        }
+        Some(value)
+    } else {
+        None
+    };
+    let scope = if operation == "compare" {
+        let value = str_field(&body, "cidr")?;
+        if value.len() > 32 || network_probe::NetworkScope::parse(value).is_err() {
+            return Err(Response::error(422, "Compare requires a private /24..../32 IPv4 CIDR"));
+        }
+        Some(value)
+    } else {
+        None
+    };
+    let read_error = |_| Response::error(
+        409,
+        "UniFi read-only HTTPS query failed; verify private controller configuration, trusted CA, API key and site ID"
+    );
+    match operation {
+        "sites" => {
+            let data = unifi::list_sites(true).map_err(read_error)?;
+            let mut output = format!(
+                "UNIFI / CONTROLLER SITES\nSITES: {}\n", data.sites.len()
+            );
+            for row in &data.sites {
+                output.push_str(&format!("{}  {}\n", row.id, row.name));
+            }
+            Ok(Response::json(200, &json!({
+                "kind": "unifi_sites", "output": output, "inventory": data
+            })))
+        }
+        "clients" => {
+            let data = unifi::list_clients(site.ok_or_else(||
+                Response::error(422, "Site ID required"))?, true).map_err(read_error)?;
+            let mut output = format!(
+                "UNIFI / CONTROLLER CONNECTED\nCLIENTS: {}  WITH IP: {}\n",
+                data.connected_clients, data.clients_with_ip
+            );
+            for client in data.clients.iter().take(60) {
+                output.push_str(&format!(
+                    "{}  {}  {}\n",
+                    client.ip_address.map(|ip| ip.to_string())
+                        .unwrap_or_else(|| "IP unknown".into()),
+                    client.connection_type,
+                    client.name
+                ));
+            }
+            if data.clients.len() > 60 {
+                output.push_str("Only first 60 shown; CLI --json provides complete inventory.\n");
+            }
+            output.push_str(&data.limitation);
+            Ok(Response::json(200, &json!({
+                "kind": "unifi_clients", "output": output, "inventory": data
+            })))
+        }
+        "compare" => {
+            let data = unifi::list_clients(site.ok_or_else(||
+                Response::error(422, "Site ID required"))?, true).map_err(read_error)?;
+            let report = network_probe::scan(scope.ok_or_else(||
+                Response::error(422, "Private subnet required"))?, true)
+                .map_err(|_| Response::error(409, "Private LAN scan unavailable or in progress"))?;
+            let comparison = unifi::compare_inventory(&report, &data);
+            let output = format!(
+                "NET ENGINEER / UNIFI CROSS-CHECK\nCONTROLLER CONNECTED: {}\nCONTROLLER IPv4: {}\nMATCHED RESPONSES: {}\nCONTROLLER IPV4 NOT PROBED: {}\nPROBED / NO CONTROLLER IP MATCH: {}\n\n{}\n\n{}",
+                comparison.controller_clients,
+                comparison.controller_with_ipv4,
+                comparison.matched_active_probe,
+                comparison.controller_not_probed,
+                comparison.active_probe_only,
+                comparison.note,
+                report.render_text()
+            );
+            Ok(Response::json(200, &json!({
+                "kind": "unifi_comparison", "output": output,
+                "inventory": data, "report": report, "comparison": comparison
+            })))
+        }
+        _ => Err(Response::error(422, "Unsupported UniFi read-only operation")),
+    }
+}
+
 fn dispatch(req: &Request, store: &WorkbenchStore, port: u16) -> Response {
     let expected_host = format!("127.0.0.1:{port}");
     if req.header("host") != Some(expected_host.as_str()) {
@@ -695,6 +792,7 @@ fn dispatch(req: &Request, store: &WorkbenchStore, port: u16) -> Response {
         ("GET", "/api/tasks") => tasks_read(store).unwrap_or_else(|error| error),
         ("GET", "/api/peers") => peers_read(store).unwrap_or_else(|error| error),
         ("POST", "/api/net/scan") => scan_network(req, store).unwrap_or_else(|error| error),
+        ("POST", "/api/net/unifi") => unifi_request(req, store).unwrap_or_else(|error| error),
         ("POST", "/api/peer/send") => device_send(req, store).unwrap_or_else(|error| error),
         ("POST", "/api/peer/sync") => device_sync(req, store).unwrap_or_else(|error| error),
         ("POST", "/api/tasks/create") => tasks_create(req, store).unwrap_or_else(|error| error),
@@ -967,6 +1065,28 @@ mod tests {
         let mut cross_origin = scoped;
         cross_origin.headers.insert("origin".into(), "https://other.invalid".into());
         assert_eq!(dispatch(&cross_origin, &store, 8765).status, 403);
+    }
+
+    #[test]
+    fn unifi_inventory_denies_without_role_or_operator_permission() {
+        let temp = tempfile::tempdir().unwrap();
+        let store = WorkbenchStore::new(temp.path().join("state"));
+        let clients = request("POST", "/api/net/unifi",
+            json!({"operation":"clients","site":"00000000-0000-0000-0000-000000000001","confirm":true}));
+        assert_eq!(dispatch(&clients, &store, 8765).status, 409);
+        assert_eq!(dispatch(&request("POST", "/api/profile",
+            json!({"id":"head-engineer","confirm":true})), &store, 8765).status, 200);
+        assert_eq!(dispatch(&request("POST", "/api/net/unifi",
+            json!({"operation":"clients","site":"00000000-0000-0000-0000-000000000001"})),
+            &store, 8765).status, 422);
+        assert_eq!(dispatch(&request("POST", "/api/net/unifi",
+            json!({"operation":"clients","site":"../../secret","confirm":true})),
+            &store, 8765).status, 422);
+        assert_eq!(dispatch(&request("POST", "/api/net/unifi",
+            json!({"operation":"compare","site":"00000000-0000-0000-0000-000000000001",
+                "cidr":"8.8.8.8/32","confirm":true})),
+            &store, 8765).status, 422);
+        assert!(!temp.path().join("state/permissions.json").exists());
     }
 
     #[test]
