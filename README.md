@@ -1,5 +1,7 @@
 # Rust-Boy
 
+Micro navigation uses HOME / TOOLS / MAP / DATA / LINK / SETUP, a consistent header Back button and separate local-tool input/results screens.
+
 [![Rust-Boy quality gates](https://github.com/pskeffington/pip_boy/actions/workflows/rust.yml/badge.svg?branch=main)](https://github.com/pskeffington/pip_boy/actions/workflows/rust.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-informational)](LICENSE)
 [![Rust: 1.90+](https://img.shields.io/badge/Rust-1.90%2B-informational)](Cargo.toml)

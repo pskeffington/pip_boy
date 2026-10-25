@@ -1,5 +1,9 @@
 # Rust-Boy | Micro handheld shell
 
+## Micro readability pass
+
+HOME, TOOLS and SETUP replace abbreviated rail labels. The heading has one consistent Back control, including return from non-home tabs; Escape follows the same route. Head Engineer opens NETWORK, which presents the available operations rather than implying a scan has already started. Local tools show results separately with EDIT INPUTS preserving the entered values. Root pages retain overflow access at accessibility zoom.
+
 ## Unified Network Engineer
 
 From `main`, select Head Engineer → NET ENGINEER. The shared Rust catalog has 16 operations across six-tool pages. Select a tool, enter inputs, and use NEXT for active operations to reach a separate authorization screen. Offline calculations run directly. Results display two inventory entries per page and retain full text under DETAILS. SCAN LAN and UniFi operations offer 60-second refresh capped at 60 runs; edit/back/navigation/hidden tabs/errors stop it. Returning to the view requires another explicit Run. See [health and UniFi setup](NETWORK_HEALTH_UNIFI.md).

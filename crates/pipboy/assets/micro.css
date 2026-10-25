@@ -361,3 +361,27 @@ small { font-size:11px; }
 
 /* Task pages are fitted, but never silently hide controls at large zoom. */
 .micro-device.micro-overflow[data-depth="tasks"] .micro-viewport { overflow-y:auto; }
+
+/* Readability pass: stable navigation, quiet hierarchy, dedicated results. */
+.micro-device::after { opacity:.06; }
+.view-heading h1 { text-shadow:none; letter-spacing:.015em; }
+.heading-left { flex:1; }
+#page-code { display:none; }
+.micro-back { flex:none; min-height:30px; border:1px solid var(--rb-line-soft); border-radius:3px; background:var(--rb-panel); padding:4px 8px; font-size:11px; }
+.micro-lab.show-result > :not(.lab-result):not(.lab-edit) { display:none; }
+.micro-lab .lab-edit { margin-bottom:7px; }
+.micro-device[data-depth="detail"] .micro-lab.show-result .mono-output { max-height:none; min-height:0; overflow:visible; }
+.tile-copy strong { font-size:12px; letter-spacing:0; }
+.tile-copy small { font-size:9px; opacity:.8; }
+.tab-symbol { font-size:17px; }
+.tab { font-size:11px; letter-spacing:0; }
+@media (max-height:360px) {
+  .micro-back { min-height:25px; padding:2px 6px; }
+  .mode-indicator { display:none; }
+  .view-heading { gap:7px; }
+  .view-heading h1 { margin:0; font-size:15px; }
+}
+@media (prefers-reduced-motion:reduce) {
+  .micro-device::after { display:none; }
+  *, *::before, *::after { scroll-behavior:auto !important; }
+}

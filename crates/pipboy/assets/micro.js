@@ -6,6 +6,7 @@
 const $ = (id) => document.getElementById(id);
 const ui = {
   screen: $("micro-device"),
+  back: $("micro-back"),
   roleSwitch: $("role-switch"),
   roleShort: $("role-short"),
   clock: $("local-clock"),
@@ -30,7 +31,7 @@ const ui = {
 };
 const pages = ["stat", "gear", "map", "data", "link", "conf"];
 const pageTitles = {
-  stat: "STATUS", gear: "TOOLS", map: "MAP",
+  stat: "HOME", gear: "TOOLS", map: "MAP",
   data: "DATA", link: "LINK", conf: "SETTINGS"
 };
 const glyphs = {
@@ -47,7 +48,7 @@ const roleStations = Object.freeze({
   "head-engineer": {
     heading: "ENGINEER",
     purpose: "SYSTEM / NET",
-    quick: "SCAN LAN", tool: "net-lab"
+    quick: "NETWORK", tool: "net-lab"
   },
   "security-chief": {
     heading: "SECURITY",
@@ -184,6 +185,7 @@ function renderHeading() {
     : openedTool ? toolInfo(openedTool)?.name : pageTitles[tab];
   ui.title.textContent = label || pageTitles[tab];
   ui.mode.textContent = "LOCAL";
+  ui.back.hidden = !openedTool && focusedCamera === null && tab === "stat";
   for (const item of ui.tabs) {
     const current = item.dataset.tab === tab;
     if (current) item.setAttribute("aria-current", "page");
@@ -232,7 +234,7 @@ function showStat() {
   root.classList.add("micro-home");
   const profileId = snapshot.active.profile;
   const station = roleStations[profileId] || roleStations.custom;
-  root.append(sectionTop(station.heading, station.purpose));
+  root.append(sectionTop("QUICK ACCESS", ""));
   const actions = make("div", "quick-row micro-home-actions");
   if (station.tool && hasTool(station.tool)) {
     actions.append(button(station.quick, () => openTool(station.tool), "micro-button solid"));
@@ -449,6 +451,7 @@ function openTool(id, mode = "distance") {
 function inputForm(root, id) {
   const form = make("form", "micro-panel");
   form.id = "micro-lab-form";
+  form.classList.add("micro-lab");
   if (id === "geo-lab") {
     const modes = make("div", "button-row");
     for (const mode of ["distance", "waypoint"]) {
@@ -474,12 +477,20 @@ function inputForm(root, id) {
     form.append(field("input", "HEXADECIMAL BYTES", "48656c6c6f", { maxLength: 3000, hex: true }));
   }
   const row = make("div", "form-actions");
-  const run = make("button", "micro-button solid", id === "diag" ? "CHECK LOCAL HOST" : id === "host" ? "SAMPLE LOCAL STATUS" :
-    ["game", "notes", "simulator", "library"].includes(id) ? "VIEW SAFE HANDOFF" : "RUN LOCAL TOOL");
+  const run = make("button", "micro-button solid", id === "diag" ? "CHECK HOST" : id === "host" ? "READ STATUS" :
+    ["game", "notes", "simulator", "library"].includes(id) ? "VIEW DETAILS" : "RUN");
   run.type = "submit";
   row.append(run);
   form.append(row);
-  const output = make("pre", "mono-output", "Awaiting explicit operator action.");
+  const output = make("pre", "mono-output lab-result", "");
+  output.hidden = true;
+  const edit = button("‹ EDIT INPUTS", () => {
+    form.classList.remove("show-result");
+    output.hidden = true;
+    edit.hidden = true;
+  }, "micro-button compact lab-edit");
+  edit.hidden = true;
+  form.append(edit);
   output.setAttribute("aria-live", "polite");
   form.append(output);
   form.addEventListener("submit", async (event) => {
@@ -487,13 +498,18 @@ function inputForm(root, id) {
     if (busy) return;
     busy = true;
     run.disabled = true;
-    output.textContent = "LOCAL TOOL / PROCESSING";
+    output.hidden = false;
+    output.textContent = "WORKING…";
     const payload = { tool: id };
     if (id === "geo-lab") payload.mode = geoMode;
     for (const [key, val] of new FormData(form).entries()) payload[key] = val;
     try {
       const result = await api("/api/experiment", payload);
-      if (openedTool === id) output.textContent = result.output;
+      if (openedTool === id && form.isConnected) {
+        output.textContent = result.output;
+        form.classList.add("show-result");
+        edit.hidden = false;
+      }
       ui.foot.textContent = "LOCAL TOOL / COMPLETE";
     } catch (error) {
       if (openedTool === id) output.textContent = "ERROR / " + error.message;
@@ -529,7 +545,6 @@ function showTool() {
   const meta = toolInfo(openedTool);
   const row = make("div", "frame-head");
   row.append(
-    button("◀ BACK", () => { openedTool = null; render(); }, "micro-button compact"),
     make("span", "mini-pill", meta?.availability === "ready" ? "LOCAL" : "MANUAL")
   );
   root.append(row);
@@ -722,6 +737,7 @@ function init() {
   window.addEventListener("resize", ensureVisible);
   ui.tabs.forEach((item) => item.addEventListener("click", () => setTab(item.dataset.tab)));
   ui.roleSwitch.addEventListener("click", openRoles);
+  ui.back.addEventListener("click", back);
   ui.closeRoles.addEventListener("click", () => ui.rolesDialog.close());
   ui.cancelRoles.addEventListener("click", () => ui.rolesDialog.close());
   ui.applyRole.addEventListener("click", activateRole);
