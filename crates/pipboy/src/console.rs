@@ -403,12 +403,11 @@ pub fn render(frame: &mut Frame, navigation: &mut Navigation, view: View<'_>) {
         detail_area,
     );
     let footer = if navigation.panel == 3 && navigation.profiles_open {
-        "PROFILES | Up/Down: role | Enter: select | Y: confirm
-N/Esc: cancel | Tab: next panel | Q: quit"
+        "PROFILES: arrows choose Enter select\nY: apply | N/Esc cancel | Q: quit"
     } else if navigation.panel == 3 && navigation.palette_open {
-        "PALETTE | Up/Down: select | Enter: pin | Esc: cancel\nTab: next panel | Q/Ctrl+C: quit"
+        "PALETTE: arrows select Enter pin\nEsc: cancel | Tab: next | Q: quit"
     } else if navigation.panel == 3 {
-        "WORKBENCH | P: role | A: palette | X: unpin | R: reload\nUp/Down: slots | PgUp/PgDn: detail | Q: quit"
+        "WORKBENCH P:roles A:tools X:remove\nUp/Down: select | R: reload | Q: quit"
     } else {
         "Tab: panel | Up/Down: item or text\nPgUp/PgDn: text | Home/End: first/last\nP: pause/resume | R: notes | Q: quit"
     };
