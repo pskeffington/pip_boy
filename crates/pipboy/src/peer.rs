@@ -348,16 +348,21 @@ fn bridge(source: &str) -> io::Result<()> {
     if !valid_device_id(source) {
         return Err(invalid("Invalid restricted SSH source identity"));
     }
-    let original = std::env::var("SSH_ORIGINAL_COMMAND")
-        .map_err(|_| io::Error::new(io::ErrorKind::PermissionDenied,
-            "Restricted SSH bridge requires SSH_ORIGINAL_COMMAND"))?;
+    let original = std::env::var("SSH_ORIGINAL_COMMAND").map_err(|_| {
+        io::Error::new(
+            io::ErrorKind::PermissionDenied,
+            "Restricted SSH bridge requires SSH_ORIGINAL_COMMAND",
+        )
+    })?;
     if original == "pipboy peer receive" {
         receive(Some(source))
     } else if original == format!("pipboy peer receipts {source}") {
         receipts(source)
     } else {
-        Err(io::Error::new(io::ErrorKind::PermissionDenied,
-            "OpenSSH restricted key permits receive and source-specific receipts only"))
+        Err(io::Error::new(
+            io::ErrorKind::PermissionDenied,
+            "OpenSSH restricted key permits receive and source-specific receipts only",
+        ))
     }
 }
 
