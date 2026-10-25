@@ -100,17 +100,21 @@ pub struct MessageBook {
 
 impl Default for MessageBook {
     fn default() -> Self {
-        Self { schema_version: SCHEMA, next_id: 1, messages: Vec::new() }
+        Self {
+            schema_version: SCHEMA,
+            next_id: 1,
+            messages: Vec::new(),
+        }
     }
 }
 
 impl MessageBook {
     fn validate(&self) -> io::Result<()> {
-        if self.schema_version != SCHEMA
-            || self.next_id == 0
-            || self.messages.len() > MAX_MESSAGES
+        if self.schema_version != SCHEMA || self.next_id == 0 || self.messages.len() > MAX_MESSAGES
         {
-            return Err(invalid("Unsupported or oversized Messenger log; original preserved"));
+            return Err(invalid(
+                "Unsupported or oversized Messenger log; original preserved",
+            ));
         }
         let mut seen = HashSet::new();
         let mut incoming = HashSet::new();
@@ -168,14 +172,17 @@ pub struct MessageStore {
 
 impl MessageStore {
     pub fn new(root: PathBuf) -> Self {
-        Self { path: root.join("messages.json") }
+        Self {
+            path: root.join("messages.json"),
+        }
     }
 
     pub fn from_environment() -> io::Result<Self> {
         let root = if let Some(home) = env::var_os("PIPBOY_HOME").filter(|x| !x.is_empty()) {
             PathBuf::from(home)
         } else {
-            let home = env::var_os("HOME").or_else(|| env::var_os("USERPROFILE"))
+            let home = env::var_os("HOME")
+                .or_else(|| env::var_os("USERPROFILE"))
                 .ok_or_else(|| invalid("Home directory unavailable"))?;
             PathBuf::from(home).join(".pipboy")
         };
@@ -198,7 +205,10 @@ impl MessageStore {
         #[cfg(unix)]
         {
             use std::os::unix::fs::DirBuilderExt;
-            fs::DirBuilder::new().recursive(true).mode(0o700).create(self.directory())?;
+            fs::DirBuilder::new()
+                .recursive(true)
+                .mode(0o700)
+                .create(self.directory())?;
         }
         #[cfg(not(unix))]
         fs::create_dir_all(self.directory())?;
@@ -221,7 +231,8 @@ impl MessageStore {
             return Err(invalid("Messenger storage limit reached"));
         }
         let mut tmp = tempfile::Builder::new()
-            .prefix(".messages-").tempfile_in(self.directory())?;
+            .prefix(".messages-")
+            .tempfile_in(self.directory())?;
         tmp.write_all(&bytes)?;
         tmp.as_file().sync_all()?;
         tmp.persist(&self.path).map_err(|error| error.error)?;
@@ -237,7 +248,9 @@ impl MessageStore {
         let _guard = self.lock()?;
         let mut book = self.load()?;
         if book.messages.len() == MAX_MESSAGES || book.next_id == u64::MAX {
-            return Err(invalid("Messenger journal full; export/retention controls not released"));
+            return Err(invalid(
+                "Messenger journal full; export/retention controls not released",
+            ));
         }
         let message = Message {
             id: book.next_id,
@@ -259,9 +272,13 @@ impl MessageStore {
         if !valid_device_id(peer) || id == 0 {
             return Err(invalid("Invalid outgoing message selector"));
         }
-        self.load()?.messages.into_iter().find(|message| {
-            message.id == id && message.peer == peer && message.direction == Direction::Outgoing
-        }).ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "Queued message not found"))
+        self.load()?
+            .messages
+            .into_iter()
+            .find(|message| {
+                message.id == id && message.peer == peer && message.direction == Direction::Outgoing
+            })
+            .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "Queued message not found"))
     }
 
     pub fn mark_stored(&self, id: u64, peer: &str, remote_id: u64) -> io::Result<Message> {
@@ -270,9 +287,13 @@ impl MessageStore {
         }
         let _guard = self.lock()?;
         let mut book = self.load()?;
-        let message = book.messages.iter_mut().find(|entry| {
-            entry.id == id && entry.peer == peer && entry.direction == Direction::Outgoing
-        }).ok_or_else(|| invalid("Message to acknowledge not found"))?;
+        let message = book
+            .messages
+            .iter_mut()
+            .find(|entry| {
+                entry.id == id && entry.peer == peer && entry.direction == Direction::Outgoing
+            })
+            .ok_or_else(|| invalid("Message to acknowledge not found"))?;
         if message.delivery == Delivery::Stored {
             if message.remote_stored_id == Some(remote_id) {
                 return Ok(message.clone());
@@ -289,7 +310,11 @@ impl MessageStore {
         Ok(result)
     }
 
-    pub fn receive(&self, frame: &RemoteMessage, local_device: &str) -> io::Result<(Message, bool)> {
+    pub fn receive(
+        &self,
+        frame: &RemoteMessage,
+        local_device: &str,
+    ) -> io::Result<(Message, bool)> {
         if !frame.valid() || frame.to_device != local_device {
             return Err(invalid("Invalid remote message or recipient device"));
         }
@@ -306,7 +331,9 @@ impl MessageStore {
             return Err(invalid("Conflicting retransmission of remote message"));
         }
         if book.messages.len() == MAX_MESSAGES || book.next_id == u64::MAX {
-            return Err(invalid("Message journal full; receiver did not store frame"));
+            return Err(invalid(
+                "Message journal full; receiver did not store frame",
+            ));
         }
         let message = Message {
             id: book.next_id,
@@ -358,8 +385,11 @@ mod tests {
 
         let frame = RemoteMessage {
             schema_version: SCHEMA,
-            from_device: "overseer-a".into(), to_device: "scout-one".into(),
-            origin_id: 15, body: "Arrived".into(), sent_at: 1,
+            from_device: "overseer-a".into(),
+            to_device: "scout-one".into(),
+            origin_id: 15,
+            body: "Arrived".into(),
+            sent_at: 1,
         };
         assert!(store.receive(&frame, "not-scout").is_err());
         let (received, new) = store.receive(&frame, "scout-one").unwrap();
@@ -381,7 +411,11 @@ mod tests {
         assert!(store.load().is_err());
         assert!(store.queue("scout-one", "Do not overwrite").is_err());
         assert_eq!(fs::read(&store.path).unwrap(), b"{corrupted");
-        fs::write(&store.path, b"{\"schema_version\":9,\"next_id\":1,\"messages\":[]}").unwrap();
+        fs::write(
+            &store.path,
+            b"{\"schema_version\":9,\"next_id\":1,\"messages\":[]}",
+        )
+        .unwrap();
         assert!(store.load().is_err());
     }
 
@@ -390,9 +424,12 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let store = MessageStore::new(dir.path().join("vault"));
         let mut packet = RemoteMessage {
-            schema_version: 1, from_device: "overseer-a".into(),
-            to_device: "scout-one".into(), origin_id: 1,
-            body: "Command received".into(), sent_at: 1,
+            schema_version: 1,
+            from_device: "overseer-a".into(),
+            to_device: "scout-one".into(),
+            origin_id: 1,
+            body: "Command received".into(),
+            sent_at: 1,
         };
         packet.from_device = "scout-one".into();
         assert!(store.receive(&packet, "scout-one").is_err());
