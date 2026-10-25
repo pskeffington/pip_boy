@@ -95,7 +95,9 @@ impl NewSite {
             .accuracy_m
             .is_some_and(|value| !value.is_finite() || !(0.0..=10_000.0).contains(&value))
         {
-            return Err(invalid("Accuracy estimate must be between 0 and 10000 meters"));
+            return Err(invalid(
+                "Accuracy estimate must be between 0 and 10000 meters",
+            ));
         }
         Ok(())
     }
@@ -148,7 +150,10 @@ impl Site {
             || self.updated_at < self.created_at
             || self.history.is_empty()
             || self.history.len() > MAX_HISTORY
-            || self.history.last().is_none_or(|event| event.status != self.status)
+            || self
+                .history
+                .last()
+                .is_none_or(|event| event.status != self.status)
         {
             return Err(invalid("Invalid reclamation site record"));
         }
@@ -189,7 +194,7 @@ impl SiteBook {
         Ok(())
     }
 
-    fn read(mut input: impl Read) -> io::Result<Self> {
+    fn read(input: impl Read) -> io::Result<Self> {
         let mut bytes = Vec::new();
         input.take(MAX_BYTES + 1).read_to_end(&mut bytes)?;
         if bytes.len() as u64 > MAX_BYTES {
@@ -319,7 +324,9 @@ impl SiteStore {
             return Err(invalid("Reclamation site limit reached"));
         }
         let id = book.next_id;
-        book.next_id = id.checked_add(1).ok_or_else(|| invalid("Site IDs exhausted"))?;
+        book.next_id = id
+            .checked_add(1)
+            .ok_or_else(|| invalid("Site IDs exhausted"))?;
         let at = now();
         let site = Site {
             id,
@@ -381,7 +388,10 @@ impl SiteStore {
         if let Some(notes) = notes {
             site.notes = notes.to_owned();
         }
-        site.revision = site.revision.checked_add(1).ok_or_else(|| invalid("Site revision exhausted"))?;
+        site.revision = site
+            .revision
+            .checked_add(1)
+            .ok_or_else(|| invalid("Site revision exhausted"))?;
         site.updated_at = at;
         let changed = site.clone();
         self.save(&book)?;
@@ -431,7 +441,12 @@ mod tests {
         let store = SiteStore::new(tmp.path().to_owned());
         let first = store.create(site(0.0, 179.9)).unwrap();
         let next = store
-            .change(first.id, 1, SiteStatus::NeedsAssistance, Some("Unsafe access"))
+            .change(
+                first.id,
+                1,
+                SiteStatus::NeedsAssistance,
+                Some("Unsafe access"),
+            )
             .unwrap();
         assert_eq!(next.revision, 2);
         assert_eq!(next.history.len(), 2);
@@ -439,10 +454,15 @@ mod tests {
         assert_eq!(store.load().unwrap().sites[0].revision, 2);
         let before = fs::read(store.path()).unwrap();
         assert_eq!(
-            store.change(first.id, 1, SiteStatus::Completed, None).unwrap_err().kind(),
+            store
+                .change(first.id, 1, SiteStatus::Completed, None)
+                .unwrap_err()
+                .kind(),
             io::ErrorKind::AlreadyExists
         );
-        assert!(store.change(first.id, 2, SiteStatus::NeedsAssistance, None).is_err());
+        assert!(store
+            .change(first.id, 2, SiteStatus::NeedsAssistance, None)
+            .is_err());
         assert_eq!(fs::read(store.path()).unwrap(), before);
     }
 
@@ -473,8 +493,14 @@ mod tests {
         store.create(site(0.0, -179.9)).unwrap();
         let geojson = store.load().unwrap().geojson().unwrap();
         assert_eq!(geojson["features"].as_array().unwrap().len(), 2);
-        assert_eq!(geojson["features"][0]["geometry"]["coordinates"], json!([179.9, 0.0]));
-        assert_eq!(geojson["features"][1]["geometry"]["coordinates"], json!([-179.9, 0.0]));
+        assert_eq!(
+            geojson["features"][0]["geometry"]["coordinates"],
+            json!([179.9, 0.0])
+        );
+        assert_eq!(
+            geojson["features"][1]["geometry"]["coordinates"],
+            json!([-179.9, 0.0])
+        );
         assert!(geojson.to_string().len() < 4096);
     }
 }
