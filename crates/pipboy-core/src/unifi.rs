@@ -37,8 +37,12 @@ impl UniFiConfig {
         api_key: String,
         ca_cert: Option<PathBuf>,
     ) -> Result<Self, String> {
-        if !controller.is_private() || controller.is_loopback() || controller.is_link_local()
-            || controller.is_broadcast() || controller.is_unspecified() {
+        if !controller.is_private()
+            || controller.is_loopback()
+            || controller.is_link_local()
+            || controller.is_broadcast()
+            || controller.is_unspecified()
+        {
             return Err("UniFi controller must be a private IPv4 LAN address".into());
         }
         if !matches!(port, 443 | 8443) {
@@ -50,7 +54,9 @@ impl UniFiConfig {
             _ => return Err("UniFi mode must be unifi-os or standalone".into()),
         };
         if !(16..=512).contains(&api_key.len())
-            || !api_key.bytes().all(|c| c.is_ascii_alphanumeric() || b"-_./+=:".contains(&c))
+            || !api_key
+                .bytes()
+                .all(|c| c.is_ascii_alphanumeric() || b"-_./+=:".contains(&c))
         {
             return Err("invalid API key format; use a valid UniFi integration API key".into());
         }
@@ -60,7 +66,11 @@ impl UniFiConfig {
             }
         }
         Ok(Self {
-            controller, port, prefix, api_key, ca_cert,
+            controller,
+            port,
+            prefix,
+            api_key,
+            ca_cert,
         })
     }
 
@@ -73,8 +83,7 @@ impl UniFiConfig {
             .unwrap_or_else(|_| "443".to_string())
             .parse::<u16>()
             .map_err(|_| "RUSTBOY_UNIFI_PORT must be 443 or 8443")?;
-        let mode = env::var("RUSTBOY_UNIFI_MODE")
-            .unwrap_or_else(|_| "unifi-os".into());
+        let mode = env::var("RUSTBOY_UNIFI_MODE").unwrap_or_else(|_| "unifi-os".into());
         let api_key = env::var("RUSTBOY_UNIFI_API_KEY")
             .map_err(|_| "RUSTBOY_UNIFI_API_KEY not configured")?;
         let ca_cert = env::var_os("RUSTBOY_UNIFI_CA_CERT").map(PathBuf::from);
@@ -84,31 +93,51 @@ impl UniFiConfig {
     fn get(&self, relative: &str) -> Result<String, String> {
         // The only relative path comes from hardcoded, allowlisted endpoints
         // and a strictly verified UUID. Never accept a user-supplied URL.
-        if !relative.starts_with("/sites") || relative.contains("..")
-            || relative.contains("//") || relative.contains('%') {
+        if !relative.starts_with("/sites")
+            || relative.contains("..")
+            || relative.contains("//")
+            || relative.contains('%')
+        {
             return Err("invalid UniFi API path".into());
         }
         let url = format!(
-            "https://{}:{}{}{}", self.controller, self.port, self.prefix, relative
+            "https://{}:{}{}{}",
+            self.controller, self.port, self.prefix, relative
         );
         let mut command = Command::new("curl");
         command.args([
-            "--disable", "--silent", "--show-error", "--fail",
-            "--proto", "=https", "--noproxy", "*",
-            "--connect-timeout", "3", "--max-time", "10",
-            "--max-filesize", "524288",
-            "--request", "GET", "--header", "@-",
-            "--header", "Accept: application/json",
+            "--disable",
+            "--silent",
+            "--show-error",
+            "--fail",
+            "--proto",
+            "=https",
+            "--noproxy",
+            "*",
+            "--connect-timeout",
+            "3",
+            "--max-time",
+            "10",
+            "--max-filesize",
+            "524288",
+            "--request",
+            "GET",
+            "--header",
+            "@-",
+            "--header",
+            "Accept: application/json",
         ]);
         if let Some(ca) = &self.ca_cert {
             command.arg("--cacert").arg(ca);
         }
-        command.arg(&url)
+        command
+            .arg(&url)
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .stderr(Stdio::null())
             .env_remove("RUSTBOY_UNIFI_API_KEY");
-        let mut child = command.spawn()
+        let mut child = command
+            .spawn()
             .map_err(|_| "curl unavailable; install a trusted HTTPS curl executable")?;
         let header = format!("X-API-Key: {}\n", self.api_key);
         let Some(mut input) = child.stdin.take() else {
@@ -123,7 +152,8 @@ impl UniFiConfig {
             return Err("unable to send UniFi authorization header".into());
         }
         drop(input);
-        let output = child.wait_with_output()
+        let output = child
+            .wait_with_output()
             .map_err(|_| "UniFi read request was interrupted")?;
         if !output.status.success() {
             return Err("UniFi HTTPS GET failed: check reachability, CA trust, API key, and controller version".into());
@@ -131,27 +161,32 @@ impl UniFiConfig {
         if output.stdout.len() > MAX_RESPONSE_BYTES {
             return Err("UniFi response exceeded size limit".into());
         }
-        String::from_utf8(output.stdout)
-            .map_err(|_| "UniFi response is not UTF-8".into())
+        String::from_utf8(output.stdout).map_err(|_| "UniFi response is not UTF-8".into())
     }
 }
 
 pub fn valid_site_id(s: &str) -> bool {
     s.len() == 36
         && s.bytes().enumerate().all(|(i, c)| {
-            if matches!(i, 8 | 13 | 18 | 23) { c == b'-' } else { c.is_ascii_hexdigit() }
+            if matches!(i, 8 | 13 | 18 | 23) {
+                c == b'-'
+            } else {
+                c.is_ascii_hexdigit()
+            }
         })
 }
 
 fn valid_label(s: &str, max: usize) -> bool {
-    !s.is_empty()
-        && s.len() <= max
-        && s.chars().all(|c| !c.is_control())
+    !s.is_empty() && s.len() <= max && s.chars().all(|c| !c.is_control())
 }
 
 fn timestamp_ms() -> u64 {
-    SystemTime::now().duration_since(UNIX_EPOCH)
-        .unwrap_or_default().as_millis().try_into().unwrap_or(u64::MAX)
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_millis()
+        .try_into()
+        .unwrap_or(u64::MAX)
 }
 
 #[derive(Deserialize)]
@@ -185,10 +220,13 @@ where
         if body.len() > MAX_RESPONSE_BYTES {
             return Err("UniFi response exceeds size limit".into());
         }
-        let page: Page<T> = serde_json::from_str(&body)
-            .map_err(|_| "invalid UniFi paginated JSON response")?;
-        if page.offset != offset || (page.limit == 0 && page.total_count != 0) || page.limit > requested
-            || page.count != page.data.len() || page.count > page.limit
+        let page: Page<T> =
+            serde_json::from_str(&body).map_err(|_| "invalid UniFi paginated JSON response")?;
+        if page.offset != offset
+            || (page.limit == 0 && page.total_count != 0)
+            || page.limit > requested
+            || page.count != page.data.len()
+            || page.count > page.limit
             || page.total_count > maximum
             || offset.saturating_add(page.count) > page.total_count
         {
@@ -228,22 +266,26 @@ pub struct SiteInventory {
     pub sites: Vec<UniFiSite>,
 }
 
-fn read_sites<F: FnMut(&str) -> Result<String, String>>(
-    fetch: F,
-) -> Result<SiteInventory, String> {
+fn read_sites<F: FnMut(&str) -> Result<String, String>>(fetch: F) -> Result<SiteInventory, String> {
     let raw: Vec<SiteSource> = collect_pages("/sites", MAX_SITES, fetch)?;
     let mut sites = Vec::new();
     let mut seen = HashSet::new();
     for entry in raw {
-        if !valid_site_id(&entry.id) || !valid_label(&entry.name, 96)
-            || !seen.insert(entry.id.clone()) {
+        if !valid_site_id(&entry.id)
+            || !valid_label(&entry.name, 96)
+            || !seen.insert(entry.id.clone())
+        {
             return Err("invalid or duplicate site in UniFi response".into());
         }
-        sites.push(UniFiSite { id: entry.id, name: entry.name });
+        sites.push(UniFiSite {
+            id: entry.id,
+            name: entry.name,
+        });
     }
     Ok(SiteInventory {
         source: "unifi_local_integration_v1".into(),
-        observed_unix_ms: timestamp_ms(), sites,
+        observed_unix_ms: timestamp_ms(),
+        sites,
     })
 }
 
@@ -300,14 +342,24 @@ fn read_clients<F: FnMut(&str) -> Result<String, String>>(
         if !valid_site_id(&row.id) || !seen.insert(row.id.clone()) {
             return Err("invalid or duplicate UniFi client identifier".into());
         }
-        let name = row.name.as_deref().filter(|s| valid_label(s, 96))
-            .unwrap_or("Unnamed client").to_string();
-        let connection_type = row.kind.as_deref()
+        let name = row
+            .name
+            .as_deref()
+            .filter(|s| valid_label(s, 96))
+            .unwrap_or("Unnamed client")
+            .to_string();
+        let connection_type = row
+            .kind
+            .as_deref()
             .filter(|s| valid_label(s, 24))
-            .unwrap_or("UNKNOWN").to_string();
+            .unwrap_or("UNKNOWN")
+            .to_string();
         let ip_address = row.address.as_deref().and_then(|s| s.parse().ok());
         clients.push(UniFiClient {
-            id: row.id, name, connection_type, ip_address,
+            id: row.id,
+            name,
+            connection_type,
+            ip_address,
         });
     }
     let clients_with_ip = clients.iter().filter(|c| c.ip_address.is_some()).count();
@@ -347,11 +399,19 @@ pub fn compare_inventory(
     report: &crate::network_probe::NetworkReport,
     inventory: &UniFiInventory,
 ) -> Comparison {
-    let responsive: HashSet<Ipv4Addr> = report.devices.iter().filter(|d|
-        d.evidence != crate::network_probe::Evidence::NeighborCache
-    ).map(|d| d.address).collect();
-    let controller_ips: HashSet<Ipv4Addr> = inventory.clients.iter()
-        .filter_map(|c| match c.ip_address { Some(IpAddr::V4(ip)) => Some(ip), _ => None })
+    let responsive: HashSet<Ipv4Addr> = report
+        .devices
+        .iter()
+        .filter(|d| d.evidence != crate::network_probe::Evidence::NeighborCache)
+        .map(|d| d.address)
+        .collect();
+    let controller_ips: HashSet<Ipv4Addr> = inventory
+        .clients
+        .iter()
+        .filter_map(|c| match c.ip_address {
+            Some(IpAddr::V4(ip)) => Some(ip),
+            _ => None,
+        })
         .collect();
     Comparison {
         controller_clients: inventory.connected_clients,
@@ -375,12 +435,30 @@ mod tests {
         assert!(!valid_site_id("../config"));
         assert!(!valid_site_id("default"));
         assert!(valid_site_id(SITE));
-        assert!(UniFiConfig::new("8.8.8.8".parse().unwrap(), 443, "unifi-os",
-            "veryvalidapikey123".into(), None).is_err());
-        assert!(UniFiConfig::new("192.168.1.1".parse().unwrap(), 80, "unifi-os",
-            "veryvalidapikey123".into(), None).is_err());
-        assert!(UniFiConfig::new("192.168.1.1".parse().unwrap(), 443, "unifi-os",
-            "bad\nX-Other: 1".into(), None).is_err());
+        assert!(UniFiConfig::new(
+            "8.8.8.8".parse().unwrap(),
+            443,
+            "unifi-os",
+            "veryvalidapikey123".into(),
+            None
+        )
+        .is_err());
+        assert!(UniFiConfig::new(
+            "192.168.1.1".parse().unwrap(),
+            80,
+            "unifi-os",
+            "veryvalidapikey123".into(),
+            None
+        )
+        .is_err());
+        assert!(UniFiConfig::new(
+            "192.168.1.1".parse().unwrap(),
+            443,
+            "unifi-os",
+            "bad\nX-Other: 1".into(),
+            None
+        )
+        .is_err());
         assert!(list_clients("../etc/passwd", false).is_err());
         assert!(list_sites(false).is_err());
     }
@@ -406,9 +484,18 @@ mod tests {
 
     #[test]
     fn malformed_pagination_fails_closed() {
-        assert!(read_sites(|_| Ok(r#"{"data":[],"count":0,"offset":0,"limit":200,"totalCount":1}"#.into())).is_err());
-        assert!(read_sites(|_| Ok(r#"{"data":[],"count":0,"offset":1,"limit":200,"totalCount":0}"#.into())).is_err());
-        assert!(read_sites(|_| Ok(r#"{"data":[],"count":0,"offset":0,"limit":200,"totalCount":4000}"#.into())).is_err());
+        assert!(read_sites(|_| Ok(
+            r#"{"data":[],"count":0,"offset":0,"limit":200,"totalCount":1}"#.into()
+        ))
+        .is_err());
+        assert!(read_sites(|_| Ok(
+            r#"{"data":[],"count":0,"offset":1,"limit":200,"totalCount":0}"#.into()
+        ))
+        .is_err());
+        assert!(read_sites(|_| Ok(
+            r#"{"data":[],"count":0,"offset":0,"limit":200,"totalCount":4000}"#.into()
+        ))
+        .is_err());
         let sites = read_sites(|_| Ok(format!(
             r#"{{"data":[{{"id":"{SITE}","name":"Main"}}],"count":1,"offset":0,"limit":200,"totalCount":1}}"#
         ))).unwrap();
@@ -421,15 +508,37 @@ mod tests {
             r#"{"data":[{"id":"00000000-0000-0000-0000-000000000101","name":"Laptop","ipAddress":"192.168.1.10"},{"id":"00000000-0000-0000-0000-000000000102","name":"Phone","ipAddress":"192.168.1.20"},{"id":"00000000-0000-0000-0000-000000000103","name":"VPN"}],"count":3,"offset":0,"limit":200,"totalCount":3}"#.into()
         )).unwrap();
         let report = NetworkReport {
-            scope: "192.168.1.0/24".into(), scanned_hosts: 254,
-            responding_devices: 2, cached_only_devices: 1,
-            total_observed_devices: 3, elapsed_ms: 10, observed_unix_ms: 0,
+            scope: "192.168.1.0/24".into(),
+            scanned_hosts: 254,
+            responding_devices: 2,
+            cached_only_devices: 1,
+            total_observed_devices: 3,
+            elapsed_ms: 10,
+            observed_unix_ms: 0,
             devices: vec![
-                DeviceObservation { address:"192.168.1.10".parse().unwrap(), evidence: Evidence::IcmpEcho, latency_ms:Some(1.0), icmp_rtt_delta_ms:None, port:None },
-                DeviceObservation { address:"192.168.1.30".parse().unwrap(), evidence: Evidence::TcpConnected, latency_ms:Some(4.0), icmp_rtt_delta_ms:None, port:Some(443) },
-                DeviceObservation { address:"192.168.1.20".parse().unwrap(), evidence: Evidence::NeighborCache, latency_ms:None, icmp_rtt_delta_ms:None, port:None },
+                DeviceObservation {
+                    address: "192.168.1.10".parse().unwrap(),
+                    evidence: Evidence::IcmpEcho,
+                    latency_ms: Some(1.0),
+                    icmp_rtt_delta_ms: None,
+                    port: None,
+                },
+                DeviceObservation {
+                    address: "192.168.1.30".parse().unwrap(),
+                    evidence: Evidence::TcpConnected,
+                    latency_ms: Some(4.0),
+                    icmp_rtt_delta_ms: None,
+                    port: Some(443),
+                },
+                DeviceObservation {
+                    address: "192.168.1.20".parse().unwrap(),
+                    evidence: Evidence::NeighborCache,
+                    latency_ms: None,
+                    icmp_rtt_delta_ms: None,
+                    port: None,
+                },
             ],
-            caveat:"fixture".into()
+            caveat: "fixture".into(),
         };
         let comparison = compare_inventory(&report, &inventory);
         assert_eq!(comparison.controller_clients, 3);

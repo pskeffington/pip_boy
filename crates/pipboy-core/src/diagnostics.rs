@@ -59,7 +59,8 @@ impl Signal {
         if self.unit.as_ref().is_some_and(|u| {
             u.is_empty()
                 || u.len() > 24
-                || !u.bytes()
+                || !u
+                    .bytes()
                     .all(|b| b.is_ascii_alphanumeric() || b"/%._:-".contains(&b))
         }) {
             return Err("invalid signal unit".into());
@@ -67,14 +68,12 @@ impl Signal {
         match &self.value {
             Value::Bool(_) | Value::Number(_) => {}
             Value::String(s)
-                if !s.is_empty()
-                    && s.len() <= 128
-                    && s.chars().all(|ch| !ch.is_control()) => {}
-            _ => return Err("value must be a finite number, bool or short printable string".into()),
+                if !s.is_empty() && s.len() <= 128 && s.chars().all(|ch| !ch.is_control()) => {}
+            _ => {
+                return Err("value must be a finite number, bool or short printable string".into())
+            }
         }
-        if self.value.is_number()
-            && self.value.as_f64().is_none_or(|number| !number.is_finite())
-        {
+        if self.value.is_number() && self.value.as_f64().is_none_or(|number| !number.is_finite()) {
             return Err("value must be finite".into());
         }
         Ok(())
@@ -131,17 +130,18 @@ impl DiagnosticReport {
             let _ = writeln!(
                 output,
                 "[{:?}] {} @ line {} / {} / {} = {}",
-                f.severity,
-                f.code,
-                f.evidence_line,
-                f.source_id,
-                f.metric,
-                f.observed_value
+                f.severity, f.code, f.evidence_line, f.source_id, f.metric, f.observed_value
             );
-            let _ = writeln!(output, "  {}. NEXT: {}", f.interpretation, f.recommended_check);
+            let _ = writeln!(
+                output,
+                "  {}. NEXT: {}",
+                f.interpretation, f.recommended_check
+            );
         }
         if self.findings.is_empty() {
-            output.push_str("NO MATCHED ALERTS in the assessed signals; this is NOT a clean bill of health.\n");
+            output.push_str(
+                "NO MATCHED ALERTS in the assessed signals; this is NOT a clean bill of health.\n",
+            );
         }
         output.push_str(&self.limitation);
         output
@@ -161,12 +161,20 @@ fn number(signal: &Signal, unit: &str, min: f64, max: f64) -> Result<f64, String
         .value
         .as_f64()
         .filter(|x| x.is_finite() && *x >= min && *x <= max)
-        .ok_or_else(|| format!("{} needs a numeric value within {min}..{max}", signal.metric))
+        .ok_or_else(|| {
+            format!(
+                "{} needs a numeric value within {min}..{max}",
+                signal.metric
+            )
+        })
 }
 
 fn boolean(signal: &Signal) -> Result<bool, String> {
     if signal.unit.is_some() {
-        return Err(format!("{} must omit unit for a boolean value", signal.metric));
+        return Err(format!(
+            "{} must omit unit for a boolean value",
+            signal.metric
+        ));
     }
     signal
         .value
@@ -201,9 +209,14 @@ fn classify(signal: &Signal, line: usize) -> Result<Evaluation, String> {
         (Hardware, "cpu_usage_percent") => {
             let value = number(signal, "percent", 0.0, 100.0)?;
             if value >= 95.0 {
-                finding(signal, line, Severity::Watch, "CPU_HIGH",
+                finding(
+                    signal,
+                    line,
+                    Severity::Watch,
+                    "CPU_HIGH",
                     "One high reading is not evidence of sustained saturation",
-                    "Repeat after a normal sampling interval and inspect the workload")
+                    "Repeat after a normal sampling interval and inspect the workload",
+                )
             } else {
                 no_alert()
             }
@@ -211,18 +224,28 @@ fn classify(signal: &Signal, line: usize) -> Result<Evaluation, String> {
         (Hardware, "memory_used_percent") => {
             let value = number(signal, "percent", 0.0, 100.0)?;
             if value >= 95.0 {
-                finding(signal, line, Severity::Watch, "MEMORY_PRESSURE",
+                finding(
+                    signal,
+                    line,
+                    Severity::Watch,
+                    "MEMORY_PRESSURE",
                     "The reported memory fraction is high; paging is not established",
-                    "Compare available memory, swap and application trends")
+                    "Compare available memory, swap and application trends",
+                )
             } else {
                 no_alert()
             }
         }
         (Hardware, "disk_smart_passed") => {
             if !boolean(signal)? {
-                finding(signal, line, Severity::Alert, "SMART_FAIL",
+                finding(
+                    signal,
+                    line,
+                    Severity::Alert,
+                    "SMART_FAIL",
                     "The supplied SMART overall-health flag reports a failure",
-                    "Back up critical data and verify the drive-specific SMART attributes")
+                    "Back up critical data and verify the drive-specific SMART attributes",
+                )
             } else {
                 no_alert()
             }
@@ -230,9 +253,14 @@ fn classify(signal: &Signal, line: usize) -> Result<Evaluation, String> {
         (Hardware, "device_error_count") => {
             let value = number(signal, "count", 0.0, 1e12)?;
             if value > 0.0 {
-                finding(signal, line, Severity::Watch, "DEVICE_ERRORS",
+                finding(
+                    signal,
+                    line,
+                    Severity::Watch,
+                    "DEVICE_ERRORS",
                     "This may be a cumulative counter, not a new failure",
-                    "Compare consecutive counter readings and examine device logs")
+                    "Compare consecutive counter readings and examine device logs",
+                )
             } else {
                 no_alert()
             }
@@ -240,18 +268,28 @@ fn classify(signal: &Signal, line: usize) -> Result<Evaluation, String> {
         (Software, "process_exit_code") => {
             let value = number(signal, "code", -1e9, 1e9)?;
             if value != 0.0 {
-                finding(signal, line, Severity::Watch, "NONZERO_EXIT",
+                finding(
+                    signal,
+                    line,
+                    Severity::Watch,
+                    "NONZERO_EXIT",
                     "A nonzero exit may be expected for some applications",
-                    "Inspect the application's exit-code specification and adjacent logs")
+                    "Inspect the application's exit-code specification and adjacent logs",
+                )
             } else {
                 no_alert()
             }
         }
         (Software, "service_running") => {
             if !boolean(signal)? {
-                finding(signal, line, Severity::Watch, "SERVICE_STOPPED",
+                finding(
+                    signal,
+                    line,
+                    Severity::Watch,
+                    "SERVICE_STOPPED",
                     "Service reported stopped; it may be intentionally inactive",
-                    "Check expected service state and local startup logs")
+                    "Check expected service state and local startup logs",
+                )
             } else {
                 no_alert()
             }
@@ -259,9 +297,14 @@ fn classify(signal: &Signal, line: usize) -> Result<Evaluation, String> {
         (Software, "error_count") => {
             let value = number(signal, "count", 0.0, 1e12)?;
             if value > 0.0 {
-                finding(signal, line, Severity::Watch, "APP_ERRORS",
+                finding(
+                    signal,
+                    line,
+                    Severity::Watch,
+                    "APP_ERRORS",
                     "The supplied error count is nonzero",
-                    "Inspect timestamps and repeated stack traces for a common cause")
+                    "Inspect timestamps and repeated stack traces for a common cause",
+                )
             } else {
                 no_alert()
             }
@@ -269,9 +312,18 @@ fn classify(signal: &Signal, line: usize) -> Result<Evaluation, String> {
         (Network, "packet_loss_percent") => {
             let value = number(signal, "percent", 0.0, 100.0)?;
             if value >= 5.0 {
-                finding(signal, line, if value >= 25.0 { Severity::Alert } else { Severity::Watch },
-                    "PACKET_LOSS", "Loss is elevated for many interactive workloads",
-                    "Check measurement interval, radio quality and route under authorized scope")
+                finding(
+                    signal,
+                    line,
+                    if value >= 25.0 {
+                        Severity::Alert
+                    } else {
+                        Severity::Watch
+                    },
+                    "PACKET_LOSS",
+                    "Loss is elevated for many interactive workloads",
+                    "Check measurement interval, radio quality and route under authorized scope",
+                )
             } else {
                 no_alert()
             }
@@ -279,9 +331,14 @@ fn classify(signal: &Signal, line: usize) -> Result<Evaluation, String> {
         (Network, "latency_ms") => {
             let value = number(signal, "ms", 0.0, 1e9)?;
             if value > 250.0 {
-                finding(signal, line, Severity::Watch, "LATENCY_HIGH",
+                finding(
+                    signal,
+                    line,
+                    Severity::Watch,
+                    "LATENCY_HIGH",
                     "Single-point latency is only meaningful against an expected baseline",
-                    "Compare multiple samples from the same authorized destination")
+                    "Compare multiple samples from the same authorized destination",
+                )
             } else {
                 no_alert()
             }
@@ -289,9 +346,14 @@ fn classify(signal: &Signal, line: usize) -> Result<Evaluation, String> {
         (Network, "jitter_ms") => {
             let value = number(signal, "ms", 0.0, 1e9)?;
             if value > 50.0 {
-                finding(signal, line, Severity::Watch, "JITTER_HIGH",
+                finding(
+                    signal,
+                    line,
+                    Severity::Watch,
+                    "JITTER_HIGH",
                     "Observed variability may affect real-time traffic",
-                    "Check sample method and compare across time with the same path")
+                    "Check sample method and compare across time with the same path",
+                )
             } else {
                 no_alert()
             }
@@ -299,18 +361,28 @@ fn classify(signal: &Signal, line: usize) -> Result<Evaluation, String> {
         (Network, "interface_error_count") => {
             let value = number(signal, "count", 0.0, 1e12)?;
             if value > 0.0 {
-                finding(signal, line, Severity::Watch, "LINK_ERRORS",
+                finding(
+                    signal,
+                    line,
+                    Severity::Watch,
+                    "LINK_ERRORS",
                     "A nonzero interface counter alone cannot date the errors",
-                    "Measure counter deltas and inspect cabling or physical link status")
+                    "Measure counter deltas and inspect cabling or physical link status",
+                )
             } else {
                 no_alert()
             }
         }
         (Physical, "sensor_fault") => {
             if boolean(signal)? {
-                finding(signal, line, Severity::Alert, "SENSOR_FAULT",
+                finding(
+                    signal,
+                    line,
+                    Severity::Alert,
+                    "SENSOR_FAULT",
                     "The supplied sensor fault flag is asserted",
-                    "Consult the device manual and verify the fault locally")
+                    "Consult the device manual and verify the fault locally",
+                )
             } else {
                 no_alert()
             }
@@ -338,9 +410,13 @@ fn evaluate(
         limitation: "EVIDENCE ONLY: source identity and legal scope are operator assertions; no device was contacted, repaired or certified.".into(),
     };
     for (line, signal) in signals {
-        signal.validate().map_err(|error| format!("line {line}: {error}"))?;
+        signal
+            .validate()
+            .map_err(|error| format!("line {line}: {error}"))?;
         if signal.asset_id != asset {
-            return Err(format!("line {line}: asset_id is outside the selected scope"));
+            return Err(format!(
+                "line {line}: asset_id is outside the selected scope"
+            ));
         }
         match classify(&signal, line).map_err(|error| format!("line {line}: {error}"))? {
             Evaluation::Assessed(hit) => {
@@ -399,32 +475,42 @@ pub fn analyze_host(snapshot: &Snapshot) -> Result<DiagnosticReport, String> {
     let mut signals = Vec::new();
     let mut unavailable = 0;
     let at = Some(snapshot.observed_unix_s.saturating_mul(1000));
-    if let Some(cpu) = snapshot.cpu_percent.filter(|x| x.is_finite() && (0.0..=100.0).contains(x)) {
-        signals.push((1, Signal {
-            schema_version: DIAG_SCHEMA_VERSION,
-            asset_id: "local-host".into(),
-            source_id: "local:sysinfo".into(),
-            domain: Domain::Hardware,
-            metric: "cpu_usage_percent".into(),
-            value: json!(cpu),
-            unit: Some("percent".into()),
-            captured_unix_ms: at,
-        }));
+    if let Some(cpu) = snapshot
+        .cpu_percent
+        .filter(|x| x.is_finite() && (0.0..=100.0).contains(x))
+    {
+        signals.push((
+            1,
+            Signal {
+                schema_version: DIAG_SCHEMA_VERSION,
+                asset_id: "local-host".into(),
+                source_id: "local:sysinfo".into(),
+                domain: Domain::Hardware,
+                metric: "cpu_usage_percent".into(),
+                value: json!(cpu),
+                unit: Some("percent".into()),
+                captured_unix_ms: at,
+            },
+        ));
     } else {
         unavailable += 1;
     }
     if snapshot.memory_total_mib > 0 && snapshot.memory_used_mib <= snapshot.memory_total_mib {
-        let memory_percent = snapshot.memory_used_mib as f64 * 100.0 / snapshot.memory_total_mib as f64;
-        signals.push((2, Signal {
-            schema_version: DIAG_SCHEMA_VERSION,
-            asset_id: "local-host".into(),
-            source_id: "local:sysinfo".into(),
-            domain: Domain::Hardware,
-            metric: "memory_used_percent".into(),
-            value: json!(memory_percent),
-            unit: Some("percent".into()),
-            captured_unix_ms: at,
-        }));
+        let memory_percent =
+            snapshot.memory_used_mib as f64 * 100.0 / snapshot.memory_total_mib as f64;
+        signals.push((
+            2,
+            Signal {
+                schema_version: DIAG_SCHEMA_VERSION,
+                asset_id: "local-host".into(),
+                source_id: "local:sysinfo".into(),
+                domain: Domain::Hardware,
+                metric: "memory_used_percent".into(),
+                value: json!(memory_percent),
+                unit: Some("percent".into()),
+                captured_unix_ms: at,
+            },
+        ));
     } else {
         unavailable += 1;
     }
@@ -447,13 +533,17 @@ mod tests {
             value,
             unit: unit.map(str::to_owned),
             captured_unix_ms: Some(1234567),
-        }).unwrap()
+        })
+        .unwrap()
     }
 
     #[test]
     fn read_only_import_reports_signal_not_root_cause() {
-        let body = format!("{}\n{}\n", record("disk_smart_passed", json!(false), None, Domain::Hardware),
-            record("latency_ms", json!(340.0), Some("ms"), Domain::Network));
+        let body = format!(
+            "{}\n{}\n",
+            record("disk_smart_passed", json!(false), None, Domain::Hardware),
+            record("latency_ms", json!(340.0), Some("ms"), Domain::Network)
+        );
         let report = analyze_ndjson(&body, "lab-1", true).unwrap();
         assert_eq!(report.assessed_count, 2);
         assert_eq!(report.findings.len(), 2);
@@ -461,29 +551,53 @@ mod tests {
         assert_eq!(report.findings[1].severity, Severity::Watch);
         assert_eq!(report.findings[1].evidence_line, 2);
         assert!(report.render_text().contains("not root-cause proof"));
-        assert_eq!(serde_json::from_str::<DiagnosticReport>(&serde_json::to_string(&report).unwrap()).unwrap(), report);
+        assert_eq!(
+            serde_json::from_str::<DiagnosticReport>(&serde_json::to_string(&report).unwrap())
+                .unwrap(),
+            report
+        );
     }
 
     #[test]
     fn scope_is_explicit_and_cannot_be_changed_by_payload() {
-        let sample = record("cpu_usage_percent", json!(0), Some("percent"), Domain::Hardware);
+        let sample = record(
+            "cpu_usage_percent",
+            json!(0),
+            Some("percent"),
+            Domain::Hardware,
+        );
         assert!(analyze_ndjson(&sample, "lab-1", false).is_err());
         assert!(analyze_ndjson(&sample, "other-host", true).is_err());
         assert!(analyze_ndjson(&sample, "../escape", true).is_err());
         assert!(analyze_ndjson("", "lab-1", true).is_err());
         assert!(analyze_ndjson(&"x".repeat(MAX_DOCUMENT_BYTES + 1), "lab-1", true).is_err());
-        assert!(analyze_ndjson(&format!("{sample}\n{}", "x".repeat(MAX_LINE_BYTES + 1)), "lab-1", true).is_err());
+        assert!(analyze_ndjson(
+            &format!("{sample}\n{}", "x".repeat(MAX_LINE_BYTES + 1)),
+            "lab-1",
+            true
+        )
+        .is_err());
     }
 
     #[test]
     fn invalid_and_unknown_signals_are_distinct() {
-        let unknown = record("temperature_c", json!(90), Some("celsius"), Domain::Hardware);
+        let unknown = record(
+            "temperature_c",
+            json!(90),
+            Some("celsius"),
+            Domain::Hardware,
+        );
         let report = analyze_ndjson(&unknown, "lab-1", true).unwrap();
         assert_eq!(report.assessed_count, 0);
         assert_eq!(report.unclassified_count, 1);
         assert!(report.findings.is_empty());
         assert!(report.render_text().contains("NOT a clean bill of health"));
-        let bad = record("packet_loss_percent", json!(150), Some("percent"), Domain::Network);
+        let bad = record(
+            "packet_loss_percent",
+            json!(150),
+            Some("percent"),
+            Domain::Network,
+        );
         assert!(analyze_ndjson(&bad, "lab-1", true).is_err());
         let mut broken: Value = serde_json::from_str(&unknown).unwrap();
         broken["value"] = json!({"unexpected": "object"});

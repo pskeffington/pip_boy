@@ -1,6 +1,8 @@
 //! DIAG: explicit local host assessment or scoped, read-only JSONL evidence import.
 
-use pipboy_core::diagnostics::{analyze_host, analyze_ndjson, DiagnosticReport, MAX_DOCUMENT_BYTES};
+use pipboy_core::diagnostics::{
+    analyze_host, analyze_ndjson, DiagnosticReport, MAX_DOCUMENT_BYTES,
+};
 use std::error::Error;
 use std::fs::File;
 use std::io::Read;
@@ -54,7 +56,8 @@ pub fn run(args: Vec<String>) -> Result<(), Box<dyn Error>> {
             }
             // Bound memory even if the file changes after metadata inspection.
             let mut input = String::new();
-            file.take((MAX_DOCUMENT_BYTES + 1) as u64).read_to_string(&mut input)?;
+            file.take((MAX_DOCUMENT_BYTES + 1) as u64)
+                .read_to_string(&mut input)?;
             let report = analyze_ndjson(&input, &asset, acknowledged)?;
             print_report(&report, as_json)
         }
