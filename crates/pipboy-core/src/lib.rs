@@ -12,6 +12,7 @@ pub mod lifecycle;
 pub mod metrics;
 pub mod notes;
 pub mod observation;
+pub mod permissions;
 pub mod registry;
 pub mod runtime;
 pub mod telemetry;
