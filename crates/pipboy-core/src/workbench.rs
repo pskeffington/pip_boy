@@ -99,6 +99,13 @@ pub const PALETTE: &[Tool] = &[
         command: "pipboy game --ps4 IP --confirm",
     },
     Tool {
+        id: "diag",
+        name: "DIAG",
+        description: "Read-only scoped evidence analysis and one-shot host checks. No probes.",
+        availability: Availability::Ready,
+        command: "pipboy diag host",
+    },
+    Tool {
         id: "net-lab",
         name: "NET LAB",
         description: "Offline IPv4/CIDR planner for LAN setup; no probing or sockets.",
@@ -182,7 +189,7 @@ pub const PRESETS: &[Preset] = &[
         description: "Systems engineering: health telemetry, subnet calculations, byte analysis and synthetic rigs.",
         lore_evidence: "VT-01",
         role_fidelity: "canonical_job",
-        tools: &["host", "net-lab", "byte-lab", "simulator", "notes"],
+        tools: &["host", "diag", "net-lab", "byte-lab", "simulator", "notes"],
     },
     Preset {
         id: "security-chief",
@@ -190,7 +197,7 @@ pub const PRESETS: &[Preset] = &[
         description: "Defensive triage: local status, offline network planning, packet bytes and incident notes.",
         lore_evidence: "VT-01",
         role_fidelity: "canonical_job",
-        tools: &["host", "net-lab", "byte-lab", "notes"],
+        tools: &["host", "diag", "net-lab", "byte-lab", "notes"],
     },
     Preset {
         id: "vault-doctor",
