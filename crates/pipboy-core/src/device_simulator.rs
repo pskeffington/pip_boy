@@ -97,6 +97,7 @@ pub enum BrokerError {
     InvalidLease,
     InvalidPreference,
     CounterExhausted,
+    ReplayInvariant,
 }
 
 impl fmt::Display for BrokerError {
@@ -110,6 +111,7 @@ impl fmt::Display for BrokerError {
             Self::InvalidLease => "simulated session is absent, revoked, or belongs to another broker",
             Self::InvalidPreference => "invalid or duplicate adapter preference; no session authorized",
             Self::CounterExhausted => "simulated session counter exhausted",
+            Self::ReplayInvariant => "deterministic replay fixture invariant violated",
         };
         formatter.write_str(message)
     }
@@ -129,6 +131,7 @@ impl BrokerError {
             Self::InvalidLease => "invalid_lease",
             Self::InvalidPreference => "invalid_preference",
             Self::CounterExhausted => "counter_exhausted",
+            Self::ReplayInvariant => "replay_invariant",
         }
     }
 }
