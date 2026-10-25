@@ -23,6 +23,7 @@ MAX_OUTPUT = 2_000_000
 ATTRIBUTE_PSEUDOCONSOLE = 0x00020016
 EXTENDED_STARTUPINFO_PRESENT = 0x00080000
 CREATE_UNICODE_ENVIRONMENT = 0x00000400
+STARTF_USESTDHANDLES = 0x00000100
 WAIT_OBJECT_0 = 0
 WAIT_TIMEOUT = 258
 
@@ -170,6 +171,10 @@ class ConPty:
 
         startup = StartupInfoExW()
         startup.StartupInfo.cb = ctypes.sizeof(StartupInfoExW)
+        # The Actions runner has no parent interactive console; force the
+        # child to use the new ConPTY's standard handles instead of the
+        # CI process's inherited redirected stdout/stderr pipes.
+        startup.StartupInfo.dwFlags = STARTF_USESTDHANDLES
         startup.lpAttributeList = self.attr_ptr
         command = ctypes.create_unicode_buffer(
             subprocess.list2cmdline(self.argv)
