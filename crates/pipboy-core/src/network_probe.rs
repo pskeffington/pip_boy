@@ -7,7 +7,13 @@ use serde::{Deserialize, Serialize};
 use std::io;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr, TcpStream, UdpSocket};
 use std::process::{Command, Stdio};
-use std::sync::{atomic::{AtomicUsize, Ordering}, Mutex};
+use std::sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Mutex};
+
+static SWEEP_ACTIVE: AtomicBool = AtomicBool::new(false);
+struct SweepLease;
+impl Drop for SweepLease {
+    fn drop(&mut self) { SWEEP_ACTIVE.store(false, Ordering::SeqCst); }
+}
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 pub const MAX_TARGETS: usize = 254;
@@ -275,6 +281,9 @@ pub fn scan(cidr: &str, confirm_authorized: bool) -> Result<NetworkReport, Strin
     if targets.is_empty() || targets.len() > MAX_TARGETS {
         return Err("invalid scan size".into());
     }
+    SWEEP_ACTIVE.compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst)
+        .map_err(|_| "another LAN sweep is already running")?;
+    let _lease = SweepLease;
     let started = Instant::now();
     let mut devices = run_parallel(&targets, probe);
     let responding = devices.len();
