@@ -1126,7 +1126,7 @@
     stopCountyRequest(view);
     view.siteVersion++;
     if (view.siteAbort) view.siteAbort.abort();
-    mapMemory = (view.shapes.length || view.onlineShapes.length || view.boston) ? {
+    mapMemory = (view.shapes.length || view.onlineShapes.length || view.boston || view.county) ? {
       center: view.siteReturn ? { ...view.siteReturn.center } :
         view.fix ? (view.county ? {
           lat:(view.county.bounds[1]+view.county.bounds[3])/2,
