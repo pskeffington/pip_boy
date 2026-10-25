@@ -35,7 +35,7 @@ const pageTitles = {
 };
 const glyphs = {
   "mission-board": "▣", "host": "⌁", "notes": "≡", "library": "▤", "game": "▣",
-  "net-lab": "⌘", "byte-lab": "0x", "simulator": "◈",
+  "diag": "!", "net-lab": "⌘", "byte-lab": "0x", "simulator": "◈",
   "geo-lab": "⌖"
 };
 const roleStations = Object.freeze({
@@ -334,7 +334,7 @@ function showMap() {
 function showData() {
   const root = panel();
   const tools = allPinned().filter((id) =>
-    ["notes", "library", "byte-lab", "simulator", "geo-lab", "net-lab"].includes(id));
+    ["notes", "library", "byte-lab", "simulator", "geo-lab", "net-lab", "diag"].includes(id));
   root.append(sectionTop("DATA", String(tools.length) + " TOOLS"));
   if (snapshot.active.profile !== "overseer") {
     root.append(button("MY DUTIES", openDuties, "micro-button solid"));
@@ -475,7 +475,7 @@ function inputForm(root, id) {
     form.append(field("input", "HEXADECIMAL BYTES", "48656c6c6f", { maxLength: 3000, hex: true }));
   }
   const row = make("div", "form-actions");
-  const run = make("button", "micro-button solid", id === "host" ? "SAMPLE LOCAL STATUS" :
+  const run = make("button", "micro-button solid", id === "diag" ? "CHECK LOCAL HOST" : id === "host" ? "SAMPLE LOCAL STATUS" :
     ["game", "notes", "simulator", "library"].includes(id) ? "VIEW SAFE HANDOFF" : "RUN LOCAL TOOL");
   run.type = "submit";
   row.append(run);
@@ -540,7 +540,7 @@ function showTool() {
   }
   // The module title is already in the page heading; keep advanced help on
   // the dedicated tool screen rather than repeating long descriptions.
-  const supported = ["geo-lab", "net-lab", "byte-lab", "host", "notes", "library", "simulator", "game"];
+  const supported = ["geo-lab", "net-lab", "byte-lab", "host", "diag", "notes", "library", "simulator", "game"];
   if (supported.includes(openedTool)) {
     inputForm(root, openedTool);
   } else {
