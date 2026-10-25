@@ -1,5 +1,10 @@
 # Rust-Boy | Validation evidence
 
+
+## Rust 1.90 minimum-supported toolchain transition — October 25, 2026
+
+The Reclamation Scout development branch now declares `[workspace.package] rust-version = "1.90"` and tests Rust **1.90.0** alongside stable in GitHub Actions. This change is intended to align the compiler floor with RustGIS while keeping the Rust 2021 edition and the existing lockfile. The exact updated commit requires its own complete CI result before promotion. Historical Rust **1.81.0** test reports below remain accurate **for earlier revisions**; they do not establish compatibility for this upgraded compiler policy or certify RustGIS/Raspberry Pi integration.
+
 Updated October 25, 2026 (America/New_York). **Verified published baseline:** [PR CI 40168791127](https://github.com/pskeffington/pip_boy/actions/runs/40168791127) passed all five jobs at `176516e`: catalog, Linux stable and Rust 1.81.0, native macOS PTY and the actual source launcher, native Windows ConPTY and deny-all physical-broker checks. This is not live PlayStation, physical-hardware, packaging or accessibility certification. **Sections farther below preserve historical development snapshots**; any older “pending”, “unexecuted” or “startup failure” wording describes the state *at the cited historical revision*, not the current status.
 
 ## Live-update test marker regression

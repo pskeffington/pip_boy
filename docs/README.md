@@ -2,7 +2,7 @@
 
 Technical contracts, architecture decisions, research provenance and validation evidence for the [Rust-Boy](../README.md) offline-first field console.
 
-**Current scope:** local desktop CLI/TUI, bundled reference library, notes and synthetic-only device workflows. Real external adapters and trusted OS authorization are not available.
+**Current scope:** Rust 1.90+ desktop CLI/TUI, bundled reference library, notes and synthetic-only device workflows. Real external adapters and trusted OS authorization are not available.
 
 ## Start here
 

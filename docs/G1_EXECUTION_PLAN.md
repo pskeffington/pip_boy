@@ -33,7 +33,7 @@ G1 module-plan statuses remain **planned** until integration and acceptance test
 
 ### G1-A: Quality and reproducibility (inherits G0 blocker)
 
-- Actions jobs must start. Rust stable and 1.81.0 compile/test successfully.
+- Actions jobs must start. Rust stable and 1.90.0 compile/test successfully.
 - Record formatter, Clippy, compiler, test and catalog-validator evidence.
 - Generate, review and commit Cargo.lock after a real dependency resolution.
 - Test small-terminal navigation, exit cleanup, note persistence and failure handling.

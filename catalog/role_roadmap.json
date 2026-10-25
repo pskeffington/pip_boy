@@ -102,7 +102,7 @@
       "title": "OpenGeos RustGIS — architecture, licensing, ARM64 builds",
       "url": "https://github.com/opengeos/RustGIS",
       "supports": "RustGIS L0 geometry and L1 data are useful interoperability references; Apache-2.0, available Linux ARM64 distribution; workspace minimum Rust 1.90.",
-      "limit": "Rust-Boy targets Rust 1.81; full RustGIS source is not currently embedded or verified on Raspberry Pi. Keep independent GeoJSON bridge until compatibility gates pass."
+      "limit": "Rust-Boy now declares Rust 1.90, removing the compiler-version mismatch. RustGIS crates are not linked yet; integration still requires API/license and ARM64 GUI/CLI verification."
     },
     {
       "id": "STD-08",
@@ -775,7 +775,7 @@
           "acceptance": [
             "GeoJSON exports [longitude,latitude] and accepts only -90..90 lat and -180..180 lon",
             "All GIS commands remain offline with no GNSS, console or TAK connection on profile activation",
-            "Unit, smoke and Rust 1.81/macOS/Windows CI gates pass before release"
+            "Unit, smoke and Rust 1.90/macOS/Windows CI gates pass before release"
           ],
           "dependencies": [],
           "status": "code_present_ci_pending"
@@ -785,7 +785,7 @@
           "title": "Offline RustGIS-compatible field mapping",
           "deliverables": [
             "Portable GeoJSON field layer, GPX imports, waypoints and manually selected cached offline tiles",
-            "Evaluate rustgis-geom/rustgis-data adapter separately, without silently increasing the Rust 1.81 MSRV",
+            "Evaluate rustgis-geom/rustgis-data adapter separately, using the new Rust 1.90 minimum with explicit dependency and API tests",
             "Touch/keyboard map navigation and DMS coordinate formats"
           ],
           "acceptance": [

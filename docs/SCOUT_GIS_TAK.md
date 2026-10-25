@@ -16,9 +16,11 @@
 
 **First-party references:** [RustGIS architecture & Apache-2.0 license](https://github.com/opengeos/RustGIS), [RustGIS ARM64 installation and minimum compiler](https://rustgis.app/installation/), [TAK.gov product descriptions](https://tak.gov/products), [TAK.gov Linux/Android operating systems](https://tak.gov/), and [OpenTAKServer Pi installer documentation](https://docs.opentakserver.io/installation/installation.html). The descriptions are not a guarantee on a particular Pi model or accessory combination.
 
-### RustGIS porting constraint
+### RustGIS compiler alignment and integration gate
 
-RustGIS's current workspace uses Rust **1.90 or newer** and Rust edition 2024; Rust-Boy's top-level minimum version is **1.81**, edition 2021. Blindly vendoring RustGIS crates into Rust-Boy would break its existing minimum compiler policy. RustGIS itself is Apache-2.0, so properly attributed integration is possible in principle, but do **not** copy files or assets without reviewing SPDX, notices, dependency provenance and compatibility. No upstream RustGIS commits or source changes are required by this work.
+RustGIS's current workspace requires Rust **1.90 or newer** and uses edition **2024**. Rust-Boy's minimum compiler has been raised to **1.90**, eliminating the earlier compiler-version mismatch. Rust-Boy deliberately retains edition **2021**: Rust dependencies can use edition 2024 without requiring the consuming application to change editions. CI checks both Rust 1.90.0 and current stable.
+
+**This is compiler readiness, not a RustGIS port.** RustGIS crates have not been added, vendored, API-tested or runtime-validated on Raspberry Pi. Its Apache-2.0 license permits appropriately attributed integration, subject to dependency notices and licensing review. Review crate interfaces, build artifacts, source provenance and ARM64 hardware behavior before selecting a direct integration; do not push to the external RustGIS repository.
 
 The current bridge produces **GeoJSON conforming to RFC 7946's longitude, latitude order**, which can be inspected by RustGIS and other tools. Read-only inspection initially accepts only Point geometries in a Geometry, Feature or FeatureCollection (maximum **1 MiB**, **1,000 points**). It rejects polygons/lines rather than silently discarding important geometry. The bounding box is raw min/max, potentially wide when data straddles the antimeridian. Great-circle estimates use a mean-radius sphere: they are not survey-grade ellipsoidal geodesics.
 
@@ -74,7 +76,7 @@ The future TAK bridge should parse and serialize only bounded, explicitly approv
 
 | Gate | Real deliverable | Required evidence |
 | --- | --- | --- |
-| **S0 – Native offline data** | GIS LAB pinned in Reclamation Scout; waypoint GeoJSON export, bounded Point inspection, approximate distance | Golden WGS84 longitude/latitude, antimeridian, invalid data, no-background-network smoke; stable/Rust 1.81/macOS/Windows CI |
+| **S0 – Native offline data** | GIS LAB pinned in Reclamation Scout; waypoint GeoJSON export, bounded Point inspection, approximate distance | Golden WGS84 longitude/latitude, antimeridian, invalid data, no-background-network smoke; stable/Rust 1.90/macOS/Windows CI |
 | **S1 – Portable map data** | Optional RustGIS-compatible feature/layer adapter, GPX, manual waypoints, limited tile cache | RustGIS import/export round-trip with fixtures; no compiler/ABI regression; offline rendering in two display sizes |
 | **S2 – Raspberry Pi** | ARM64 native build, rustgis-cli compatibility trial, prototype 4-inch map UI | Actual Pi 5 run with RAM, CPU, cold-start, tile-load and power measurements; fallback when no GPU acceleration |
 | **S3 – TAK interop** | Non-network CoT fixtures, then secure opted-in client to an independently configured OpenTAKServer | Explicit consent, valid certificates, no implicit multicast, short TTL, revoke/reconnect, multi-client interoperability |

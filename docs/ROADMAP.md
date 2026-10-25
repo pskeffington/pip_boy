@@ -11,11 +11,11 @@ Rust-Boy is the public product name. The existing `pip_boy` repository, `pipboy`
 
 The [eight-role workbench plan](ROLE_ROADMAP.md) and [machine-readable role matrix](../catalog/role_roadmap.json) define per-job needs, preloaded tools, new modules, dependencies and objective acceptance tests. The [Vault-Tec lore matrix](VAULT_TEC_LORE_MATRIX.md) distinguishes canon from themed adaptations. **Security Chief** prioritizes a user-requested [2×2 camera wall with focused single-feed view](SECURITY_CAMERA_WALL.md) after deterministic offline mocks; real streams and ONVIF compatibility require separately accepted device and privacy gates.
 
-**Current blocker:** The workbench development branch has compilation/formatting failures in CI and must return to green before any role implementation is called accepted. The R0 role definitions are marked `code_present_ci_pending`. Hardware gates remain planned, not silently enabled.
+**Verification policy:** The predecessor workbench and Scout branches passed the full native CI matrix before the compiler upgrade. The Rust 1.90 transition is a new compatibility gate: only an exact-SHA run on the upgraded branch proves it passed. The R0 labels remain provisional for any untested hardware, and real device permissions are not silently enabled.
 
 ## Reclamation Scout: GIS + Raspberry Pi + TAK
 
-[Scout architecture and acceptance gates](SCOUT_GIS_TAK.md) define the current independent RFC 7946 Point geometry tools and the future separately gated ARM64 RustGIS adapter and OpenTAKServer/CoT connector. **ATAK itself remains Android-only, and no Pi-native ATAK app or TAK connection is shipped.** RustGIS requires Rust 1.90+; Rust-Boy still targets 1.81, so direct RustGIS code embedding is deferred. This work does not alter the external RustGIS repository.
+[Scout architecture and acceptance gates](SCOUT_GIS_TAK.md) define the current independent RFC 7946 Point geometry tools and the future separately gated ARM64 RustGIS adapter and OpenTAKServer/CoT connector. **ATAK itself remains Android-only, and no Pi-native ATAK app or TAK connection is shipped.** Rust-Boy now requires Rust 1.90+, matching RustGIS's compiler minimum; direct RustGIS integration remains deferred for API, licensing, ARM64 and performance verification. This work does not alter the external RustGIS repository.
 
 ## Navigate the build
 

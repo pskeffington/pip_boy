@@ -2,7 +2,7 @@
 
 [![Rust-Boy quality gates](https://github.com/pskeffington/pip_boy/actions/workflows/rust.yml/badge.svg?branch=main)](https://github.com/pskeffington/pip_boy/actions/workflows/rust.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-informational)](LICENSE)
-[![Rust: 1.81+](https://img.shields.io/badge/Rust-1.81%2B-informational)](Cargo.toml)
+[![Rust: 1.90+](https://img.shields.io/badge/Rust-1.90%2B-informational)](Cargo.toml)
 
 **Offline first. Native by design.**
 
@@ -53,7 +53,11 @@ The [Mac → PS4 field guide](docs/MAC_PLAYSTATION.md) describes a direct local-
 
 ## Quick start
 
-Requires [Rust and Cargo](https://www.rust-lang.org/tools/install) (Rust 1.81 or newer), Git and a supported terminal.
+**Compiler policy:** Rust **1.90** is now the minimum supported compiler. Local development uses `stable` from `rust-toolchain.toml`; CI independently tests **1.90.0** and current stable. Rust edition **2021** is retained; 2024-edition crates can be used as dependencies without migrating Rust-Boy's own source edition. This compiler upgrade removes the earlier MSRV mismatch with RustGIS; direct RustGIS crate integration remains an independent engineering step.
+
+For an existing Rust installation, use `rustup update stable` or `rustup toolchain install 1.90.0` to obtain a supported compiler.
+
+Requires [Rust and Cargo](https://www.rust-lang.org/tools/install) (Rust 1.90 or newer), Git and a supported terminal.
 
 ```bash
 git clone https://github.com/pskeffington/pip_boy.git
@@ -140,7 +144,7 @@ python3 tools/validate_catalog.py
 python3 tools/smoke_broker.py
 ```
 
-The quality workflow runs catalog checks, stable Rust, the Rust 1.81 minimum-supported version, native macOS terminal tests and native Windows ConPTY tests. For the exact evidence and remaining platform limits, see [validation records](docs/VALIDATION.md) and [GitHub Actions](https://github.com/pskeffington/pip_boy/actions/workflows/rust.yml). A green CI result is not certification for hardware control or safety-critical use.
+The quality workflow runs catalog checks, stable Rust, the Rust 1.90 minimum-supported version, native macOS terminal tests and native Windows ConPTY tests. For the exact evidence and remaining platform limits, see [validation records](docs/VALIDATION.md) and [GitHub Actions](https://github.com/pskeffington/pip_boy/actions/workflows/rust.yml). A green CI result is not certification for hardware control or safety-critical use.
 
 ## Documentation
 

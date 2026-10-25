@@ -4,7 +4,7 @@ Rust-Boy is an open-source, offline-first Rust console. Contributions are welcom
 
 ## Set up
 
-Install Rust (minimum 1.81), Git and Python 3 for the optional validation scripts. The checked-in `Cargo.lock` is authoritative.
+Install Rust (minimum 1.90), Git and Python 3 for the optional validation scripts. The checked-in `Cargo.lock` is authoritative.
 
 ```bash
 git clone https://github.com/pskeffington/pip_boy.git

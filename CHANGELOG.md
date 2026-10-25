@@ -2,6 +2,13 @@
 
 This file records notable changes to Rust-Boy. This repository is in **development preview**; the Rust workspace version `0.1.0` is not a published production release. Dates are in UTC unless otherwise stated.
 
+## Unreleased — Rust 1.90 minimum compiler upgrade (2026-10-25)
+
+- Raise the workspace minimum supported Rust compiler from **1.81** to **1.90** across all three inheriting crates; CI tests Rust **1.90.0** and current stable, plus native macOS/Windows.
+- Retain Rust edition **2021**, workspace resolver **2**, current Cargo.lock and the `stable` development toolchain. Edition 2024 dependencies are supported without migrating this application; no dependency/lockfile re-resolution is introduced by this policy change.
+- Remove the earlier RustGIS MSRV blocker. Direct RustGIS source, a native ARM64 renderer and TAK interoperability are still separate, unshipped milestones.
+- Add version-policy validation to prevent metadata, CI and install documentation drift.
+
 ## Unreleased — Reclamation Scout GIS / Pi-TAK foundation (2026-10-25)
 
 - Add an offline `scout geo` CLI with bounded RFC 7946 Point/Feature/FeatureCollection inspection, WGS84 waypoint export, and spherical distance calculations. No network/GNSS access is performed by the module.
