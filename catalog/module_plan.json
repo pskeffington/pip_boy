@@ -235,11 +235,14 @@
       "Explicit per-adapter permission choices",
       "Reversible configuration",
       "Disabled-by-default external I/O",
-      "Session-only local host-read pause/resume implemented; persistent per-adapter consent remains planned"
+      "Session-only local host-read pause/resume implemented; persistent per-adapter consent remains planned",
+      "Version-1 bounded persistent adapter request/deny/clear preferences and CLI (not authorization; tests authored and pending)"
     ],
     "acceptance": [
       "Permissions tested before adapter callback",
-      "Settings migration and revocation tests"
+      "Settings migration and revocation tests",
+      "Read/list creates no data files; unsupported/future/duplicate/oversized preferences are preserved and rejected",
+      "Stored requested preference never grants hardware/network access; active-session broker remains unimplemented"
     ]
   },
   {

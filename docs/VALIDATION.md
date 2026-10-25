@@ -2,6 +2,14 @@
 
 Review date: October 24, 2026 (America/New_York). Environment: Linux x86_64 container. These are local results; they do not establish remote Actions success or macOS/Windows support.
 
+## Current follow-on G1-D implementation: adapter preferences (unverified)
+
+The development branch now contains `crates/pipboy-core/src/permissions.rs`, exposed by `lib.rs`, and a CLI `pipboy permissions list|request|deny|clear`. This is a **preference-only** record for 11 named future adapter capabilities, not actual consent. It never calls `ModuleHost::grant`; stored `requested` does not permit a radio, mesh, location, BLE or network adapter to run. Preferences are in a bounded 16 KiB schema-1 `permissions.json` under `PIPBOY_HOME`, protected by a stable advisory lock and flushed same-directory replacement. Read/list creates no files, invalid or future schemas are preserved, and the explicit commands update or clear decisions.
+
+Five new unit tests and `tools/smoke_permissions.py` were authored to cover empty defaults, no implicit grants, repeat-safe set/deny/clear, unsupported capability refusal, writer contention, corrupt/future/oversized file preservation and CLI behavior. The CI stable job now includes this smoke script. **None of these new tests have been executed.** The current execution environment has no Rust/Cargo binary or network access to clone/install the toolchain; remote GitHub Actions has been failing at startup before any jobs are created. No new build, compilation, native platform, accessibility, or runtime success is claimed. This change also does not make previously authored STATUS or scoped LIBRARY/NOTES tests pass retroactively.
+
+Before accepting, run `cargo fmt --all -- --check`, `cargo check --workspace --all-targets --locked`, `cargo test --workspace --locked` on stable and 1.81.0, `cargo clippy --workspace --all-targets --locked -- -D warnings`, and both existing smoke suites plus `python3 tools/smoke_permissions.py`. Verify Linux, macOS and Windows native file replacement and advisory locking. Source/static checks only are recorded separately and do not prove compilation. See [PERMISSIONS.md](PERMISSIONS.md).
+
 ## Change under test
 
 G1-B/G1-C/G1-D/G1-E: shared `TelemetrySession<SnapshotSource>` for TUI and finite NDJSON. The session bounds history, records source/provenance, rejects backwards collection timestamps, and calculates freshness at render time. TUI history holds 60 readings; NDJSON history holds at most the requested 1–30. No telemetry files are created. The legacy `status --json` shape is preserved.

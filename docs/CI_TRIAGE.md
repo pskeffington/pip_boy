@@ -16,7 +16,7 @@
 
 ## Quality gates after jobs start
 
-The revised workflow checks the offline catalog with Python, plus Rust stable and Rust 1.81.0 toolchains. Stable must pass format, compile, tests and Clippy; the minimum-supported Rust version must compile and test.
+The revised workflow checks the offline catalog with Python, plus Rust stable and Rust 1.81.0 toolchains. The stable job now includes the adapter-preference CLI smoke suite alongside existing notes/runtime checks, but this is only authored coverage until runners start. Stable must pass format, compile, tests and Clippy; the minimum-supported Rust version must compile and test.
 
 Local commands on a machine with Rust installed:
 
@@ -28,6 +28,8 @@ Local commands on a machine with Rust installed:
     cargo clippy --workspace --all-targets -- -D warnings
     cargo run -p pipboy -- doctor
     cargo run -p pipboy -- sample --count 2 --interval-ms 1000
+    cargo run -p pipboy -- permissions list
+    python3 tools/smoke_permissions.py
 
 A generated Cargo.lock is now committed and tested locally on stable and Rust 1.81.0. CI uses `--locked`. Modern Cargo uses the MSRV fallback resolver; Cargo 1.81 ignores that newer configuration key but consumes the compatible version-3 lockfile. The lockfile selects instability 0.3.10 and unicode-segmentation 1.12.0 rather than newer versions requiring newer Rust. See [local validation evidence](VALIDATION.md).
 

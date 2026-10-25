@@ -12,6 +12,7 @@ Rust-Boy is the public product name. The existing `pip_boy` repository, `pipboy`
 - [Rust object model](OBJECT_MODEL.md) — object boundaries, traits, composition and runtime access policy.
 - [G1 execution plan](G1_EXECUTION_PLAN.md) — ordered engineering acceptance packages and next implementation priority.
 - [CI triage](CI_TRIAGE.md) — zero-job startup investigation and required quality evidence.
+- [Adapter permissions](PERMISSIONS.md) — persisted preference state, explicit CLI and authorization boundary.
 - [Architecture](ARCHITECTURE.md) — host / UI / core / adapter boundaries.
 - [Research library](RESEARCH_LIBRARY.md) — external open-source Pip-Boy implementation references.
 
@@ -44,7 +45,8 @@ The build is a directed acyclic dependency plan, **not** a schedule. All module 
 - [ ] Integrate sample buffer with actual UI/runtime, add property-based invariants and output/interruption fixtures.
 - [ ] Establish explicit retention/erase policies and schema migration for stored observations. Notes now support explicit schema-1 export/import; observation storage/migration remains planned.
 - [x] Author a pure module lifecycle state machine and existing deny-before-poll host prechecks (**in-process only; unverified**).
-- [ ] Complete persistent per-adapter consent and an OS-level device broker. Local host-read revocation is now enforced immediately; TUI P resumes only through explicit grant/start. A Rust trait is **not** a security sandbox.
+- [x] Author a bounded version-1 **preference-only** adapter request/deny/clear store and CLI, with no implicit runtime grants (**new tests unexecuted**).
+- [ ] Complete actual session-based per-adapter consent and an OS-level device broker. Host-read revocation is already enforced locally; TUI P resumes only after grant/start. A stored preference is **not** consent or an OS sandbox.
 - [ ] Add battery, thermal, disk and network-interface status only where supported, with `Unknown` rather than guessed values.
 - [ ] Complete accessibility acceptance across platforms. Keyboard collection/detail navigation, compact 40x12 rendering and smaller-screen fallback are locally tested; motion remains static, with no decorative animation.
 - [x] Author state/quality/overflow and sample-argument unit tests (**not yet executed**).
@@ -95,7 +97,7 @@ The build is a directed acyclic dependency plan, **not** a schedule. All module 
 
 **G0:** remote Actions previously reported startup_failure with zero executed jobs; local Linux stable/MSRV compilation, 63 tests, fmt, Clippy and CLI/TUI smoke checks now pass; remote CI and remaining platform acceptance are still open.
 
-**G1:** typed observation, bounded sample buffer, lifecycle transitions, finite NDJSON command and offline catalog validator have initial source implementations with telemetry now shared by TUI and finite NDJSON through a bounded session. The lazy host telemetry adapter now connects ModuleHost, lifecycle and capabilities to the TUI and finite sampling command; the one-shot status CLI has also been wired through it (new tests awaiting execution). Per-adapter persistent consent and device brokering remain planned. See [validation evidence](VALIDATION.md).
+**G1:** typed observation, bounded sample buffer, lifecycle transitions, finite NDJSON command and offline catalog validator have initial source implementations with telemetry now shared by TUI and finite NDJSON through a bounded session. The lazy host telemetry adapter now connects ModuleHost, lifecycle and capabilities to the TUI and finite sampling command; the one-shot status CLI has also been wired through it (new tests awaiting execution). The new `PreferenceStore` and CLI record requested/denied adapter intent only, with authored schema/locking/smoke tests not yet executed. No preference enables radio, GNSS, mesh, BLE, GPIO or network access; actual consent and brokering remain planned. See [permissions contract](PERMISSIONS.md) and [validation evidence](VALIDATION.md).
 
 **G2–G4:** still planned, with no external hardware, location, scanning or transmission enabled.
 
