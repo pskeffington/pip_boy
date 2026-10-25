@@ -55,3 +55,7 @@ TAK's official ATAK-CIV runs on Android, not directly on Raspberry Pi OS. On a P
 - [Camera wall plan](SECURITY_CAMERA_WALL.md) — detailed physical security use case.
 - [Machine-readable source/roadmap](../catalog/role_roadmap.json) — source IDs and role IDs validated against implementation.
 - [Rust workbench palette](../crates/pipboy-core/src/workbench.rs) — current code, which does not imply that planned integrations are shipped.
+
+## Boston real geometry and user-visible lore crosswalk — 2026-10-25
+
+The canonical vs. inspired role distinctions above remain unchanged. The [operator naming policy](LORE_NAMING.md) maps the six visible tabs (STAT, GEAR, MAP, DATA, LINK, SETUP) and lore-inspired names to stable internal tool IDs. **RADIO** is reserved for actual RF hardware; LINK is IP/SSH. The [Boston basemap](BOSTON_BASEMAP.md) consists only of real City SAM WGS84 street coordinates with original phosphor styling, never fictional vaults, gameplay streets or invented landmarks. Verify data redistribution rights before packaging.
