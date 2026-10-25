@@ -454,7 +454,7 @@ function inputForm(root, id) {
   const form = make("form", "micro-panel");
   form.id = "micro-lab-form";
   form.classList.add("micro-lab");
-  const draftKey = snapshot.active.profile + ":" + id + ":" + geoMode;
+  const draftKey = snapshot.active.profile + ":" + id + ":" + (id === "geo-lab" ? geoMode : "default");
   const saveDraft = () => labDrafts.set(draftKey, Object.fromEntries(new FormData(form)));
   form.addEventListener("input", saveDraft);
   if (id === "geo-lab") {
@@ -502,6 +502,7 @@ function inputForm(root, id) {
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
     if (busy) return;
+    saveDraft();
     busy = true;
     run.disabled = true;
     output.hidden = false;
