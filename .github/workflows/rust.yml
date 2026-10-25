@@ -49,3 +49,4 @@ jobs:
           python3 tools/smoke_runtime.py
           python3 tools/smoke_notes.py
           python3 tools/smoke_permissions.py
+          python3 tools/smoke_simulator.py
