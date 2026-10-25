@@ -8,7 +8,7 @@ Use [micro handheld mode](MICRO_UI.md) when testing a real micro-display layout 
 
 ## NET ENGINEER active network tool
 
-Load Head Engineer or Security Chief, open NET ENGINEER, select Live Private LAN Scan, choose local or an authorized private /24..../32 CIDR, affirm the scope, and press Scan Private LAN. Response lists detected IPs, ICMP/TCP latency evidence, and neighbor-cache sightings, not an authoritative list of all connected clients. Optional monitor refresh runs once per 60 seconds only while this view remains active. See [network diagnostics](NETWORK_ENGINEERING.md). The offline CIDR calculator is still available.
+Load Head Engineer or Security Chief, open NET ENGINEER, select Live Private LAN Scan, choose local or an authorized private /24..../32 CIDR, affirm the scope, and press Scan Private LAN. Response lists detected IPs, ICMP/TCP latency evidence, and neighbor-cache sightings, not an authoritative list of all connected clients. Optional monitor refresh runs once per 60 seconds only while this view remains active. See [network diagnostics](NETWORK_ENGINEERING.md). Use the UniFi Sites/Clients/Compare modes to read the local, configured UniFi Network Integration API; no browser API key is sent. The offline CIDR calculator is still available. See [UniFi setup](NETWORK_ENGINEERING.md).
 
 ## Launch on macOS
 
