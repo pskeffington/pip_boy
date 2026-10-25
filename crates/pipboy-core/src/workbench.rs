@@ -602,16 +602,16 @@ mod tests {
     use super::*;
 
     #[test]
-    fn blank_slate_is_empty_and_has_no_read_side_effects() {
+    fn default_overseer_board_is_ready_without_read_side_effects() {
         let temporary = tempfile::tempdir().unwrap();
         let root = temporary.path().join("new");
         let store = WorkbenchStore::new(root.clone());
         let board = store.load().unwrap();
         assert_eq!(board.schema_version, 1);
-        assert!(board.slots.is_empty());
+        assert_eq!(board.profile, "overseer");
+        assert_eq!(board.slots.len(), 4);
         assert!(!root.exists());
         assert!(!store.remove(77).unwrap());
-        assert!(!store.clear().unwrap());
         assert!(!root.exists());
     }
 
@@ -621,6 +621,7 @@ mod tests {
         let store = WorkbenchStore::new(temporary.path().join("state"));
         assert!(store.add("radio").is_err());
         assert!(!store.path().exists());
+        assert!(store.apply_preset("custom").unwrap());
         let pinned = store.add("byte-lab").unwrap();
         assert_eq!(pinned.id, 1);
         assert_eq!(store.load().unwrap().slots, vec![pinned.clone()]);
