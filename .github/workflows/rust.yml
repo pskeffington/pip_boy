@@ -27,11 +27,12 @@ jobs:
         toolchain: ["stable", "1.81.0"]
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          toolchain: ${{ matrix.toolchain }}
-          components: rustfmt, clippy
-      - uses: Swatinem/rust-cache@v2
+      - name: Install matrix Rust toolchain
+        run: |
+          rustup toolchain install "${{ matrix.toolchain }}" --profile minimal --component rustfmt --component clippy
+          rustup default "${{ matrix.toolchain }}"
+          rustc --version
+          cargo --version
       - name: Formatting
         if: matrix.toolchain == 'stable'
         run: cargo fmt --all -- --check
