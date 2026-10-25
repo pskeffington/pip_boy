@@ -17,10 +17,10 @@ Reviewed **October 25, 2026**. Every citation is a bibliographic pointer, **not*
 | `STD-06` | [W3C WCAG 2.2](https://www.w3.org/TR/WCAG22/) · technical standard | Readable controls, input targets and keyboard operability guide handheld UI acceptance. | A desktop terminal prototype does not establish WCAG conformance for a future handheld. |
 | `RB-01` | [Rust-Boy role architecture](https://github.com/pskeffington/pip_boy/blob/feat/rust-boy-workbench/crates/pipboy-core/src/workbench.rs) · project definition | Role preset IDs, currently pinned tool sets and independent Custom sandbox. | Code presence on development branch is not cross-platform CI acceptance. |
 
-| `STD-07` | [OpenGeos RustGIS — architecture, licensing, ARM64 builds](https://github.com/opengeos/RustGIS) · upstream software | RustGIS L0 geometry and L1 data are useful interoperability references; Apache-2.0, available Linux ARM64 distribution; workspace minimum Rust 1.90. | Rust-Boy targets Rust 1.81; full RustGIS source is not currently embedded or verified on Raspberry Pi. Keep independent GeoJSON bridge until compatibility gates pass. |
+| `STD-07` | [OpenGeos RustGIS — architecture, licensing, ARM64 builds](https://github.com/opengeos/RustGIS) · upstream software | RustGIS L0 geometry and L1 data are useful interoperability references; Apache-2.0, available Linux ARM64 distribution; workspace minimum Rust 1.90. | Rust-Boy uses Rust 1.90+; full RustGIS source is not currently embedded or verified on Raspberry Pi. Keep independent GeoJSON bridge until compatibility gates pass. |
 | `STD-08` | [TAK Product Center — ATAK, TAKX, PiTAK, TAK Server](https://tak.gov/products) · official product | ATAK-CIV is Android software, TAKX includes a Linux variant, and PiTAK is a transport-specific TAK ecosystem product. | PiTAK does not imply an entire ATAK mobile client on Raspberry Pi OS; Linux TAKX ARM64 support has not been established. |
 | `STD-09` | [OpenTAKServer — Raspberry Pi OS installation](https://docs.opentakserver.io/installation/installation.html) · upstream software | OpenTAKServer supports Raspberry Pi OS Bookworm-or-newer with a documented Pi installer; this is a TAK-compatible server for client data exchange. | Separate software, not embedded in Rust-Boy; operator must review installer, certificates, access policy and live ARM64 hardware behavior. |
-| `STD-10` | [IETF RFC 7946 — GeoJSON](https://www.rfc-editor.org/rfc/rfc7946) · technical standard | Positions use geographic longitude, latitude WGS84 axis order; GeoJSON Feature and FeatureCollection are suitable portable interchange artifacts. | Raw bounding boxes may be broad across antimeridian; this first Scout reader supports Point geometries only. |
+| `STD-10` | [IETF RFC 7946 — GeoJSON](https://www.rfc-editor.org/rfc/rfc7946) · technical standard | Positions use geographic longitude, latitude WGS84 axis order; GeoJSON Feature and FeatureCollection are suitable portable interchange artifacts. | Raw bounding boxes may be broad across antimeridian; the Scout CLI Point inspection and newer graphical polyline/polygon renderer have separate format and size bounds. |
 
 ## Canonical roles vs adaptations
 
@@ -45,7 +45,7 @@ The field-mapping project must preserve **longitude, latitude** ordering in GeoJ
 
 ## Reclamation Scout interoperability note
 
-RustGIS is an independent Apache-2.0 project, with separate Linux ARM64 releases and a workspace requiring Rust 1.90 or newer. Rust-Boy targets 1.81, so the initial Scout GIS Lab is independently implemented and exchanges **RFC 7946 GeoJSON Point** documents without linking or copying RustGIS source. Direct RustGIS geometry/data dependencies are a later optional compatibility gate.
+RustGIS is an independent Apache-2.0 project, with separate Linux ARM64 releases and a workspace requiring Rust 1.90 or newer. Rust-Boy uses 1.90+ but keeps its own independent Scout GIS Lab and exchanges **RFC 7946 GeoJSON Point** documents without linking or copying RustGIS source. Direct RustGIS geometry/data dependencies are a later optional compatibility gate.
 
 TAK's official ATAK-CIV runs on Android, not directly on Raspberry Pi OS. On a Pi, prefer a native Rust-Boy Scout interface plus separately deployed **OpenTAKServer** and an operator-approved CoT integration. **PiTAK** on TAK.gov is a transport option, not evidence that the full Android ATAK app works on Pi OS. TAKX Linux availability likewise does not establish ARM64 support without testing.
 
@@ -55,3 +55,7 @@ TAK's official ATAK-CIV runs on Android, not directly on Raspberry Pi OS. On a P
 - [Camera wall plan](SECURITY_CAMERA_WALL.md) — detailed physical security use case.
 - [Machine-readable source/roadmap](../catalog/role_roadmap.json) — source IDs and role IDs validated against implementation.
 - [Rust workbench palette](../crates/pipboy-core/src/workbench.rs) — current code, which does not imply that planned integrations are shipped.
+
+## Boston real geometry and user-visible lore crosswalk — 2026-10-25
+
+The canonical vs. inspired role distinctions above remain unchanged. The [operator naming policy](LORE_NAMING.md) maps the six visible tabs (STAT, GEAR, MAP, DATA, LINK, SETUP) and lore-inspired names to stable internal tool IDs. **RADIO** is reserved for actual RF hardware; LINK is IP/SSH. The [Boston basemap](BOSTON_BASEMAP.md) consists only of real City SAM WGS84 street coordinates with original phosphor styling, never fictional vaults, gameplay streets or invented landmarks. Verify data redistribution rights before packaging.

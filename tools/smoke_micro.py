@@ -101,6 +101,8 @@ with tempfile.TemporaryDirectory() as work:
         assert b"MAILTO:" not in js.upper()
         assert b"/assets/map.js" in html and b"/assets/map-import.js" in html
         for asset, marker in [
+            ("/assets/boston-base.js", b"City of Boston Street Segments"),
+            ("/assets/boston-map.js", b"City of Boston SAM"),
             ("/assets/map.js", b"watchPosition"),
             ("/assets/map-import.js", b"parseRustGIS"),
             ("/assets/map.css", b".rb-map"),

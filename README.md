@@ -1,6 +1,6 @@
 # Rust-Boy
 
-Micro navigation uses HOME / TOOLS / MAP / DATA / LINK / SETUP, a consistent header Back button and separate local-tool input/results screens. Back returns through inputs before leaving a tool; temporary local drafts survive navigation until reload.
+Micro navigation uses STAT / GEAR / MAP / DATA / LINK / SETUP, a consistent header Back button and separate local-tool input/results screens. Back returns through inputs before leaving a tool; temporary local drafts survive navigation until reload.
 
 [![Rust-Boy quality gates](https://github.com/pskeffington/pip_boy/actions/workflows/rust.yml/badge.svg?branch=main)](https://github.com/pskeffington/pip_boy/actions/workflows/rust.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-informational)](LICENSE)
@@ -51,7 +51,7 @@ git pull --ff-only origin main
 | Overseer Task Control | Persistent assignments, role queues, status, due dates and revision-safe history | Human/organizational identity beyond local role labels |
 | Peer task transport | Explicit paired-device OpenSSH send and receipt/status retrieval | Real Mac-to-Pi SSH pairing, interruption and key-rotation tests |
 | Reclamation Field Kit | Persistent manual-position survey sites, statuses, selectable offline map markers and GeoJSON export | Field GNSS, RustGIS full renderer, Pi touch acceptance and operational verification |
-| Scout maps | RustGIS/GeoJSON vector import, independent WGS84 canvas renderer and opt-in browser GPS; optional online reference overlay | Upstream RustGIS renderer, raster/terrain, native GNSS and Pi display |
+| Scout maps | Default offline central-Boston real City SAM street geometry; imported RustGIS/GeoJSON layers, opt-in GPS and separately enabled web reference | Upstream RustGIS renderer, raster/terrain, native GNSS and Pi display |
 | Host / Library / Notes | Local telemetry with quality labels, bundled references and offline notes | Production packaging and accessibility acceptance |
 | Fallout 4 companion | Read-only TCP protocol browser, diagnostics and bounded observation | Actual game-build/PlayStation interoperability |
 | Device simulation | Fixed fixtures, bounded queues and mock adapters | Physical GPIO, serial, SDR, BLE, mesh and camera integrations |
@@ -104,13 +104,15 @@ Responders, cache sightings and controller-connected clients are different count
 | Records Custodian | Local notes and archive references |
 | Custom | Empty workspace with explicit tool pinning |
 
-Switch profiles through the UI or `pipboy workbench use head-engineer --replace`. Profile replacement changes pinned layout; each active operation still has its own Run/authorization step. [Role roadmap](docs/ROLE_ROADMAP.md) · [Lore/source matrix](docs/VAULT_TEC_LORE_MATRIX.md) · [Camera-wall contract](docs/SECURITY_CAMERA_WALL.md).
+Switch profiles through the UI or `pipboy workbench use head-engineer --replace`. Profile replacement changes pinned layout; each active operation still has its own Run/authorization step. [Role roadmap](docs/ROLE_ROADMAP.md) · [Lore/source matrix](docs/VAULT_TEC_LORE_MATRIX.md) · [Lore-aligned names](docs/LORE_NAMING.md) · [Camera-wall contract](docs/SECURITY_CAMERA_WALL.md).
 
 ## Maps, tasks and diagnostics
 
 **Reclamation:** load Reclamation Scout and select **SITES** on micro. Add site observations with manual WGS84 coordinates, condition, priority, notes and position uncertainty; update status and export RFC 7946 GeoJSON. Records persist at `PIPBOY_HOME/reclamation.json` (default `~/.pipboy/reclamation.json`). **MAP → SITES** loads saved markers explicitly; selecting **MAP** on a site opens its location on the grid. WEB is blocked while saved sites are displayed, so site coordinates are not sent to Overpass. No background GNSS or uploads. [Field kit guide](docs/RECLAMATION.md).
 
-**Scout MAP:** choose **RUSTGIS** to load `.rgismap`, `.rgis`, `.rgislyr`, `.rgismpk`, `.rgispkg` or GeoJSON. Native vector data remains primary; missing raster/streamed sources are reported. Browser GPS needs permission. **WEB ON** enables a separately labeled OpenStreetMap/Overpass reference overlay; provider reachability checks contain no coordinates. [Map/GPS guide](docs/SCOUT_GPS_MAP.md).
+**Scout MAP:** defaults to an **offline real-geometry central Boston street basemap** (10,634 source-derived segments, no fictional roads or landmarks), rendered in Rust-Boy's original phosphor style. **BOS OFF / BOS ON** hides or restores the reference; the source manifest identifies its dated municipal data. Coverage is partial, not live. [Boston basemap provenance](docs/BOSTON_BASEMAP.md) · [Lore naming](docs/LORE_NAMING.md).
+
+**RustGIS import:** choose **RUSTGIS** to load `.rgismap`, `.rgis`, `.rgislyr`, `.rgismpk`, `.rgispkg` or GeoJSON. Native vector data remains primary; missing raster/streamed sources are reported. Browser GPS needs permission. **WEB ON** enables a separately labeled OpenStreetMap/Overpass reference overlay; provider reachability checks contain no coordinates. [Map/GPS guide](docs/SCOUT_GPS_MAP.md).
 
 **Overseer TASKS:** create assignments by person/job, priority and due date; acknowledge, update and inspect history. Paired-device Send uses OpenSSH with a dedicated key, pinned host key and restricted receiver. Remote progress is retrieved explicitly. [Task Control](docs/TASK_CONTROL.md) · [Peer enrollment](docs/PEER_TASK_TRANSPORT.md).
 

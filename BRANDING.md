@@ -22,7 +22,7 @@ Do not invent a general-purpose `rust-boy` CLI or a new storage path: the intera
 
 Micro mode uses an original dark-green field monitor treatment with subtle scanlines, restrained glow, legible monospaced status text and a six-tab lower rail. It conveys the **retro-futurist wrist computer** category without cloning a copyrighted game interface, importing art, or implying endorsement by Bethesda/Vault-Tec. Static fixtures must state when there is no camera frame, GIS renderer, GNSS or power sensor. The screen remains keyboard/touch usable with effects disabled for accessibility.
 
-See the [micro UI operator guide](docs/MICRO_UI.md).
+See the [micro UI operator guide](docs/MICRO_UI.md), [lore naming crosswalk](docs/LORE_NAMING.md) and [Boston source policy](docs/BOSTON_BASEMAP.md).
 
 ## Dashboard visual identity
 
@@ -60,11 +60,14 @@ These are design intentions, not an assertion that contrast or accessibility com
 
 **Typography:** system monospace for command outputs and instrument readouts; accessible system sans-serif for prose and long-form documentation. Do not bundle commercial or game-specific fonts.
 
+**Map provenance:** Only actual Boston SAM street geometry and traceable real GIS layers are drawn; stylization must never fabricate landmarks, paths or gameplay locations.
+
 **Motion:** static by default. Any CRT/scanline aesthetic must be optional, low-intensity, and disabled in reduced-motion mode. Never sacrifice clarity to imitate a game UI.
 
 ## 4. Interface language
 
-- Use `STAT`, `LIBRARY`, `NOTES`, `MAP`, `RADIO`, and `MESH` for module identifiers.
+- Visible micro navigation is `STAT`, `GEAR`, `MAP`, `DATA`, `LINK`, `SETUP`; stable internal page and tool IDs remain unchanged.
+- Display names follow [LORE_NAMING](docs/LORE_NAMING.md): MISSION LOG, SYSTEM STAT, NET ENGINEER, SYSTEM DIAG, ARCHIVES, JOURNAL, SIM BAY, FIELD LOG, SURVEY GIS and GAME LINK. `LINK` is IP/SSH, **not** radio/mesh.
 - Use `READY`, `PLANNED`, `UNAVAILABLE`, and `ERROR` accurately; never treat missing telemetry as zero.
 - Label observed values with source and freshness where practical.
 - Explain when radio is receive-only, device permissions are absent, or location services are off.

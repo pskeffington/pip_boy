@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-10-25 — Boston real street base and lore-aligned names (feature validation pending)
+
+- Pin 10,634 true City Boston SAM street segments and 47,994 original WGS84 source vertices for a local central-Boston MAP. No fictional feature creation; show coverage and source credit.
+- Render source lines under separate imported GIS and Reclamation markers in an original phosphor palette. Add BOS OFF/ON, source manifest and offline default without external tiles or automatic reachability ping.
+- Rename display tools to MISSION LOG, SYSTEM STAT, ARCHIVES, JOURNAL, SIM BAY, SYSTEM DIAG, FIELD LOG and SURVEY GIS; set micro tab labels STAT/GEAR/MAP/DATA/LINK/SETUP without renaming stable IDs.
+- Add provenance/rebuild tool, real-only map and naming documents, tests and HTTP smoke checks. Field validation, data release licensing and hardware acceptance remain open.
+
+
 ## 2026-10-25 — Reclamation map-marker integration (validation pending)
 
 - Add opt-in **MAP → SITES** overlay and focus from site records on micro and desktop without basemap requirement.

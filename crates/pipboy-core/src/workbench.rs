@@ -57,7 +57,7 @@ pub const PALETTE: &[Tool] = &[
     },
     Tool {
         id: "mission-board",
-        name: "TASK CONTROL",
+        name: "MISSION LOG",
         description:
             "Persistent Overseer assignments, priority, due date, status and manual handoff.",
         availability: Availability::Ready,
@@ -65,28 +65,28 @@ pub const PALETTE: &[Tool] = &[
     },
     Tool {
         id: "host",
-        name: "HOST STAT",
+        name: "SYSTEM STAT",
         description: "Opt-in local CPU/RAM and field quality. No collection by pinning.",
         availability: Availability::Ready,
         command: "pipboy status --details",
     },
     Tool {
         id: "library",
-        name: "LIBRARY",
+        name: "ARCHIVES",
         description: "Bundled research and open-source references. Fully offline.",
         availability: Availability::Ready,
         command: "pipboy sources rust",
     },
     Tool {
         id: "notes",
-        name: "NOTES",
+        name: "JOURNAL",
         description: "Local plaintext research journal; do not store sensitive material.",
         availability: Availability::Ready,
         command: "pipboy notes list",
     },
     Tool {
         id: "simulator",
-        name: "DEVICE SIM",
+        name: "SIM BAY",
         description: "Fixed synthetic fixtures for experiment and adapter development.",
         availability: Availability::Simulated,
         command: "pipboy simulate list",
@@ -100,7 +100,7 @@ pub const PALETTE: &[Tool] = &[
     },
     Tool {
         id: "diag",
-        name: "DIAG",
+        name: "SYSTEM DIAG",
         description: "Read-only scoped evidence analysis and one-shot host checks. No probes.",
         availability: Availability::Ready,
         command: "pipboy diag host",
@@ -114,14 +114,14 @@ pub const PALETTE: &[Tool] = &[
     },
     Tool {
         id: "reclamation",
-        name: "RECLAMATION",
+        name: "FIELD LOG",
         description: "Offline field site register with manual positions, condition, urgency and GeoJSON export.",
         availability: Availability::Ready,
         command: "pipboy dashboard --micro",
     },
     Tool {
         id: "geo-lab",
-        name: "SCOUT GIS",
+        name: "SURVEY GIS",
         description:
             "Offline WGS84 GeoJSON waypoints, great-circle distance and local Point inspection.",
         availability: Availability::Ready,

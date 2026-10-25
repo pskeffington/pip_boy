@@ -403,6 +403,43 @@
     }
   }
 
+
+  function bostonVisible(shape, view) {
+    if (!shape.bostonBase) return true;
+    // Original road class (CFCC) determines detail, not a fabricated feature.
+    if (view.zoom < 10.8 && shape.cfcc >= 30) return false;
+    if (view.zoom < 12.5 && shape.cfcc >= 41) return false;
+    const sw = screenPoint(view, shape.bounds[0], shape.bounds[1]);
+    const ne = screenPoint(view, shape.bounds[2], shape.bounds[3]);
+    return Math.max(sw[0], ne[0]) >= -12 &&
+      Math.min(sw[0], ne[0]) <= view.width + 12 &&
+      Math.max(sw[1], ne[1]) >= -12 &&
+      Math.min(sw[1], ne[1]) <= view.height + 12;
+  }
+
+  function drawBostonLabels(ctx, view) {
+    if (!view.baseVisible || !view.boston || view.zoom < 11.8) return;
+    const placed = [], names = new Set();
+    const limit = view.width <= 520 ? 8 : 15;
+    ctx.globalAlpha = 0.95;
+    ctx.font = "9px monospace";
+    ctx.fillStyle = "#c4edaa";
+    for (const shape of view.boston.labelShapes) {
+      if (placed.length >= limit) break;
+      if (names.has(shape.label) || !bostonVisible(shape, view)) continue;
+      const line = shape.paths[0];
+      const midpoint = line[Math.floor(line.length / 2)];
+      const p = screenPoint(view, midpoint[0], midpoint[1]);
+      if (p[0] < 13 || p[0] > view.width - 80 ||
+          p[1] < 20 || p[1] > view.height - 14) continue;
+      if (placed.some(([x,y]) => Math.abs(x-p[0]) < 85 && Math.abs(y-p[1]) < 18)) continue;
+      ctx.fillText(shape.label.slice(0, 24).toUpperCase(), p[0] + 4, p[1] - 5);
+      placed.push(p);
+      names.add(shape.label);
+    }
+    ctx.globalAlpha = 1;
+  }
+
   function draw(view) {
     const ctx = view.canvas.getContext("2d");
     if (!ctx || !view.width || !view.height) return;
@@ -414,8 +451,10 @@
     ctx.lineJoin = "round";
     ctx.lineCap = "round";
     let labels = 0;
-    // Reference OSM geometry sits under authoritative local RustGIS layers.
-    for (const shape of [...view.onlineShapes, ...view.shapes]) {
+    // Real Boston snapshot sits under opt-in OSM reference and imported RustGIS.
+    const baseShapes = view.baseVisible && view.boston ? view.boston.shapes : [];
+    for (const shape of [...baseShapes, ...view.onlineShapes, ...view.shapes]) {
+      if (!bostonVisible(shape, view)) continue;
       const style = shape.style || {};
       ctx.globalAlpha = Number.isFinite(style.opacity) ? style.opacity : 1;
       if (shape.kind === "point") {
@@ -450,7 +489,7 @@
         ctx.strokeStyle = style.stroke || (shape.kind === "polygon" ? "#6b9f6b" : "#b5db90");
         ctx.stroke();
         // A few named roads are useful on the miniature field display.
-        if (shape.label && shape.kind === "line" && view.zoom >= 13.5 && labels < 12 &&
+        if (!shape.bostonBase && shape.label && shape.kind === "line" && view.zoom >= 13.5 && labels < 12 &&
             shape.paths[0] && shape.paths[0].length >= 2) {
           const mid = shape.paths[0][Math.floor(shape.paths[0].length / 2)];
           const p = screenPoint(view, mid[0], mid[1]);
@@ -466,6 +505,7 @@
     }
 
 
+    drawBostonLabels(ctx, view);
     // Site markers remain distinct from imported RustGIS and opt-in OSM layers.
     view.siteMarkers = [];
     ctx.globalAlpha = 1;
@@ -526,7 +566,7 @@
       ctx.stroke();
     }
 
-    if (!view.shapes.length && !view.onlineShapes.length) {
+    if (!view.baseVisible && !view.shapes.length && !view.onlineShapes.length) {
       ctx.textAlign = "center";
       ctx.font = "11px monospace";
       ctx.fillStyle = "#dfa96b";
@@ -546,25 +586,38 @@
       : view.gpsState;
     view.status.textContent = (view.siteCentered ? "MANUAL SITE / NOT GPS  |  " : "") +
       fix + "  |  Z" + view.zoom.toFixed(1) + "  |  " +
-      (view.layerName || (view.sitesVisible ? "LOCAL SITES" : "LOAD RUSTGIS MAP")) +
+      (view.layerName || (view.sitesVisible ? "LOCAL SITES" :
+        view.baseVisible ? "BOSTON / REAL STREETS" : "LOAD RUSTGIS MAP")) +
       "  |  CENTER " + center;
     view.locate.textContent = view.watchId === null ? "GPS ON" : "GPS OFF";
     view.followButton.disabled = !view.fix;
     view.followButton.textContent = view.follow ? "FOLLOW" : "RECENTER";
     view.webButton.textContent = view.webEnabled ? "WEB OFF" : "WEB ON";
     view.siteButton.textContent = view.sitesVisible ? "SITES OFF" : "SITES";
+    view.baseButton.hidden = !view.boston;
+    view.baseButton.textContent = view.baseVisible ? "BOS OFF" : "BOS ON";
+    view.baseAttribution.hidden = !view.baseVisible;
     view.siteSummary.textContent = "RECLAMATION / " + view.sites.length + " LOCAL SITES";
     view.webRefresh.hidden = !view.webEnabled;
     view.webStatusNode.textContent = view.webStatus;
     view.attribution.hidden = !view.onlineShapes.length;
     view.sourceBox.hidden = !view.layers.length && !view.webMeta &&
-      !(view.sitesVisible && view.sites.length);
-    if (view.layers.length || view.webMeta || (view.sitesVisible && view.sites.length)) {
-      view.sourceSummary.textContent = "DATA SOURCES / " + view.layers.length + " NATIVE LAYERS" +
+      !view.baseVisible && !(view.sitesVisible && view.sites.length);
+    if (view.baseVisible || view.layers.length || view.webMeta ||
+        (view.sitesVisible && view.sites.length)) {
+      view.sourceSummary.textContent = "DATA SOURCES / " + view.layers.length + " IMPORTED LAYERS" +
+        (view.baseVisible ? " / BOSTON SAM" : "") +
         (view.sitesVisible ? " / " + view.sites.length + " LOCAL SITES" : "") +
         (view.webMeta ? " / OSM WEB" : "") +
         (view.warnings.length ? " / " + view.warnings.length + " LIMITATIONS" : "");
-      view.sourceLines.textContent = view.mapName + " / " + view.mapFormat + "\n" +
+      view.sourceLines.textContent = (view.baseVisible ?
+        "BOSTON STREET CENTERLINES / " + view.boston.featureCount + " ACTUAL CITY SEGMENTS\n" +
+        "City of Boston / SAM (via pinned Olin College mirror)\n" +
+        "Extract: central Boston; data is a dated snapshot, not live\n" +
+        "Source: " + view.boston.source.origin_url + "\n" +
+        "Blob SHA: " + view.boston.source.source_blob_sha + "\n" +
+        "WGS84 geometry (rounded to 6 decimals); no fictional points\n" : "") +
+        (view.mapName ? view.mapName + " / " + view.mapFormat + "\n" : "") +
         view.layers.map((layer) => layer.name + " (" + layer.features + " features)\n" +
           "  Source: " + layer.source +
           (layer.originalCrs ? "\n  Original CRS: " + JSON.stringify(layer.originalCrs).slice(0, 120) : "")
@@ -876,12 +929,13 @@
     if (view.webProbeAbort) view.webProbeAbort.abort();
     view.siteVersion++;
     if (view.siteAbort) view.siteAbort.abort();
-    mapMemory = (view.shapes.length || view.onlineShapes.length) ? {
+    mapMemory = (view.shapes.length || view.onlineShapes.length || view.boston) ? {
       center: view.siteReturn ? { ...view.siteReturn.center } : { ...view.center },
       zoom: view.siteReturn ? view.siteReturn.zoom : view.zoom,
       shapes: view.shapes, layers: view.layers, warnings: view.warnings,
       layerName: view.layerName, mapName: view.mapName, mapFormat: view.mapFormat,
-      onlineShapes: view.onlineShapes, webMeta: view.webMeta
+      onlineShapes: view.onlineShapes, webMeta: view.webMeta,
+      baseVisible: view.baseVisible
     } : null;
     active = null;
     if (view.host.isConnected) view.host.replaceChildren();
@@ -890,6 +944,13 @@
   function mount(host, options) {
     unmount();
     if (!host) return;
+    let boston = null;
+    let bostonError = null;
+    try {
+      if (window.RustBoyBoston) boston = window.RustBoyBoston.load();
+    } catch (error) {
+      bostonError = error instanceof Error ? error.message : "Boston source invalid";
+    }
     const root = make("section", "rb-map");
     root.setAttribute("aria-label", "Local WGS84 map with imported RustGIS GeoJSON layers");
     const toolbar = make("div", "rb-map-toolbar");
@@ -912,6 +973,12 @@
     attribution.rel = "noopener noreferrer";
     attribution.hidden = true;
     stage.append(attribution);
+    const baseAttribution = make("a", "rb-map-base-credit", "BOSTON SAM / REAL ROADS");
+    baseAttribution.href = "https://data.boston.gov/dataset/boston-street-segments-sam-system";
+    baseAttribution.target = "_blank";
+    baseAttribution.rel = "noopener noreferrer";
+    baseAttribution.hidden = true;
+    stage.append(baseAttribution);
     const webStatusNode = make("div", "rb-map-web-state", "WEB OFF");
     webStatusNode.setAttribute("role", "status");
     const sourceBox = make("details", "rb-map-sources");
@@ -927,7 +994,7 @@
       view.layerName = "";
       view.mapName = "";
       view.mapFormat = "";
-      view.gpsState = "MAP DATA CLEARED";
+      view.gpsState = view.baseVisible ? "IMPORTS CLEARED / BOSTON BASE" : "MAP DATA CLEARED";
       refresh(view);
     }, "Discard imported geography from this browser session");
     sourceBox.append(sourceSummary, sourceLines, clearMap);
@@ -977,8 +1044,11 @@
       host, root, stage, canvas, status, file, sourceBox, sourceSummary, sourceLines,
       manual, latitude, longitude,
       width: 0, height: 0, dpr: 1,
-      center: mapMemory ? { ...mapMemory.center } : { lat: 0, lon: 0 },
-      zoom: mapMemory ? mapMemory.zoom : 2,
+      center: mapMemory ? { ...mapMemory.center } :
+        boston ? { ...boston.center } : { lat: 0, lon: 0 },
+      zoom: mapMemory ? mapMemory.zoom : boston ? 12 : 2,
+      boston, bostonError,
+      baseVisible: Boolean(boston && (!mapMemory || mapMemory.baseVisible !== false)),
       shapes: mapMemory ? mapMemory.shapes : [],
       layers: mapMemory ? mapMemory.layers : [],
       warnings: mapMemory ? mapMemory.warnings : [],
@@ -990,7 +1060,8 @@
       webEnabled: false, webBusy: false, webAbort: null,
       webProbeAbort: null, webProbePromise: null,
       webReconnect: null, webDisconnect: null, webStatus: "WEB OFF",
-      attribution, webStatusNode, webButton: null, webRefresh: null,
+      attribution, baseAttribution, webStatusNode, webButton: null, webRefresh: null,
+      baseButton: null,
       fix: null, watchId: null, gpsState: "GPS OFF",
       follow: !mapMemory, observer: null, windowResize: null, drag: null,
       locate: null, followButton: null,
@@ -1016,6 +1087,11 @@
       else showLocalSites(view);
     }, "Show saved Reclamation sites only on this device; no sharing");
     view.siteButton.hidden = !view.siteAccess;
+    view.baseButton = control("BOS OFF", () => {
+      view.baseVisible = !view.baseVisible;
+      refresh(view);
+    }, "Toggle real City of Boston street centerlines; no external requests");
+    view.baseButton.hidden = !view.boston;
     view.webButton = control("WEB ON", () => webToggle(view),
       "Enable online road/landmark retrieval; sends map area to Overpass (OSM), not official GIS");
     view.webRefresh = control("SYNC", () => void webFetch(view),
@@ -1031,8 +1107,8 @@
       "Zoom in");
     const zoomOut = control("-", () => { view.zoom = clamp(view.zoom - 1, MIN_ZOOM, MAX_ZOOM); refresh(view); },
       "Zoom out");
-    toolbar.append(view.locate, view.followButton, importButton, view.siteButton,
-      view.webButton, view.webRefresh, manualButton, zoomIn, zoomOut);
+    toolbar.append(view.locate, view.followButton, importButton, view.baseButton,
+      view.siteButton, view.webButton, view.webRefresh, manualButton, zoomIn, zoomOut);
     if (options && typeof options.onTools === "function") {
       toolbar.append(control("GIS", options.onTools, "Open Scout GIS tools"));
     }
@@ -1160,7 +1236,7 @@
     view.webReconnect = () => {
       if (active !== view) return;
       if (view.webEnabled) void webFetch(view);
-      else if (!view.sitesVisible) void probeWeb(view);
+      else if (!view.sitesVisible && !view.baseVisible) void probeWeb(view);
     };
     view.webDisconnect = () => {
       if (active === view && view.webEnabled) {
@@ -1181,8 +1257,12 @@
     }
     window.requestAnimationFrame(() => {
       resize(view);
+      if (bostonError) {
+        view.gpsState = "BOSTON SOURCE INVALID / " + bostonError.slice(0, 44);
+        refresh(view);
+      }
       if (view.siteAccess && pendingSiteFocus !== null) showLocalSites(view);
-      else void probeWeb(view);
+      else if (!view.baseVisible) void probeWeb(view);
       if (!view.siteAccess) pendingSiteFocus = null;
     });
     return view;
