@@ -110,7 +110,7 @@ def check_hr(value, operation):
 
 
 class ConPty:
-    def __init__(self, api, home, initial_size=(100, 24)):
+    def __init__(self, api, home, initial_size=(100, 24), argv=None):
         self.api = api
         self.home = home
         self.input_read = wintypes.HANDLE()
@@ -127,6 +127,7 @@ class ConPty:
         self.output = bytearray()
         self.reader = None
         self.initial_size = initial_size
+        self.argv = list(argv) if argv is not None else [str(BINARY), "tui"]
 
     def start(self):
         api = self.api
@@ -171,7 +172,7 @@ class ConPty:
         startup.StartupInfo.cb = ctypes.sizeof(StartupInfoExW)
         startup.lpAttributeList = self.attr_ptr
         command = ctypes.create_unicode_buffer(
-            subprocess.list2cmdline([str(BINARY), "tui"])
+            subprocess.list2cmdline(self.argv)
         )
         env = dict(os.environ, PIPBOY_HOME=str(self.home), TERM="xterm-256color")
         env_text = "".join(
@@ -181,7 +182,7 @@ class ConPty:
         env_block = ctypes.create_unicode_buffer(env_text)
         check(
             api.CreateProcessW(
-                str(BINARY), command, None, None, False,
+                self.argv[0], command, None, None, False,
                 EXTENDED_STARTUPINFO_PRESENT | CREATE_UNICODE_ENVIRONMENT,
                 ctypes.cast(env_block, ctypes.c_void_p), None,
                 ctypes.byref(startup.StartupInfo),
@@ -198,9 +199,13 @@ class ConPty:
             while True:
                 data = ctypes.create_string_buffer(4096)
                 amount = wintypes.DWORD()
-                if not api.ReadFile(
+                ok = api.ReadFile(
                     self.output_read, data, 4096, ctypes.byref(amount), None
-                ) or amount.value == 0:
+                )
+                if not ok:
+                    self.messages.put(("read_error", ctypes.get_last_error()))
+                    break
+                if amount.value == 0:
                     self.messages.put(None)
                     break
                 self.messages.put(data.raw[:amount.value])
@@ -225,6 +230,8 @@ class ConPty:
                 continue
             if chunk is None:
                 break
+            if isinstance(chunk, tuple):
+                raise AssertionError(f"ConPTY read failed: win32={chunk[1]}")
             self.output.extend(chunk)
             if len(self.output) > MAX_OUTPUT:
                 raise AssertionError("ConPTY produced excessive terminal output")
@@ -240,7 +247,12 @@ class ConPty:
                 return
             if self.started and self.api.WaitForSingleObject(self.process.hProcess, 0) == WAIT_OBJECT_0:
                 raise AssertionError(f"ConPTY child exited before {marker!r}: {self.output[-700:]!r}")
-        raise AssertionError(f"ConPTY never displayed {marker!r}: {self.output[-1200:]!r}")
+        alive = self.api.WaitForSingleObject(self.process.hProcess, 0) == WAIT_TIMEOUT
+        raise AssertionError(
+            f"ConPTY never displayed {marker!r}, child_alive={alive}, "
+            f"reader_alive={self.reader.is_alive() if self.reader else False}: "
+            f"{self.output[-1200:]!r}"
+        )
 
     def send(self, data):
         written = wintypes.DWORD()
@@ -259,7 +271,7 @@ class ConPty:
             "ResizePseudoConsole",
         )
 
-    def finish(self, expected_code=0, timeout=10):
+    def finish(self, expected_code=0, timeout=10, require_screen=True):
         done = self.api.WaitForSingleObject(self.process.hProcess, int(timeout * 1000))
         assert done == WAIT_OBJECT_0, f"ConPTY child timed out; tail={self.output[-900:]!r}"
         code = wintypes.DWORD()
@@ -272,8 +284,9 @@ class ConPty:
             f"ConPTY exit code {code.value}, expected {expected_code}; "
             f"tail={self.output[-900:]!r}"
         )
-        assert b"\x1b[?1049h" in self.output, "alternate screen was never entered"
-        assert b"\x1b[?1049l" in self.output, "alternate screen was not restored"
+        if require_screen:
+            assert b"\x1b[?1049h" in self.output, "alternate screen was never entered"
+            assert b"\x1b[?1049l" in self.output, "alternate screen was not restored"
 
     def close(self):
         # Always reap the child and close ConPTY, even when a test assertion fails.
@@ -335,6 +348,18 @@ def main():
     api = configure_windows_api()
     with tempfile.TemporaryDirectory(prefix="rust-boy-conpty-") as temp:
         root = Path(temp)
+        command = [
+            os.environ.get("COMSPEC", r"C:\Windows\System32\cmd.exe"),
+            "/d", "/c", "echo RUSTBOY_CONPTY_PROBE",
+        ]
+        probe = ConPty(api, root / "probe", argv=command)
+        try:
+            probe.start()
+            probe.wait_for(b"RUSTBOY_CONPTY_PROBE", timeout=5)
+            probe.finish(expected_code=0, require_screen=False)
+            print("PASS: ConPTY Windows cmd echo and output pipe")
+        finally:
+            probe.close()
         exercise(api, root / "normal", corrupt_notes=False)
         exercise(api, root / "corrupt", corrupt_notes=True)
     print(
