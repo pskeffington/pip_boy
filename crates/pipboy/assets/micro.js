@@ -31,10 +31,59 @@ const pageTitles = {
   data: "DATA & RECORDS", link: "DEVICE LINKS", conf: "CONFIGURATION"
 };
 const glyphs = {
-  "host": "⌁", "notes": "≡", "library": "▤", "game": "▣",
+  "mission-board": "▣", "host": "⌁", "notes": "≡", "library": "▤", "game": "▣",
   "net-lab": "⌘", "byte-lab": "0x", "simulator": "◈",
   "geo-lab": "⌖"
 };
+const roleStations = Object.freeze({
+  "overseer": {
+    heading: "OPERATIONS CONTROL",
+    purpose: "Delegated missions, deadlines, handoffs and crew accountability.",
+    quick: "TASK CONTROL", tool: "mission-board"
+  },
+  "head-engineer": {
+    heading: "ENGINEERING BENCH",
+    purpose: "Host health, network planning, byte inspection and test fixtures.",
+    quick: "NETWORK DIAGNOSTICS", tool: "net-lab"
+  },
+  "security-chief": {
+    heading: "SECURITY WATCH",
+    purpose: "Camera wall, incident triage and assigned security duties.",
+    quick: "FOUR-CAMERA VIEW", page: "link"
+  },
+  "vault-doctor": {
+    heading: "CLINICAL REFERENCE",
+    purpose: "Reference material, local notes and assigned care-environment checklists.",
+    quick: "REFERENCE LIBRARY", tool: "library"
+  },
+  "university-researcher": {
+    heading: "RESEARCH BENCH",
+    purpose: "Reproducible experiments, reference review and technical datasets.",
+    quick: "BYTE ANALYSIS", tool: "byte-lab"
+  },
+  "reclamation-scout": {
+    heading: "FIELD RECONNAISSANCE",
+    purpose: "Waypoints, offline distances, site notes and assigned field duties.",
+    quick: "SCOUT WAYPOINT", tool: "geo-lab", page: "map"
+  },
+  "records-custodian": {
+    heading: "RECORDS OFFICE",
+    purpose: "Local archives, evidence notes and assigned retrievals.",
+    quick: "RECORDS LIBRARY", tool: "library"
+  },
+  "custom": {
+    heading: "OPERATOR PLAYGROUND",
+    purpose: "A blank, user-built station with explicitly selected local modules.",
+    quick: "ADD TOOLS", page: "conf"
+  }
+});
+
+function openDuties() {
+  openedTool = "assigned-duties";
+  render();
+  ui.viewport.scrollTop = 0;
+}
+
 let snapshot = null;
 let tab = "stat";
 let openedTool = null;
@@ -122,7 +171,8 @@ function renderHeading() {
   ui.roleShort.textContent = labelForProfile(activeProfile());
   const index = pages.indexOf(tab);
   ui.code.textContent = String(index + 1).padStart(2, "0") + " / " + tab.toUpperCase();
-  const label = openedTool ? toolInfo(openedTool)?.name : pageTitles[tab];
+  const label = openedTool === "assigned-duties" ? "ASSIGNED DUTIES"
+    : openedTool ? toolInfo(openedTool)?.name : pageTitles[tab];
   ui.title.textContent = label || pageTitles[tab];
   ui.mode.textContent = snapshot.engine.rustgis === "integrated" ? "LOCAL" : "OFFLINE";
   for (const item of ui.tabs) {
@@ -169,42 +219,43 @@ function field(key, title, value, options = {}) {
 
 function showStat() {
   const root = panel();
-  const heading = make("div", "hero-status");
-  const status = make("div", "block-box lit");
-  status.append(
-    make("span", "micro-label", "ROLE / CURRENTLY LOADED"),
+  const profileId = snapshot.active.profile;
+  const station = roleStations[profileId] || roleStations.custom;
+  root.append(sectionTop(station.heading, "LOCAL / OPERATOR"));
+  const hero = make("div", "hero-status");
+  const content = make("div", "block-box lit");
+  content.append(
+    make("span", "micro-label", "ACTIVE JOB / COMMAND STATION"),
     make("div", "hero-title scan-glow", labelForProfile(activeProfile())),
-    make("div", "hero-sub", "Operator station · profile locally saved")
+    make("div", "hero-sub", station.purpose)
   );
   const display = make("div", "instrument");
-  display.setAttribute("aria-label", "Decorative local instrument grid; no sensor data");
+  display.setAttribute("aria-label", "Decorative instrument backdrop, not a live sensor feed");
   display.append(make("span", "", "NO LIVE SENSOR FEED"));
-  heading.append(status, display);
-  root.append(heading);
-  const grid = make("div", "signal-grid");
-  for (const [key, value] of [
-    ["MODULES", String(allPinned().length).padStart(2, "0") + " PINNED"],
-    ["NETWORK", "LOOPBACK"],
-    ["POWER", "NOT DETECTED"],
-    ["DATA SOURCE", "LOCAL ONLY"]
-  ]) {
-    const cell = make("div", "signal-cell");
-    cell.append(make("span", "", key), make("strong", "", value));
-    grid.append(cell);
+  hero.append(content, display);
+  root.append(hero);
+  const actions = make("div", "button-row");
+  if (station.tool && hasTool(station.tool)) {
+    actions.append(button(station.quick, () => openTool(station.tool), "micro-button solid"));
+  } else if (station.page) {
+    actions.append(button(station.quick, () => setTab(station.page), "micro-button solid"));
   }
-  root.append(grid);
-  const row = make("div", "button-row");
-  row.append(button("OPEN MODULES", () => setTab("gear"), "micro-button solid"));
-  const shortcut = snapshot.active.profile === "reclamation-scout"
-    ? ["SCOUT MAP", "map"]
-    : snapshot.active.profile === "security-chief"
-      ? ["CAMERA GRID", "link"]
-      : ["CHOOSE JOB", null];
-  row.append(button(shortcut[0], () => shortcut[1] ? setTab(shortcut[1]) : openRoles(), "micro-button"));
-  root.append(row);
-  const note = make("p", "panel-copy",
-    "This is a local field workbench. No camera, sensor, console, map engine or radio device is connected automatically.");
-  root.append(note);
+  if (station.page && station.tool) {
+    actions.append(button("VIEW " + station.page.toUpperCase(), () => setTab(station.page), "micro-button"));
+  }
+  actions.append(button("MODULES", () => setTab("gear"), "micro-button"));
+  root.append(actions);
+  const taskSection = make("div", "task-station-summary");
+  root.append(taskSection);
+  if (window.RustBoyTasks) {
+    window.RustBoyTasks.summary(taskSection, {
+      role: profileId,
+      onOpen: profileId === "overseer" && hasTool("mission-board")
+        ? () => openTool("mission-board") : openDuties
+    });
+  }
+  root.append(make("p", "panel-note",
+    "Local state only. An assigned task is not delivered or acknowledged automatically."));
   return root;
 }
 
@@ -277,6 +328,9 @@ function showData() {
   const dataTools = allPinned().filter((id) =>
     ["notes", "library", "byte-lab", "simulator", "geo-lab", "net-lab"].includes(id));
   root.append(sectionTop("RECORDS / OFFLINE TOOLS", String(dataTools.length) + " AVAILABLE"));
+  if (snapshot.active.profile !== "overseer") {
+    root.append(button("MY ASSIGNED DUTIES", openDuties, "micro-button solid"));
+  }
   if (dataTools.length) {
     const list = make("div", "tile-grid");
     dataTools.forEach((id, index) => list.append(toolTile(id, index)));
@@ -466,6 +520,20 @@ function inputForm(root, id) {
 
 function showTool() {
   const root = panel();
+  if (openedTool === "assigned-duties" || openedTool === "mission-board") {
+    const actions = make("div", "button-row");
+    actions.append(button("◀ RETURN", () => {
+      openedTool = null;
+      render();
+    }, "micro-button compact"));
+    root.append(actions);
+    const container = make("div", "task-manager-viewport");
+    root.append(container);
+    if (window.RustBoyTasks) {
+      window.RustBoyTasks.mount(container, { profiles: snapshot.profiles });
+    }
+    return root;
+  }
   const meta = toolInfo(openedTool);
   const row = make("div", "frame-head");
   row.append(

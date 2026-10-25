@@ -38,7 +38,7 @@ const ui = {
   toast: byId("toast")
 };
 const symbols = {
-  "host": "⌁", "notes": "≡", "library": "▤", "game": "▣",
+  "mission-board": "▣", "host": "⌁", "notes": "≡", "library": "▤", "game": "▣",
   "net-lab": "⌘", "byte-lab": "0x", "simulator": "◈",
   "geo-lab": "⌖", "gpio": "◧", "radio": ")))",
   "ble": "⋈", "nfc": "⊞", "mesh": "◇"
@@ -204,6 +204,25 @@ function renderExtension() {
   ui.extension.replaceChildren();
   const selected = profile();
   if (!selected) return;
+  if (selected.id === "overseer" || selectedTool === "mission-board") {
+    const manager = el("section", "job-command-panel");
+    const heading = el("div", "section-heading");
+    heading.append(el("h2", "", "OVERSEER / MISSION CONTROL"),
+      el("span", "section-counter", "TASK ASSIGNMENTS / LOCAL"));
+    manager.append(heading);
+    if (selectedAvailable() && snapshot.active.slots.some((slot) => slot.tool === "mission-board")) {
+      const mount = el("div", "task-desktop-board");
+      manager.append(mount);
+      if (window.RustBoyTasks) {
+        window.RustBoyTasks.mount(mount, { profiles: snapshot.profiles });
+      }
+    } else {
+      manager.append(el("p", "workspace-subtitle",
+        "Preview only. Load the Overseer profile to create or manage assignments."));
+    }
+    ui.extension.append(manager);
+    return;
+  }
   if (selected.id === "reclamation-scout") {
     const map = el("div", "map-preview");
     const heading = el("div", "map-preview-header");
@@ -217,6 +236,11 @@ function renderExtension() {
     canvas.append(el("span", "map-canvas-label", "REFERENCE GRID ONLY / NO LIVE MAP"));
     map.append(heading, canvas);
     ui.extension.append(map);
+    if (selectedAvailable() && window.RustBoyTasks) {
+      const queue = el("div", "job-assignments");
+      ui.extension.append(queue);
+      window.RustBoyTasks.summary(queue, { role: selected.id });
+    }
     return;
   }
   if (selected.id === "security-chief") {
@@ -245,6 +269,22 @@ function renderExtension() {
         : "Click focused tile or press Esc to return to the four-camera grid."
     ));
     ui.extension.append(wall);
+    if (selectedAvailable() && window.RustBoyTasks) {
+      const queue = el("div", "job-assignments");
+      ui.extension.append(queue);
+      window.RustBoyTasks.summary(queue, { role: selected.id });
+    }
+    return;
+  }
+  if (selectedAvailable() && selected.id !== "custom" && window.RustBoyTasks) {
+    const station = el("div", "job-station-summary");
+    const name = el("strong", "", "ASSIGNED OPERATIONS / " + selected.title.toUpperCase());
+    const purpose = el("p", "workspace-subtitle", selected.description);
+    station.append(name, purpose);
+    const queue = el("div", "job-assignments");
+    station.append(queue);
+    ui.extension.append(station);
+    window.RustBoyTasks.summary(queue, { role: selected.id });
     return;
   }
   const placeholder = el("div", "extension-placeholder");
@@ -330,6 +370,11 @@ function renderDetail() {
   if (info.availability === "planned") {
     ui.handoff.hidden = false;
     ui.manual.textContent = "Not implemented: no hardware access";
+    return;
+  }
+  if (selectedTool === "mission-board") {
+    ui.handoff.hidden = false;
+    ui.manual.textContent = "Task Control is open in the Module Viewport. Tasks remain local until explicitly handed off.";
     return;
   }
   if (Object.hasOwn(forms, selectedTool)) {
