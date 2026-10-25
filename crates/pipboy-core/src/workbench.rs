@@ -107,10 +107,10 @@ pub const PALETTE: &[Tool] = &[
     },
     Tool {
         id: "net-lab",
-        name: "NET LAB",
-        description: "Offline IPv4/CIDR planner for LAN setup; no probing or sockets.",
+        name: "NET ENGINEER",
+        description: "Active, operator-authorized private LAN discovery: responding hosts, RTT and cache sightings; offline CIDR planning retained.",
         availability: Availability::Ready,
-        command: "pipboy workbench net cidr 192.168.1.50/24",
+        command: "pipboy net scan local --confirm",
     },
     Tool {
         id: "geo-lab",
