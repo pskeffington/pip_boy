@@ -172,6 +172,10 @@ with tempfile.TemporaryDirectory() as work:
         assert code == 409
         code, _, response = api(port, "GET", "/api/reclamation/geojson")
         assert code == 200 and response["features"][0]["geometry"]["coordinates"] == [-70.75, 42.0]
+        code, _, map_records = api(port, "GET", "/api/reclamation/map")
+        assert code == 200 and map_records["sites"][0]["position_source"] == "manual"
+        assert map_records["network_used"] is False
+        assert "notes" not in map_records["sites"][0], "map view must omit private notes"
         code, _, result = api(port, "POST", "/api/experiment", {
             "tool": "geo-lab", "mode": "waypoint",
             "name": "Camp One", "lat": "42.0", "lon": "-70.75"
