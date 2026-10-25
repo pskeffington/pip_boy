@@ -35,6 +35,9 @@ const MICRO_CSS: &str = include_str!("../assets/micro.css");
 const MICRO_JS: &str = include_str!("../assets/micro.js");
 const BOSTON_BASE_JS: &str = include_str!("../assets/boston-base.js");
 const BOSTON_MAP_JS: &str = include_str!("../assets/boston-map.js");
+const BOSTON_COAST_JS: &str = include_str!("../assets/boston-coast-base.js");
+const BOSTON_LAND_JS: &str = include_str!("../assets/boston-land-base.js");
+const COUNTY_MAP_JS: &str = include_str!("../assets/county-map.js");
 const MAP_JS: &str = include_str!("../assets/map.js");
 const MAP_IMPORT_JS: &str = include_str!("../assets/map-import.js");
 const MAP_ONLINE_JS: &str = include_str!("../assets/map-online.js");
@@ -1001,6 +1004,21 @@ fn dispatch(req: &Request, store: &WorkbenchStore, port: u16) -> Response {
             "text/javascript; charset=utf-8",
             BOSTON_MAP_JS.as_bytes(),
         ),
+        ("GET", "/assets/boston-coast-base.js") => Response::new(
+            200,
+            "text/javascript; charset=utf-8",
+            BOSTON_COAST_JS.as_bytes(),
+        ),
+        ("GET", "/assets/boston-land-base.js") => Response::new(
+            200,
+            "text/javascript; charset=utf-8",
+            BOSTON_LAND_JS.as_bytes(),
+        ),
+        ("GET", "/assets/county-map.js") => Response::new(
+            200,
+            "text/javascript; charset=utf-8",
+            COUNTY_MAP_JS.as_bytes(),
+        ),
         ("GET", "/assets/map.js") => {
             Response::new(200, "text/javascript; charset=utf-8", MAP_JS.as_bytes())
         }
@@ -1270,6 +1288,9 @@ mod tests {
             "/micro/",
             "/assets/micro.css",
             "/assets/micro.js",
+            "/assets/boston-coast-base.js",
+            "/assets/boston-land-base.js",
+            "/assets/county-map.js",
             "/assets/map.js",
             "/assets/map-import.js",
             "/assets/map-online.js",

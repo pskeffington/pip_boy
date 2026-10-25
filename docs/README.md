@@ -17,6 +17,7 @@ Technical contracts, architecture decisions, research provenance and validation 
 | [Graphical dashboard](DASHBOARD_UI.md) | Run local browser UI on Mac, load role templates, test offline tools and Custom |
 | [Quick start](../README.md#quick-start) | Clone, build, run the terminal UI and inspect local status |
 | [Console controls](CONSOLE.md) | Keyboard navigation, resize behavior and terminal restoration |
+| [County map and shoreline acquisition](COUNTY_MAP.md) | Boston real land/coast reference, explicit GPS/manual county lookup and Census data limits |
 | [Boston offline real-street basemap](BOSTON_BASEMAP.md) | Pinned City SAM geometry, provenance, coverage and licensing |
 | [Lore naming and tool crosswalk](LORE_NAMING.md) | Six-tab HUD names, role/tool alignment and capability boundaries |
 | [RustGIS-native map and GPS](SCOUT_GPS_MAP.md) | Native RustGIS map import, GPS, optional Overpass road reference, privacy and provenance |

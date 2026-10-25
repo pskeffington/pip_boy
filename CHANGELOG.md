@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-10-25 — County maps, sourced coastline and GPS/manual acquisition (feature validation pending)
+
+- Overlay a real City of Boston water-excluded footprint, Natural Earth 1:10m coastal coordinates and clearly labeled historical generalized Suffolk context over the existing offline Boston SAM roads.
+- Introduce **AREA** with manual latitude/longitude **LOAD COUNTY**, or a one-time **USE GPS** consented position, resolving 2026 U.S. Census county geometry before fetching county roads, rail and hydrography.
+- Bound requests and output, clip roads to the selected polygon, display Census provenance, protect Reclamation-site location context from automatic OSM lookup and retain the last valid map on failure.
+- Add independent browser map tests, source and privacy documentation. Physical GPS, Census live CORS/size and ARM64 acceptance remain open.
+
 ## 2026-10-25 — Boston real street base and lore-aligned names (feature validation pending)
 
 - Pin 10,634 true City Boston SAM street segments and 47,994 original WGS84 source vertices for a local central-Boston MAP. No fictional feature creation; show coverage and source credit.

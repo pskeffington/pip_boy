@@ -85,3 +85,21 @@
 @media (max-height:360px) {
   .rb-map-base-credit { font-size:8px; padding:1px 3px; }
 }
+
+/* Area selection is collapsed by default. Source disclosure stays visible. */
+.rb-map-zone-status {flex:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  font:9px ui-monospace,Consolas,monospace;color:#9acfa9;padding:1px 3px; }
+.rb-map-county-form {display:flex;gap:5px;flex-wrap:wrap;align-items:center;
+  flex:none;padding:5px;border:1px solid #476b50;background:#0d2115;max-height:120px;overflow-y:auto;}
+.rb-map-county-form[hidden] {display:none;}
+.rb-map-county-consent {flex:1 1 100%;font:9px ui-monospace,Consolas,monospace;
+  color:#f0cf91;margin:0;line-height:1.25;}
+.rb-map-county-form input {width:87px;min-width:0;flex:1 1 72px;min-height:32px;
+  border:1px solid #53785b;background:#102618;color:#d6f7c3;
+  font:11px ui-monospace,monospace;padding:5px;}
+.rb-map-county-result {flex:1 1 100%;color:#a8d5ba;font-size:10px;overflow-wrap:anywhere;}
+@media (max-height:360px) {
+  .rb-map-county-form{max-height:96px;padding:3px;}
+  .rb-map-county-form input{min-height:26px;}
+  .rb-map-zone-status{font-size:8px;}
+}
