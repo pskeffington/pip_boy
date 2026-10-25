@@ -331,6 +331,13 @@ fn experiment(body: &Value, store: &WorkbenchStore) -> Result<Response, Response
                 return Err(Response::error(422, "Unknown GIS experiment mode"));
             }
         }
+        "diag" => {
+            let snapshot = super::status::collect()
+                .map_err(|_| Response::error(409, "Local host telemetry unavailable"))?;
+            pipboy_core::diagnostics::analyze_host(&snapshot)
+                .map_err(|_| Response::error(500, "Cannot evaluate local host readings"))?
+                .render_text()
+        }
         "host" => {
             let report = super::status::collect_details()
                 .map_err(|_| Response::error(409, "Host telemetry not available"))?;
@@ -362,7 +369,7 @@ fn experiment(body: &Value, store: &WorkbenchStore) -> Result<Response, Response
     Ok(Response::json(
         200,
         &json!({
-            "kind": if matches!(tool_id, "geo-lab" | "host") { "computed" } else { "information" },
+            "kind": if matches!(tool_id, "geo-lab" | "host" | "diag") { "computed" } else { "information" },
             "output": output
         }),
     ))
