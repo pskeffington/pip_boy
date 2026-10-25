@@ -86,7 +86,11 @@ pub fn run(args: Vec<String>) -> Result<(), Box<dyn Error>> {
                 diagnose = true;
             }
             "--observe-seconds" if !snapshot && !diagnose && observe.is_none() => {
-                let seconds = iter.next().ok_or(usage)?.parse::<u64>().map_err(|_| usage)?;
+                let seconds = iter
+                    .next()
+                    .ok_or(usage)?
+                    .parse::<u64>()
+                    .map_err(|_| usage)?;
                 if !(1..=120).contains(&seconds) {
                     return Err("--observe-seconds must be 1..120".into());
                 }

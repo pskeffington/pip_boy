@@ -45,7 +45,11 @@ fn discover_to(target: SocketAddr, window: Duration) -> io::Result<Vec<(Ipv4Addr
     let mut buffer = [0u8; MAX_REPLY + 1];
     while Instant::now() < deadline {
         let remaining = deadline.saturating_duration_since(Instant::now());
-        socket.set_read_timeout(Some(remaining.min(Duration::from_millis(100)).max(Duration::from_millis(1))))?;
+        socket.set_read_timeout(Some(
+            remaining
+                .min(Duration::from_millis(100))
+                .max(Duration::from_millis(1)),
+        ))?;
         match socket.recv_from(&mut buffer) {
             Ok((len, from)) => {
                 if let Some((ip, busy)) = candidate(&buffer[..len], from) {
@@ -133,7 +137,10 @@ mod tests {
     fn discovery_accepts_only_bounded_ps4_advertisements() {
         let ps4: SocketAddr = "192.168.1.50:28000".parse().unwrap();
         let valid = br#"{"IsBusy":false,"MachineType":"PS4","extra":1}"#;
-        assert_eq!(candidate(valid, ps4), Some((Ipv4Addr::new(192, 168, 1, 50), false)));
+        assert_eq!(
+            candidate(valid, ps4),
+            Some((Ipv4Addr::new(192, 168, 1, 50), false))
+        );
         assert_eq!(
             candidate(br#"{"IsBusy":true,"MachineType":"PS4"}"#, ps4),
             Some((Ipv4Addr::new(192, 168, 1, 50), true))
@@ -150,20 +157,29 @@ mod tests {
         }
         assert_eq!(candidate(&vec![b'x'; MAX_REPLY + 1], ps4), None);
         assert_eq!(candidate(valid, "[::1]:28000".parse().unwrap()), None);
-        assert_eq!(candidate(valid, "255.255.255.255:28000".parse().unwrap()), None);
+        assert_eq!(
+            candidate(valid, "255.255.255.255:28000".parse().unwrap()),
+            None
+        );
     }
 
     #[test]
     fn one_udp_request_discovers_a_mock_ps4_without_connecting_to_game() {
         let responder = UdpSocket::bind("127.0.0.1:0").unwrap();
-        responder.set_read_timeout(Some(Duration::from_secs(2))).unwrap();
+        responder
+            .set_read_timeout(Some(Duration::from_secs(2)))
+            .unwrap();
         let destination = responder.local_addr().unwrap();
         let reply = thread::spawn(move || {
             let mut buffer = [0u8; 256];
             let (len, sender) = responder.recv_from(&mut buffer).unwrap();
             assert_eq!(&buffer[..len], REQUEST);
-            responder.send_to(br#"{"IsBusy":false,"MachineType":"PC"}"#, sender).unwrap();
-            responder.send_to(br#"{"IsBusy":true,"MachineType":"PS4"}"#, sender).unwrap();
+            responder
+                .send_to(br#"{"IsBusy":false,"MachineType":"PC"}"#, sender)
+                .unwrap();
+            responder
+                .send_to(br#"{"IsBusy":true,"MachineType":"PS4"}"#, sender)
+                .unwrap();
             responder.send_to(br#"{"IsBusy":true,"MachineType":"PS4"}"#, sender).unwrap();
         });
         let found = discover_to(destination, Duration::from_millis(200)).unwrap();
@@ -175,8 +191,16 @@ mod tests {
     fn discovery_rejects_missing_consent_and_invalid_flags_without_network() {
         for args in [
             vec!["--discover-ps4".to_owned()],
-            vec!["--discover-ps4".into(), "--confirm".into(), "--confirm".into()],
-            vec!["--discover-ps4".into(), "--confirm".into(), "--snapshot".into()],
+            vec![
+                "--discover-ps4".into(),
+                "--confirm".into(),
+                "--confirm".into(),
+            ],
+            vec![
+                "--discover-ps4".into(),
+                "--confirm".into(),
+                "--snapshot".into(),
+            ],
         ] {
             assert!(run(&args).is_err());
         }

@@ -265,7 +265,7 @@ def exercise(mode):
         elif mode in ('playstation', 'late-handshake', 'mac-launcher', 'mac-launcher-prompt'):
             assert result.returncode == 0, result.stderr
             report = json.loads(result.stdout)
-            assert report['status'] == 'ready' and report['target_profile'] == 'playstation'
+            assert report['status'] == 'ready' and report['target_profile'] == ('ps4' if launcher_mode else 'playstation')
             assert report['handshake'] == {'version': 'fixture', 'lang': 'en'}
             assert report['root_fields'] == ['HP']
             assert report['console_identity_verified'] is False
