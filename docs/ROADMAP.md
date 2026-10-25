@@ -23,7 +23,7 @@ Rust-Boy is the public product name. The existing `pip_boy` repository, `pipboy`
 
 The build is a directed acyclic dependency plan, **not** a schedule. All module IDs and dependencies live in [catalog/module_plan.json](../catalog/module_plan.json). Each PR must identify: affected module IDs; evidence IDs; data contracts; permission changes; deterministic test fixtures; user-visible status language; and its exit gate. A module cannot advance from **planned** until its testable implementation has been reviewed.
 
-### G0: Native foundation and quality recovery — **Linux/macOS/Windows CLI verified; terminal gate open**
+### G0: Native foundation and quality recovery — **Linux/macOS/Windows terminal CI verified; release gate open**
 
 - [x] Curated public GitHub reference catalog with license status.
 - [x] Rust-Boy product identity and documented independent-project IP boundaries.
@@ -33,7 +33,7 @@ The build is a directed acyclic dependency plan, **not** a schedule. All module 
 - [x] GitHub Actions admitted jobs and [passed the full Ubuntu Rust quality matrix](https://github.com/pskeffington/pip_boy/actions/runs/40160220866) after replacing unsupported third-party setup/cache actions with runner-native `rustup`.
 - [x] Validate dependency lockfile and pinned toolchain compatibility. **Local Linux: passed; lockfile committed.**
 - [x] Native macOS/Windows build, unit test and offline fixture smoke jobs passed in [run 40161263824](https://github.com/pskeffington/pip_boy/actions/runs/40161263824). Native portable output and POSIX/macOS TUI restoration checks are expanded in the next pass (new runs pending).
-- [ ] Validate new Windows ConPTY TUI pause/resume, resize, clean/error exit and restoration on the exact CI commit; harness added under `tools/smoke_windows_conpty.py`.
+- [x] Windows ConPTY TUI pause/resume, resize, clean/error exit and restoration verified by [run 40162936734](https://github.com/pskeffington/pip_boy/actions/runs/40162936734), using `tools/smoke_windows_conpty.py`.
 - [ ] Complete screen-reader/contrast checks, interrupt/write durability and other native accessibility/persistence acceptance.
 - [ ] Verify terminal restoration on panic/error and note persistence during interrupted writes.
 
@@ -105,7 +105,7 @@ The build is a directed acyclic dependency plan, **not** a schedule. All module 
 
 ## G0 and G1 status summary
 
-**G0:** GitHub Actions is operational. [Run 40162059963](https://github.com/pskeffington/pip_boy/actions/runs/40162059963) passed Linux stable/MSRV, macOS native PTY and Windows native CLI/fixture checks at `8a4f7c5` (115 Rust tests per toolchain). Newly authored Windows interactive ConPTY, release hardening and accessibility gates are open until checked on the exact commit.
+**G0:** GitHub Actions is operational. [Run 40162059963](https://github.com/pskeffington/pip_boy/actions/runs/40162059963) passed Linux stable/MSRV, macOS native PTY and Windows native CLI/fixture checks at `8a4f7c5` (115 Rust tests per toolchain). Windows native ConPTY is now verified at [run 40162936734](https://github.com/pskeffington/pip_boy/actions/runs/40162936734); release hardening and accessibility gates remain open.
 
 **G1:** typed observation, bounded sample buffer, lifecycle transitions, finite NDJSON command and offline catalog validator have initial source implementations with telemetry now shared by TUI and finite NDJSON through a bounded session. The lazy host telemetry adapter now connects ModuleHost, lifecycle and capabilities to the TUI and finite sampling command; the one-shot status CLI has also been wired through it (new tests awaiting execution). The new `PreferenceStore` and CLI record requested/denied adapter intent only, with authored schema/locking/smoke tests not yet executed. No preference enables radio, GNSS, mesh, BLE, GPIO or network access; actual consent and brokering remain planned. See [permissions contract](PERMISSIONS.md) and [validation evidence](VALIDATION.md).
 

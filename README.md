@@ -4,7 +4,7 @@
 
 Rust-Boy is an independent, modular toolkit for desktop terminals and future wearable field computers. It combines local host diagnostics, a curated research library, and a user-controlled offline journal under one minimal native interface. Planned adapters extend it to Raspberry Pi hardware, maps, receive-only radios, and authenticated local communications.
 
-> **Project status — cross-platform Linux/macOS/Windows quality checks verified.** [Push run 40162057807](https://github.com/pskeffington/pip_boy/actions/runs/40162057807) and [PR run 40162059963](https://github.com/pskeffington/pip_boy/actions/runs/40162059963) passed all five GitHub Actions jobs at `8a4f7c5`, including 115 Rust tests on stable and Rust 1.81.0, typed mock adapters, native macOS PTY and Windows CLI. The newest Windows **ConPTY interactive TUI** regression is now authored and executing; that gate cannot be called complete before CI passes its exact commit. OS-brokered real device authorization and any physical access remain **unimplemented**. See [validation](docs/VALIDATION.md).
+> **Project status — GitHub-hosted Linux/macOS/Windows CLI and interactive terminal checks verified.** [GitHub Actions run 40162936734](https://github.com/pskeffington/pip_boy/actions/runs/40162936734) passed all five jobs at `4d27208`: Linux stable and Rust 1.81.0, macOS native PTY, Windows native **ConPTY TUI** keyboard/resize/error restoration, and offline catalog validation. The cross-platform typed mock adapters and finite transport tests also passed. **No physical device, live network/radio interface or OS-enforced device authorization broker is implemented.** A later documentation-only commit still needs its own CI result. See [validation](docs/VALIDATION.md).
 
 ## Rust-Boy identity
 
@@ -110,7 +110,7 @@ Two new fixed mock replay scenarios exercise cancellation and bounded logical-ti
 
 ## Virtual transport precursor
 
-The new `simulate transport` CLI generates bounded *fixture-only* events through a 1–64 event in-memory FIFO. It accepts a finite `--count` of 1–128 and records every oldest-event drop. A stored preference cannot authorize a virtual session: `--confirm` is required, and an explicit saved denial takes precedence. A cancelled, disconnected, expired or revoked virtual session cannot drain old buffered data. There is no real serial, BLE, SDR, mesh or network transport. See [virtual transport contract](docs/VIRTUAL_TRANSPORT.md). The new code is undergoing CI validation on Linux, macOS and Windows.
+The new `simulate transport` CLI generates bounded *fixture-only* events through a 1–64 event in-memory FIFO. It accepts a finite `--count` of 1–128 and records every oldest-event drop. A stored preference cannot authorize a virtual session: `--confirm` is required, and an explicit saved denial takes precedence. A cancelled, disconnected, expired or revoked virtual session cannot drain old buffered data. There is no real serial, BLE, SDR, mesh or network transport. See [virtual transport contract](docs/VIRTUAL_TRANSPORT.md). The virtual transport implementation passed the cross-platform quality matrix; it still provides no real transport.
 
 ## Typed mock adapters
 

@@ -89,7 +89,7 @@ or started as a side effect of TUI launch, `doctor`, `status`, or library reads.
 
 `tools/smoke_windows_conpty.py` uses Microsoft's native pseudoconsole API
 to test Windows terminal interaction, resize behavior and terminal restoration
-inside GitHub Actions. It does **not** grant Rust-Boy access to any external
+inside GitHub Actions; the new interactive regression passed in [run 40162936734](https://github.com/pskeffington/pip_boy/actions/runs/40162936734). It does **not** grant Rust-Boy access to any external
 device, and it does not implement or validate the proposed broker.
 
 Primary platform references:

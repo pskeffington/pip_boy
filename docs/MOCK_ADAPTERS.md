@@ -34,6 +34,6 @@ Explicit revoke and cancel fixtures verify that a mock operation cannot continue
 
 Ten new core unit tests exercise trait-object dispatch, mock-only output contracts, invalid display/serial input bounds, saved preference denial, absence of implicit confirmation, revocation/cancellation and reproducible JSON. A separate tools/smoke_mock_adapters.py validates CLI schemas, denied cases and corrupt preferences. tools/smoke_native_cli.py validates cross-platform, noninteractive command output, absence of ANSI escapes and read-only filesystem behavior.
 
-The GitHub workflow runs the new tests on Linux stable/MSRV and native macOS/Windows, plus a POSIX PTY journey on macOS using tools/smoke_runtime.py. The portable Windows CLI test is **not a Windows ConPTY interactive TUI test**; that remains an acceptance gate. Native TUI/accessibility evaluation and real devices are still outstanding.
+The GitHub workflow runs the new tests on Linux stable/MSRV and native macOS/Windows, plus a POSIX PTY journey on macOS using tools/smoke_runtime.py. The portable Windows CLI test does not itself prove ConPTY, but a **separate Windows ConPTY interactive TUI test passed** in [run 40162936734](https://github.com/pskeffington/pip_boy/actions/runs/40162936734). Assistive-technology evaluation, device authorization and actual real hardware remain outstanding.
 
 See [virtual transport](VIRTUAL_TRANSPORT.md), [simulation](SIMULATION.md), [OS device broker requirements](OS_DEVICE_BROKER.md), [roadmap](ROADMAP.md), and [validation](VALIDATION.md).
