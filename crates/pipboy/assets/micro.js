@@ -58,7 +58,7 @@ const roleStations = Object.freeze({
   "vault-doctor": {
     heading: "MEDICAL",
     purpose: "REFERENCE / NOTES",
-    quick: "LIBRARY", tool: "library"
+    quick: "ARCHIVES", tool: "library"
   },
   "university-researcher": {
     heading: "RESEARCH",
@@ -72,8 +72,8 @@ const roleStations = Object.freeze({
   },
   "records-custodian": {
     heading: "RECORDS",
-    purpose: "ARCHIVE / NOTES",
-    quick: "LIBRARY", tool: "library"
+    purpose: "ARCHIVES / JOURNAL",
+    quick: "ARCHIVES", tool: "library"
   },
   "custom": {
     heading: "CUSTOM",
