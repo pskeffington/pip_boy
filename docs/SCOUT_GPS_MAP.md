@@ -22,7 +22,7 @@ cargo run --locked -p pipboy -- dashboard --micro --open
 
 Open **MAP** and press **RUSTGIS** to select `.rgismap`, `.rgis`, `.rgislyr`, `.rgismpk`, `.rgispkg`, or `.geojson`. The map uses a project camera center/zoom if available. **GPS ON** requests browser location permission, then **FOLLOW** centers on the live fix without altering map feature coordinates. GPS is *never* activated by selecting a map. You can drag/touch pan, zoom, and manually enter a center (marked as *not* GPS).
 
-Expand **DATA SOURCES** under the map to see visible imported layers, per-layer feature counts, original source references and unavailable-layer warnings. WGS84 geometry, GPS and accuracy circle share the same screen projection. No files, coordinates or photos are uploaded by Rust-Boy. Switching away from MAP destroys the current imported layer and position watch.
+Expand **DATA SOURCES** under the map to see visible imported layers, per-layer feature counts, original source references and unavailable-layer warnings. WGS84 geometry, GPS and accuracy circle share the same screen projection. No files, coordinates or photos are uploaded by Rust-Boy. Switching away from MAP **stops the GPS watch and discards the fix**, while retaining the imported vector geography only in volatile browser page memory for fast return to MAP. The **CLEAR MAP** control inside DATA SOURCES erases that copy; reloading/closing the browser page also clears it.
 
 ## Supported data and safety limits
 
@@ -40,6 +40,7 @@ Expand **DATA SOURCES** under the map to see visible imported layers, per-layer 
 node --check crates/pipboy/assets/map-import.js
 node --check crates/pipboy/assets/map.js
 node tools/test_rustgis_map_import.cjs
+node tools/test_rustgis_map_view.cjs
 cargo fmt --all -- --check
 cargo check --workspace --all-targets --locked
 cargo test --workspace --locked
