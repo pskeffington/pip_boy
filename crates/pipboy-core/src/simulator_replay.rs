@@ -3,9 +3,7 @@
 //! Logical times are relative fixture labels, never wall-clock observations.
 //! Scenarios do not use OS devices, sockets, timers, real measurements, or I/O.
 
-use crate::device_simulator::{
-    BrokerError, SessionConfirmation, SimulatedBroker, SimulationEvent,
-};
+use crate::device_simulator::{BrokerError, SessionConfirmation, SimulatedBroker, SimulationEvent};
 use crate::permissions::PreferenceEntry;
 use serde::Serialize;
 
@@ -151,8 +149,7 @@ pub fn replay_fixture(
                 return Err(BrokerError::ReplayInvariant);
             }
             trace.ok(200, "disconnect", "disconnected", None);
-            let error =
-                expect_rejection(broker.sample(&lease), BrokerError::InvalidLease)?;
+            let error = expect_rejection(broker.sample(&lease), BrokerError::InvalidLease)?;
             trace.rejected(300, "sample_stale_lease", "disconnected", error);
             let error = expect_rejection(
                 broker.open(id, SessionConfirmation::Confirmed),
@@ -163,8 +160,7 @@ pub fn replay_fixture(
                 return Err(BrokerError::ReplayInvariant);
             }
             trace.ok(500, "reconnect", "inactive", None);
-            let error =
-                expect_rejection(broker.sample(&lease), BrokerError::InvalidLease)?;
+            let error = expect_rejection(broker.sample(&lease), BrokerError::InvalidLease)?;
             trace.rejected(600, "sample_stale_lease", "inactive", error);
             let error = expect_rejection(
                 broker.open(id, SessionConfirmation::Absent),
@@ -177,8 +173,7 @@ pub fn replay_fixture(
                 return Err(BrokerError::ReplayInvariant);
             }
             trace.ok(200, "revoke", "inactive", None);
-            let error =
-                expect_rejection(broker.sample(&lease), BrokerError::InvalidLease)?;
+            let error = expect_rejection(broker.sample(&lease), BrokerError::InvalidLease)?;
             trace.rejected(300, "sample_stale_lease", "inactive", error);
             let error = expect_rejection(
                 broker.open(id, SessionConfirmation::Absent),
@@ -207,12 +202,18 @@ mod tests {
 
     #[test]
     fn only_known_replay_scenarios_are_accepted() {
-        assert_eq!(ReplayScenario::from_key("nominal"), Some(ReplayScenario::Nominal));
+        assert_eq!(
+            ReplayScenario::from_key("nominal"),
+            Some(ReplayScenario::Nominal)
+        );
         assert_eq!(
             ReplayScenario::from_key("disconnect-recover"),
             Some(ReplayScenario::DisconnectRecover)
         );
-        assert_eq!(ReplayScenario::from_key("revoke"), Some(ReplayScenario::Revoke));
+        assert_eq!(
+            ReplayScenario::from_key("revoke"),
+            Some(ReplayScenario::Revoke)
+        );
         assert_eq!(ReplayScenario::from_key("hardware"), None);
     }
 
@@ -227,7 +228,11 @@ mod tests {
         .unwrap();
         assert_eq!(trace.steps.len(), 3);
         assert_eq!(
-            trace.steps.iter().map(|step| step.logical_ms).collect::<Vec<_>>(),
+            trace
+                .steps
+                .iter()
+                .map(|step| step.logical_ms)
+                .collect::<Vec<_>>(),
             [0, 100, 200]
         );
         assert_eq!(trace.clock, "synthetic_logical_ms");
@@ -325,7 +330,12 @@ mod tests {
                 )
                 .unwrap()
             };
-            assert_eq!(run(), run(), "replay is nondeterministic: {}", scenario.key());
+            assert_eq!(
+                run(),
+                run(),
+                "replay is nondeterministic: {}",
+                scenario.key()
+            );
         }
     }
 

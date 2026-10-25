@@ -108,8 +108,12 @@ impl fmt::Display for BrokerError {
             Self::DeniedPreference => "saved adapter preference denies this capability",
             Self::Unavailable => "simulated device is disconnected",
             Self::Busy => "simulated broker already has an active session",
-            Self::InvalidLease => "simulated session is absent, revoked, or belongs to another broker",
-            Self::InvalidPreference => "invalid or duplicate adapter preference; no session authorized",
+            Self::InvalidLease => {
+                "simulated session is absent, revoked, or belongs to another broker"
+            }
+            Self::InvalidPreference => {
+                "invalid or duplicate adapter preference; no session authorized"
+            }
             Self::CounterExhausted => "simulated session counter exhausted",
             Self::ReplayInvariant => "deterministic replay fixture invariant violated",
         };
@@ -335,10 +339,7 @@ impl SimulatedBroker {
     /// The caller must reload a validated preference store before this step.
     /// On malformed updates, revoke the active session rather than fall back
     /// to the previous potentially permissive configuration.
-    pub fn replace_preferences(
-        &mut self,
-        entries: &[PreferenceEntry],
-    ) -> Result<(), BrokerError> {
+    pub fn replace_preferences(&mut self, entries: &[PreferenceEntry]) -> Result<(), BrokerError> {
         let validated = match Self::validated_preferences(entries) {
             Ok(validated) => validated,
             Err(error) => {
@@ -389,13 +390,12 @@ mod tests {
 
     #[test]
     fn a_saved_request_alone_never_authorizes_a_simulator() {
-        let mut broker = SimulatedBroker::new(&[choice(
-            "sdr.receive",
-            Preference::Requested,
-        )])
-        .unwrap();
+        let mut broker =
+            SimulatedBroker::new(&[choice("sdr.receive", Preference::Requested)]).unwrap();
         assert_eq!(
-            broker.open("sim:sdr", SessionConfirmation::Absent).unwrap_err(),
+            broker
+                .open("sim:sdr", SessionConfirmation::Absent)
+                .unwrap_err(),
             BrokerError::ConfirmationRequired
         );
         assert!(broker.active_device().is_none());
@@ -406,7 +406,9 @@ mod tests {
         let mut broker =
             SimulatedBroker::new(&[choice("mesh.transmit", Preference::Denied)]).unwrap();
         assert_eq!(
-            broker.open("sim:mesh", SessionConfirmation::Confirmed).unwrap_err(),
+            broker
+                .open("sim:mesh", SessionConfirmation::Confirmed)
+                .unwrap_err(),
             BrokerError::DeniedPreference
         );
         assert!(broker.active_device().is_none());
@@ -430,7 +432,10 @@ mod tests {
         assert!(json.get("longitude").is_none());
         assert_eq!(broker.sample(&lease).unwrap().sequence, 2);
         broker.close(&lease).unwrap();
-        assert_eq!(broker.sample(&lease).unwrap_err(), BrokerError::InvalidLease);
+        assert_eq!(
+            broker.sample(&lease).unwrap_err(),
+            BrokerError::InvalidLease
+        );
     }
 
     #[test]
@@ -444,7 +449,9 @@ mod tests {
         assert!(!broker.revoke(Capability::SdrReceive));
         assert_eq!(broker.sample(&old).unwrap_err(), BrokerError::InvalidLease);
         assert_eq!(
-            broker.open("sim:sdr", SessionConfirmation::Absent).unwrap_err(),
+            broker
+                .open("sim:sdr", SessionConfirmation::Absent)
+                .unwrap_err(),
             BrokerError::ConfirmationRequired
         );
         let fresh = broker
@@ -463,16 +470,23 @@ mod tests {
         broker
             .replace_preferences(&[choice("ble.discover", Preference::Denied)])
             .unwrap();
-        assert_eq!(broker.sample(&token).unwrap_err(), BrokerError::InvalidLease);
         assert_eq!(
-            broker.open("sim:ble", SessionConfirmation::Confirmed).unwrap_err(),
+            broker.sample(&token).unwrap_err(),
+            BrokerError::InvalidLease
+        );
+        assert_eq!(
+            broker
+                .open("sim:ble", SessionConfirmation::Confirmed)
+                .unwrap_err(),
             BrokerError::DeniedPreference
         );
         broker
             .replace_preferences(&[choice("ble.discover", Preference::Requested)])
             .unwrap();
         assert_eq!(
-            broker.open("sim:ble", SessionConfirmation::Absent).unwrap_err(),
+            broker
+                .open("sim:ble", SessionConfirmation::Absent)
+                .unwrap_err(),
             BrokerError::ConfirmationRequired
         );
     }
@@ -492,7 +506,10 @@ mod tests {
                 .unwrap_err(),
             BrokerError::InvalidPreference
         );
-        assert_eq!(broker.sample(&token).unwrap_err(), BrokerError::InvalidLease);
+        assert_eq!(
+            broker.sample(&token).unwrap_err(),
+            BrokerError::InvalidLease
+        );
         assert_eq!(
             broker
                 .open("sim:gpio", SessionConfirmation::Confirmed)
@@ -514,7 +531,9 @@ mod tests {
     #[test]
     fn simulated_disconnect_requires_new_session_after_reconnect() {
         let mut broker = SimulatedBroker::new(&[]).unwrap();
-        let old = broker.open("sim:serial", SessionConfirmation::Confirmed).unwrap();
+        let old = broker
+            .open("sim:serial", SessionConfirmation::Confirmed)
+            .unwrap();
         assert_eq!(broker.sample(&old).unwrap().sequence, 1);
         assert!(broker.disconnect("sim:serial").unwrap());
         assert!(!broker.disconnect("sim:serial").unwrap());
@@ -530,10 +549,14 @@ mod tests {
         assert!(!broker.reconnect("sim:serial").unwrap());
         assert_eq!(broker.sample(&old).unwrap_err(), BrokerError::InvalidLease);
         assert_eq!(
-            broker.open("sim:serial", SessionConfirmation::Absent).unwrap_err(),
+            broker
+                .open("sim:serial", SessionConfirmation::Absent)
+                .unwrap_err(),
             BrokerError::ConfirmationRequired
         );
-        let fresh = broker.open("sim:serial", SessionConfirmation::Confirmed).unwrap();
+        let fresh = broker
+            .open("sim:serial", SessionConfirmation::Confirmed)
+            .unwrap();
         assert_eq!(broker.sample(&fresh).unwrap().sequence, 2);
         assert_eq!(broker.sample(&old).unwrap_err(), BrokerError::InvalidLease);
     }
@@ -541,8 +564,14 @@ mod tests {
     #[test]
     fn disconnect_and_reconnect_reject_unknown_devices() {
         let mut broker = SimulatedBroker::new(&[]).unwrap();
-        assert_eq!(broker.disconnect("real:sdr").unwrap_err(), BrokerError::UnknownDevice);
-        assert_eq!(broker.reconnect("real:sdr").unwrap_err(), BrokerError::UnknownDevice);
+        assert_eq!(
+            broker.disconnect("real:sdr").unwrap_err(),
+            BrokerError::UnknownDevice
+        );
+        assert_eq!(
+            broker.reconnect("real:sdr").unwrap_err(),
+            BrokerError::UnknownDevice
+        );
         assert_eq!(broker.active_device(), None);
         assert_eq!(BrokerError::Unavailable.code(), "unavailable");
     }
@@ -562,11 +591,15 @@ mod tests {
             BrokerError::InvalidLease
         );
         assert_eq!(
-            first.open("real:gpio", SessionConfirmation::Confirmed).unwrap_err(),
+            first
+                .open("real:gpio", SessionConfirmation::Confirmed)
+                .unwrap_err(),
             BrokerError::UnknownDevice
         );
         assert_eq!(
-            first.open("sim:sdr", SessionConfirmation::Confirmed).unwrap_err(),
+            first
+                .open("sim:sdr", SessionConfirmation::Confirmed)
+                .unwrap_err(),
             BrokerError::Busy
         );
         assert!(second.sample(&second_lease).is_ok());

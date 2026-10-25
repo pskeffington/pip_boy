@@ -105,10 +105,9 @@ mod tests {
 
     #[test]
     fn unavailable_collector_propagates_error_instead_of_fabricating_metrics() {
-        let error = collect_with::<Fixture, _>(
-            PermissionSet::offline_read_only(),
-            || Err("collector unavailable".to_owned()),
-        )
+        let error = collect_with::<Fixture, _>(PermissionSet::offline_read_only(), || {
+            Err("collector unavailable".to_owned())
+        })
         .unwrap_err();
         assert_eq!(error, "collector unavailable");
     }

@@ -148,11 +148,7 @@ impl ModuleHost {
             .map(|capability| capability.key())
             .collect();
         if !missing.is_empty() {
-            return Err(format!(
-                "{} denied: {}",
-                descriptor.id,
-                missing.join(", ")
-            ));
+            return Err(format!("{} denied: {}", descriptor.id, missing.join(", ")));
         }
         action().map_err(|error| format!("{} operation failed: {error}", descriptor.id))
     }
@@ -371,10 +367,12 @@ mod tests {
     fn local_denial_does_not_execute_callback() {
         let host = ModuleHost::new(PermissionSet::empty());
         let mut called = false;
-        let error = host.run_local(LocalOperation::LibraryRead, || {
-            called = true;
-            Ok::<(), std::io::Error>(())
-        }).unwrap_err();
+        let error = host
+            .run_local(LocalOperation::LibraryRead, || {
+                called = true;
+                Ok::<(), std::io::Error>(())
+            })
+            .unwrap_err();
         assert!(error.contains("files.read"));
         assert!(!called);
     }
@@ -382,13 +380,23 @@ mod tests {
     #[test]
     fn local_read_only_cannot_write_but_explicit_grant_can() {
         let mut host = ModuleHost::new(PermissionSet::offline_read_only());
-        assert_eq!(host.run_local(LocalOperation::NotesRead, || Ok::<_, String>(7)).unwrap(), 7);
+        assert_eq!(
+            host.run_local(LocalOperation::NotesRead, || Ok::<_, String>(7))
+                .unwrap(),
+            7
+        );
         let denied = host.run_local(LocalOperation::NotesWrite, || Ok::<_, String>(8));
         assert!(denied.unwrap_err().contains("files.write"));
         host.grant(Capability::FilesWrite);
-        assert_eq!(host.run_local(LocalOperation::NotesWrite, || Ok::<_, String>(9)).unwrap(), 9);
+        assert_eq!(
+            host.run_local(LocalOperation::NotesWrite, || Ok::<_, String>(9))
+                .unwrap(),
+            9
+        );
         host.revoke(Capability::FilesWrite);
-        assert!(host.run_local(LocalOperation::NotesWrite, || Ok::<_, String>(10)).is_err());
+        assert!(host
+            .run_local(LocalOperation::NotesWrite, || Ok::<_, String>(10))
+            .is_err());
     }
 
     #[test]

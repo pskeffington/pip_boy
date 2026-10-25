@@ -185,75 +185,63 @@ fn run() -> Result<(), Box<dyn Error>> {
                     println!("INFO: this is a saved preference, not an active permission");
                     Ok(())
                 }
-                _ => Err(
-                    "usage: pipboy permissions <list|request KEY|deny KEY|clear KEY>".into(),
-                ),
+                _ => Err("usage: pipboy permissions <list|request KEY|deny KEY|clear KEY>".into()),
             }
         }
-        Some("simulate") => {
-            match args.next().as_deref() {
-                Some("list") if args.next().is_none() => {
-                    for device in SimulatedBroker::fixtures() {
-                        println!(
-                            "{:<20} {:<18} {} (SIMULATED)",
-                            device.id,
-                            device.capability.key(),
-                            device.description
-                        );
-                    }
-                    println!("INFO: fixed in-memory fixtures; no OS device discovery");
-                    Ok(())
+        Some("simulate") => match args.next().as_deref() {
+            Some("list") if args.next().is_none() => {
+                for device in SimulatedBroker::fixtures() {
+                    println!(
+                        "{:<20} {:<18} {} (SIMULATED)",
+                        device.id,
+                        device.capability.key(),
+                        device.description
+                    );
                 }
-                Some("run") => {
-                    let device_id = args
-                        .next()
-                        .ok_or("usage: pipboy simulate run ID [--confirm]")?;
-                    let confirmation = match args.next().as_deref() {
-                        Some("--confirm") if args.next().is_none() => {
-                            SessionConfirmation::Confirmed
-                        }
-                        None => SessionConfirmation::Absent,
-                        _ => return Err("usage: pipboy simulate run ID [--confirm]".into()),
-                    };
-                    let preferences = PreferenceStore::from_environment()?.list()?;
-                    let mut broker = SimulatedBroker::new(&preferences)?;
-                    let lease = broker.open(&device_id, confirmation)?;
-                    let event = broker.sample(&lease)?;
-                    broker.close(&lease)?;
-                    println!("{}", serde_json::to_string_pretty(&event)?);
-                    Ok(())
-                }
-                Some("replay") => {
-                    let id = args
-                        .next()
-                        .ok_or("usage: pipboy simulate replay ID SCENARIO [--confirm]")?;
-                    let scenario_key = args
-                        .next()
-                        .ok_or("usage: pipboy simulate replay ID SCENARIO [--confirm]")?;
-                    let scenario = ReplayScenario::from_key(&scenario_key)
-                        .ok_or("unknown replay scenario (nominal|disconnect-recover|revoke)")?;
-                    let confirmation = match args.next().as_deref() {
-                        Some("--confirm") if args.next().is_none() => {
-                            SessionConfirmation::Confirmed
-                        }
-                        None => SessionConfirmation::Absent,
-                        _ => {
-                            return Err(
-                                "usage: pipboy simulate replay ID SCENARIO [--confirm]".into()
-                            )
-                        }
-                    };
-                    let preferences = PreferenceStore::from_environment()?.list()?;
-                    let trace = replay_fixture(&id, scenario, &preferences, confirmation)?;
-                    println!("{}", serde_json::to_string_pretty(&trace)?);
-                    Ok(())
-                }
-                _ => Err(
-                    "usage: pipboy simulate <list|run ID [--confirm]|replay ID SCENARIO [--confirm]>"
-                        .into(),
-                ),
+                println!("INFO: fixed in-memory fixtures; no OS device discovery");
+                Ok(())
             }
-        }
+            Some("run") => {
+                let device_id = args
+                    .next()
+                    .ok_or("usage: pipboy simulate run ID [--confirm]")?;
+                let confirmation = match args.next().as_deref() {
+                    Some("--confirm") if args.next().is_none() => SessionConfirmation::Confirmed,
+                    None => SessionConfirmation::Absent,
+                    _ => return Err("usage: pipboy simulate run ID [--confirm]".into()),
+                };
+                let preferences = PreferenceStore::from_environment()?.list()?;
+                let mut broker = SimulatedBroker::new(&preferences)?;
+                let lease = broker.open(&device_id, confirmation)?;
+                let event = broker.sample(&lease)?;
+                broker.close(&lease)?;
+                println!("{}", serde_json::to_string_pretty(&event)?);
+                Ok(())
+            }
+            Some("replay") => {
+                let id = args
+                    .next()
+                    .ok_or("usage: pipboy simulate replay ID SCENARIO [--confirm]")?;
+                let scenario_key = args
+                    .next()
+                    .ok_or("usage: pipboy simulate replay ID SCENARIO [--confirm]")?;
+                let scenario = ReplayScenario::from_key(&scenario_key)
+                    .ok_or("unknown replay scenario (nominal|disconnect-recover|revoke)")?;
+                let confirmation = match args.next().as_deref() {
+                    Some("--confirm") if args.next().is_none() => SessionConfirmation::Confirmed,
+                    None => SessionConfirmation::Absent,
+                    _ => return Err("usage: pipboy simulate replay ID SCENARIO [--confirm]".into()),
+                };
+                let preferences = PreferenceStore::from_environment()?.list()?;
+                let trace = replay_fixture(&id, scenario, &preferences, confirmation)?;
+                println!("{}", serde_json::to_string_pretty(&trace)?);
+                Ok(())
+            }
+            _ => Err(
+                "usage: pipboy simulate <list|run ID [--confirm]|replay ID SCENARIO [--confirm]>"
+                    .into(),
+            ),
+        },
         Some("doctor") => {
             let entries = sources()?;
             validate_sources(&entries)?;

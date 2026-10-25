@@ -297,9 +297,8 @@ mod tests {
         let store = PreferenceStore::new(home.clone());
         assert!(store.list().unwrap().is_empty());
         assert!(!home.exists());
-        let host = crate::runtime::ModuleHost::new(
-            crate::capability::PermissionSet::offline_read_only(),
-        );
+        let host =
+            crate::runtime::ModuleHost::new(crate::capability::PermissionSet::offline_read_only());
         for capability in ADAPTER_CAPABILITIES {
             assert!(!host.permissions().allows(*capability));
         }
@@ -318,9 +317,8 @@ mod tests {
             .unwrap());
         assert_eq!(fs::read(store.path()).unwrap(), initial);
         assert_eq!(store.list().unwrap()[0].preference, Preference::Requested);
-        let host = crate::runtime::ModuleHost::new(
-            crate::capability::PermissionSet::offline_read_only(),
-        );
+        let host =
+            crate::runtime::ModuleHost::new(crate::capability::PermissionSet::offline_read_only());
         assert!(!host.permissions().allows(Capability::SdrReceive));
         assert!(store
             .set(Capability::SdrReceive, Preference::Denied)
@@ -337,7 +335,9 @@ mod tests {
         let store = PreferenceStore::new(temporary.path().to_owned());
         assert!(adapter_capability("host.read").is_err());
         assert!(adapter_capability("unexpected.adapter").is_err());
-        assert!(store.set(Capability::FilesWrite, Preference::Requested).is_err());
+        assert!(store
+            .set(Capability::FilesWrite, Preference::Requested)
+            .is_err());
         assert!(!store.path().exists());
         let invalid = [
             "{broken",
@@ -349,7 +349,9 @@ mod tests {
         for item in invalid {
             fs::write(store.path(), item).unwrap();
             assert_eq!(store.list().unwrap_err().kind(), io::ErrorKind::InvalidData);
-            assert!(store.set(Capability::SdrReceive, Preference::Denied).is_err());
+            assert!(store
+                .set(Capability::SdrReceive, Preference::Denied)
+                .is_err());
             assert_eq!(fs::read_to_string(store.path()).unwrap(), item);
         }
     }
@@ -381,8 +383,11 @@ mod tests {
     fn oversized_and_invalid_documents_are_rejected() {
         let temporary = tempfile::tempdir().unwrap();
         let store = PreferenceStore::new(temporary.path().to_owned());
-        fs::write(store.path(), vec![b' '; (MAX_PREFERENCES_BYTES + 1) as usize])
-            .unwrap();
+        fs::write(
+            store.path(),
+            vec![b' '; (MAX_PREFERENCES_BYTES + 1) as usize],
+        )
+        .unwrap();
         assert_eq!(store.list().unwrap_err().kind(), io::ErrorKind::InvalidData);
         let before = fs::read(store.path()).unwrap();
         assert!(store.clear(Capability::GnssRead).is_err());
