@@ -2,7 +2,7 @@ use crossterm::event::{self, Event, KeyCode, KeyEventKind};
 use crossterm::execute;
 use crossterm::terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen};
 use pipboy_core::catalog::sources;
-use pipboy_core::metrics::{Collector, Snapshot};
+use pipboy_core::metrics::Collector;
 use pipboy_core::notes::NoteStore;
 use pipboy_core::registry::{Readiness, MODULES};
 use ratatui::prelude::*;
