@@ -1,0 +1,16 @@
+.rb-rec-title{font:700 12px ui-monospace,monospace;letter-spacing:.08em;margin:0 0 6px}
+.rb-rec-status,.rb-rec-meta,.rb-rec-empty{font:11px ui-monospace,monospace;opacity:.83;margin:5px 0}
+.rb-rec-actions{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:7px 0}
+.rb-rec-button,.rb-rec-actions select{min-height:38px;border:1px solid #59875b;background:#102418;color:#d5f5bd;padding:6px 9px;font:11px ui-monospace,monospace}
+.rb-rec-primary{background:#b0f583;color:#102418;font-weight:700}
+.rb-rec-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;border:1px solid #426844;padding:8px;margin:8px 0}
+.rb-rec-form[hidden]{display:none}
+.rb-rec-field{min-width:0;display:flex;flex-direction:column;gap:4px;font:10px ui-monospace,monospace}
+.rb-rec-field input,.rb-rec-field select{max-width:100%;min-width:0;min-height:35px;border:1px solid #527b50;background:#071809;color:#d5f5bd;padding:6px;font:12px ui-monospace,monospace}
+.rb-rec-form .rb-rec-actions{grid-column:1/-1}
+.rb-rec-site{padding:9px;border:1px solid #426844;margin:7px 0;background:#0a1c10;overflow-wrap:anywhere}
+.rb-rec-row{display:flex;gap:7px;justify-content:space-between;align-items:center;font-size:12px}
+.rb-rec-priority{font-size:10px;color:#e8cc83}
+.rb-rec-note{margin:6px 0;font:11px ui-monospace,monospace;white-space:pre-wrap}
+.rb-rec-list{max-width:100%}
+@media(max-width:520px){.rb-rec-form{grid-template-columns:1fr 1fr}.rb-rec-row{font-size:11px}}
