@@ -53,6 +53,9 @@ jobs:
       - name: Formatting
         if: matrix.toolchain == 'stable'
         run: cargo fmt --all -- --check
+      - name: Dashboard JavaScript syntax
+        if: matrix.toolchain == 'stable'
+        run: node --check crates/pipboy/assets/dashboard.js
       - name: Compile all targets
         run: cargo check --workspace --all-targets --locked
       - name: Unit tests
@@ -76,6 +79,7 @@ jobs:
           python3 tools/smoke_game.py
           python3 tools/smoke_workbench.py
           python3 tools/smoke_scout.py
+          python3 tools/smoke_dashboard.py
 
   native:
     name: Native ${{ matrix.os }}
@@ -116,6 +120,7 @@ jobs:
           ${{ matrix.python }} tools/smoke_game.py
           ${{ matrix.python }} tools/smoke_workbench.py
           ${{ matrix.python }} tools/smoke_scout.py
+          ${{ matrix.python }} tools/smoke_dashboard.py
       - name: Native macOS terminal PTY journey
         if: matrix.os == 'macos-latest'
         shell: bash
