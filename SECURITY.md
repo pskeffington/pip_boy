@@ -22,6 +22,8 @@ The in-process Rust `ModuleHost` provides **lifecycle and capability policy chec
 
 Virtual lease cancellation and deadlines are only in-memory mock behavior. The broker accepts manually injected logical milliseconds rather than wall-clock time, and backward ticks invalidate the active mock lease. Neither operation is an OS-enforced device watchdog or protection for physical transports.
 
+The bounded `VirtualTransport` queue only holds synthetic `sim:*` events; explicit CLI `--confirm` is for a single simulation and is never persisted as a device grant. The current in-process queue checks broker session state before reads and clears data after mock cancellation or revocation, but this **does not** protect against untrusted native code, enforce OS permissions, or implement encrypted/authenticated communications. A physical transport needs a separate broker, secure peer identity and real-world timeout/revocation semantics.
+
 ## Future devices
 
 Location, serial ports, GPIO, SDR/radio, BLE, Wi-Fi, and mesh transports require separate adapters, permission gates, simulator tests, and user-facing indicators. Do not silently initiate scans, pair devices, transmit, or modify settings. No interference, jamming, credential interception, or covert collection features.

@@ -2,6 +2,12 @@
 
 Updated October 25, 2026 (America/New_York). This record includes GitHub-hosted Ubuntu Linux CI evidence; older sections retain historical development-state notes. macOS/Windows and real-device acceptance remain open.
 
+## New cross-platform and virtual transport pass — execution pending
+
+The development branch now contains `virtual_transport.rs` with a **1–64 element FIFO**, `pump(1..=128)`, oldest-event drop accounting, pre-read active lease checks and cancellation/revocation/disconnect/timeout/policy-change queue invalidation. New CLI `pipboy simulate transport ID --count N --capacity N [--confirm]` emits a synthetic-only JSON envelope and leaves no files behind. Eight new core fixtures and `tools/smoke_transport.py` cover bounds, order, drop counts, explicit confirmation, denied/corrupt policy, and no stale-event reads. No network/socket/device driver is included.
+
+The existing first-party-only CI now also defines `native` matrix jobs for GitHub-hosted `macos-latest` and `windows-latest`, using runner-native `rustup` for stable `cargo check --workspace --all-targets --locked`, `cargo test --workspace --locked`, and `cargo build -p pipboy --locked`; offline preference, simulator, replay and transport smoke scripts run on those OSs. The Linux stable/MSRV and catalog jobs remain intact. The prior full green Ubuntu result at `8047a24` is *not* proof that the new transport or platform jobs pass. See [virtual transport](VIRTUAL_TRANSPORT.md). Real TUI/PTY, native recovery, screen-reader/contrast tests and actual hardware are not covered by the new matrix.
+
 ## Verified Ubuntu baseline and follow-on tests
 
 [Actions run 40160220866](https://github.com/pskeffington/pip_boy/actions/runs/40160220866) passed the complete Linux quality matrix at `e36fd59`: catalog validation, formatting, stable Clippy and compile, 13 CLI + 79 core unit tests on stable and Rust 1.81.0 (**92 each**), and five CLI/TUI smoke suites. GitHub Actions were enabled throughout; the earlier zero-job failure reproduced when an external Rust setup action was used, and resolved when setup/cache used runner-native `rustup`. The account-level action policy was not directly inspected.

@@ -30,7 +30,7 @@ The build is a directed acyclic dependency plan, **not** a schedule. All module 
 - [x] Add workflow triggers and stable/1.81.0 compatibility matrix, executed successfully on feature branch at `f445814` (97 tests each).
 - [x] GitHub Actions admitted jobs and [passed the full Ubuntu Rust quality matrix](https://github.com/pskeffington/pip_boy/actions/runs/40160220866) after replacing unsupported third-party setup/cache actions with runner-native `rustup`.
 - [x] Validate dependency lockfile and pinned toolchain compatibility. **Local Linux: passed; lockfile committed.**
-- [ ] Smoke test launch, navigation, exit, and data persistence on Linux, macOS and Windows.
+- [ ] Validate native macOS/Windows build, test, and offline fixture smoke jobs, then extend to TUI launch/exit and persistence acceptance. A new CI matrix exists; green results must be captured at the exact commit.
 - [ ] Verify terminal restoration on panic/error and note persistence during interrupted writes.
 
 **G0 exit:** green checks and reproducible build logs; tested CLI and TUI with no implicit external IO. Do not call CI startup failure a code test failure or a passing check.
@@ -67,6 +67,8 @@ The build is a directed acyclic dependency plan, **not** a schedule. All module 
 - [ ] Add cross-build for arm64 Linux and hardware-in-loop acceptance tests.
 
 **G2 precursor (G1-D source authored, unverified):** an in-memory `SimulatedBroker` now has 11 fixed virtual fixtures, explicit simulation confirmation, preference denial, generation-based lease revocation and truthful fake-only events. The G1 precursor now also has fixed `nominal`, `disconnect-recover`, and `revoke` logical-time trace scripts (tests authored, unexecuted). Two additional source-defined `cancel` and `timeout` scenarios exercise virtual session invalidation with injected logical clock bounds (**Ubuntu CI verified at `f445814`**). This is not the full G2 hardware simulator, OS broker, driver event replay system or physical adapter.
+
+**New G2 precursor:** `VirtualTransport` now provides a bounded mock-event FIFO, finite queue pumping, drop accounting and fail-closed buffered-read invalidation; it is not a serial, SDR, mesh or network implementation. This module and native macOS/Windows CI jobs are undergoing acceptance (see [virtual transport](VIRTUAL_TRANSPORT.md)).
 
 **G2 exit:** clean simulator replay on CI and verified physical input on selected hardware; no automatic port opening, scanning, or unsafe fallback.
 

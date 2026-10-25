@@ -69,6 +69,7 @@ cargo run -p pipboy -- simulate replay sim:serial disconnect-recover --confirm
 cargo run -p pipboy -- simulate replay sim:sdr revoke --confirm
 cargo run -p pipboy -- simulate replay sim:ble cancel --confirm
 cargo run -p pipboy -- simulate replay sim:network timeout --confirm
+cargo run -p pipboy -- simulate transport sim:sdr --count 5 --capacity 2 --confirm
 cargo run -p pipboy -- notes add "Field observation"
 cargo run -p pipboy -- notes list
 cargo run -p pipboy -- notes search "battery"
@@ -81,6 +82,7 @@ cargo test --workspace
 python3 tools/smoke_permissions.py # run after cargo build -p pipboy
 python3 tools/smoke_simulator.py   # fixed in-memory fixtures only
 python3 tools/smoke_replay.py      # synthetic trace fixtures only
+python3 tools/smoke_transport.py   # bounded fake event FIFO only
 cargo clippy --workspace --all-targets -- -D warnings
 ```
 
@@ -98,6 +100,10 @@ The new `permissions` CLI records `unset`, `requested`, or `denied` intent in a 
 
 Two new fixed mock replay scenarios exercise cancellation and bounded logical-time expiration. They invalidate virtual leases without activating real hardware or using wall-clock timers. [Simulator documentation](docs/SIMULATION.md) describes the test-only contract.
 
+## Virtual transport precursor
+
+The new `simulate transport` CLI generates bounded *fixture-only* events through a 1–64 event in-memory FIFO. It accepts a finite `--count` of 1–128 and records every oldest-event drop. A stored preference cannot authorize a virtual session: `--confirm` is required, and an explicit saved denial takes precedence. A cancelled, disconnected, expired or revoked virtual session cannot drain old buffered data. There is no real serial, BLE, SDR, mesh or network transport. See [virtual transport contract](docs/VIRTUAL_TRANSPORT.md). The new code is undergoing CI validation on Linux, macOS and Windows.
+
 ## Repository navigation
 
 | Resource | Purpose |
@@ -112,6 +118,7 @@ Two new fixed mock replay scenarios exercise cancellation and bounded logical-ti
 | [docs/STORAGE.md](docs/STORAGE.md) | Notes schema, limits, write locks and recovery rules |
 | [docs/PERMISSIONS.md](docs/PERMISSIONS.md) | External adapter preferences, storage and consent boundary |
 | [docs/SIMULATION.md](docs/SIMULATION.md) | Fixed virtual device fixtures, session revocation and mock-only outputs |
+| [docs/VIRTUAL_TRANSPORT.md](docs/VIRTUAL_TRANSPORT.md) | Bounded fake FIFO, drop accounting, per-lease read checks and cross-platform CI |
 | [docs/CI_TRIAGE.md](docs/CI_TRIAGE.md) | GitHub Actions startup investigation and local verification |
 | [docs/LITERATURE_MATRIX.md](docs/LITERATURE_MATRIX.md) | Evidence matrix connecting standards and studies to modules |
 | [docs/MODULE_CATALOG.md](docs/MODULE_CATALOG.md) | Planned modules, features, dependency gates and acceptance criteria |

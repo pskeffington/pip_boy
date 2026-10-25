@@ -16,7 +16,8 @@
 | Finite NDJSON export | sampling.rs | Locally tested, including writer failures | Signal cancellation and other OS clock checks |
 | Local notes | notes.rs | Locked staged writes, validated limits, search and explicit export/import; locally tested | Native Windows/macOS runtime and general schema migrations |
 | Adapter preferences | permissions.rs; CLI permissions | Versioned requested/denied preferences, bounded locked persistence and fail-closed parsing authored (tests pending) | Actual consent flow, OS broker, native platforms and tamper resistance |
-| Virtual broker prototype | device_simulator.rs, simulator_replay.rs; CLI simulate | 11 virtual fixtures, five deterministic replay scenarios, cancel and bounded injected timeouts passed Ubuntu stable/1.81.0 CI | Real OS broker, trusted UX, physical adapters and wall-clock watchdogs |
+| Virtual broker prototype | device_simulator.rs, simulator_replay.rs; CLI simulate | 11 virtual fixtures and five replay scenarios passed Ubuntu stable/1.81.0 CI | Real OS broker, trusted UX, hardware and wall-clock watchdogs |
+| Virtual transport prototype | virtual_transport.rs; CLI simulate transport | Bounded fixture-only FIFO, drop accounting, revoked-read prevention and 8 new unit fixtures authored | Stable/MSRV and native macOS/Windows validation of current commit, then transport isolation design |
 | Console navigation | console.rs / tui.rs | Compact layout, scrolling, explicit note reload and Linux resize smoke checks | Native platforms, assistive-tech and contrast acceptance |
 | Research consistency | tools/validate_catalog.py | Passing locally | Keep catalog and Rust registry aligned |
 | Quality checks | rust.yml | Ubuntu push/PR CI green at `f445814`: Python catalog, stable/1.81.0 (97 tests each), fmt, Clippy, five smoke suites | Native macOS/Windows, hardware and accessibility acceptance |
@@ -82,7 +83,7 @@ G1 module-plan statuses remain **planned** until integration and acceptance test
 | P0 | Extend tested notes portability to general collection migrations and backup identities | G1-E |
 | P1 | Build testable host telemetry timing and source-quality dashboard | G1-C |
 | P1 | Native platform, assistive-tech and contrast acceptance | G1-E |
-| P2 | Validate new mock cancel/timeout scenarios, then implement isolated simulated transport contracts without hardware enablement | G1-D/G2 |
+| P2 | Validate new bounded mock transport and native macOS/Windows CI; follow with adapter traits and injection/cancellation harness, no physical I/O | G1-D/G2 |
 
 ## Acceptance evidence format
 
