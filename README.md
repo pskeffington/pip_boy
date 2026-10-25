@@ -203,6 +203,10 @@ python3 tools/smoke_broker.py
 
 The quality workflow runs catalog checks, stable Rust, the Rust 1.90 minimum-supported version, native macOS terminal tests and native Windows ConPTY tests. For the exact evidence and remaining platform limits, see [validation records](docs/VALIDATION.md) and [GitHub Actions](https://github.com/pskeffington/pip_boy/actions/workflows/rust.yml). A green CI result is not certification for hardware control or safety-critical use.
 
+## GPS / GeoJSON map preview
+
+The handheld MAP tab and desktop Scout viewport support an opt-in browser position fix, local WGS84 GeoJSON layer rendering, accuracy circle, follow, pan and zoom. This is an independent coordinate viewer, **not** native RustGIS or a street/terrain basemap. See [GPS map setup, privacy and acceptance](docs/SCOUT_GPS_MAP.md).
+
 ## Documentation
 
 **Start with:** [documentation index](docs/README.md) · [architecture](docs/ARCHITECTURE.md) · [roadmap](docs/ROADMAP.md) · [validation](docs/VALIDATION.md).
