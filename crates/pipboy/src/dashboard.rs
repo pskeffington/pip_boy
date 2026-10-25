@@ -319,6 +319,18 @@ fn experiment(body: &Value, store: &WorkbenchStore) -> Result<Response, Response
             if input.len() > 256 || extra.is_some_and(|x| x.len() > 1024) {
                 return Err(Response::error(422, "Network bench input exceeds limit"));
             }
+            if mode == "icmp" {
+                if body.get("confirm").and_then(Value::as_bool) != Some(true) {
+                    return Err(Response::error(422, "ICMP ping requires confirmation"));
+                }
+                let count = network_health::count(extra.unwrap_or("5"))
+                    .map_err(|_| Response::error(422, "ICMP sample count must be 3..8"))?;
+                let metrics = network_probe::icmp_health(input, count, true)
+                    .map_err(|_| Response::error(409, "Native ping unavailable, incomplete or invalid"))?;
+                return Ok(Response::json(200, &json!({
+                    "kind":"icmp", "output":metrics.console(), "metrics":metrics
+                })));
+            }
             if mode == "health" {
                 if body.get("confirm").and_then(Value::as_bool) != Some(true) {
                     return Err(Response::error(422, "Network Health requires confirmation"));

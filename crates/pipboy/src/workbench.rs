@@ -7,7 +7,7 @@ use pipboy_core::workbench::{crc32_hex, encode_hex, inspect_hex, tool, Workbench
 use std::error::Error;
 
 pub fn run(args: Vec<String>) -> Result<(), Box<dyn Error>> {
-    let usage = "usage: pipboy workbench <list [--json]|profiles [--json]|use PROFILE --replace|palette [--json]|add TOOL|remove ID|rename TITLE|clear --confirm|bytes <encode TEXT|inspect HEX|crc32 HEX>|net <list|health IP PORT SAMPLES --confirm|unifi [SITE_UUID] --confirm|cidr|cidr6|split4|route|aggregate4|overlap4|mac|vlan|mtu|tcp>>";
+    let usage = "usage: pipboy workbench <list [--json]|profiles [--json]|use PROFILE --replace|palette [--json]|add TOOL|remove ID|rename TITLE|clear --confirm|bytes <encode TEXT|inspect HEX|crc32 HEX>|net <list|icmp IP SAMPLES --confirm|health IP PORT SAMPLES --confirm|unifi [SITE_UUID] --confirm|cidr|cidr6|split4|route|aggregate4|overlap4|mac|vlan|mtu|tcp>>";
     let mut args = args.into_iter();
     let command = args.next().ok_or(usage)?;
     match command.as_str() {
@@ -192,6 +192,17 @@ pub fn run(args: Vec<String>) -> Result<(), Box<dyn Error>> {
                     }
                     Ok(())
                 }
+                [mode, address, samples, confirmation]
+                    if mode == "icmp" && confirmation == "--confirm" =>
+                {
+                    let count = network_health::count(samples)?;
+                    let result = network_probe::icmp_health(address, count, true)?;
+                    println!("{}", result.console());
+                    Ok(())
+                }
+                [mode, ..] if mode == "icmp" => Err(
+                    "usage: pipboy workbench net icmp IP SAMPLES(3..8) --confirm".into()
+                ),
                 [mode, address, port, samples, confirmation]
                     if mode == "health" && confirmation == "--confirm" =>
                 {

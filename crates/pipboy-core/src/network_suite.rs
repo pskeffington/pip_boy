@@ -25,6 +25,15 @@ pub struct Operation {
 
 pub const OPERATIONS: &[Operation] = &[
     Operation {
+        id: "icmp",
+        name: "PING / JITTER",
+        input_label: "GATEWAY / TARGET IP",
+        example: "192.168.1.1",
+        extra_label: Some("SAMPLES (3-8)"),
+        extra_example: Some("5"),
+        active: true,
+    },
+    Operation {
         id: "health",
         name: "NETWORK HEALTH",
         input_label: "TARGET IP",
@@ -670,6 +679,6 @@ mod tests {
         }
         assert!(run_offline("route", "10.0.0.1", Some(&"10.0.0.0/8,".repeat(17))).is_err());
         assert!(run_offline("cidr4", "10.0.0.1/24\nNEXT", None).is_err());
-        assert_eq!(OPERATIONS.iter().filter(|op| op.active).count(), 3);
+        assert_eq!(OPERATIONS.iter().filter(|op| op.active).count(), 4);
     }
 }
