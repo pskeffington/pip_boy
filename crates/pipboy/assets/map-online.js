@@ -48,7 +48,8 @@
       reject("INVALID WEB QUERY AREA");
     }
     const [w, s, e, n] = bounds;
-    return "[out:json][timeout:15][bbox:" + s + "," + w + "," + n + "," + e + "];(" +
+    return "/* Rust-Boy field viewer github.com/pskeffington/pip_boy / RustGIS OSM presets */" +
+      "[out:json][timeout:15][bbox:" + s + "," + w + "," + n + "," + e + "];(" +
       'way["highway"];way["waterway"];way["natural"="water"];' +
       'way["building"];way["leisure"="park"];node["amenity"];node["tourism"];' +
       ");out geom " + MAX_ELEMENTS + ";";
