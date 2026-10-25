@@ -134,6 +134,10 @@
       state.status = "";
       try {
         await request();
+        // A task mutation invalidates any previously prepared outbound text.
+        // Never let a reassign/status update leave an old handoff copyable.
+        state.handoff = null;
+        state.editor = null;
         state.status = success;
         await refresh();
       } catch (error) {
