@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased — clear micro navigation
+
+- Use plain HOME / TOOLS / SETUP labels, a header Back control, quieter phosphor styling and larger readable tool labels.
+- Remove duplicated home-role headings and empty lab output; separate local results from preserved input forms with EDIT INPUTS.
+
 ## Unreleased — unified Network Engineer and mainline polish (2026-10-25)
 
 - Merge LAN discovery, read-only UniFi client inventory/reconciliation and DIAG ingestion to `main` through PR #15 after all five quality jobs passed at `badabc5`.
