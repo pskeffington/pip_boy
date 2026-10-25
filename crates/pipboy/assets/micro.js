@@ -47,7 +47,7 @@ const roleStations = Object.freeze({
   "head-engineer": {
     heading: "ENGINEER",
     purpose: "SYSTEM / NET",
-    quick: "NET LAB", tool: "net-lab"
+    quick: "SCAN LAN", tool: "net-lab"
   },
   "security-chief": {
     heading: "SECURITY",
@@ -470,12 +470,46 @@ function inputForm(root, id) {
     }
     form.append(fields);
   } else if (id === "net-lab") {
-    form.append(field("input", "IPV4 / CIDR", "192.168.1.50/24"));
+    const modeLabel = make("label", "field", "OPERATION");
+    const mode = make("select");
+    mode.name = "mode";
+    for (const [value, name] of [["scan", "SCAN PRIVATE LAN"], ["cidr", "CIDR CALCULATOR"]]) {
+      const option = make("option", "", name);
+      option.value = value;
+      mode.append(option);
+    }
+    modeLabel.append(mode);
+    form.append(modeLabel);
+    const scope = field("input", "PRIVATE CIDR / LOCAL", "local");
+    form.append(scope);
+    const consent = make("label", "micro-consent");
+    const check = make("input");
+    check.type = "checkbox";
+    check.name = "authorized";
+    check.value = "yes";
+    consent.append(check, make("span", "", "AUTHORIZED NETWORK / OPT-IN"));
+    form.append(consent);
+    const monitor = make("label", "micro-consent");
+    const watch = make("input");
+    watch.type = "checkbox";
+    watch.name = "monitor";
+    watch.value = "yes";
+    monitor.append(watch, make("span", "", "REFRESH EVERY 60 SEC"));
+    form.append(monitor);
+    mode.addEventListener("change", () => {
+      const scanning = mode.value === "scan";
+      consent.hidden = !scanning;
+      monitor.hidden = !scanning;
+      const input = scope.querySelector("input");
+      if (scanning && input.value === "192.168.1.50/24") input.value = "local";
+      if (!scanning && input.value === "local") input.value = "192.168.1.50/24";
+      run.textContent = scanning ? "SCAN PRIVATE LAN" : "CALCULATE CIDR";
+    });
   } else if (id === "byte-lab") {
     form.append(field("input", "HEXADECIMAL BYTES", "48656c6c6f", { maxLength: 3000, hex: true }));
   }
   const row = make("div", "form-actions");
-  const run = make("button", "micro-button solid", id === "diag" ? "CHECK LOCAL HOST" : id === "host" ? "SAMPLE LOCAL STATUS" :
+  const run = make("button", "micro-button solid", id === "net-lab" ? "SCAN PRIVATE LAN" : id === "diag" ? "CHECK LOCAL HOST" : id === "host" ? "SAMPLE LOCAL STATUS" :
     ["game", "notes", "simulator", "library"].includes(id) ? "VIEW SAFE HANDOFF" : "RUN LOCAL TOOL");
   run.type = "submit";
   row.append(run);
@@ -492,10 +526,27 @@ function inputForm(root, id) {
     const payload = { tool: id };
     if (id === "geo-lab") payload.mode = geoMode;
     for (const [key, val] of new FormData(form).entries()) payload[key] = val;
+    const scanning = id === "net-lab" && payload.mode === "scan";
     try {
-      const result = await api("/api/experiment", payload);
+      if (scanning && payload.authorized !== "yes") {
+        throw new Error("Confirm authorization before probing this private LAN");
+      }
+      const result = scanning
+        ? await api("/api/net/scan", { cidr: payload.input, confirm: true })
+        : await api("/api/experiment", id === "net-lab"
+          ? { tool: id, input: payload.input } : payload);
       if (openedTool === id) output.textContent = result.output;
-      ui.foot.textContent = result.kind === "computed" ? "RESULT / LOCAL ONLY" : "INFORMATION / NO CONNECTION";
+      ui.foot.textContent = scanning ? "LAN / DETECTED, NOT TOTAL" :
+        result.kind === "computed" ? "RESULT / LOCAL ONLY" : "INFORMATION / NO CONNECTION";
+      if (scanning && payload.monitor === "yes") {
+        window.setTimeout(() => {
+          if (openedTool === id && form.isConnected && !busy &&
+              form.querySelector('input[name="monitor"]')?.checked &&
+              form.querySelector('select[name="mode"]')?.value === "scan") {
+            form.requestSubmit();
+          }
+        }, 60000);
+      }
     } catch (error) {
       if (openedTool === id) output.textContent = "ERROR / " + error.message;
       notify(error.message, true);
