@@ -37,6 +37,12 @@ def main():
             ("net", "watch", "192.168.1.0/24", "--confirm", "--count", "0"),
             ("net", "watch", "192.168.1.0/24", "--confirm", "--interval-sec", "1"),
             ("net", "scan", "local", "--confirm", "--bogus"),
+            ("net", "unifi", "sites"),
+            ("net", "unifi", "clients", "00000000-0000-0000-0000-000000000001"),
+            ("net", "unifi", "clients", "default", "--confirm"),
+            ("net", "unifi", "compare", "00000000-0000-0000-0000-000000000001",
+             "8.8.8.8/32", "--confirm"),
+            ("net", "unifi", "sites", "--bogus"),
         ]:
             invoke(env, *command, success=False)
         assert not home.exists(), "rejected scans wrote to disk"
