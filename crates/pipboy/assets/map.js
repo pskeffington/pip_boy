@@ -15,6 +15,7 @@
   const MAX_VERTICES = 30000;
   const EARTH_RADIUS_M = 6378137;
   let active = null;
+  let mapMemory = null; // volatile, imported geography only; never store GPS fixes
 
   function clamp(value, lower, upper) {
     return Math.min(upper, Math.max(lower, value));
@@ -416,6 +417,11 @@
     if (view.watchId !== null && navigator.geolocation) navigator.geolocation.clearWatch(view.watchId);
     if (view.observer) view.observer.disconnect();
     if (view.windowResize) window.removeEventListener("resize", view.windowResize);
+    mapMemory = view.shapes.length ? {
+      center: { lat: view.center.lat, lon: view.center.lon }, zoom: view.zoom,
+      shapes: view.shapes, layers: view.layers, warnings: view.warnings,
+      layerName: view.layerName, mapName: view.mapName, mapFormat: view.mapFormat
+    } : null;
     active = null;
     if (view.host.isConnected) view.host.replaceChildren();
   }
@@ -442,7 +448,18 @@
     sourceBox.hidden = true;
     const sourceSummary = make("summary", "", "DATA SOURCES");
     const sourceLines = make("pre", "rb-map-source-text");
-    sourceBox.append(sourceSummary, sourceLines);
+    const clearMap = control("CLEAR MAP", () => {
+      mapMemory = null;
+      view.shapes = [];
+      view.layers = [];
+      view.warnings = [];
+      view.layerName = "";
+      view.mapName = "";
+      view.mapFormat = "";
+      view.gpsState = "MAP DATA CLEARED";
+      refresh(view);
+    }, "Discard imported geography from this browser session");
+    sourceBox.append(sourceSummary, sourceLines, clearMap);
     const manual = make("form", "rb-map-manual");
     manual.hidden = true;
     const latitude = make("input", "", "");
@@ -468,10 +485,16 @@
       host, root, stage, canvas, status, file, sourceBox, sourceSummary, sourceLines,
       manual, latitude, longitude,
       width: 0, height: 0, dpr: 1,
-      center: { lat: 0, lon: 0 }, zoom: 2,
-      shapes: [], layers: [], warnings: [], layerName: "", mapName: "", mapFormat: "",
+      center: mapMemory ? { ...mapMemory.center } : { lat: 0, lon: 0 },
+      zoom: mapMemory ? mapMemory.zoom : 2,
+      shapes: mapMemory ? mapMemory.shapes : [],
+      layers: mapMemory ? mapMemory.layers : [],
+      warnings: mapMemory ? mapMemory.warnings : [],
+      layerName: mapMemory ? mapMemory.layerName : "",
+      mapName: mapMemory ? mapMemory.mapName : "",
+      mapFormat: mapMemory ? mapMemory.mapFormat : "",
       fix: null, watchId: null, gpsState: "GPS OFF",
-      follow: true, observer: null, windowResize: null, drag: null,
+      follow: !mapMemory, observer: null, windowResize: null, drag: null,
       locate: null, followButton: null
     };
     active = view;
