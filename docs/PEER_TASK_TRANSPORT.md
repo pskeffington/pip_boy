@@ -1,6 +1,6 @@
 # Rust-Boy | Device-to-device task assignments over OpenSSH
 
-**Status:** an explicit, operator-initiated Rust-Boy-to-Rust-Boy task transport for macOS/Linux/Raspberry Pi (and OpenSSH-capable Windows builds). The native task storage, sender/receiver envelope, idempotent import, receipt validation and progress reconciliation are implemented. **No auto-discovery, background connection, relay, BLE/mesh or new listening service is enabled.** Physical Mac-to-Pi SSH integration and hardware UX still require field acceptance.
+**Status:** an explicit, operator-initiated Rust-Boy-to-Rust-Boy task transport for macOS and Linux/Raspberry Pi. Windows compilation is covered by CI, but Windows SSH path handling and physical peer delivery are not yet validated. The native task storage, sender/receiver envelope, idempotent import, receipt validation and progress reconciliation are implemented. **No auto-discovery, background connection, relay, BLE/mesh or new listening service is enabled.** Physical Mac-to-Pi SSH integration and hardware UX still require field acceptance.
 
 ## How it works
 
