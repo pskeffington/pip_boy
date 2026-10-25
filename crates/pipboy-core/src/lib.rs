@@ -16,6 +16,7 @@ pub mod metrics;
 pub mod mock_adapters;
 pub mod notes;
 pub mod observation;
+pub mod peers;
 pub mod permissions;
 pub mod registry;
 pub mod runtime;
