@@ -373,3 +373,24 @@ small { font-size:11px; }
   .net-suite-tile { min-height:38px; padding:4px; }
   .net-suite-tile .tile-copy small { margin-top:0; }
 }
+
+
+/* Network Health status stays visible on a four-inch result page. */
+.net-health-metrics {
+  display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:4px;
+}
+.net-health-metric {
+  border:1px solid var(--rb-line-soft,#3a6740); border-radius:4px;
+  padding:4px 5px; min-width:0;
+}
+.net-health-metric small {
+  display:block; font-size:9px; opacity:.8; letter-spacing:.04em;
+}
+.net-health-metric strong {
+  display:block; font-size:12px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.net-status { font:10px/1.4 var(--rb-mono,monospace); padding:7px; }
+.net-site-picker {
+  display:block; width:100%; min-height:34px; background:#0d190e;
+  border:1px solid #55734e; color:inherit; margin-top:4px;
+}

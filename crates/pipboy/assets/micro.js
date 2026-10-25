@@ -46,8 +46,8 @@ const roleStations = Object.freeze({
   },
   "head-engineer": {
     heading: "ENGINEER",
-    purpose: "SYSTEM / NET",
-    quick: "NET SUITE", tool: "net-lab"
+    purpose: "NETWORK / HEALTH",
+    quick: "HEALTH", tool: "net-lab", mode: "health"
   },
   "security-chief": {
     heading: "SECURITY",
@@ -92,6 +92,8 @@ let tab = "stat";
 let openedTool = null;
 let geoMode = "distance";
 let netMode = null;
+let unifiSites = [];
+let unifiSiteId = null;
 let focusedCamera = null;
 let pendingProfile = null;
 let busy = false;
@@ -236,7 +238,10 @@ function showStat() {
   root.append(sectionTop(station.heading, station.purpose));
   const actions = make("div", "quick-row micro-home-actions");
   if (station.tool && hasTool(station.tool)) {
-    actions.append(button(station.quick, () => openTool(station.tool), "micro-button solid"));
+    actions.append(button(station.quick, () => openTool(station.tool, station.mode || "distance"), "micro-button solid"));
+    if (profileId === "head-engineer") {
+      actions.append(button("UNIFI", () => openTool("net-lab", "unifi"), "micro-button"));
+    }
   } else if (station.page) {
     actions.append(button(station.quick, () => setTab(station.page), "micro-button solid"));
   }
@@ -444,7 +449,7 @@ function openTool(id, mode = "distance") {
     return;
   }
   openedTool = id;
-  netMode = null;
+  netMode = id === "net-lab" && mode !== "distance" ? mode : null;
   activeTaskUI = null;
   geoMode = mode;
   render();
@@ -454,7 +459,9 @@ function openTool(id, mode = "distance") {
 
 function showNetworkMenu(root) {
   const operations = snapshot.net_operations || [];
-  root.append(sectionTop("NETWORK TOOLS", "9 OFFLINE / 1 CONNECT"));
+  const countOffline = operations.filter((op) => !op.active).length;
+  root.append(sectionTop("NET ENGINEER", countOffline + " OFFLINE / " +
+    (operations.length - countOffline) + " LIVE"));
   pagedTiles(root, operations, "net", (op) => {
     const cell = button("", () => {
       netMode = op.id;
@@ -497,11 +504,30 @@ function inputForm(root, id) {
     form.append(fields);
   } else if (id === "net-lab") {
     const op = (snapshot.net_operations || []).find((candidate) => candidate.id === netMode);
-    if (op) {
+    if (op && op.id === "unifi") {
+      form.append(make("div", "net-status", snapshot.unifi?.configured
+        ? "LOCAL UNI FI CONFIGURED / NOT CONNECTED" : "SET RUSTBOY_UNIFI_IP + API_KEY ON MAC"));
+      if (unifiSites.length > 1) {
+        const selectLabel = make("label", "field", "SITE");
+        const picker = make("select", "net-site-picker");
+        picker.name = "site";
+        unifiSites.forEach((site) => {
+          const item = make("option", "", site.name);
+          item.value = site.id;
+          if (site.id === unifiSiteId) item.selected = true;
+          picker.append(item);
+        });
+        selectLabel.append(picker);
+        form.append(selectLabel);
+      }
+    } else if (op) {
       form.append(field("input", op.input_label, op.example, { maxLength: 256 }));
       if (op.extra_label && op.extra_example) {
         form.append(field("extra", op.extra_label, op.extra_example,
           { maxLength: op.id === "route" ? 1024 : 256 }));
+      }
+      if (op.id === "health") {
+        form.append(field("samples", "SAMPLES (3–8)", "5", { numeric: true, maxLength: 1 }));
       }
     }
   } else if (id === "byte-lab") {
@@ -509,7 +535,10 @@ function inputForm(root, id) {
   }
   const row = make("div", "form-actions");
   const run = make("button", "micro-button solid",
-    id === "net-lab" && netMode === "tcp" ? "CONNECT" : id === "host" ? "SAMPLE" :
+    id === "net-lab" && netMode === "tcp" ? "CONNECT" :
+    id === "net-lab" && netMode === "health" ? "TEST" :
+    id === "net-lab" && netMode === "unifi" ? "READ" :
+    id === "host" ? "SAMPLE" :
     ["game", "notes", "simulator", "library"].includes(id) ? "INFO" : "RUN");
   run.type = "submit";
   row.append(run);
@@ -517,6 +546,9 @@ function inputForm(root, id) {
   const entry = make("div", "lab-entry");
   while (form.firstChild) entry.append(form.firstChild);
   form.append(entry);
+  const metrics = make("div", "net-health-metrics");
+  metrics.hidden = true;
+  form.append(metrics);
   const output = make("pre", "mono-output", "");
   output.hidden = true;
   output.setAttribute("aria-live", "polite");
@@ -525,6 +557,7 @@ function inputForm(root, id) {
     output.hidden = true;
     edit.hidden = true;
     entry.hidden = false;
+    metrics.hidden = true;
   }, "micro-button compact");
   edit.hidden = true;
   form.append(edit);
@@ -532,26 +565,65 @@ function inputForm(root, id) {
     event.preventDefault();
     if (busy) return;
     if (id === "net-lab" && netMode === "tcp" &&
-        !window.confirm("Connect once to this IP and TCP port? Only test endpoints you administer.")) {
-      return;
-    }
+        !window.confirm("Connect once to this IP and TCP port? Only test endpoints you administer.")) return;
+    if (id === "net-lab" && netMode === "health" &&
+        !window.confirm("Run 3–8 TCP connection timing probes to this one endpoint? Failed connects are NOT packet loss.")) return;
+    if (id === "net-lab" && netMode === "unifi" &&
+        !window.confirm("Read local UniFi sites and device status? HTTPS GET only; no settings changed.")) return;
     busy = true;
     run.disabled = true;
     entry.hidden = true;
     output.hidden = false;
     edit.hidden = false;
     output.textContent = "RUNNING…";
+    metrics.hidden = true;
+    metrics.replaceChildren();
     const payload = { tool: id };
     if (id === "geo-lab") payload.mode = geoMode;
     if (id === "net-lab") {
       payload.mode = netMode;
-      if (netMode === "tcp") payload.confirm = true;
+      if (["tcp", "health", "unifi"].includes(netMode)) payload.confirm = true;
     }
     for (const [key, val] of new FormData(form).entries()) payload[key] = val;
     try {
       const result = await api("/api/experiment", payload);
-      if (openedTool === id) output.textContent = result.output;
-      ui.foot.textContent = result.kind === "probe" ? "TCP CHECK / CONNECT ATTEMPT"
+      if (openedTool === id) {
+        output.textContent = result.output;
+        if (result.kind === "health" && result.metrics) {
+          metrics.hidden = false;
+          const values = [
+            ["MEAN", result.metrics.mean_ms, "ms"],
+            ["VAR", result.metrics.variation_ms, "ms"],
+            ["FAIL", result.metrics.failure_percent, "%"]
+          ];
+          values.forEach(([label, value, unit]) => {
+            const item = make("div", "net-health-metric");
+            item.append(make("small", "", label),
+              make("strong", "", value === null ? "—" : value.toFixed(2) + unit));
+            metrics.append(item);
+          });
+        } else if (result.kind === "unifi") {
+          unifiSites = Array.isArray(result.sites) ? result.sites : [];
+          unifiSiteId = result.site?.id || null;
+          metrics.hidden = false;
+          const values = [
+            ["DEV", result.devices_listed, ""],
+            ["ON", result.online_on_page, ""],
+            ["OFF", result.offline_on_page, ""]
+          ];
+          values.forEach(([label, value, unit]) => {
+            const item = make("div", "net-health-metric");
+            item.append(make("small", "", label),
+              make("strong", "", String(value ?? 0) + unit));
+            metrics.append(item);
+          });
+          output.textContent += "\n" + (result.devices || []).slice(0, 8)
+            .map((item) => item.name + " / " + item.state).join("\n");
+        }
+      }
+      ui.foot.textContent = result.kind === "health" ? "HEALTH / TCP SAMPLES"
+        : result.kind === "unifi" ? "UNIFI / READ-ONLY"
+        : result.kind === "probe" ? "TCP CHECK / CONNECT ATTEMPT"
         : result.kind === "computed" ? "RESULT / LOCAL ONLY" : "INFO / OFFLINE";
     } catch (error) {
       if (openedTool === id) output.textContent = "ERROR / " + error.message;
