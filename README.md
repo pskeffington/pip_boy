@@ -88,7 +88,7 @@ cd pip_boy
 
 Alternatively run `cargo run --locked -p pipboy -- dashboard --open` on macOS. The launcher opens your browser to **http://127.0.0.1:8765/**. Press **Ctrl+C** in the launching Terminal to stop it. Other operating systems can use `cargo run --locked -p pipboy -- dashboard` and open the displayed local URL.
 
-The working UI uses the authoritative Rust job templates: **Overseer, Head Engineer, Security Chief, Vault Doctor, University Researcher, Reclamation Scout, Records Custodian, then Custom**. Click a role to preview it; explicitly confirm loading the profile. Custom starts empty and offers a tool palette. Interactive local labs calculate **GeoJSON waypoints/distance, IPv4/CIDR and hex inspection**; other modules show accurate permission/availability labels. Security Chief has a four-camera **layout fixture only** and Reclamation Scout an **empty RustGIS viewport**, both plainly marked as unconnected. No real video, game link, GNSS or TAK activity starts from the dashboard.
+The working UI uses the authoritative Rust job templates: **Overseer, Head Engineer, Security Chief, Vault Doctor, University Researcher, Reclamation Scout, Records Custodian, then Custom**. Click a role to preview it; explicitly confirm loading the profile. Custom starts empty and offers a tool palette. Interactive local labs calculate **GeoJSON waypoints/distance, the ten-mode networking suite and hex inspection**; other modules show accurate permission/availability labels. Security Chief has a four-camera **layout fixture only** and Reclamation Scout an **empty RustGIS viewport**, both plainly marked as unconnected. No real video, game link, GNSS or TAK activity starts from the dashboard.
 
 See the [graphical dashboard guide](docs/DASHBOARD_UI.md) for keyboard/touch layout, Mac instructions, API/privacy boundaries and acceptance tests.
 
@@ -98,8 +98,8 @@ See the [graphical dashboard guide](docs/DASHBOARD_UI.md) for keyboard/touch lay
 
 | Role | Real-world station focus | Readiness |
 | --- | --- | --- |
-| Overseer | **Task Control: assign, track, reassign and manually hand off work** | Local board and role queues implemented; remote delivery not connected |
-| Head Engineer | Hex/CRC32, IPv4 subnet math, simulated device rigs | Workbench commands present; physical serial/GPIO planned |
+| Overseer | **Task Control: assign, track, reassign and deliver tasks to a paired device** | Local queues plus opt-in OpenSSH delivery prototype; physical Mac/Pi test pending |
+| Head Engineer | **NET SUITE:** IPv4/IPv6, routes, subnets, VLAN, MAC, MTU/MSS, TCP checks | Nine offline modes and one confirmed single-port probe; hardware diagnostics planned |
 | Security Chief | Security diagnostics, **four-camera 2×2 wall with focus view** | Camera video planned, not connected |
 | Vault Doctor | Research library, environmental observation and safety checklists | Library/notes exist; environmental sensing planned |
 | University Researcher | Data inspection, reproducible experiments and statistics | Fixture/palette tools exist; data lab planned |
@@ -108,7 +108,7 @@ See the [graphical dashboard guide](docs/DASHBOARD_UI.md) for keyboard/touch lay
 | Custom | Truly empty expert workspace with user-selected modules | Tool pinning code present; plugin sandbox planned |
 
 ```bash
-# On the feat/dashboard-ui-shell development branch:
+# On the feat/network-engineering-suite development branch:
 cargo run --locked -p pipboy -- workbench profiles
 cargo run --locked -p pipboy -- workbench list
 cargo run --locked -p pipboy -- workbench use security-chief --replace
@@ -182,6 +182,7 @@ Current priority: **Mac → PlayStation**. Double-click `scripts/launch-playstat
 | --- | --- | --- |
 | **Fallout 4 companion** | Implemented; live game acceptance pending | Opt-in TCP game-data browser, heartbeat, incremental state and snapshot diagnostics |
 | **STAT** | Available | Local CPU, memory, OS, architecture, uptime, field quality and bounded telemetry |
+| **NET SUITE** | New development pass | Nine offline network calculations plus one explicitly confirmed TCP endpoint connection |
 | **LIBRARY** | Available | Browse bundled, license-aware research/source references without contacting GitHub |
 | **NOTES** | Available | Create, search, list, export and import offline field notes |
 | **Permission preferences** | Available, intent only | Save `requested` / `denied` settings; never activates devices |
