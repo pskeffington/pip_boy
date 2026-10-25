@@ -672,12 +672,16 @@ pub fn ipv4_cidr(value: &str) -> io::Result<String> {
     } else {
         (network, network, 1)
     };
+    let broadcast_text = if bits >= 31 {
+        "NONE (/31 POINT-TO-POINT; /32 SINGLE HOST)".to_string()
+    } else {
+        Ipv4Addr::from(broadcast).to_string()
+    };
     Ok(format!(
-        "NET LAB / OFFLINE IPv4\nInput: {ip}/{bits}\nNetwork: {}/{}\nMask: {}\nBroadcast: {}\nHost range: {} - {}\nUsable addresses: {usable}\nNo network packets sent.",
+        "NET SUITE / OFFLINE IPv4\nInput: {ip}/{bits}\nNetwork: {}/{}\nMask: {}\nBroadcast: {broadcast_text}\nHost range: {} - {}\nUsable addresses: {usable}\nNo network packets sent.",
         Ipv4Addr::from(network),
         bits,
         Ipv4Addr::from(mask),
-        Ipv4Addr::from(broadcast),
         Ipv4Addr::from(first),
         Ipv4Addr::from(last)
     ))
