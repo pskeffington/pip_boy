@@ -7,6 +7,12 @@ Rust-Boy is the public product name. The existing `pip_boy` repository, `pipboy`
 
 > **Verified integration baseline:** [Five-job Linux/macOS/Windows CI](https://github.com/pskeffington/pip_boy/actions/runs/40164915215) passed at `e7d1090`, including macOS PTY, Windows ConPTY, and the strict deny-all broker suite. **This does not complete a packaged release or enable physical devices.** The catalog's `implemented_unverified` status denotes a pending module acceptance review, not an absence of CI execution.
 
+## Role-specific roadmap — R0 through R3
+
+The [eight-role workbench plan](ROLE_ROADMAP.md) and [machine-readable role matrix](../catalog/role_roadmap.json) define per-job needs, preloaded tools, new modules, dependencies and objective acceptance tests. The [Vault-Tec lore matrix](VAULT_TEC_LORE_MATRIX.md) distinguishes canon from themed adaptations. **Security Chief** prioritizes a user-requested [2×2 camera wall with focused single-feed view](SECURITY_CAMERA_WALL.md) after deterministic offline mocks; real streams and ONVIF compatibility require separately accepted device and privacy gates.
+
+**Current blocker:** The workbench development branch has compilation/formatting failures in CI and must return to green before any role implementation is called accepted. The R0 role definitions are marked `code_present_ci_pending`. Hardware gates remain planned, not silently enabled.
+
 ## Navigate the build
 
 - [Literature matrix](LITERATURE_MATRIX.md) — 37 traceable primary/official references, limitations and corresponding tests.

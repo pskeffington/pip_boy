@@ -9,7 +9,11 @@ The TUI supports keyboard navigation with static presentation and explicit statu
 | Page Up/Page Down | Scroll the selected detail text by a viewport, with one-line overlap |
 | Home/End | First/last source or note; top/bottom text on other panels |
 | R | Reload notes while in NOTES |
-| P | Revoke/resume local host telemetry and clear its history on pause |
+| P on STAT | Revoke/resume local host telemetry and clear its history on pause |
+| P on WORKBENCH | Open the eight-role picker; Enter prepares replacement, Y confirms, N/Esc cancels |
+| A on WORKBENCH | Browse the built-in tool palette; Enter pins a supported tool without running it |
+| X/Delete on WORKBENCH | Unpin selected tool; does not delete notes or permission settings |
+| R on WORKBENCH | Reload pinned layout from local workbench JSON |
 | Q, Escape, Ctrl+C | Exit and restore the terminal |
 
 ## Collections and freshness

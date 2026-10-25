@@ -10,6 +10,9 @@ Technical contracts, architecture decisions, research provenance and validation 
 | --- | --- |
 | [Quick start](../README.md#quick-start) | Clone, build, run the terminal UI and inspect local status |
 | [Console controls](CONSOLE.md) | Keyboard navigation, resize behavior and terminal restoration |
+| [Role roadmap](ROLE_ROADMAP.md) | Eight occupational workbenches, operational needs and R0-R3 acceptance gates |
+| [Lore/source matrix](VAULT_TEC_LORE_MATRIX.md) | Publisher-source evidence, role name fidelity and technical standards |
+| [Security camera wall](SECURITY_CAMERA_WALL.md) | Four-feed 2×2 view, one-key focus, camera authorization and media acceptance |
 | [Architecture](ARCHITECTURE.md) | Workspace, lifecycle, local boundaries and adapter layering |
 | [Roadmap](ROADMAP.md) | G0–G4 priorities, planned modules and acceptance gates |
 | [Validation](VALIDATION.md) | Executed tests, exact CI runs, limitations and historic evidence |

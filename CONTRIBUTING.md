@@ -29,6 +29,10 @@ python3 tools/smoke_broker.py
 
 GitHub Actions also runs the CLI, notes, permission, simulator, transport and mock-adapter smoke scripts; native macOS PTY and Windows ConPTY tests are platform-specific. Check [the workflow](.github/workflows/rust.yml) and [validation records](docs/VALIDATION.md). A test defined but not executed is **not** a passing result.
 
+## Role feature contract
+
+A new role needs an entry in [catalog/role_roadmap.json](catalog/role_roadmap.json), a cited [lore classification](docs/VAULT_TEC_LORE_MATRIX.md), an [operational R0–R3 roadmap](docs/ROLE_ROADMAP.md), explicitly permitted default tools, and real acceptance evidence. The role validator compares the manifest against `PRESETS`; run `python3 tools/validate_roles.py` alongside other offline checks. Security camera integrations additionally require [camera-media acceptance](docs/SECURITY_CAMERA_WALL.md). No new role may silently grant network or hardware permissions.
+
 ## Contribution requirements
 
 1. **Be precise about status.** Do not call a planned capability available, a synthetic observation measured, or a developer build production-ready.

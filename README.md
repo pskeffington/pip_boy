@@ -6,9 +6,37 @@
 
 **Offline first. Native by design.**
 
-Rust-Boy is an independent, Rust-native field systems console for desktop terminals, with a modular foundation for future wearable and hardware applications. It brings local host diagnostics, a curated research library and user-controlled field notes together in a keyboard-driven interface.
+Rust-Boy is an independent, Rust-native, role-configurable developer workbench for desktop terminals, with a modular foundation for future 4-inch wearable and handheld applications. It brings local host diagnostics, a curated research library and user-controlled field notes together in a keyboard-driven interface.
 
 **Current stage:** development preview. The terminal console and offline workflows are implemented and tested on Linux, macOS and Windows. Physical GPIO, serial, SDR, Bluetooth, mesh, GNSS, mapping and physical device integrations are **not enabled**. An explicitly requested Fallout 4 TCP companion browser is available for validation. No packaged production release is claimed.
+
+## Vault-Tec occupational workbenches
+
+**Seven ready-made roles + one empty Custom mode.** On a fresh workbench, **Overseer Operations** is the default; users can switch between complete, pre-pinned stations. Each preloaded tool must still be invoked explicitly. No saved role opens cameras or devices by itself. This development branch has **unresolved CI gates**; a profile present in source is not a certified release.
+
+| Role | Real-world station focus | Readiness |
+| --- | --- | --- |
+| Overseer | Local status, notes, research, explicit game companion | Built-in palette; task mission board planned |
+| Head Engineer | Hex/CRC32, IPv4 subnet math, simulated device rigs | Workbench commands present; physical serial/GPIO planned |
+| Security Chief | Security diagnostics, **four-camera 2×2 wall with focus view** | Camera video planned, not connected |
+| Vault Doctor | Research library, environmental observation and safety checklists | Library/notes exist; environmental sensing planned |
+| University Researcher | Data inspection, reproducible experiments and statistics | Fixture/palette tools exist; data lab planned |
+| Reclamation Scout | Offline field notes, coordinates, maps and game companion | Map/GNSS planned; PS4 acceptance pending |
+| Records Custodian | Archive provenance, search, SHA-256 integrity and export | Notes/library exist; secure hashing/index planned |
+| Custom | Truly empty expert workspace with user-selected modules | Tool pinning code present; plugin sandbox planned |
+
+\`\`\`bash
+# On the feat/rust-boy-workbench development branch:
+cargo run --locked -p pipboy -- workbench profiles
+cargo run --locked -p pipboy -- workbench list
+cargo run --locked -p pipboy -- workbench use security-chief --replace
+cargo run --locked -p pipboy -- workbench use custom --replace
+cargo run --locked -p pipboy -- workbench net cidr 192.168.1.50/24
+\`\`\`
+
+Inside the desktop TUI, navigate to WORKBENCH and press **P** to choose a complete role (Enter, then Y to replace), or **A** to browse individual tools. Role replacement modifies pinned layout only, not notes or saved permission rules.
+
+**Design and evidence:** [role-by-role roadmap](docs/ROLE_ROADMAP.md) · [Vault-Tec lore matrix](docs/VAULT_TEC_LORE_MATRIX.md) · [Security Chief four-camera wall](docs/SECURITY_CAMERA_WALL.md). Profiles and hardware readiness are separately gated.
 
 ## Local PS4 testing on a Mac
 

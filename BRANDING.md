@@ -18,6 +18,10 @@ This is the authoritative product-naming reference for this repository. The bran
 
 Do not invent a general-purpose `rust-boy` CLI or a new storage path: the interactive command is still `pipboy`, and `rust-boy-broker` is a separate **deny-only** protocol binary. User-facing prose always says **Rust-Boy**; code and paths must accurately reflect the current implementation.
 
+## Lore-inspired station naming
+
+The user-facing Vault-Tec occupational terms are **theme inspiration**, not a claim of sponsorship, brand license or exact game-function replication. Explicitly classify canonical jobs (Overseer, Head Engineer, Security Chief, Doctor) versus original adaptations (University Researcher, Reclamation Scout, Records Custodian, Custom). Code/tool descriptions must remain accurate for their implemented real-world behavior; do not copy game graphics, logos or recorded dialogue. See [source-backed lore matrix](docs/VAULT_TEC_LORE_MATRIX.md) and [role requirements](docs/ROLE_ROADMAP.md).
+
 ## 2. Standard descriptions
 
 **Short:** Rust-Boy is an offline-first, Rust-native field systems console.

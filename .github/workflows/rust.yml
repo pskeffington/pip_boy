@@ -16,7 +16,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Offline manifest validation
-        run: python3 tools/validate_catalog.py
+        run: |
+          python3 tools/validate_catalog.py
+          python3 tools/validate_roles.py
 
   rust:
     name: Rust ${{ matrix.toolchain }}
