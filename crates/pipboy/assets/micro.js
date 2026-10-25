@@ -473,7 +473,7 @@ function inputForm(root, id) {
     const modeLabel = make("label", "field", "OPERATION");
     const mode = make("select");
     mode.name = "mode";
-    for (const [value, name] of [["scan", "SCAN PRIVATE LAN"], ["cidr", "CIDR CALCULATOR"]]) {
+    for (const [value, name] of [["scan", "SCAN PRIVATE LAN"], ["unifi-sites", "UNIFI SITES"], ["unifi-clients", "UNIFI CLIENTS"], ["unifi-compare", "UNIFI / LAN CHECK"], ["cidr", "CIDR CALCULATOR"]]) {
       const option = make("option", "", name);
       option.value = value;
       mode.append(option);
@@ -482,6 +482,10 @@ function inputForm(root, id) {
     form.append(modeLabel);
     const scope = field("input", "PRIVATE CIDR / LOCAL", "local");
     form.append(scope);
+    const site = field("site", "UNIFI SITE UUID", "", { maxLength: 36 });
+    site.hidden = true;
+    site.querySelector("input").required = false;
+    form.append(site);
     const consent = make("label", "micro-consent");
     const check = make("input");
     check.type = "checkbox";
@@ -497,13 +501,27 @@ function inputForm(root, id) {
     monitor.append(watch, make("span", "", "REFRESH EVERY 60 SEC"));
     form.append(monitor);
     mode.addEventListener("change", () => {
-      const scanning = mode.value === "scan";
-      consent.hidden = !scanning;
-      monitor.hidden = !scanning;
+      const selection = mode.value;
+      const external = selection !== "cidr";
+      const withScope = ["scan", "unifi-compare", "cidr"].includes(selection);
+      const withSite = ["unifi-clients", "unifi-compare"].includes(selection);
+      consent.hidden = !external;
+      monitor.hidden = !external;
+      scope.hidden = !withScope;
+      site.hidden = !withSite;
       const input = scope.querySelector("input");
-      if (scanning && input.value === "192.168.1.50/24") input.value = "local";
-      if (!scanning && input.value === "local") input.value = "192.168.1.50/24";
-      run.textContent = scanning ? "SCAN PRIVATE LAN" : "CALCULATE CIDR";
+      const siteInput = site.querySelector("input");
+      input.required = withScope;
+      siteInput.required = withSite;
+      check.required = external;
+      if (selection !== "cidr" && input.value === "192.168.1.50/24") input.value = "local";
+      if (selection === "cidr" && input.value === "local") input.value = "192.168.1.50/24";
+      const labels = {
+        scan: "SCAN PRIVATE LAN", "unifi-sites": "LIST UNIFI SITES",
+        "unifi-clients": "CONNECTED CLIENTS", "unifi-compare": "COMPARE / LAN",
+        cidr: "CALCULATE CIDR"
+      };
+      run.textContent = labels[selection] || "RUN";
     });
   } else if (id === "byte-lab") {
     form.append(field("input", "HEXADECIMAL BYTES", "48656c6c6f", { maxLength: 3000, hex: true }));
@@ -529,27 +547,48 @@ function inputForm(root, id) {
     if (id === "geo-lab") payload.mode = geoMode;
     for (const [key, val] of new FormData(form).entries()) payload[key] = val;
     const scanning = id === "net-lab" && payload.mode === "scan";
+    const unifi = id === "net-lab" && payload.mode?.startsWith("unifi-");
+    const external = scanning || unifi;
     try {
-      if (scanning && payload.authorized !== "yes") {
-        throw new Error("Confirm authorization before probing this private LAN");
+      if (external && payload.authorized !== "yes") {
+        throw new Error("Confirm authorization for this private network/controller");
       }
-      const result = scanning
-        ? await api("/api/net/scan", { cidr: payload.input, confirm: true })
-        : await api("/api/experiment", id === "net-lab"
+      let result;
+      if (scanning) {
+        result = await api("/api/net/scan", { cidr: payload.input, confirm: true });
+      } else if (unifi) {
+        const operation = payload.mode.slice("unifi-".length);
+        const params = { operation, confirm: true };
+        if (operation !== "sites") params.site = payload.site.trim();
+        if (operation === "compare") params.cidr = payload.input;
+        result = await api("/api/net/unifi", params);
+      } else {
+        result = await api("/api/experiment", id === "net-lab"
           ? { tool: id, input: payload.input } : payload);
-      if (openedTool === id) output.textContent = result.output;
-      if (scanning && netSummary && result.report) {
-        const rep = result.report;
-        netSummary.textContent = rep.responding_devices + " RESPONDING / " +
-          rep.cached_only_devices + " CACHE / " + rep.scanned_hosts + " SCANNED";
       }
-      ui.foot.textContent = scanning ? "LAN / DETECTED, NOT TOTAL" :
+      if (openedTool === id) output.textContent = result.output;
+      if (netSummary) {
+        if (scanning && result.report) {
+          const rep = result.report;
+          netSummary.textContent = rep.responding_devices + " RESPONDING / " +
+            rep.cached_only_devices + " CACHE / " + rep.scanned_hosts + " SCANNED";
+        } else if (unifi && result.comparison) {
+          const cmp = result.comparison;
+          netSummary.textContent = cmp.controller_clients + " UNIFI / " +
+            cmp.matched_active_probe + " MATCHED";
+        } else if (unifi && result.inventory?.connected_clients !== undefined) {
+          netSummary.textContent = result.inventory.connected_clients + " CONTROLLER CLIENTS";
+        } else if (unifi && result.inventory?.sites) {
+          netSummary.textContent = result.inventory.sites.length + " UNIFI SITES";
+        }
+      }
+      ui.foot.textContent = external ? "NETWORK / READ-ONLY" :
         result.kind === "computed" ? "RESULT / LOCAL ONLY" : "INFORMATION / NO CONNECTION";
-      if (scanning && payload.monitor === "yes") {
+      if (external && payload.monitor === "yes") {
         window.setTimeout(() => {
           if (openedTool === id && form.isConnected && !busy &&
               form.querySelector('input[name="monitor"]')?.checked &&
-              form.querySelector('select[name="mode"]')?.value === "scan") {
+              form.querySelector('select[name="mode"]')?.value === payload.mode) {
             form.requestSubmit();
           }
         }, 60000);
