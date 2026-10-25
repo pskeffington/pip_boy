@@ -1,6 +1,6 @@
 # Rust-Boy | Adapter preferences and authorization boundary
 
-**Gate:** G1-D settings foundation. **Status:** authored, not yet compiled or accepted.
+**Gate:** G1-D settings foundation. **Status:** CLI/storage schema and smoke tests verified in the [cross-platform quality matrix](https://github.com/pskeffington/pip_boy/actions/runs/40164915215); **not** an active real-device authorization system.
 
 ## Purpose
 
@@ -32,7 +32,7 @@ The key set is: `device.enumerate`, `gpio.read`, `display.write`, `serial.read`,
 - Repeating an unchanged request/denial, or clearing an absent entry, does not rewrite the JSON document. Removing or corrupting the file never authorizes devices.
 - Unsupported or malformed preference data is preserved on disk, not guessed or automatically migrated. Recover from a user-owned backup after examining the file.
 
-Filesystem atomic replacement, locks, and directory syncing have different platform and power-failure guarantees. Native Windows/macOS testing and hostile-filesystem/path handling are outstanding. Do not treat this store as tamper-resistant.
+Filesystem atomic replacement, locks and directory syncing have different platform and power-failure guarantees. Native Windows/macOS CLI and test coverage is in place, but hostile-filesystem/path handling and power-failure acceptance remain open. Do not treat this store as tamper-resistant.
 
 ## Threat boundary and remaining work
 
@@ -57,4 +57,4 @@ python3 tools/smoke_notes.py
 python3 tools/smoke_runtime.py
 ```
 
-The new unit fixtures cover no-write defaults, request/deny/clear round trips, no implicit runtime grants, future schema/duplicate/unknown preservation, writer lock contention, and oversized-document rejection. The black-box script tests CLI visibility and invalid-input handling. **These tests are authored, not yet executed.** See [validation](VALIDATION.md), [G1 plan](G1_EXECUTION_PLAN.md), and [CI triage](CI_TRIAGE.md).
+The new unit fixtures cover no-write defaults, request/deny/clear round trips, no implicit runtime grants, future schema/duplicate/unknown preservation, writer lock contention, and oversized-document rejection. The black-box script tests CLI visibility and invalid-input handling. **These tests execute in CI**, including native macOS/Windows and Linux, as recorded in [validation](VALIDATION.md). Passing preference tests still cannot grant an external device; see [G1 plan](G1_EXECUTION_PLAN.md) and [OS broker requirements](OS_DEVICE_BROKER.md).

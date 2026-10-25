@@ -1,7 +1,7 @@
 # Rust-Boy | G1 implementation and acceptance plan
 
-**Status:** early implementation, not a completed development gate.  
-**Review:** October 24, 2026.  
+**Status:** local native foundation exercised in CI; G1 acceptance and all physical-device gates remain open.  
+**Review:** October 25, 2026.  
 **Objective:** establish local data provenance, bounded telemetry, consent-aware lifecycle behavior, reliable storage and accessible operation before connecting external hardware.
 
 ## Present implementation versus remaining work

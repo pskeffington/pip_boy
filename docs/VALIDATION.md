@@ -1,6 +1,6 @@
-# Rust-Boy | Local validation evidence
+# Rust-Boy | Validation evidence
 
-Updated October 25, 2026 (America/New_York). The latest verified evidence includes Windows ConPTY, macOS PTY and Linux stable/MSRV GitHub-hosted CI; older sections below are historical snapshots and are not the current project status. The previous native macOS/Windows build/test/offline-smoke matrix passed at [run 40161267203](https://github.com/pskeffington/pip_boy/actions/runs/40161267203); further TUI/platform and real-device acceptance remain open.
+Updated October 25, 2026 (America/New_York). **Current verified source baseline:** [PR CI 40164915215](https://github.com/pskeffington/pip_boy/actions/runs/40164915215) passed catalog, Linux stable and Rust 1.81.0, native macOS PTY, native Windows ConPTY and the deny-all physical-broker tests at `e7d1090`. This is not physical-hardware, packaging or accessibility certification. **Sections farther below preserve historical development snapshots**; any older “pending”, “unexecuted” or “startup failure” wording describes the state *at the cited historical revision*, not the current status.
 
 ## G2-A deny-all broker protocol — cross-platform CI verified
 

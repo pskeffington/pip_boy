@@ -13,9 +13,10 @@ This is the authoritative product-naming reference for this repository. The bran
 - **pip_boy** — existing GitHub repository slug. Do not rename the repository or links as part of a branding-only pass.
 - **pipboy** — stable CLI executable and existing Rust package identifier. Its display header says Rust-Boy; commands remain `pipboy` until a separately tested migration is approved.
 - **pipboy-core** — internal library crate; retained to avoid unnecessary dependency and import changes.
+- **rust-boy-broker** — separate, currently deny-only executable for strict physical-device request parsing. Its name does **not** imply actual hardware authorization.
 - **PIPBOY_HOME** / `~/.pipboy` — existing settings and data paths, retained to protect stored notes and scripts.
 
-Do not invent a `rust-boy` executable or new storage path in instructions before it actually exists. User-facing prose always says **Rust-Boy**; code and paths must accurately reflect the current implementation.
+Do not invent a general-purpose `rust-boy` CLI or a new storage path: the interactive command is still `pipboy`, and `rust-boy-broker` is a separate **deny-only** protocol binary. User-facing prose always says **Rust-Boy**; code and paths must accurately reflect the current implementation.
 
 ## 2. Standard descriptions
 
@@ -63,13 +64,13 @@ Do **not** copy Fallout logos, Pip-Boy product trade dress, original game screen
 
 ## 6. Brand change checklist
 
-- [ ] README title, product description, and docs index use Rust-Boy.
-- [ ] Security, architecture, roadmap, and research documents use Rust-Boy as the project name.
-- [ ] CLI help, errors, and terminal header identify Rust-Boy.
-- [ ] Technical paths and example commands remain valid.
-- [ ] The brand is not presented as an authorized Fallout or Wand Company product.
+- [x] README title, product description, and docs index use Rust-Boy.
+- [x] Security, architecture, roadmap, and research documents use Rust-Boy as the project name.
+- [x] CLI help, errors, and terminal header identify Rust-Boy.
+- [x] Technical paths and example commands remain valid.
+- [x] The brand is not presented as an authorized Fallout or Wand Company product.
 - [ ] Accessibility, legal, and code quality checks are performed before tagging a release.
 
 ## 7. Scope
 
-Naming and design conventions are active now. Logo artwork, trademark investigation, command migration to `rust-boy`, packaging, and a fully themed GUI require separate review and implementation gates.
+Naming and design conventions are active now. Original logo artwork, trademark investigation, any migration of the main command to `rust-boy`, packaging, and a fully themed GUI require separate review and implementation gates. Passing CI for the deny-only `rust-boy-broker` is not real-device certification.
