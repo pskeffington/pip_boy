@@ -5,6 +5,8 @@
  */
 (function () {
   "use strict";
+  // This public Overpass instance requires a Referer for browser requests.
+  // Send only the local origin (never the map path, query, or GPS coordinates).
   const STATUS = "https://overpass-api.de/api/status";
   const ENDPOINT = "https://overpass-api.de/api/interpreter";
   const MAX_RESPONSE = 4 * 1024 * 1024;
@@ -175,7 +177,7 @@
   async function ping(signal) {
     // No coordinates or local user data in this request.
     const response = await fetch(STATUS, { method: "GET", mode: "cors", cache: "no-store",
-      credentials: "omit", referrerPolicy: "no-referrer", signal });
+      credentials: "omit", referrerPolicy: "origin", signal });
     if (!response.ok) reject("OVERPASS STATUS HTTP " + response.status);
     if (response.body && typeof response.body.cancel === "function") {
       await response.body.cancel();
@@ -188,7 +190,7 @@
     const ql = qlFor(bounds);
     const response = await fetch(ENDPOINT, {
       method: "POST", mode: "cors", cache: "no-store", credentials: "omit",
-      referrerPolicy: "no-referrer",
+      referrerPolicy: "origin",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: "data=" + encodeURIComponent(ql), signal
     });
