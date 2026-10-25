@@ -15,3 +15,5 @@ pub mod observation;
 pub mod registry;
 pub mod runtime;
 pub mod telemetry;
+
+pub mod host_telemetry;

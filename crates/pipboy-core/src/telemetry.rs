@@ -25,17 +25,26 @@ pub struct TelemetrySession<S> {
 
 impl<S: SnapshotSource> TelemetrySession<S> {
     pub fn new(source: S, capacity: usize, expires_after: Duration) -> Result<Self, String> {
-        let expires_after_ms = u64::try_from(expires_after.as_millis())
-            .map_err(|_| "telemetry expiry exceeds supported duration")?;
-        if expires_after_ms == 0 {
-            return Err("telemetry expiry must be at least one millisecond".into());
-        }
+        let expires_after_ms = Self::validate_configuration(capacity, expires_after)?;
         Ok(Self {
             source,
             history: SampleBuffer::new(capacity)?,
             expires_after_ms,
             last_poll_ms: None,
         })
+    }
+
+    pub(crate) fn validate_configuration(
+        capacity: usize,
+        expires_after: Duration,
+    ) -> Result<u64, String> {
+        SampleBuffer::<()>::new(capacity)?;
+        let expires_after_ms = u64::try_from(expires_after.as_millis())
+            .map_err(|_| "telemetry expiry exceeds supported duration")?;
+        if expires_after_ms == 0 {
+            return Err("telemetry expiry must be at least one millisecond".into());
+        }
+        Ok(expires_after_ms)
     }
 
     /// Caller supplies timestamps from one process-local monotonic clock.

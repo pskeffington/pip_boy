@@ -18,7 +18,7 @@ flowchart TD
     HOST --> STORE[Local Storage / user-owned notes]
 ```
 
-**Current implementation scope:** `RuntimeModule` and `ModuleHost` provide trusted in-process polymorphism and capability prechecks. A separate pure `ModuleLifecycle` state machine, `Observation<T>` envelope and `SampleBuffer<T>` have been authored for G1. The new CLI can print a finite set of local NDJSON host samples. These implementations remain **uncompiled and unverified** in this workspace; the live TUI and notes code still call existing services directly. There is no OS isolation, physical device broker, background scheduler or loaded third-party plugin.
+**Current implementation scope:** `ModuleHost` owns lifecycle states, capability grants and trusted built-in modules. The TUI and finite NDJSON command run a lazy `HostTelemetryModule` through it. Construction/registration performs no collector I/O; explicit start checks grants before initialization. Revocation stops affected modules immediately, regrant alone never restarts them, and host drop cleans up running modules. TUI P revokes/resumes local host reads and clears its cached display and observation history. These paths are locally tested on stable and Rust 1.81.0. Notes, library and legacy `status` remain direct service calls. The diagram shows the broader target architecture; OS isolation, device brokering, persistent settings and third-party plugins remain unimplemented.
 
 ## Major objects / responsibilities
 
@@ -26,10 +26,10 @@ flowchart TD
 | --- | --- | --- |
 | `ModuleDescriptor` / `ModulePlan` | Stable ID, readiness, evidence and dependency metadata | Immutable manifest/catalog |
 | `RuntimeModule` trait | Polymorphic, object-safe internal module contract | Concrete module implementation |
-| `ModuleHost` | Registration, duplicate and readiness checks, capability policy **precheck**, poll outcomes | Module collection and user grants |
+| `ModuleHost` | Registration, duplicate and readiness checks, capability checks, start/stop/revoke and lifecycle outcomes | Module collection and user grants |
 | `PermissionSet` | Initially offline/read-only; manual grants require explicit application action | Host, not an adapter |
-| `ModulePoll` | Explicit `Sample`, `Denied`, `Failed` status for observability | Return value, no hidden success |
-| `Observation<T>` (planned typed envelope) | Source, time, unit, validity and provenance of measurements | One sample; enforce data constraints |
+| `ModulePoll` | Explicit `Sample`, `Denied`, `Inactive`, `Failed` status plus lifecycle state for observability | Return value, no hidden success |
+| `Observation<T>` (implemented typed envelope) | Source, time, unit, validity and provenance of measurements | One sample; enforce data constraints |
 | `DeviceBroker` (G2 planned) | Authorized OS I/O handles for selected hardware | Controlled platform adapter |
 | `InputSource` / `DisplayBackend` | User actions and display snapshots across targets | OS-specific adapter |
 | `LocationSource` / `Receiver` / `MeshTransport` | Explicit opt-in field interfaces | Separate G3 adapters |
@@ -43,6 +43,8 @@ The G0/G1 in-process object must be simple enough for `dyn` dispatch and predict
 pub trait RuntimeModule: Send {
     fn id(&self) -> &'static str;
     fn capabilities(&self) -> &'static [Capability];
+    fn start(&mut self) -> Result<(), String> { Ok(()) }
+    fn stop(&mut self) {} // idempotent resource release
     fn sample(&mut self) -> Result<ModuleSample, String>;
 }
 
@@ -58,11 +60,15 @@ Use concrete generic adapters for high-throughput SDR and packet decode paths wh
 
 1. Configuration starts with no grants for network, radio, GPIO, location, BLE or transmission.
 2. A user explicitly enables a module and selects a compatible device or data source.
-3. `ModuleHost` checks every declared required capability before invoking `sample`.
+3. `ModuleHost` checks required capabilities before `start` and before every `sample`. Registration leaves the module disabled; grants alone do not start it.
 4. `DeviceBroker` (future) must issue scoped handles *after* a separate authorization check; only the broker should own OS I/O resources.
-5. Revocation or device loss yields a visible `Denied`/`Unavailable` state and must shut down resources.
+5. `revoke` immediately stops affected running modules and moves them to Disabled. Start failure calls cleanup and moves to Unavailable; explicit stop/reset is needed before retry. Poll failures move to Degraded; a successful later poll recovers Running.
 
 **Critical distinction:** a capability array is a policy declaration; a malicious Rust module can still call `std::fs` or sockets if linked in-process. Real plugin isolation requires a separate process/sandbox, broker-only handles, and security review. G4 explicitly avoids loading untrusted native modules.
+
+### Runtime API migration
+
+Registered modules now remain Disabled until `start(id)` succeeds. Replace the prototype `permissions_mut()` access with `grant(capability)` and `revoke(capability)` so revocation can release resources immediately. Each `ModulePoll` carries lifecycle state; `Inactive` distinguishes a permitted but stopped module from denial. `ModuleSample.host_observation` supplies typed host data while NDJSON command output retains the observation envelope.
 
 ## Proposed crate evolution
 
@@ -83,7 +89,7 @@ crates/
 
 Keep future crates **out of the Cargo workspace** until the corresponding gate has passing tests. File trees are planning targets, not a claim of implemented modules.
 
-## Lifecycle state machine (pure G1 model authored; integration pending)
+## Lifecycle state machine (integrated for host telemetry)
 
 ```mermaid
 stateDiagram-v2
@@ -102,17 +108,17 @@ stateDiagram-v2
 
 `Ready` (legacy G0 registry) must not mean `Running` or `CI verified`. Roadmap manifests instead use `implemented_unverified` and `planned`. Display separate **implementation** and **runtime connectivity** statuses; avoid conflation.
 
-## Data contract (G1 prototype authored; validation pending)
+## Data contract (locally tested; migration policy pending)
 
 The core now declares a generic observation with schema_version (1), source_id, provenance, captured_wall_unix_ms (optional), captured_session_ms (monotonic-process-relative), unit (optional), value (optional), quality (valid, stale, unknown, invalid) and expires_after_ms (optional).
 
 - **Valid/stale** requires a value; **unknown/invalid** must not carry one. A numeric zero is still a real value.
 - Session-relative clock values are only comparable within a single process launch; wall clock may be unavailable or incorrect.
 - A sample can move from valid to stale when its TTL expires, never automatically back to valid.
-- CLI sampling currently writes a finite number of NDJSON host snapshots to stdout. The TUI and full ModuleHost integration are still pending.
-- No data collector, file exporter, device scanner, transmitter, or automatic sync has been enabled by this code.
+- CLI sampling writes finite NDJSON observations to stdout; both it and the TUI use the lifecycle host and bounded telemetry adapter.
+- Host collection is read-only; no recording files, device scanner, transmitter, or automatic sync is enabled.
 
-See core files observation.rs, buffer.rs, lifecycle.rs, and CLI file sampling.rs. Re-run test and formatting checks before accepting these structures as stable data contracts.
+See runtime.rs, host_telemetry.rs, telemetry.rs, observation.rs, buffer.rs, lifecycle.rs, sampling.rs and tui.rs. Re-run test and formatting checks before accepting these structures as stable data contracts.
 
 ## Testing strategy
 

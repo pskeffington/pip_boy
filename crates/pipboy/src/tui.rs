@@ -1,4 +1,3 @@
-use crate::sampling::wall_ms;
 use crossterm::event::{self, Event, KeyCode, KeyEventKind};
 use crossterm::execute;
 use crossterm::terminal::{
@@ -6,10 +5,13 @@ use crossterm::terminal::{
 };
 use pipboy_core::branding::{CLI_COMMAND, PRODUCT_NAME};
 use pipboy_core::catalog::sources;
-use pipboy_core::metrics::Collector;
+use pipboy_core::host_telemetry::HostTelemetryModule;
+use pipboy_core::lifecycle::State;
+use pipboy_core::metrics::{Collector, Snapshot};
 use pipboy_core::notes::NoteStore;
+use pipboy_core::observation::Observation;
 use pipboy_core::registry::{Readiness, MODULES};
-use pipboy_core::telemetry::TelemetrySession;
+use pipboy_core::runtime::{Capability, ModuleHost, PermissionSet, PollOutcome};
 use ratatui::prelude::*;
 use ratatui::widgets::{Block, Borders, Paragraph, Tabs, Wrap};
 use std::error::Error;
@@ -39,11 +41,21 @@ impl Drop for TerminalGuard {
 const PANELS: &[&str] = &["STAT", "LIBRARY", "NOTES", "MAP", "RADIO", "MESH"];
 
 pub fn run() -> Result<(), Box<dyn Error>> {
-    let mut collector = Collector::new();
-    collector.prime();
-    let session_start = Instant::now();
-    let mut telemetry = TelemetrySession::new(collector, 60, Duration::from_secs(4))?;
-    telemetry.poll(0, wall_ms())?;
+    let module = HostTelemetryModule::new(
+        || {
+            let mut collector = Collector::new();
+            collector.prime();
+            Ok(collector)
+        },
+        60,
+        Duration::from_secs(4),
+    )?;
+    let session_start = module.session_start();
+    let mut host = ModuleHost::new(PermissionSet::offline_read_only());
+    host.register(Box::new(module))?;
+    host.start("stat")?;
+    let (initial, mut history_info) = read_stat(&mut host)?;
+    let mut latest = Some(initial);
     let library = sources()?;
     let store = NoteStore::from_environment()?;
     let mut panel = 0usize;
@@ -58,10 +70,8 @@ pub fn run() -> Result<(), Box<dyn Error>> {
             None
         };
         let session_ms = u64::try_from(session_start.elapsed().as_millis()).unwrap_or(u64::MAX);
-        let observation = telemetry
-            .latest(session_ms)
-            .ok_or("missing host observation")?;
-        let snapshot = observation.value.as_ref().ok_or("missing host snapshot")?;
+        let state = host.state("stat").unwrap_or(State::Unavailable);
+        let body_stat = stat_body(latest.as_ref(), state, &history_info, session_ms);
         terminal.draw(|frame| {
             let sections = Layout::vertical([
                 Constraint::Length(3),
@@ -77,14 +87,7 @@ pub fn run() -> Result<(), Box<dyn Error>> {
             frame.render_widget(tab, sections[0]);
 
             let body = match panel {
-                0 => format!(
-                    "HOST: {} / {}\nCPU: {:.1}% ({} logical cores)\nRAM: {} / {} MiB\nUPTIME: {} seconds\nSOURCE: {} | {:?} | age {} ms\nHISTORY: {} retained / {} dropped (memory only)\n\nNo device, geolocation or network access.",
-                    snapshot.os, snapshot.arch, snapshot.cpu_percent, snapshot.logical_cores,
-                    snapshot.memory_used_mib, snapshot.memory_total_mib, snapshot.uptime_s,
-                    observation.provenance, observation.quality,
-                    session_ms.saturating_sub(observation.captured_session_ms),
-                    telemetry.retained(), telemetry.dropped()
-                ),
+                0 => body_stat,
                 1 => {
                     let mut text = format!("{} linked source projects | metadata snapshot only\n\n", library.len());
                     for entry in &library {
@@ -119,7 +122,7 @@ pub fn run() -> Result<(), Box<dyn Error>> {
                 sections[1],
             );
             frame.render_widget(
-                Paragraph::new(" LEFT/RIGHT or TAB: panel    Q: quit    Offline-first / read-only host telemetry ")
+                Paragraph::new(" LEFT/RIGHT or TAB: panel    P: pause/resume STAT    Q: quit ")
                     .style(Style::default().fg(Color::Gray)),
                 sections[2],
             );
@@ -136,15 +139,84 @@ pub fn run() -> Result<(), Box<dyn Error>> {
                     KeyCode::Left | KeyCode::BackTab => {
                         panel = (panel + PANELS.len() - 1) % PANELS.len()
                     }
+                    KeyCode::Char('p') | KeyCode::Char('P') => {
+                        if host.permissions().allows(Capability::HostRead) {
+                            host.revoke(Capability::HostRead);
+                            latest = None;
+                            history_info.clear();
+                        } else {
+                            host.grant(Capability::HostRead);
+                            host.start("stat")?;
+                            let (observation, detail) = read_stat(&mut host)?;
+                            latest = Some(observation);
+                            history_info = detail;
+                        }
+                        last_sample = Instant::now();
+                    }
                     _ => {}
                 }
             }
         }
-        if last_sample.elapsed() >= Duration::from_secs(2) {
-            let now = u64::try_from(session_start.elapsed().as_millis()).unwrap_or(u64::MAX);
-            telemetry.poll(now, wall_ms())?;
+        if matches!(host.state("stat"), Some(State::Running | State::Degraded))
+            && last_sample.elapsed() >= Duration::from_secs(2)
+        {
+            let (observation, detail) = read_stat(&mut host)?;
+            latest = Some(observation);
+            history_info = detail;
             last_sample = Instant::now();
         }
     }
     Ok(())
+}
+
+fn read_stat(host: &mut ModuleHost) -> Result<(Observation<Snapshot>, String), String> {
+    let poll = host
+        .poll_once()
+        .into_iter()
+        .find(|poll| poll.module_id == "stat")
+        .ok_or("missing STAT module")?;
+    match poll.outcome {
+        PollOutcome::Sample { data } => Ok((
+            data.host_observation.ok_or("missing STAT observation")?,
+            data.detail,
+        )),
+        other => Err(format!("STAT did not sample: {other:?}")),
+    }
+}
+
+fn stat_body(
+    observation: Option<&Observation<Snapshot>>,
+    state: State,
+    history: &str,
+    now: u64,
+) -> String {
+    let Some(mut observation) = observation
+        .cloned()
+        .filter(|_| matches!(state, State::Running | State::Degraded))
+    else {
+        return format!("STAT: {state:?} / PAUSED\nHost read permission revoked. Buffered readings cleared.\nPress P to grant local host read access and resume.");
+    };
+    observation.update_freshness(now);
+    let Some(snapshot) = observation.value.as_ref() else {
+        return "STAT: UNKNOWN / no reading".into();
+    };
+    format!(
+        "STAT: {state:?}\nHOST: {} / {}\nCPU: {:.1}% ({} logical cores)\nRAM: {} / {} MiB\nUPTIME: {} seconds\nSOURCE: {} | {:?} | age {} ms\nHISTORY: {} (memory only)\n\nP pauses collection and clears buffered readings.",
+        snapshot.os, snapshot.arch, snapshot.cpu_percent, snapshot.logical_cores,
+        snapshot.memory_used_mib, snapshot.memory_total_mib, snapshot.uptime_s,
+        observation.provenance, observation.quality, now.saturating_sub(observation.captured_session_ms), history,
+    )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn pause_message_has_no_host_values_and_explains_resume() {
+        let text = stat_body(None, State::Disabled, "old history", 1000);
+        assert!(text.contains("PAUSED"));
+        assert!(text.contains("Press P"));
+        assert!(!text.contains("CPU:"));
+        assert!(!text.contains("old history"));
+    }
 }

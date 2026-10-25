@@ -1,12 +1,14 @@
 //! Explicit, bounded local host sampling. Output is NDJSON on stdout only.
 //! No background service, data file, socket, or hardware device is opened.
 
+use pipboy_core::host_telemetry::HostTelemetryModule;
 use pipboy_core::metrics::Collector;
-use pipboy_core::telemetry::{SnapshotSource, TelemetrySession};
+use pipboy_core::runtime::{ModuleHost, PermissionSet, PollOutcome};
+use pipboy_core::telemetry::SnapshotSource;
 use std::error::Error;
 use std::io::{self, Write};
 use std::thread;
-use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
+use std::time::Duration;
 
 #[derive(Debug, PartialEq, Eq)]
 struct Options {
@@ -71,38 +73,43 @@ pub fn run(args: Vec<String>) -> Result<(), Box<dyn Error>> {
         );
     }
 
-    let mut collector = Collector::new();
-    collector.prime();
     let stdout = io::stdout();
-    stream(collector, &options, &mut stdout.lock(), thread::sleep)
+    stream(
+        || {
+            let mut collector = Collector::new();
+            collector.prime();
+            Ok(collector)
+        },
+        &options,
+        &mut stdout.lock(),
+        thread::sleep,
+    )
 }
 
-pub(crate) fn wall_ms() -> Option<u64> {
-    SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .ok()
-        .and_then(|elapsed| u64::try_from(elapsed.as_millis()).ok())
-}
-
-fn stream<S: SnapshotSource, W: Write>(
-    source: S,
+fn stream<S: SnapshotSource + Send + 'static, W: Write>(
+    factory: impl FnMut() -> Result<S, String> + Send + 'static,
     options: &Options,
     output: &mut W,
     mut wait: impl FnMut(Duration),
 ) -> Result<(), Box<dyn Error>> {
-    let started = Instant::now();
-    let mut session = TelemetrySession::new(
-        source,
+    let mut host = ModuleHost::new(PermissionSet::offline_read_only());
+    host.register(Box::new(HostTelemetryModule::new(
+        factory,
         options.count,
         Duration::from_millis(options.interval_ms * 2),
-    )?;
+    )?))?;
+    host.start("stat")?;
     for index in 0..options.count {
         if index != 0 {
             wait(Duration::from_millis(options.interval_ms));
         }
-        let now = u64::try_from(started.elapsed().as_millis()).unwrap_or(u64::MAX);
-        session.poll(now, wall_ms())?;
-        let observation = session.latest(now).ok_or("missing host observation")?;
+        let poll = host.poll_once().pop().ok_or("missing host poll")?;
+        let observation = match poll.outcome {
+            PollOutcome::Sample { data } => {
+                data.host_observation.ok_or("missing host observation")?
+            }
+            other => return Err(format!("host telemetry did not sample: {other:?}").into()),
+        };
         let result = writeln!(output, "{}", serde_json::to_string(&observation)?)
             .and_then(|()| output.flush());
         match result {
@@ -155,11 +162,11 @@ mod tests {
             assert!(Options::parse(&args(&values)).is_err(), "{values:?}");
         }
     }
-    struct Fixture(std::rc::Rc<std::cell::Cell<usize>>);
+    struct Fixture(std::sync::Arc<std::sync::atomic::AtomicUsize>);
 
     impl SnapshotSource for Fixture {
         fn snapshot(&mut self) -> pipboy_core::metrics::Snapshot {
-            self.0.set(self.0.get() + 1);
+            self.0.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
             pipboy_core::metrics::Snapshot {
                 observed_unix_s: 1234,
                 os: "fixture".into(),
@@ -175,11 +182,14 @@ mod tests {
 
     #[test]
     fn writes_finite_valid_ndjson_without_real_sleep() {
-        let calls = std::rc::Rc::new(std::cell::Cell::new(0));
+        let calls = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
         let mut output = Vec::new();
         let mut waits = Vec::new();
         stream(
-            Fixture(calls.clone()),
+            {
+                let calls = calls.clone();
+                move || Ok(Fixture(calls.clone()))
+            },
             &Options::default(),
             &mut output,
             |delay| waits.push(delay),
@@ -198,7 +208,7 @@ mod tests {
             })
             .collect();
         assert_eq!(rows.len(), 3);
-        assert_eq!(calls.get(), 3);
+        assert_eq!(calls.load(std::sync::atomic::Ordering::SeqCst), 3);
         assert_eq!(waits, vec![Duration::from_secs(1); 2]);
     }
 
@@ -216,15 +226,18 @@ mod tests {
     #[test]
     fn closed_pipe_stops_before_another_sample_and_other_errors_propagate() {
         for kind in [io::ErrorKind::BrokenPipe, io::ErrorKind::PermissionDenied] {
-            let calls = std::rc::Rc::new(std::cell::Cell::new(0));
+            let calls = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
             let result = stream(
-                Fixture(calls.clone()),
+                {
+                    let calls = calls.clone();
+                    move || Ok(Fixture(calls.clone()))
+                },
                 &Options::default(),
                 &mut FailedOutput(kind),
                 |_| panic!("must stop before waiting"),
             );
             assert_eq!(result.is_ok(), kind == io::ErrorKind::BrokenPipe);
-            assert_eq!(calls.get(), 1);
+            assert_eq!(calls.load(std::sync::atomic::Ordering::SeqCst), 1);
         }
     }
 }

@@ -44,7 +44,7 @@ The build is a directed acyclic dependency plan, **not** a schedule. All module 
 - [ ] Integrate sample buffer with actual UI/runtime, add property-based invariants and output/interruption fixtures.
 - [ ] Establish explicit retention/erase policies and schema migration for stored observations.
 - [x] Author a pure module lifecycle state machine and existing deny-before-poll host prechecks (**in-process only; unverified**).
-- [ ] Integrate lifecycle with a user-consent service, enforce revocation, and later build an OS-level device broker. A Rust trait is **not** a security sandbox.
+- [ ] Complete persistent per-adapter consent and an OS-level device broker. Local host-read revocation is now enforced immediately; TUI P resumes only through explicit grant/start. A Rust trait is **not** a security sandbox.
 - [ ] Add battery, thermal, disk and network-interface status only where supported, with `Unknown` rather than guessed values.
 - [ ] Provide keyboard-only paths, reduced motion and terminal-size fallback.
 - [x] Author state/quality/overflow and sample-argument unit tests (**not yet executed**).
@@ -93,9 +93,9 @@ The build is a directed acyclic dependency plan, **not** a schedule. All module 
 
 ## G0 and G1 status summary
 
-**G0:** remote Actions previously reported startup_failure with zero executed jobs; local Linux stable/MSRV compilation, 36 tests, fmt, Clippy and CLI/TUI smoke checks now pass; remote CI and remaining platform acceptance are still open.
+**G0:** remote Actions previously reported startup_failure with zero executed jobs; local Linux stable/MSRV compilation, 43 tests, fmt, Clippy and CLI/TUI smoke checks now pass; remote CI and remaining platform acceptance are still open.
 
-**G1:** typed observation, bounded sample buffer, lifecycle transitions, finite NDJSON command and offline catalog validator have initial source implementations with telemetry now shared by TUI and finite NDJSON through a bounded session. Lifecycle and ModuleHost orchestration remain separate. See [validation evidence](VALIDATION.md).
+**G1:** typed observation, bounded sample buffer, lifecycle transitions, finite NDJSON command and offline catalog validator have initial source implementations with telemetry now shared by TUI and finite NDJSON through a bounded session. The lazy host telemetry adapter now connects ModuleHost, lifecycle, capabilities and both frontends. Per-adapter persistent consent and device brokering remain planned. See [validation evidence](VALIDATION.md).
 
 **G2–G4:** still planned, with no external hardware, location, scanning or transmission enabled.
 

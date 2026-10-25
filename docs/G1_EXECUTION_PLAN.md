@@ -10,15 +10,15 @@
 | --- | --- | --- | --- |
 | Host measurements | metrics.rs | Linux smoke tested | macOS/Windows fixtures and platform timing |
 | Typed observation | observation.rs | Integrated with TUI and finite NDJSON; locally tested | Schema migration and field-level units |
-| Bounded sample buffer | buffer.rs | Integrated with TUI and finite NDJSON; locally tested | Lifecycle host integration |
-| Lifecycle state | lifecycle.rs | Pure transition model, unverified | Host/permission service integration |
-| Capability prechecks | capability.rs and runtime.rs | Prototype, unverified | Explicit grant/revoke UI and device broker |
+| Bounded sample buffer | buffer.rs | Integrated with TUI and finite NDJSON; locally tested | Runtime integration for other adapters |
+| Lifecycle state | lifecycle.rs | Integrated into ModuleHost; locally tested | External authorization/device broker |
+| Capability prechecks | capability.rs and runtime.rs | Explicit start/revoke/cleanup; TUI P control tested | Persistent per-adapter consent and device broker |
 | Finite NDJSON export | sampling.rs | Locally tested, including writer failures | Signal cancellation and other OS clock checks |
 | Local notes | notes.rs | Existing, unverified | Crash recovery, migration and Windows overwrite |
 | Research consistency | tools/validate_catalog.py | Passing locally | Keep catalog and Rust registry aligned |
 | Quality checks | rust.yml | Python + stable + Rust 1.81.0 matrix | Local quality checks pass; remote Actions still unverified |
 
-See [VALIDATION.md](VALIDATION.md) for executed Linux checks. The shared `TelemetrySession` is used by frontends directly; it is not yet orchestrated by `ModuleHost`.
+See [VALIDATION.md](VALIDATION.md) for executed Linux checks. Both TUI and NDJSON now use `ModuleHost` with a lazy telemetry adapter. TUI P controls local host-read grant/revocation. Persistent settings, general adapter consent, and OS brokering remain planned.
 
 G1 module-plan statuses remain **planned** until integration and acceptance tests are verified. File presence is not proof of a functioning runtime.
 
@@ -74,8 +74,8 @@ G1 module-plan statuses remain **planned** until integration and acceptance test
 | Priority | Work item | Blocking dependency |
 | --- | --- | --- |
 | P0 | Investigate Actions startup failure and capture passing CI | Runner/entitlement investigation |
-| P0 | Connect the shared frontend telemetry session to lifecycle/module host | G1-D |
-| P0 | Integrate lifecycle and true user consent/revoke pathways | G1-D |
+| P0 | Extend lifecycle host integration to other built-ins | G1-D |
+| P0 | Build persistent per-adapter consent UI and OS device broker | G1-D/G2 |
 | P0 | Fix notes overwrite/recovery and design schema migrations | G1-A |
 | P1 | Build testable host telemetry timing and source-quality dashboard | G1-C |
 | P1 | Accessibility/low-motion terminal profiles | G1-E |

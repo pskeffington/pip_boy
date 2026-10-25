@@ -13,7 +13,7 @@ Rust-Boy is an experimental offline-first field systems console, not a safety-of
 
 ## Capability architecture
 
-The in-process Rust `ModuleHost` provides a **best-effort policy precheck** for built-in trusted modules, not operating-system isolation. The static manifest cannot prevent malicious linked code from invoking OS functions. Hardware operations will require a separate device broker with explicit user consent and scoped handles before those adapters can be enabled. See [docs/OBJECT_MODEL.md](docs/OBJECT_MODEL.md).
+The in-process Rust `ModuleHost` provides **lifecycle and capability policy checks** for built-in trusted modules, not operating-system isolation. The static manifest cannot prevent malicious linked code from invoking OS functions. Hardware operations will require a separate device broker with explicit user consent and scoped handles before those adapters can be enabled. See [docs/OBJECT_MODEL.md](docs/OBJECT_MODEL.md).
 
 ## Future devices
 
@@ -26,3 +26,5 @@ Never import source or media solely because it is visible on GitHub. Capture rep
 ## Reports
 
 File a private security report using GitHub's security advisory feature when available. Avoid publishing credentials, location traces, or sensitive sample files in issues.
+
+Local host telemetry starts only after the host checks its read grant. TUI P revokes that grant immediately, drops the collector/history, and clears the displayed reading. Resume grants host read access for the current session and explicitly restarts collection. Grants are not persisted. Notes/library and legacy `status` are still direct built-in services; this is not a general per-adapter consent system.

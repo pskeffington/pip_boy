@@ -42,3 +42,8 @@ jobs:
       - name: Clippy
         if: matrix.toolchain == 'stable'
         run: cargo clippy --workspace --all-targets --locked -- -D warnings
+      - name: Runtime CLI and terminal smoke checks
+        if: matrix.toolchain == 'stable'
+        run: |
+          cargo build -p pipboy --locked
+          python3 tools/smoke_runtime.py

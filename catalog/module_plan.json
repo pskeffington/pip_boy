@@ -102,7 +102,7 @@
       "Provenance-tagged samples",
       "NDJSON export and interval controls",
       "Bounded in-memory buffers",
-      "Shared TUI/finite NDJSON session with bounded history and freshness (locally tested; lifecycle integration pending)"
+      "TUI/finite NDJSON use a lazy lifecycle-host telemetry adapter with bounded history and freshness (locally tested)"
     ],
     "acceptance": [
       "Tests cover source, clock and sample freshness",
@@ -215,7 +215,8 @@
     "features": [
       "Explicit per-adapter permission choices",
       "Reversible configuration",
-      "Disabled-by-default external I/O"
+      "Disabled-by-default external I/O",
+      "Session-only local host-read pause/resume implemented; persistent per-adapter consent remains planned"
     ],
     "acceptance": [
       "Permissions tested before adapter callback",
