@@ -111,7 +111,7 @@
       }
       const panel = node("section", "task-summary");
       const title = node("div", "task-heading");
-      title.append(node("strong", "", response.manager ? "OPERATIONS / TASK CONTROL" : "ASSIGNED DUTIES"));
+      title.append(node("strong", "", response.manager ? "OPERATIONS / MISSION LOG" : "ASSIGNED DUTIES"));
       title.append(badge(String(own.length) + " TASKS"));
       panel.append(title);
       const meter = node("div", "task-counts");
@@ -134,7 +134,7 @@
       }
       panel.append(list);
       if (typeof options.onOpen === "function") {
-        panel.append(button(response.manager ? "OPEN TASK CONTROL" : "VIEW ASSIGNED DUTIES",
+        panel.append(button(response.manager ? "OPEN MISSION LOG" : "VIEW ASSIGNED DUTIES",
           options.onOpen, "solid"));
       }
       if (response.manager) panel.append(infoText("Assignments remain local until sent to a paired Rust-Boy."));
