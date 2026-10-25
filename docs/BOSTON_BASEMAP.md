@@ -9,7 +9,7 @@ The default MAP view shows **real, modern central Boston** street centerlines. T
 - **Licensing:** [Boston Street Segments metadata](https://www.arcgis.com/home/item.html?id=8f31b239f40847e29543322093c717fc) states ODC PDDL 1.0. The City also has a [general data license agreement](https://www.boston.gov/government/cabinets/innovation-and-technology/city-boston-data-license-agreement) with restrictions. Confirm how these terms interact **before public dataset redistribution or release**; Olin's software license alone does not license the GIS data.
 - **Geographic selection:** WGS84 longitude -71.140 to -70.990, latitude 42.309 to 42.399. A source segment is selected if at least one **real source vertex** falls inside. Entire original segments, including small excursions beyond the box, are retained.
 - **Included:** 10,634 uniquely identified actual road segments, 47,994 source vertices, 2,522 original street names. The source CFCC road classification is preserved. Coordinates are rounded to six WGS84 decimals (~0.1 m coordinate quantization, **not** a ground-survey accuracy claim).
-- **Not included:** The whole city or Greater Boston, every water/coastline polygon, buildings, live closures, trails missing from source, Cambridge/Somerville street coverage or any fictional game location.
+- **Not included in the street dataset:** The whole city or Greater Boston, buildings, live closures, trails missing from source, Cambridge/Somerville streets or any fictional game location. Separate pinned City boundary and Natural Earth coastline references now provide real **shoreline and land geometry**; see [county and coast guide](COUNTY_MAP.md) for their limitations.
 
 ## Implementation
 
@@ -17,9 +17,9 @@ The data file at crates/pipboy/assets/boston-base.js contains **source-derived r
 
 Original phosphor colors, road-width hierarchy, fine grid and optional scanlines provide a retro-futurist look **without changing the street geometry**.
 
-MAP starts with local geometry and no external tiles or location permissions. Browser GPS still requires operator action. WEB ON is a distinct optional provider request that can disclose a viewport; it remains blocked when saved Reclamation sites are visible. The BOS OFF / BOS ON button hides or restores the included base; CLEAR MAP clears imported/online data while leaving the fixed Boston reference available.
+MAP starts with local road, land-footprint and coastline geometry and no external tiles or location permissions. Browser GPS still requires operator action. WEB ON is a distinct optional provider request that can disclose a viewport; it remains blocked when saved Reclamation sites are visible. The BOS OFF / BOS ON button hides or restores the included base; CLEAR MAP clears imported/online data while leaving the fixed Boston reference available.
 
-The map provides its municipal source in DATA SOURCES and an attribution link. It is **not certified for navigation**, current closures, road safety or field hardware; no raster or full native RustGIS renderer is bundled.
+The map provides its municipal, Natural Earth and historic Suffolk county sources in DATA SOURCES and attribution. **AREA** accepts explicit manual coordinates or one-time GPS; **LOAD COUNTY** retrieves and renders the actual 2026 Census county boundary, roads, rail and hydrography for the selected location. No automatic location disclosure occurs on opening MAP. See [county source and privacy guide](COUNTY_MAP.md). It is **not certified for navigation**, current closures, road safety or field hardware; no raster or full native RustGIS renderer is bundled.
 
 ## Rebuild from pinned source (offline)
 
