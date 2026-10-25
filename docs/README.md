@@ -59,3 +59,5 @@ The machine-readable `implemented_unverified` catalog label is a **module accept
 [Security](../SECURITY.md) · [Contributing](../CONTRIBUTING.md) · [Branding](../BRANDING.md) · [License](../LICENSE).
 
 The product name is **Rust-Boy**; the existing `pip_boy` repository, `pipboy` CLI and `PIPBOY_HOME` storage variable remain compatibility interfaces. Keep implementation status explicit, preserve data provenance, and obtain separate rights clearance before copying third-party software or art.
+
+- [Reclamation Field Kit](RECLAMATION.md) — manual survey site register, offline markers, GeoJSON export and privacy boundaries.
