@@ -113,3 +113,39 @@ impl PermissionSet {
     }
 }
 
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn emitted_permission_keys_match_manifest_vocabulary() {
+        for key in [
+            "host.read", "files.read", "files.write", "device.enumerate",
+            "gpio.read", "display.write", "serial.read", "gnss.read",
+            "sdr.receive", "ble.discover", "mesh.transmit", "sensor.read",
+            "audio.play", "network.fetch",
+        ] {
+            let capability = Capability::from_key(key).expect("permission must exist");
+            assert_eq!(capability.key(), key);
+            assert_eq!(serde_json::to_string(&capability).unwrap(), format!("\"{key}\""));
+        }
+    }
+
+    #[test]
+    fn default_permissions_deny_sensitive_interfaces() {
+        let permissions = PermissionSet::offline_read_only();
+        assert!(permissions.allows(Capability::FilesRead));
+        assert!(permissions.allows(Capability::HostRead));
+        for denied in [
+            Capability::FilesWrite,
+            Capability::GnssRead,
+            Capability::SdrReceive,
+            Capability::BleDiscover,
+            Capability::MeshTransmit,
+            Capability::NetworkFetch,
+        ] {
+            assert!(!permissions.allows(denied));
+        }
+    }
+}

@@ -150,6 +150,29 @@ mod tests {
         }
     }
 
+    /// A second concrete type proves actual heterogeneous trait dispatch.
+    struct LibraryFixture {
+        calls: Arc<AtomicUsize>,
+    }
+
+    impl RuntimeModule for LibraryFixture {
+        fn id(&self) -> &'static str {
+            "library"
+        }
+
+        fn capabilities(&self) -> &'static [Capability] {
+            FILE_READ
+        }
+
+        fn sample(&mut self) -> Result<ModuleSample, String> {
+            self.calls.fetch_add(1, Ordering::SeqCst);
+            Ok(ModuleSample {
+                source: "library-fixture".to_owned(),
+                detail: "offline-only".to_owned(),
+            })
+        }
+    }
+
     fn mock(id: &'static str, required: &'static [Capability], calls: &Arc<AtomicUsize>) -> Box<dyn RuntimeModule> {
         Box::new(MockModule {
             id,
@@ -164,7 +187,7 @@ mod tests {
         let mut host = ModuleHost::new(PermissionSet::offline_read_only());
         host.register(mock("notes", WRITE, &calls)).unwrap();
 
-        assert!(matches!(host.poll_once()[0].outcome, PollOutcome::Denied { .. }));
+        assert!(matches!(&host.poll_once()[0].outcome, PollOutcome::Denied { .. }));
         assert_eq!(calls.load(Ordering::SeqCst), 0);
 
         host.permissions_mut().grant(Capability::FilesWrite);
@@ -181,11 +204,11 @@ mod tests {
         let calls = Arc::new(AtomicUsize::new(0));
         let mut host = ModuleHost::new(PermissionSet::offline_read_only());
         host.register(mock("stat", READ, &calls)).unwrap();
-        host.register(mock("library", FILE_READ, &calls)).unwrap();
+        host.register(Box::new(LibraryFixture { calls: Arc::clone(&calls) })).unwrap();
 
         let output = host.poll_once();
         assert_eq!(output.len(), 2);
-        assert!(output.iter().all(|entry| matches!(entry.outcome, PollOutcome::Sample { .. })));
+        assert!(output.iter().all(|entry| matches!(&entry.outcome, PollOutcome::Sample { .. })));
         assert_eq!(calls.load(Ordering::SeqCst), 2);
     }
 
