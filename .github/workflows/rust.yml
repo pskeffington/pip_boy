@@ -61,6 +61,7 @@ jobs:
       - name: Dashboard JavaScript and native RustGIS map tests
         if: matrix.toolchain == 'stable'
         run: |
+          node --check crates/pipboy/assets/reclamation.js
           node --check crates/pipboy/assets/network.js
           node tools/test_network_ui.cjs
           node --check crates/pipboy/assets/dashboard.js
