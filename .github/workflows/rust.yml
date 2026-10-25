@@ -48,3 +48,4 @@ jobs:
           cargo build -p pipboy --locked
           python3 tools/smoke_runtime.py
           python3 tools/smoke_notes.py
+          python3 tools/smoke_permissions.py
