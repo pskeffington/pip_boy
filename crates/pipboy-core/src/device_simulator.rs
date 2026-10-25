@@ -7,7 +7,7 @@
 use crate::capability::Capability;
 use crate::permissions::{adapter_capability, Preference, PreferenceEntry, ADAPTER_CAPABILITIES};
 use serde::Serialize;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::error::Error;
 use std::fmt;
 use std::sync::Arc;
@@ -302,6 +302,7 @@ impl SimulatedBroker {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::collections::HashSet;
 
     fn choice(capability: &str, preference: Preference) -> PreferenceEntry {
         PreferenceEntry {

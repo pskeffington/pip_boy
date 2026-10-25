@@ -1,6 +1,7 @@
 use pipboy_core::blueprint::{literature, plans, validate_blueprint};
 use pipboy_core::branding::{CLI_COMMAND, PRODUCT_DESCRIPTOR, PRODUCT_NAME};
 use pipboy_core::catalog::{sources, validate_sources};
+use pipboy_core::device_simulator::{SessionConfirmation, SimulatedBroker};
 use pipboy_core::notes::NoteStore;
 use pipboy_core::permissions::{
     adapter_capability, Preference, PreferenceStore, ADAPTER_CAPABILITIES,
@@ -14,7 +15,7 @@ mod tui;
 
 fn help() {
     println!("{PRODUCT_NAME} | {PRODUCT_DESCRIPTOR}");
-    println!("usage: {CLI_COMMAND} [tui|status [--json]|sample [--count N --interval-ms MS]|sources [query]|modules|plan [G0..G4]|evidence [query]|doctor|permissions <list|request KEY|deny KEY|clear KEY>|notes <list|add TEXT|search QUERY|export|import FILE>|help]");
+    println!("usage: {CLI_COMMAND} [tui|status [--json]|sample [--count N --interval-ms MS]|sources [query]|modules|plan [G0..G4]|evidence [query]|doctor|permissions <list|request KEY|deny KEY|clear KEY>|simulate <list|run ID [--confirm]>|notes <list|add TEXT|search QUERY|export|import FILE>|help]");
 }
 
 fn main() {
@@ -188,6 +189,42 @@ fn run() -> Result<(), Box<dyn Error>> {
                 ),
             }
         }
+        Some("simulate") => {
+            match args.next().as_deref() {
+                Some("list") if args.next().is_none() => {
+                    for device in SimulatedBroker::fixtures() {
+                        println!(
+                            "{:<20} {:<18} {} (SIMULATED)",
+                            device.id,
+                            device.capability.key(),
+                            device.description
+                        );
+                    }
+                    println!("INFO: fixed in-memory fixtures; no OS device discovery");
+                    Ok(())
+                }
+                Some("run") => {
+                    let device_id = args
+                        .next()
+                        .ok_or("usage: pipboy simulate run ID [--confirm]")?;
+                    let confirmation = match args.next().as_deref() {
+                        Some("--confirm") if args.next().is_none() => {
+                            SessionConfirmation::Confirmed
+                        }
+                        None => SessionConfirmation::Absent,
+                        _ => return Err("usage: pipboy simulate run ID [--confirm]".into()),
+                    };
+                    let preferences = PreferenceStore::from_environment()?.list()?;
+                    let mut broker = SimulatedBroker::new(&preferences)?;
+                    let lease = broker.open(&device_id, confirmation)?;
+                    let event = broker.sample(&lease)?;
+                    broker.close(&lease)?;
+                    println!("{}", serde_json::to_string_pretty(&event)?);
+                    Ok(())
+                }
+                _ => Err("usage: pipboy simulate <list|run ID [--confirm]>".into()),
+            }
+        }
         Some("doctor") => {
             let entries = sources()?;
             validate_sources(&entries)?;
@@ -209,6 +246,10 @@ fn run() -> Result<(), Box<dyn Error>> {
             println!(
                 "PASS: {} persisted adapter preferences validated",
                 preferences.list()?.len()
+            );
+            println!(
+                "INFO: {} fixed in-memory device fixtures; no real device backend",
+                SimulatedBroker::fixtures().len()
             );
             println!("INFO: map, radio, mesh, GPIO and device I/O are not implemented");
             println!("INFO: doctor does not probe or connect to nearby devices");

@@ -7,6 +7,7 @@ pub mod blueprint;
 pub mod branding;
 pub mod buffer;
 pub mod capability;
+pub mod device_simulator;
 pub mod catalog;
 pub mod lifecycle;
 pub mod metrics;
