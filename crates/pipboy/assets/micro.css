@@ -117,6 +117,7 @@ small { font-size:11px; }
 .form-actions { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
 .micro-consent {display:flex;align-items:center;gap:8px;font:10px var(--rb-mono);color:var(--rb-text);letter-spacing:0;}
 .micro-consent input {width:17px;height:17px;margin:0;accent-color:var(--rb-accent);flex:none;}
+.net-summary {padding:6px 8px;border:1px solid var(--rb-line);background:var(--rb-surface);font:bold 11px var(--rb-mono);color:var(--rb-accent);}
 .muted { color:var(--rb-muted); }
 .warning { color:var(--rb-alert); }
 .error { color:#f5a599; }
