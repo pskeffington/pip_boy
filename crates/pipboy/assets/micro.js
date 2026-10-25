@@ -64,7 +64,7 @@ const roleStations = Object.freeze({
   "reclamation-scout": {
     heading: "FIELD RECONNAISSANCE",
     purpose: "Waypoints, offline distances, site notes and assigned field duties.",
-    quick: "SCOUT WAYPOINT", tool: "geo-lab", page: "map"
+    quick: "SCOUT GIS", tool: "geo-lab", page: "map"
   },
   "records-custodian": {
     heading: "RECORDS OFFICE",
