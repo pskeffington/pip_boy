@@ -4,9 +4,7 @@
 //! declarative. No hardware, camera, console, GNSS or TAK transport is opened
 //! by browsing the dashboard or selecting a role.
 use pipboy_core::scout_gis::{distance_meters, waypoint, Point};
-use pipboy_core::workbench::{
-    inspect_hex, ipv4_cidr, tool, WorkbenchStore, PALETTE, PRESETS,
-};
+use pipboy_core::workbench::{inspect_hex, ipv4_cidr, tool, WorkbenchStore, PALETTE, PRESETS};
 use serde_json::{json, Value};
 use std::collections::BTreeMap;
 use std::error::Error;
@@ -133,7 +131,7 @@ fn receive(stream: &mut TcpStream) -> Result<Request, Response> {
     let path = words.next().unwrap_or_default().to_owned();
     let version = words.next().unwrap_or_default();
     if words.next().is_some()
-        || !matches!(method, "GET" | "POST")
+        || !matches!(method.as_str(), "GET" | "POST")
         || !path.starts_with('/')
         || version != "HTTP/1.1"
     {
@@ -155,7 +153,10 @@ fn receive(stream: &mut TcpStream) -> Result<Request, Response> {
         }
         let key = name.to_ascii_lowercase();
         if headers.contains_key(&key) {
-            return Err(Response::error(400, "Duplicate HTTP headers are not allowed"));
+            return Err(Response::error(
+                400,
+                "Duplicate HTTP headers are not allowed",
+            ));
         }
         let value = value.trim();
         if value.bytes().any(|c| c.is_ascii_control()) {
@@ -164,7 +165,10 @@ fn receive(stream: &mut TcpStream) -> Result<Request, Response> {
         headers.insert(key, value.to_owned());
     }
     if headers.contains_key("transfer-encoding") {
-        return Err(Response::error(400, "Chunked HTTP uploads are not accepted"));
+        return Err(Response::error(
+            400,
+            "Chunked HTTP uploads are not accepted",
+        ));
     }
     let declared_length = headers
         .get("content-length")
@@ -183,7 +187,10 @@ fn receive(stream: &mut TcpStream) -> Result<Request, Response> {
     }
     let received = data.len() - boundary;
     if received > length {
-        return Err(Response::error(400, "Unexpected bytes after HTTP request body"));
+        return Err(Response::error(
+            400,
+            "Unexpected bytes after HTTP request body",
+        ));
     }
     while data.len() - boundary < length {
         let mut chunk = [0u8; 1024];
@@ -206,7 +213,10 @@ fn receive(stream: &mut TcpStream) -> Result<Request, Response> {
 
 fn parse_json_body(req: &Request, permitted: &[&str]) -> Result<Value, Response> {
     if req.header("content-type") != Some("application/json") {
-        return Err(Response::error(415, "Require Content-Type: application/json"));
+        return Err(Response::error(
+            415,
+            "Require Content-Type: application/json",
+        ));
     }
     let value: Value = serde_json::from_slice(&req.body)
         .map_err(|_| Response::error(400, "Invalid JSON request body"))?;
@@ -226,9 +236,12 @@ fn str_field<'a>(body: &'a Value, key: &str) -> Result<&'a str, Response> {
 }
 
 fn state(store: &WorkbenchStore) -> Result<Response, Response> {
-    let active = store
-        .load()
-        .map_err(|_| Response::error(409, "Cannot read the local workbench; original file preserved"))?;
+    let active = store.load().map_err(|_| {
+        Response::error(
+            409,
+            "Cannot read the local workbench; original file preserved",
+        )
+    })?;
     Ok(Response::json(
         200,
         &json!({
@@ -262,7 +275,10 @@ fn experiment(body: &Value, store: &WorkbenchStore) -> Result<Response, Response
         .load()
         .map_err(|_| Response::error(409, "Workbench state unavailable"))?;
     if !active.slots.iter().any(|slot| slot.tool == tool_id) {
-        return Err(Response::error(409, "Load a role containing this tool first"));
+        return Err(Response::error(
+            409,
+            "Load a role containing this tool first",
+        ));
     }
     let output = match tool_id {
         "byte-lab" => {
@@ -365,15 +381,18 @@ fn dispatch(req: &Request, store: &WorkbenchStore, port: u16) -> Response {
             let result = (|| {
                 let body = parse_json_body(req, &["id", "confirm"])?;
                 if body.get("confirm").and_then(Value::as_bool) != Some(true) {
-                    return Err(Response::error(422, "Confirm profile replacement explicitly"));
+                    return Err(Response::error(
+                        422,
+                        "Confirm profile replacement explicitly",
+                    ));
                 }
                 let id = str_field(&body, "id")?;
                 if !PRESETS.iter().any(|profile| profile.id == id) {
                     return Err(Response::error(422, "Unknown role profile"));
                 }
-                store
-                    .apply_preset(id)
-                    .map_err(|_| Response::error(409, "Cannot replace workbench; original preserved"))?;
+                store.apply_preset(id).map_err(|_| {
+                    Response::error(409, "Cannot replace workbench; original preserved")
+                })?;
                 state(store)
             })();
             result.unwrap_or_else(|error| error)
@@ -382,16 +401,24 @@ fn dispatch(req: &Request, store: &WorkbenchStore, port: u16) -> Response {
             let result = (|| {
                 let body = parse_json_body(req, &["id"])?;
                 let id = str_field(&body, "id")?;
-                if store.load().map_err(|_| Response::error(409, "Workbench unavailable"))?.profile
+                if store
+                    .load()
+                    .map_err(|_| Response::error(409, "Workbench unavailable"))?
+                    .profile
                     != "custom"
                 {
                     return Err(Response::error(409, "Select Custom before pinning modules"));
                 }
                 let candidate = tool(id).ok_or_else(|| Response::error(422, "Unknown tool"))?;
                 if !candidate.availability.can_pin() {
-                    return Err(Response::error(422, "Unimplemented hardware tools cannot be pinned"));
+                    return Err(Response::error(
+                        422,
+                        "Unimplemented hardware tools cannot be pinned",
+                    ));
                 }
-                store.add(id).map_err(|_| Response::error(409, "Tool already pinned or storage unavailable"))?;
+                store.add(id).map_err(|_| {
+                    Response::error(409, "Tool already pinned or storage unavailable")
+                })?;
                 state(store)
             })();
             result.unwrap_or_else(|error| error)
@@ -399,16 +426,22 @@ fn dispatch(req: &Request, store: &WorkbenchStore, port: u16) -> Response {
         ("POST", "/api/custom/remove") => {
             let result = (|| {
                 let body = parse_json_body(req, &["id"])?;
-                let id = body.get("id")
+                let id = body
+                    .get("id")
                     .and_then(Value::as_u64)
                     .filter(|value| *value != 0)
                     .ok_or_else(|| Response::error(422, "Invalid slot number"))?;
-                if store.load().map_err(|_| Response::error(409, "Workbench unavailable"))?.profile
+                if store
+                    .load()
+                    .map_err(|_| Response::error(409, "Workbench unavailable"))?
+                    .profile
                     != "custom"
                 {
                     return Err(Response::error(409, "Select Custom before removing a slot"));
                 }
-                store.remove(id).map_err(|_| Response::error(409, "Cannot remove slot"))?;
+                store
+                    .remove(id)
+                    .map_err(|_| Response::error(409, "Cannot remove slot"))?;
                 state(store)
             })();
             result.unwrap_or_else(|error| error)
@@ -417,7 +450,9 @@ fn dispatch(req: &Request, store: &WorkbenchStore, port: u16) -> Response {
             let result = (|| {
                 let body = parse_json_body(
                     req,
-                    &["tool", "mode", "input", "lat", "lon", "lat2", "lon2", "name"],
+                    &[
+                        "tool", "mode", "input", "lat", "lon", "lat2", "lon2", "name",
+                    ],
                 )?;
                 experiment(&body, store)
             })();
@@ -535,13 +570,21 @@ mod tests {
     fn cross_origin_and_unknown_host_cannot_write_workbench() {
         let temp = tempfile::tempdir().unwrap();
         let store = WorkbenchStore::new(temp.path().join("state"));
-        let mut req = request("POST", "/api/profile", json!({"id":"custom","confirm":true}));
-        req.headers.insert("origin".to_owned(), "https://example.invalid".to_owned());
+        let mut req = request(
+            "POST",
+            "/api/profile",
+            json!({"id":"custom","confirm":true}),
+        );
+        req.headers
+            .insert("origin".to_owned(), "https://example.invalid".to_owned());
         assert_eq!(dispatch(&req, &store, 8765).status, 403);
-        req.headers.insert("origin".to_owned(), "http://127.0.0.1:8765".to_owned());
-        req.headers.insert("host".to_owned(), "attacker.local".to_owned());
+        req.headers
+            .insert("origin".to_owned(), "http://127.0.0.1:8765".to_owned());
+        req.headers
+            .insert("host".to_owned(), "attacker.local".to_owned());
         assert_eq!(dispatch(&req, &store, 8765).status, 403);
-        req.headers.insert("host".to_owned(), "127.0.0.1:8765".to_owned());
+        req.headers
+            .insert("host".to_owned(), "127.0.0.1:8765".to_owned());
         req.headers.remove("content-type");
         assert_eq!(dispatch(&req, &store, 8765).status, 415);
         let wrong = request("POST", "/api/profile", json!({"id":"custom"}));
@@ -569,7 +612,11 @@ mod tests {
         let output = dispatch(&lab, &store, 8765);
         assert_eq!(output.status, 200);
         assert!(String::from_utf8_lossy(&output.body).contains("-70.75"));
-        let current = request("POST", "/api/profile", json!({"id":"custom","confirm":true}));
+        let current = request(
+            "POST",
+            "/api/profile",
+            json!({"id":"custom","confirm":true}),
+        );
         assert_eq!(dispatch(&current, &store, 8765).status, 200);
         assert!(store.load().unwrap().slots.is_empty());
         assert_eq!(dispatch(&lab, &store, 8765).status, 409);
@@ -580,7 +627,9 @@ mod tests {
             "/api/experiment",
             json!({"tool":"net-lab","input":"192.168.1.50/24"}),
         );
-        assert!(String::from_utf8_lossy(&dispatch(&net, &store, 8765).body).contains("192.168.1.0/24"));
+        assert!(
+            String::from_utf8_lossy(&dispatch(&net, &store, 8765).body).contains("192.168.1.0/24")
+        );
         let remove = request("POST", "/api/custom/remove", json!({"id":1}));
         assert_eq!(dispatch(&remove, &store, 8765).status, 200);
         assert!(store.load().unwrap().slots.is_empty());
@@ -598,9 +647,15 @@ mod tests {
             ("/api/experiment", json!({"tool":"game","input":"scan"})),
             ("/api/shell", json!({"cmd":"echo hi"})),
         ] {
-            assert_ne!(dispatch(&request("POST", path, body), &store, 8765).status, 200);
+            assert_ne!(
+                dispatch(&request("POST", path, body), &store, 8765).status,
+                200
+            );
         }
-        assert_eq!(dispatch(&request("GET", "/api/unknown", Value::Null), &store, 8765).status, 404);
+        assert_eq!(
+            dispatch(&request("GET", "/api/unknown", Value::Null), &store, 8765).status,
+            404
+        );
         assert!(!temp.path().join("state").exists());
         let secret = "Bearer random-secret";
         let malformed = request("POST", "/api/profile", json!({"id":secret,"confirm":true}));
@@ -614,7 +669,11 @@ mod tests {
         let temp = tempfile::tempdir().unwrap();
         let store = WorkbenchStore::new(temp.path().to_path_buf());
         fs::write(store.path(), "invalid").unwrap();
-        let req = request("POST", "/api/profile", json!({"id":"overseer","confirm":true}));
+        let req = request(
+            "POST",
+            "/api/profile",
+            json!({"id":"overseer","confirm":true}),
+        );
         assert_eq!(dispatch(&req, &store, 8765).status, 409);
         assert_eq!(fs::read_to_string(store.path()).unwrap(), "invalid");
     }
@@ -633,6 +692,4 @@ mod tests {
         assert!(CSS.contains("@media"));
         assert!(!JS.contains("eval("));
     }
-
-
 }
