@@ -3,6 +3,7 @@
 //! This is a local companion window, not an external web service. Profiles are
 //! declarative. No hardware, camera, console, GNSS or TAK transport is opened
 //! by browsing the dashboard or selecting a role.
+use crate::county_cache::{self, CountyCache};
 use crate::peer;
 use pipboy_core::network_health;
 use pipboy_core::network_probe;
@@ -38,6 +39,7 @@ const BOSTON_MAP_JS: &str = include_str!("../assets/boston-map.js");
 const MAP_JS: &str = include_str!("../assets/map.js");
 const MAP_IMPORT_JS: &str = include_str!("../assets/map-import.js");
 const MAP_ONLINE_JS: &str = include_str!("../assets/map-online.js");
+const COUNTY_JS: &str = include_str!("../assets/map-county.js");
 const MAP_CSS: &str = include_str!("../assets/map.css");
 const NETWORK_JS: &str = include_str!("../assets/network.js");
 const NETWORK_CSS: &str = include_str!("../assets/network.css");
@@ -107,7 +109,7 @@ impl Response {
         let head = format!(
             "HTTP/1.1 {} {}\r\nContent-Type: {}\r\nContent-Length: {}\r\n\
              Cache-Control: no-store, max-age=0\r\n\
-             Content-Security-Policy: default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self' https://overpass-api.de; frame-ancestors 'none'; base-uri 'none'; form-action 'none'\r\n\
+             Content-Security-Policy: default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self' https://overpass-api.de https://tigerweb.geo.census.gov; frame-ancestors 'none'; base-uri 'none'; form-action 'none'\r\n\
              X-Content-Type-Options: nosniff\r\n\
              X-Frame-Options: DENY\r\n\
              Referrer-Policy: no-referrer\r\n\
@@ -433,6 +435,41 @@ fn experiment(body: &Value, store: &WorkbenchStore) -> Result<Response, Response
             "output": output
         }),
     ))
+}
+
+fn county_cache(store: &WorkbenchStore) -> CountyCache {
+    CountyCache::new(
+        store
+            .path()
+            .parent()
+            .unwrap_or_else(|| std::path::Path::new("."))
+            .join("county_cache"),
+    )
+}
+
+fn county_package(req: &Request, store: &WorkbenchStore) -> Result<Response, Response> {
+    let body = parse_json_body(req, &["geoid", "source", "confirm", "cache_only"])?;
+    let geoid = str_field(&body, "geoid")?;
+    let source = str_field(&body, "source")?;
+    let cache_only = body.get("cache_only").and_then(Value::as_bool) == Some(true);
+    let confirm = body.get("confirm").and_then(Value::as_bool) == Some(true);
+    if !confirm && !cache_only {
+        return Err(Response::error(
+            403,
+            "Confirm Census county network acquisition",
+        ));
+    }
+    let bytes = county_cache(store)
+        .fetch(geoid, source, !cache_only && confirm)
+        .map_err(|error| match error.kind() {
+            io::ErrorKind::NotFound => Response::error(404, "No cached county package"),
+            io::ErrorKind::InvalidInput => Response::error(422, "Invalid county GEOID or source"),
+            io::ErrorKind::WouldBlock => {
+                Response::error(409, "County download already in progress")
+            }
+            _ => Response::error(409, "County archive unavailable; original cache preserved"),
+        })?;
+    Ok(Response::new(200, "application/zip", bytes))
 }
 
 fn reclamation_store(store: &WorkbenchStore) -> SiteStore {
@@ -1001,6 +1038,9 @@ fn dispatch(req: &Request, store: &WorkbenchStore, port: u16) -> Response {
             "text/javascript; charset=utf-8",
             BOSTON_MAP_JS.as_bytes(),
         ),
+        ("GET", "/assets/map-county.js") => {
+            Response::new(200, "text/javascript; charset=utf-8", COUNTY_JS.as_bytes())
+        }
         ("GET", "/assets/map.js") => {
             Response::new(200, "text/javascript; charset=utf-8", MAP_JS.as_bytes())
         }
@@ -1034,6 +1074,12 @@ fn dispatch(req: &Request, store: &WorkbenchStore, port: u16) -> Response {
             Response::new(200, "text/javascript; charset=utf-8", JS.as_bytes())
         }
         ("GET", "/favicon.ico") => Response::new(204, "text/plain; charset=utf-8", Vec::new()),
+        ("GET", "/api/map/sources") => Response::json(200, &county_cache::sources()),
+        ("GET", "/api/map/cache") => county_cache(store)
+            .active()
+            .map(|value| Response::json(200, &value))
+            .unwrap_or_else(|_| Response::error(409, "County cache unavailable")),
+        ("POST", "/api/map/package") => county_package(req, store).unwrap_or_else(|error| error),
         ("GET", "/api/state") => state(store).unwrap_or_else(|error| error),
         ("GET", "/api/reclamation") => reclamation_read(store, false).unwrap_or_else(|error| error),
         ("GET", "/api/reclamation/map") => {
@@ -1146,7 +1192,7 @@ fn dispatch(req: &Request, store: &WorkbenchStore, port: u16) -> Response {
 
 fn serve_client(mut stream: TcpStream, store: &WorkbenchStore, port: u16) -> io::Result<()> {
     stream.set_read_timeout(Some(Duration::from_secs(3)))?;
-    stream.set_write_timeout(Some(Duration::from_secs(3)))?;
+    stream.set_write_timeout(Some(Duration::from_secs(30)))?;
     let response = match receive(&mut stream) {
         Ok(request) => dispatch(&request, store, port),
         Err(response) => response,
@@ -1695,6 +1741,78 @@ mod tests {
             std::fs::read_to_string(task_store(&store).path()).unwrap(),
             "bad-json"
         );
+    }
+
+    #[test]
+    fn county_source_api_is_allowlisted_local_and_explicit() {
+        let temp = tempfile::tempdir().unwrap();
+        let store = WorkbenchStore::new(temp.path().join("state"));
+        let index = dispatch(
+            &request("GET", "/api/map/sources", Value::Null),
+            &store,
+            8765,
+        );
+        assert_eq!(index.status, 200);
+        let sources: Value = serde_json::from_slice(&index.body).unwrap();
+        assert_eq!(sources["sources"].as_array().unwrap().len(), 3);
+        let cache = dispatch(&request("GET", "/api/map/cache", Value::Null), &store, 8765);
+        assert_eq!(cache.status, 200);
+        let manifest: Value = serde_json::from_slice(&cache.body).unwrap();
+        assert_eq!(manifest["active_geoid"], Value::Null);
+        assert!(!temp.path().join("state/county_cache").exists());
+
+        let cases = [
+            json!({"geoid":"25025","source":"tiger-roads"}),
+            json!({"geoid":"../../secret","source":"tiger-roads","confirm":true}),
+            json!({"geoid":"25025","source":"https://evil.invalid","confirm":true}),
+        ];
+        for (i, body) in cases.into_iter().enumerate() {
+            let response = dispatch(&request("POST", "/api/map/package", body), &store, 8765);
+            assert_eq!(response.status, if i == 0 { 403 } else { 422 });
+            assert!(!temp.path().join("state/county_cache").exists());
+        }
+        let response = dispatch(
+            &request(
+                "POST",
+                "/api/map/package",
+                json!({"geoid":"25025","source":"tiger-roads","cache_only":true}),
+            ),
+            &store,
+            8765,
+        );
+        assert_eq!(response.status, 404);
+        assert!(!temp.path().join("state/county_cache").exists());
+
+        let mut malicious = request(
+            "POST",
+            "/api/map/package",
+            json!({"geoid":"25025","source":"tiger-roads","confirm":true}),
+        );
+        malicious
+            .headers
+            .insert("origin".to_owned(), "https://untrusted.invalid".to_owned());
+        assert_eq!(dispatch(&malicious, &store, 8765).status, 403);
+        assert!(!temp.path().join("state/county_cache").exists());
+
+        let cached_dir = temp.path().join("state/county_cache");
+        std::fs::create_dir_all(&cached_dir).unwrap();
+        std::fs::write(
+            cached_dir.join("tl_2025_25025_roads.zip"),
+            b"PK\x03\x04local-cached-test",
+        )
+        .unwrap();
+        let response = dispatch(
+            &request(
+                "POST",
+                "/api/map/package",
+                json!({"geoid":"25025","source":"tiger-roads","cache_only":true}),
+            ),
+            &store,
+            8765,
+        );
+        assert_eq!(response.status, 200);
+        assert_eq!(response.content_type, "application/zip");
+        assert_eq!(response.body, b"PK\x03\x04local-cached-test");
     }
 
     #[test]

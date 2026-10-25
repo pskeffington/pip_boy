@@ -339,7 +339,7 @@
 
   function showLocalSites(view) {
     if (!view.siteAccess || active !== view) return;
-    if (view.countyEnabled) disableCounty(view);
+    if (view.countyEnabled || view.countyShapes.length) disableCounty(view);
     if (view.webEnabled) webOff(view, false);
     view.sitesVisible = true;
     view.sitePanel.hidden = false;
@@ -406,6 +406,18 @@
 
 
   function bostonVisible(shape, view) {
+    if (shape.countyBase) {
+      // Draw only actual source vertices, with small-screen zoom filtering.
+      if (shape.countyLayer === "roads" && !shape.countyMajor && view.zoom < 11.4)
+        return false;
+      const bounds = shape.bounds;
+      const sw = screenPoint(view, bounds[0], bounds[1]);
+      const ne = screenPoint(view, bounds[2], bounds[3]);
+      return Math.max(sw[0],ne[0]) >= -12 &&
+        Math.min(sw[0],ne[0]) <= view.width+12 &&
+        Math.max(sw[1],ne[1]) >= -12 &&
+        Math.min(sw[1],ne[1]) <= view.height+12;
+    }
     if (!shape.bostonBase) return true;
     // Original road class (CFCC) determines detail, not a fabricated feature.
     if (view.zoom < 10.8 && shape.cfcc >= 30) return false;
@@ -454,7 +466,8 @@
     let labels = 0;
     // Real Boston snapshot sits under opt-in OSM reference and imported RustGIS.
     const baseShapes = view.baseVisible && view.boston ? view.boston.shapes : [];
-    for (const shape of [...baseShapes, ...view.onlineShapes, ...view.shapes,
+    for (const shape of [...baseShapes, ...view.countyShapes,
+      ...view.onlineShapes, ...view.shapes,
       ...(view.county ? [view.county.shape] : [])]) {
       if (!bostonVisible(shape, view)) continue;
       const style = shape.style || {};
@@ -568,7 +581,8 @@
       ctx.stroke();
     }
 
-    if (!view.baseVisible && !view.shapes.length && !view.onlineShapes.length) {
+    if (!view.baseVisible && !view.countyShapes.length && !view.shapes.length &&
+        !view.onlineShapes.length) {
       ctx.textAlign = "center";
       ctx.font = "11px monospace";
       ctx.fillStyle = "#dfa96b";
@@ -589,6 +603,7 @@
     view.status.textContent = (view.siteCentered ? "MANUAL SITE / NOT GPS  |  " : "") +
       fix + "  |  Z" + view.zoom.toFixed(1) + "  |  " +
       (view.layerName || (view.sitesVisible ? "LOCAL SITES" :
+        view.countyShapes.length ? "TIGER COUNTY " + view.countyPackage.geoid :
         view.baseVisible ? "BOSTON / REAL STREETS" : "LOAD RUSTGIS MAP")) +
       "  |  CENTER " + center;
     view.locate.textContent = view.watchId === null ? "GPS ON" : "GPS OFF";
@@ -599,23 +614,37 @@
     view.baseButton.hidden = !view.boston;
     view.baseButton.textContent = view.baseVisible ? "BOS OFF" : "BOS ON";
     view.baseAttribution.hidden = !view.baseVisible;
+    view.countyAttribution.hidden = !view.countyShapes.length && !view.county;
     view.siteSummary.textContent = "RECLAMATION / " + view.sites.length + " LOCAL SITES";
     view.webRefresh.hidden = !view.webEnabled;
     view.webStatusNode.textContent = view.webStatus;
     view.countyButton.textContent = view.countyEnabled ? "COUNTY OFF" : "COUNTY";
     view.countyNode.textContent = view.countyStatus;
     view.attribution.hidden = !view.onlineShapes.length;
-    view.sourceBox.hidden = !view.county && !view.layers.length && !view.webMeta &&
+    view.sourceBox.hidden = !view.county && !view.countyShapes.length &&
+      !view.layers.length && !view.webMeta &&
       !view.baseVisible && !(view.sitesVisible && view.sites.length);
-    if (view.county || view.baseVisible || view.layers.length || view.webMeta ||
+    if (view.county || view.countyShapes.length || view.baseVisible ||
+        view.layers.length || view.webMeta ||
         (view.sitesVisible && view.sites.length)) {
       view.sourceSummary.textContent = "DATA SOURCES / " + view.layers.length + " IMPORTED LAYERS" +
         (view.baseVisible ? " / BOSTON SAM" : "") +
         (view.county ? " / CENSUS COUNTY" : "") +
+        (view.countyPackage ? " / TIGER " + view.countyPackage.geoid : "") +
         (view.sitesVisible ? " / " + view.sites.length + " LOCAL SITES" : "") +
         (view.webMeta ? " / OSM WEB" : "") +
         (view.warnings.length ? " / " + view.warnings.length + " LIMITATIONS" : "");
-      view.sourceLines.textContent = (view.county ?
+      view.sourceLines.textContent = (view.countyPackage ?
+        "COUNTY GEOID " + view.countyPackage.geoid +
+        " / U.S. Census TIGER/Line 2025\n" +
+        "Source datum: GCS NAD83 (geographic lon/lat); no datum shift applied.\n" +
+        Object.entries(view.countyPackage.layers).map(([id,d]) =>
+          id + ": " + d.features + " features, " + d.vertices +
+          " original vertices / county-wide source").join("\n") +
+        (view.countyPackage.errors.length ?
+          "\nPARTIAL SOURCES: " + view.countyPackage.errors.join(" | ") : "") +
+        "\nWater areas/streams are reference geometry, not surveyed coastline.\n" : "") +
+        (view.county ?
         "COUNTY: " + view.county.name + " / GEOID " + view.county.id + "\n" +
         "Source: " + view.county.source + "\n" +
         "Boundary ≠ surveyed shoreline; OSM roads are viewport-limited.\n" : "") +
@@ -819,17 +848,112 @@
   }
 
 
+
+  function clearCountyPackages(view) {
+    view.countyPackageVersion++;
+    if (view.countyPackageAbort) view.countyPackageAbort.abort();
+    view.countyPackageAbort = null;
+    view.countyShapes = [];
+    view.countyPackage = null;
+    if (view.countyPriorBaseVisible !== null) {
+      view.baseVisible = view.countyPriorBaseVisible;
+      view.countyPriorBaseVisible = null;
+    }
+  }
+
+  function fitCountyPackage(view) {
+    const data = view.countyPackage &&
+      (view.countyPackage.layers["tiger-roads"] ||
+       view.countyPackage.layers["tiger-areawater"]);
+    if (!data) return;
+    const [west,south,east,north] = data.bounds;
+    const a = project(west,south), b = project(east,north);
+    view.zoom = clamp(Math.floor(Math.log2(Math.min(
+      Math.max(80, view.width - 50) / Math.max(0.001,Math.abs(b[0]-a[0])),
+      Math.max(60, view.height - 45) / Math.max(0.001,Math.abs(b[1]-a[1]))))),MIN_ZOOM,16);
+    view.center = inverse((a[0]+b[0])/2,(a[1]+b[1])/2);
+    view.follow = false;
+  }
+
+  async function loadCountyPackages(view, geoid, cacheOnly=false) {
+    if (active !== view || view.sitesVisible || view.siteCentered ||
+        !window.RustBoyCounty?.validGeoid(geoid)) return;
+    clearCountyPackages(view);
+    const version = ++view.countyPackageVersion;
+    const controller = new AbortController();
+    view.countyPackageAbort = controller;
+    view.countyPackage = {geoid,layers:Object.create(null),errors:[]};
+    view.countyStatus = "COUNTY "+geoid+" / SOURCE LIST";
+    refresh(view);
+    try {
+      const report = await window.RustBoyCounty.load(geoid,{
+        cacheOnly,signal:controller.signal,
+        onStatus: message => {
+          if(active===view && view.countyPackageVersion===version) {
+            view.countyStatus=message;refresh(view);
+          }
+        },
+        onLayer: (id,data) => {
+          if(active!==view || view.countyPackageVersion!==version ||
+              controller.signal.aborted)return;
+          view.countyPackage.layers[id]=data;
+          view.countyShapes=[
+            ...(view.countyPackage.layers["tiger-areawater"]?.shapes||[]),
+            ...(view.countyPackage.layers["tiger-linearwater"]?.shapes||[]),
+            ...(view.countyPackage.layers["tiger-roads"]?.shapes||[])
+          ];
+          if(view.countyPriorBaseVisible===null)view.countyPriorBaseVisible=view.baseVisible;
+          view.baseVisible=false;
+          if(cacheOnly && !view.county && !view.fix)fitCountyPackage(view);
+          refresh(view);
+        }
+      });
+      if(active!==view || view.countyPackageVersion!==version)return;
+      view.countyPackage.errors=report.errors;
+      view.countyStatus="COUNTY "+geoid+" / "+report.features+" REAL FEATURES / "+
+        (cacheOnly?"LOCAL CACHE":"CENSUS 2025")+
+        (report.errors.length?" / PARTIAL - SEE SOURCES":" / SOURCES LOADED");
+      refresh(view);
+    }catch(error){
+      if(active!==view || view.countyPackageVersion!==version ||
+         controller.signal.aborted)return;
+      view.countyStatus="COUNTY "+geoid+" / "+
+        (error instanceof Error?error.message:"SOURCE FAILED").slice(0,100);
+      refresh(view);
+    }finally{
+      if(view.countyPackageAbort===controller)view.countyPackageAbort=null;
+    }
+  }
+
+  async function restoreCachedCounty(view) {
+    if(!window.RustBoyCounty)return;
+    const version=++view.countyCacheReadVersion;
+    try{
+      const cache=await window.RustBoyCounty.active();
+      if(active===view && version===view.countyCacheReadVersion &&
+         !view.countyEnabled && !view.sitesVisible && cache.active_geoid &&
+         cache.cached_sources.length)
+        void loadCountyPackages(view,cache.active_geoid,true);
+    }catch(_){/* Missing cache leaves original offline Boston map untouched. */}
+  }
+
   function disableCounty(view) {
     view.countyEnabled=false;
     view.countyRequest++;
     if(view.countyAbort)view.countyAbort.abort();
     view.countyAbort=null;
     view.county=null;
-    view.countyStatus="COUNTY OFF";
+    view.countyLastLookup=null;
+    view.countyCacheReadVersion++;
+    clearCountyPackages(view);
+    view.countyStatus="COUNTY OFF / CACHE PRESERVED";
     refresh(view);
   }
   async function loadCounty(view, location) {
     if(active!==view || !view.countyEnabled || !window.RustBoyOnline) return;
+    if(view.county && view.countyLastLookup &&
+        Math.abs(view.countyLastLookup.lat-location.lat)<0.012 &&
+        Math.abs(view.countyLastLookup.lon-location.lon)<0.012)return;
     if (view.sitesVisible || view.siteCentered) {
       view.countyStatus="CLOSE SITES BEFORE COUNTY LOOKUP";
       refresh(view); return;
@@ -848,14 +972,17 @@
       const county=await window.RustBoyOnline.countyAt(location.lon,location.lat,controller.signal);
       if(active!==view || !view.countyEnabled || version!==view.countyRequest) return;
       view.county=county;
+      view.countyLastLookup={...location};
       view.countyStatus=county.name.toUpperCase()+" COUNTY / VERIFIED BOUNDARY";
       view.center={lat:location.lat,lon:location.lon};
       view.follow=false;
       view.zoom=Math.max(view.zoom,10);
       refresh(view);
-      // Road + major-feature coverage is bounded to the map viewport. Do not
-      // label this as a complete county road inventory.
-      if (!view.webEnabled && view.zoom>=12.5) {
+      if(window.RustBoyCounty) {
+        // Explicit COUNTY consent permits fixed Census source-list downloads.
+        // OSM WEB stays a separate explicit operator choice.
+        void loadCountyPackages(view,county.id,false);
+      } else if(!view.webEnabled && view.zoom>=12.5) {
         view.webEnabled=true;
         view.countyStatus += " / OSM VIEWPORT REFERENCE";
         void webFetch(view);
@@ -997,6 +1124,8 @@
     if (view.webProbeAbort) view.webProbeAbort.abort();
     view.countyRequest++;
     if (view.countyAbort) view.countyAbort.abort();
+    view.countyCacheReadVersion++;
+    clearCountyPackages(view);
     view.siteVersion++;
     if (view.siteAbort) view.siteAbort.abort();
     mapMemory = (view.shapes.length || view.onlineShapes.length || view.boston) ? {
@@ -1049,6 +1178,13 @@
     baseAttribution.rel = "noopener noreferrer";
     baseAttribution.hidden = true;
     stage.append(baseAttribution);
+    const countyAttribution = make("a", "rb-map-base-credit", "US CENSUS / TIGER 2025");
+    countyAttribution.href =
+      "https://www.census.gov/geographies/mapping-files/time-series/geo/tiger-line-file.html";
+    countyAttribution.target = "_blank";
+    countyAttribution.rel = "noopener noreferrer";
+    countyAttribution.hidden = true;
+    stage.append(countyAttribution);
     const webStatusNode = make("div", "rb-map-web-state", "WEB OFF");
     const countyNode = make("div", "rb-map-web-state", "COUNTY OFF / GPS OR CENTER REQUIRED");
     webStatusNode.setAttribute("role", "status");
@@ -1129,11 +1265,15 @@
       onlineShapes: mapMemory ? mapMemory.onlineShapes || [] : [],
       webMeta: mapMemory ? mapMemory.webMeta || null : null,
       county: null, countyEnabled: false, countyAbort: null, countyRequest: 0,
+      countyLastLookup:null,countyShapes:[],countyPackage:null,
+      countyPackageAbort:null,countyPackageVersion:0,countyCacheReadVersion:0,
+      countyPriorBaseVisible:null,
       countyStatus:"COUNTY OFF / GPS OR CENTER REQUIRED",countyNode,countyButton:null,
       webEnabled: false, webBusy: false, webAbort: null,
       webProbeAbort: null, webProbePromise: null,
       webReconnect: null, webDisconnect: null, webStatus: "WEB OFF",
-      attribution, baseAttribution, webStatusNode, webButton: null, webRefresh: null,
+      attribution, baseAttribution, countyAttribution, webStatusNode,
+      webButton: null, webRefresh: null,
       baseButton: null,
       fix: null, watchId: null, gpsState: "GPS OFF",
       follow: !mapMemory, observer: null, windowResize: null, drag: null,
@@ -1351,6 +1491,7 @@
       if (view.siteAccess && pendingSiteFocus !== null) showLocalSites(view);
       else if (!view.baseVisible) void probeWeb(view);
       if (!view.siteAccess) pendingSiteFocus = null;
+      if(!view.siteAccess || pendingSiteFocus===null)void restoreCachedCounty(view);
     });
     return view;
   }

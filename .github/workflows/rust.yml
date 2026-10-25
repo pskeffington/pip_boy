@@ -76,11 +76,13 @@ jobs:
           node --check crates/pipboy/assets/map.js
           node --check crates/pipboy/assets/map-import.js
           node --check crates/pipboy/assets/map-online.js
+          node --check crates/pipboy/assets/map-county.js
           node tools/test_rustgis_map_import.cjs
           node tools/test_rustgis_map_view.cjs
           node tools/test_boston_map.cjs
           node tools/test_reclamation_map.cjs
           node tools/test_county_map.cjs
+          node tools/test_county_sources.cjs
           node tools/test_rustgis_online.cjs
           node tools/test_rustgis_online_view.cjs
       - name: Compile all targets

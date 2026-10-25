@@ -19,6 +19,7 @@ Technical contracts, architecture decisions, research provenance and validation 
 | [Console controls](CONSOLE.md) | Keyboard navigation, resize behavior and terminal restoration |
 | [Boston offline real-street basemap](BOSTON_BASEMAP.md) | Pinned City SAM geometry, provenance, coverage and licensing |
 | [Lore naming and tool crosswalk](LORE_NAMING.md) | Six-tab HUD names, role/tool alignment and capability boundaries |
+| [County source acquisition](COUNTY_SOURCES.md) | Allowlisted Census county road/water archives, GPS zone selection and offline cache lifecycle |
 | [RustGIS-native map and GPS](SCOUT_GPS_MAP.md) | Native RustGIS map import, GPS, optional Overpass road reference, privacy and provenance |
 | [Reclamation Field Kit](RECLAMATION.md) | Local manual site register, offline markers, GeoJSON export and privacy controls |
 | [Scout GIS + TAK on Pi](SCOUT_GIS_TAK.md) | Offline GeoJSON, RustGIS ARM64 roadmap, Pi TAK server and CoT integration gates |
