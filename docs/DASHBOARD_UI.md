@@ -6,6 +6,10 @@
 
 Use [micro handheld mode](MICRO_UI.md) when testing a real micro-display layout instead of shrinking the desktop workstation. Start `./scripts/launch-micro.command` or `cargo run --locked -p pipboy -- dashboard --micro --open` on Mac. The local server serves **/micro** alongside the existing **/** desktop route. Both use the exact same workbench API; changing a job template in either view is reflected in the other after reload.
 
+## NET ENGINEER active network tool
+
+Load Head Engineer or Security Chief, open NET ENGINEER, select Live Private LAN Scan, choose local or an authorized private /24..../32 CIDR, affirm the scope, and press Scan Private LAN. Response lists detected IPs, ICMP/TCP latency evidence, and neighbor-cache sightings, not an authoritative list of all connected clients. Optional monitor refresh runs once per 60 seconds only while this view remains active. See [network diagnostics](NETWORK_ENGINEERING.md). The offline CIDR calculator is still available.
+
 ## Launch on macOS
 
 From the `feat/dashboard-ui-shell` development branch, with Rust **1.90 or newer** installed:
