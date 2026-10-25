@@ -197,6 +197,10 @@
       textarea.maxLength = 400;
       textarea.rows = 2;
       textarea.placeholder = "Action, expected outcome and reporting instruction";
+      textarea.addEventListener("input", () => {
+        // The bounded handoff format is intentionally one logical line.
+        textarea.value = textarea.value.replace(/[\r\n]+/g, " ");
+      });
       description.append(textarea);
       form.append(description);
       form.append(infoText("Creation saves to local tasks.json only. No assignment is sent automatically."));
@@ -225,7 +229,7 @@
         ["blocked", "Blocked"], ["done", "Complete"]
       ], task.status);
       wrap.append(stateSelect);
-      const note = label("note", "UPDATE NOTE", 128);
+      const note = label("note", "UPDATE NOTE", 110);
       note.querySelector("input").placeholder = "Optional progress note";
       wrap.append(note);
       wrap.append(button("UPDATE", () => execute(

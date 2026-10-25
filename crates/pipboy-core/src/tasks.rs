@@ -141,6 +141,10 @@ impl Task {
     fn valid(&self) -> bool {
         self.id > 0
             && self.revision > 0
+            && !self.events.is_empty()
+            && self.acknowledged_at.is_none_or(|ack| {
+                self.sent_at.is_some_and(|sent| ack >= sent)
+            })
             && checked_text(&self.title, 96, true)
             && checked_text(&self.details, 400, false)
             && checked_text(&self.assignee, 64, true)
