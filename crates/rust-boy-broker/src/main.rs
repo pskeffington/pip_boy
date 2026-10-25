@@ -121,7 +121,7 @@ fn run() -> io::Result<()> {
         Err(_) => deny_frame(&[]),
     };
     let mut stdout = io::stdout().lock();
-    serde_json::to_writer(&mut stdout, &decision)?;
+    serde_json::to_writer(&mut stdout, &decision).map_err(io::Error::other)?;
     stdout.write_all(b"\n")?;
     stdout.flush()?;
     Ok(())
@@ -214,7 +214,8 @@ mod tests {
 
     #[test]
     fn request_id_is_opaque_and_never_grants_or_is_echoed() {
-        for id in ["", "0", "f".repeat(32).as_str(), "not-hex-identifier"] {
+        let long_id = "f".repeat(32);
+        for id in ["", "0", long_id.as_str(), "not-hex-identifier"] {
             let mut req = request();
             req["request_id"] = json!(id);
             assert_eq!(reason(req), "invalid_request");
@@ -238,7 +239,8 @@ mod tests {
 
     #[test]
     fn purpose_is_bounded_printable_and_not_logged_back() {
-        for purpose in ["", " ", "line\nbreak", "á", "x".repeat(121).as_str()] {
+        let long_purpose = "x".repeat(121);
+        for purpose in ["", " ", "line\nbreak", "á", long_purpose.as_str()] {
             let mut req = request();
             req["purpose"] = json!(purpose);
             assert_eq!(reason(req), "invalid_request");
