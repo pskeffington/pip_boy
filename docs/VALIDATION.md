@@ -2,6 +2,21 @@
 
 Updated October 25, 2026 (America/New_York). **Current verified source baseline:** [PR CI 40164915215](https://github.com/pskeffington/pip_boy/actions/runs/40164915215) passed catalog, Linux stable and Rust 1.81.0, native macOS PTY, native Windows ConPTY and the deny-all physical-broker tests at `e7d1090`. This is not physical-hardware, packaging or accessibility certification. **Sections farther below preserve historical development snapshots**; any older “pending”, “unexecuted” or “startup failure” wording describes the state *at the cited historical revision*, not the current status.
 
+## G1-B/G1-C host field-quality pass — local checks passed
+
+Built from merged foundation `794da68`. The new `host_report.rs` provides seven typed field readings with units, quality and finite reason codes; `status --details [--json]`, `sample --details` and the console derive them from the same single snapshot. The default JSON keys are preserved; unavailable CPU is explicitly null. CPU initialization requests only CPU/RAM and gates refreshes with monotonic elapsed time; the TUI no longer sleeps to prime CPU. Poll-start intervals reset with a new session. See the [host telemetry contract](HOST_TELEMETRY.md).
+
+Executed locally on Linux with locked dependencies:
+
+- Stable Rust **1.99.1**: format check, workspace unit tests, Clippy with `-D warnings`, and workspace binary build passed.
+- Minimum-supported Rust **1.81.0**: workspace compile/unit tests passed. Both toolchains passed **15 CLI + 107 core + 12 broker = 134 tests**.
+- All nine black-box suites passed: `smoke_native_cli`, `smoke_runtime`, `smoke_notes`, `smoke_permissions`, `smoke_simulator`, `smoke_replay`, `smoke_transport`, `smoke_mock_adapters`, and `smoke_broker`.
+- Offline catalog validation passed: **27 modules, 37 evidence records, 14 external sources, 8 runtime entries**.
+
+New fixtures cover exact CPU cadence, early/repeated/backward ticks, genuine zero, unavailable CPU/core/OS/memory values, NaN/infinity/range checks, inconsistent memory, expiry, report provenance/JSON round-trip, no duplicate collection, and paused-value clearing. The existing cross-platform `smoke_native_cli.py` now also checks detailed text/JSON/NDJSON, units, null reasons, timing, argument rejection and absence of data-file/ANSI side effects. Evidence IDs: L03, L19, L31, L32, L33; modules: `stat`, `telemetry`.
+
+Native macOS/Windows execution for this new pass must be confirmed in its associated [quality workflow](https://github.com/pskeffington/pip_boy/actions/workflows/rust.yml) before merge. No dependency or permission change, hardware enablement, stored-observation migration, measured CPU accuracy/overhead baseline or accessibility certification is claimed.
+
 ## G2-A deny-all broker protocol — cross-platform CI verified
 
 `crates/rust-boy-broker` is a **separate**, explicitly invoked, one-shot Rust executable whose only exposed channel is inherited stdin/stdout; it never starts on the normal TUI/status/doctor/notes paths. Its v1 input is a bounded 1,024-byte JSON record with strict capability/operation, opaque `device:` selector, request identifier, duration and purpose rules. It always returns a fixed five-field `allowed:false` response; even `operator_intent:true` cannot authorize a physical interface. It does not read a real port, device, radio, BLE, network or filesystem. No OS-enforced caller identity, broker privilege boundary, trusted user confirmation or physical handle exists.

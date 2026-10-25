@@ -8,8 +8,8 @@
 
 | Slice | Existing code | Status | Verification still needed |
 | --- | --- | --- | --- |
-| Host measurements | metrics.rs | Linux smoke tested | macOS/Windows fixtures and platform timing |
-| Typed observation | observation.rs | Integrated with TUI and finite NDJSON; locally tested | Schema migration and field-level units |
+| Host measurements | metrics.rs | CPU/RAM-only refresh, nonblocking console warm-up and monotonic CPU cadence; local Linux checked | Native delta validation and measured hardware baselines |
+| Typed observation | observation.rs, host_report.rs | Field units/quality/reasons shared by console and opt-in detailed status/NDJSON; deterministic fixtures | Stored-observation migrations and external ingestion |
 | Bounded sample buffer | buffer.rs | Integrated with TUI and finite NDJSON; locally tested | Runtime integration for other adapters |
 | Lifecycle state | lifecycle.rs | Integrated into ModuleHost; locally tested | External authorization/device broker |
 | Capability prechecks | capability.rs and runtime.rs | TUI pause/revoke locally tested; one-shot STATUS and scoped LIBRARY/NOTES routing authored, newer tests pending | Per-adapter active-session authorization and device broker |
@@ -44,7 +44,7 @@ G1 module-plan statuses remain **planned** until integration and acceptance test
 
 - A versioned observation carries a source ID, provenance, optional wall clock, process-relative monotonic time, value, quality and expiry.
 - Unknown and invalid readings have no value; measured zero is distinct from absent data.
-- Add explicit field-level units and schema migration policy before external ingestion.
+- Field-level units/quality now exist for local host reports; complete schema migration and ingestion validation before external ingestion. See [host telemetry](HOST_TELEMETRY.md).
 - Do not compare process-relative timestamps from separate launches.
 
 **Exit:** round-trip, invalid-schema and stale-at-expiry tests pass, with per-platform clock checks.
@@ -84,7 +84,7 @@ G1 module-plan statuses remain **planned** until integration and acceptance test
 | P0 | Run stable/MSRV and real CLI checks for STATUS, scoped LIBRARY/NOTES and preference commands | G1-A/G1-D |
 | P0 | Validate new deny-all physical broker protocol on all three OSs; design independently authenticated OS IPC and trusted real-device consent (no hardware enablement) | G2-A/G2-B |
 | P0 | Extend tested notes portability to general collection migrations and backup identities | G1-E |
-| P1 | Build testable host telemetry timing and source-quality dashboard | G1-C |
+| P1 | Host field-quality dashboard and deterministic CPU cadence fixtures implemented; complete native CI and measured hardware timing/overhead baselines | G1-B/G1-C |
 | P1 | Windows ConPTY terminal journey completed on hosted runner (40162936734); next native accessibility, signal/interruption and forced-write-error acceptance | G0/G1-E |
 | P2 | Validate new bounded mock transport and native macOS/Windows CI; follow with adapter traits and injection/cancellation harness, no physical I/O | G1-D/G2 |
 

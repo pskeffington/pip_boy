@@ -45,6 +45,8 @@ Future feature-gated adapters attach beneath core capability interfaces:
 
 ## Shared telemetry session
 
+`host_report.rs` derives field-level units, quality and bounded reason codes from the same retained snapshot, without additional collection. `ModuleSample` carries both the raw observation and this detailed report. The TUI and opt-in CLI `--details` output share it; stale propagation is applied at render time. `Collector` requests only CPU/RAM refreshes and gates CPU deltas with a monotonic cadence; the TUI does not prime by sleeping. See [host telemetry](HOST_TELEMETRY.md) for schemas and CPU null semantics.
+
 `TelemetrySession<SnapshotSource>` owns a bounded in-memory observation history. The TUI retains 60 readings; finite NDJSON retains at most the requested 1–30 readings. Both use the same source/provenance and monotonic expiry logic. Tests inject fixture collectors and timestamps. Reading a freshness view never samples the host. `status --json` keeps its existing raw Snapshot format. Both frontends now use `HostTelemetryModule` through `ModuleHost`; collector initialization follows an explicit permitted start. TUI P immediately revokes host reads and clears cached/buffered data; resume grants local reads and explicitly starts a fresh buffer. The one-shot `status` CLI now also uses the lazy `HostTelemetryModule` through `ModuleHost`, with an explicit local read grant, while retaining the original raw `status --json` Snapshot format. LIBRARY and NOTES CLI/TUI paths now use scoped `ModuleHost::run_local` read/write prechecks (execution testing pending). These synchronous operations do not represent running device lifecycle modules; the OS sandbox and device broker are still unimplemented.
 
 ## Adapter preference state (unverified)

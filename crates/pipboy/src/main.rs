@@ -21,7 +21,7 @@ mod tui;
 
 fn help() {
     println!("{PRODUCT_NAME} | {PRODUCT_DESCRIPTOR}");
-    println!("usage: {CLI_COMMAND} [tui|status [--json]|sample [--count N --interval-ms MS]|sources [query]|modules|plan [G0..G4]|evidence [query]|doctor|permissions <list|request KEY|deny KEY|clear KEY>|simulate <list|run ID [--confirm]|replay ID SCENARIO [--confirm]|transport ID --count N --capacity N [--confirm]|adapter <input|display|serial> [--confirm]>|notes <list|add TEXT|search QUERY|export|import FILE>|help]");
+    println!("usage: {CLI_COMMAND} [tui|status [--details] [--json]|sample [--count N --interval-ms MS --details]|sources [query]|modules|plan [G0..G4]|evidence [query]|doctor|permissions <list|request KEY|deny KEY|clear KEY>|simulate <list|run ID [--confirm]|replay ID SCENARIO [--confirm]|transport ID --count N --capacity N [--confirm]|adapter <input|display|serial> [--confirm]>|notes <list|add TEXT|search QUERY|export|import FILE>|help]");
 }
 
 fn main() {
@@ -40,18 +40,36 @@ fn run() -> Result<(), Box<dyn Error>> {
             Ok(())
         }
         Some("status") => {
-            let option = args.next();
-            if option.as_deref().is_some_and(|value| value != "--json") || args.next().is_some() {
-                return Err(format!("usage: {CLI_COMMAND} status [--json]").into());
+            let mut json = false;
+            let mut details = false;
+            for option in args {
+                match option.as_str() {
+                    "--json" if !json => json = true,
+                    "--details" if !details => details = true,
+                    _ => return Err(format!("usage: {CLI_COMMAND} status [--details] [--json]").into()),
+                }
+            }
+            if details {
+                let report = status::collect_details()?;
+                if json {
+                    println!("{}", serde_json::to_string_pretty(&report)?);
+                } else {
+                    println!("{PRODUCT_NAME} STAT / field quality");
+                    if let Some(readings) = &report.value {
+                        println!("{}", pipboy_core::host_report::display_fields(readings));
+                    }
+                    println!("SOURCE: {} | {:?}", report.provenance, report.quality);
+                }
+                return Ok(());
             }
             let snapshot = status::collect()?;
-            if option.as_deref() == Some("--json") {
+            if json {
                 println!("{}", serde_json::to_string_pretty(&snapshot)?);
             } else {
                 println!("{PRODUCT_NAME} STAT / {} {}", snapshot.os, snapshot.arch);
                 println!(
-                    "CPU: {:.1}% across {} logical cores",
-                    snapshot.cpu_percent, snapshot.logical_cores
+                    "CPU: {} across {} logical cores",
+                    snapshot.cpu_percent.map(|value| format!("{value:.1}%")).unwrap_or_else(|| "Unknown (warming up or unavailable)".into()), snapshot.logical_cores
                 );
                 println!(
                     "RAM: {} / {} MiB",

@@ -74,6 +74,7 @@ impl<S: SnapshotSource + Send, F: FnMut() -> Result<S, String> + Send> RuntimeMo
                 session.dropped()
             ),
             host_observation: session.latest(now),
+            host_report: session.latest_report(now),
         })
     }
 }
@@ -103,7 +104,7 @@ mod tests {
                 observed_unix_s: 1234,
                 os: "fixture".into(),
                 arch: "test".into(),
-                cpu_percent: 0.0,
+                cpu_percent: Some(0.0),
                 logical_cores: 1,
                 memory_used_mib: 1,
                 memory_total_mib: 2,
@@ -157,6 +158,10 @@ mod tests {
             panic!("no sample");
         };
         assert_eq!(data.detail, "1 retained / 0 dropped");
+        assert_eq!(
+            data.host_report.unwrap().value.unwrap().poll_interval_ms,
+            None
+        );
         drop(host);
         assert_eq!(creations.load(Ordering::SeqCst), 2);
         assert_eq!(drops.load(Ordering::SeqCst), 2);

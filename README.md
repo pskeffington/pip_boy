@@ -26,6 +26,7 @@ Try the command-line interface:
 
 ```bash
 cargo run --locked -p pipboy -- status --json
+cargo run --locked -p pipboy -- status --details --json
 cargo run --locked -p pipboy -- sample --count 3 --interval-ms 1000
 cargo run --locked -p pipboy -- sources rust
 cargo run --locked -p pipboy -- modules
@@ -36,11 +37,13 @@ cargo run --locked -p pipboy -- notes list
 
 The `sample` command emits a finite stream of NDJSON to standard output; it does not record or upload data. Notes are saved locally as **plaintext**, in the application data directory or the location specified by `PIPBOY_HOME`. Do not store passwords, credentials or sensitive records in notes.
 
+Use `status --details` or `sample --details` for per-field units, quality, missing-value reasons and poll timing. The console shows these same quality labels, including CPU warm-up and stale readings. Raw CPU JSON can be null when unavailable. See the [host telemetry contract](docs/HOST_TELEMETRY.md).
+
 ## Current capabilities
 
 | Area | Status | What it does |
 | --- | --- | --- |
-| **STAT** | Available | Local CPU, memory, OS, architecture, uptime and bounded telemetry |
+| **STAT** | Available | Local CPU, memory, OS, architecture, uptime, field quality and bounded telemetry |
 | **LIBRARY** | Available | Browse bundled, license-aware research/source references without contacting GitHub |
 | **NOTES** | Available | Create, search, list, export and import offline field notes |
 | **Permission preferences** | Available, intent only | Save `requested` / `denied` settings; never activates devices |

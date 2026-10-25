@@ -19,7 +19,7 @@ Technical contracts, architecture decisions, research provenance and validation 
 
 | Topic | Documents |
 | --- | --- |
-| Local host and UI | [Object model](OBJECT_MODEL.md) · [Scoped local operations](LOCAL_OPERATIONS.md) · [Console](CONSOLE.md) |
+| Local host and UI | [Host telemetry and field quality](HOST_TELEMETRY.md) · [Object model](OBJECT_MODEL.md) · [Scoped local operations](LOCAL_OPERATIONS.md) · [Console](CONSOLE.md) |
 | Data and persistence | [Storage](STORAGE.md) · [Permission preferences](PERMISSIONS.md) |
 | Synthetic devices | [Simulator](SIMULATION.md) · [Virtual transport](VIRTUAL_TRANSPORT.md) · [Typed mock adapters](MOCK_ADAPTERS.md) |
 | Physical-device safety | [Deny-only broker protocol](BROKER_PROTOCOL.md) · [Future OS-enforced broker requirements](OS_DEVICE_BROKER.md) |

@@ -47,7 +47,8 @@ The build is a directed acyclic dependency plan, **not** a schedule. All module 
 **P0: telemetry, storage, settings, accessibility, diagnostics**; **P1: power, network link**.
 
 - [x] Draft versioned `Observation<T>` envelope with source, provenance, optional wall clock, process-session time, unit, quality and expiry (unit-tested; field-level integration remains open).
-- [ ] Verify schema compatibility, implement field-level units and connect observations to each frontend.
+- [x] Add local host field units/quality/reasons and connect a shared report to console and opt-in detailed status/NDJSON; deterministic fixtures and Linux checks executed. See [host telemetry](HOST_TELEMETRY.md).
+- [ ] Complete stored-observation schema migrations and external ingestion validation; native field-report CI and hardware accuracy acceptance remain separate.
 - [ ] Separate local read-only metrics from user-initiated notes/storage writes.
 - [x] Author a bounded in-memory sample buffer with drop accounting and finite NDJSON host sampling (executed in CI; storage/migration acceptance remains open).
 - [ ] Integrate sample buffer with actual UI/runtime, add property-based invariants and output/interruption fixtures.
@@ -132,7 +133,7 @@ The next engineering handoff is [G1_EXECUTION_PLAN.md](G1_EXECUTION_PLAN.md). Do
 
 ## Risk register
 
-1. **CI startup failure (active):** blocks code-level verification. Repair platform access/runner state before claiming G0 complete.
+1. **CI regressions:** require passing checks for each new source revision. The historical startup blocker was resolved; the current five-job baseline is linked above.
 2. **Platform-specific APIs:** GPIO/serial/BLE/SDR can require native libraries or user privileges; postpone runtime wiring until target selection.
 3. **Legal datasets:** OSM data licensing and OSM Foundation raster tile policy are different; do not scrape community tiles for offline caching.
 4. **Messaging security:** pairing is not authentication of a human peer, and HPKE is not a complete messaging app; threat model and protocol review are mandatory.

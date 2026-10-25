@@ -6,6 +6,7 @@ This file records notable changes to Rust-Boy. This repository is in **developme
 
 ### Available
 
+- Field-level host units, quality and reason codes in `status --details [--json]`, finite `sample --details` and the console. Explicit CPU warm-up/early-poll absence, per-field stale propagation and poll-start timing; collector initialization now requests only CPU/RAM, with no process inventory.
 - Rust-Boy-branded native `pipboy` CLI and Ratatui TUI, with keyboard navigation, small-screen fallback and local host diagnostics.
 - Bundled, license-aware source library; offline plaintext notes with search, export/import, versioned schema and cooperative writer protection.
 - Finite NDJSON host sampling, in-memory observation buffers, pause/resume, and permission-aware module lifecycle.

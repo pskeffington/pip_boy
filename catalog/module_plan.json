@@ -18,12 +18,15 @@
     "features": [
       "CPU/memory/OS/uptime snapshot",
       "Human-readable and JSON output",
-      "One-shot status CLI uses lazy ModuleHost lifecycle and host-read precheck (new tests defined; execution pending)"
+      "One-shot status CLI uses lazy ModuleHost lifecycle and host-read precheck (CI verified)",
+      "CPU/RAM-only collector with monotonic CPU cadence and explicit unavailable CPU values",
+      "Opt-in --details text/JSON with per-field units, quality and missing-value reasons"
     ],
     "acceptance": [
       "Status runs without network or devices",
       "No fabricated hardware values",
-      "Denied host.read never constructs a collector; status --json retains legacy Snapshot fields"
+      "Denied host.read never constructs a collector; status --json retains legacy Snapshot fields",
+      "Warm-up/early polls never fabricate zero CPU; invalid field values are omitted from detailed reports"
     ]
   },
   {
@@ -115,11 +118,13 @@
       "Provenance-tagged samples",
       "NDJSON export and interval controls",
       "Bounded in-memory buffers",
-      "TUI/finite NDJSON use a lazy lifecycle-host telemetry adapter with bounded history and freshness (locally tested)"
+      "TUI/finite NDJSON use a lazy lifecycle-host telemetry adapter with bounded history and freshness (locally tested)",
+      "Shared field-quality dashboard and opt-in detailed finite NDJSON; poll-start interval and per-field stale propagation"
     ],
     "acceptance": [
       "Tests cover source, clock and sample freshness",
-      "No background uploads or implicit files"
+      "No background uploads or implicit files",
+      "Measured zero, missing/invalid values, exact cadence/expiry boundaries and no double collection are covered by deterministic fixtures"
     ]
   },
   {

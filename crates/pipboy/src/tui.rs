@@ -5,9 +5,10 @@ use crossterm::terminal::{
     disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen,
 };
 use pipboy_core::catalog::sources;
+use pipboy_core::host_report::{self, HostReadings};
 use pipboy_core::host_telemetry::HostTelemetryModule;
 use pipboy_core::lifecycle::State;
-use pipboy_core::metrics::{Collector, Snapshot};
+use pipboy_core::metrics::Collector;
 use pipboy_core::notes::NoteStore;
 use pipboy_core::observation::Observation;
 use pipboy_core::runtime::{Capability, LocalOperation, ModuleHost, PermissionSet, PollOutcome};
@@ -37,15 +38,7 @@ impl Drop for TerminalGuard {
 }
 
 pub fn run() -> Result<(), Box<dyn Error>> {
-    let module = HostTelemetryModule::new(
-        || {
-            let mut collector = Collector::new();
-            collector.prime();
-            Ok(collector)
-        },
-        60,
-        Duration::from_secs(4),
-    )?;
+    let module = HostTelemetryModule::new(|| Ok(Collector::new()), 60, Duration::from_secs(4))?;
     let session_start = module.session_start();
     let mut host = ModuleHost::new(PermissionSet::offline_read_only());
     host.register(Box::new(module))?;
@@ -148,7 +141,7 @@ pub fn run() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-fn read_stat(host: &mut ModuleHost) -> Result<(Observation<Snapshot>, String), String> {
+fn read_stat(host: &mut ModuleHost) -> Result<(Observation<HostReadings>, String), String> {
     let poll = host
         .poll_once()
         .into_iter()
@@ -156,7 +149,7 @@ fn read_stat(host: &mut ModuleHost) -> Result<(Observation<Snapshot>, String), S
         .ok_or("missing STAT module")?;
     match poll.outcome {
         PollOutcome::Sample { data } => Ok((
-            data.host_observation.ok_or("missing STAT observation")?,
+            data.host_report.ok_or("missing STAT field report")?,
             data.detail,
         )),
         other => Err(format!("STAT did not sample: {other:?}")),
@@ -164,7 +157,7 @@ fn read_stat(host: &mut ModuleHost) -> Result<(Observation<Snapshot>, String), S
 }
 
 fn stat_body(
-    observation: Option<&Observation<Snapshot>>,
+    observation: Option<&Observation<HostReadings>>,
     state: State,
     history: &str,
     now: u64,
@@ -175,14 +168,13 @@ fn stat_body(
     else {
         return format!("STAT: {state:?} / PAUSED\nHost read permission revoked. Buffered readings cleared.\nPress P to grant local host read access and resume.");
     };
-    observation.update_freshness(now);
-    let Some(snapshot) = observation.value.as_ref() else {
+    host_report::refresh(&mut observation, now);
+    let Some(readings) = observation.value.as_ref() else {
         return "STAT: UNKNOWN / no reading".into();
     };
     format!(
-        "STAT: {state:?}\nHOST: {} / {}\nCPU: {:.1}% ({} logical cores)\nRAM: {} / {} MiB\nUPTIME: {} seconds\nSOURCE: {} | {:?} | age {} ms\nHISTORY: {} (memory only)\n\nP pauses collection and clears buffered readings.",
-        snapshot.os, snapshot.arch, snapshot.cpu_percent, snapshot.logical_cores,
-        snapshot.memory_used_mib, snapshot.memory_total_mib, snapshot.uptime_s,
+        "STAT: {state:?}\n{}\nSOURCE: {} | {:?} | age {} ms\nHISTORY: {} (memory only)\n\nP pauses collection and clears buffered readings.",
+        host_report::display_fields(readings),
         observation.provenance, observation.quality, now.saturating_sub(observation.captured_session_ms), history,
     )
 }
@@ -197,5 +189,42 @@ mod tests {
         assert!(text.contains("Press P"));
         assert!(!text.contains("CPU:"));
         assert!(!text.contains("old history"));
+    }
+
+    #[test]
+    fn dashboard_distinguishes_warmup_and_stale_values_without_collecting() {
+        let sample = pipboy_core::metrics::Snapshot {
+            observed_unix_s: 1234,
+            os: "fixture".into(),
+            arch: "test".into(),
+            cpu_percent: None,
+            logical_cores: 2,
+            memory_used_mib: 0,
+            memory_total_mib: 64,
+            uptime_s: 0,
+        };
+        let raw = Observation::new(
+            "host.stats",
+            "fixture",
+            None,
+            100,
+            None,
+            Some(sample),
+            pipboy_core::observation::Quality::Valid,
+            Some(500),
+        )
+        .unwrap();
+        let report = host_report::describe(&raw, None);
+        let current = stat_body(Some(&report), State::Running, "1 retained / 0 dropped", 100);
+        assert!(current.contains("CPU: Unknown (warming up or unavailable)"));
+        assert!(current.contains("RAM: 0 [Valid] / 64 [Valid] MiB"));
+        assert!(current.contains("first poll; interval unknown"));
+        let stale = stat_body(Some(&report), State::Running, "history", 600);
+        assert!(stale.contains("64 [Stale]"));
+        assert!(stale.contains("CPU: Unknown"));
+        let paused = stat_body(Some(&report), State::Disabled, "old history", 600);
+        assert!(!paused.contains("fixture"));
+        assert!(!paused.contains("64"));
+        assert!(!paused.contains("old history"));
     }
 }

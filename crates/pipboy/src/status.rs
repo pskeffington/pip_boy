@@ -1,15 +1,30 @@
 //! Explicit one-shot STAT collection through the same lifecycle host as the TUI
 //! and finite sampling command. The CLI's raw Snapshot JSON shape is unchanged.
 
+use pipboy_core::host_report::HostReadings;
 use pipboy_core::host_telemetry::HostTelemetryModule;
 use pipboy_core::metrics::{Collector, Snapshot};
-use pipboy_core::runtime::{ModuleHost, PermissionSet, PollOutcome};
+use pipboy_core::observation::Observation;
+use pipboy_core::runtime::{ModuleHost, ModuleSample, PermissionSet, PollOutcome};
 use pipboy_core::telemetry::SnapshotSource;
 use std::time::Duration;
 
 /// Running the local `status` command is an explicit request for host metrics.
 /// Sensitive device/network capabilities are not granted.
 pub fn collect() -> Result<Snapshot, String> {
+    collect_native()?
+        .host_observation
+        .and_then(|observation| observation.value)
+        .ok_or_else(|| "missing STAT snapshot".to_owned())
+}
+
+pub fn collect_details() -> Result<Observation<HostReadings>, String> {
+    collect_native()?
+        .host_report
+        .ok_or_else(|| "missing STAT field report".to_owned())
+}
+
+fn collect_native() -> Result<ModuleSample, String> {
     collect_with(PermissionSet::offline_read_only(), || {
         let mut collector = Collector::new();
         collector.prime();
@@ -19,7 +34,7 @@ pub fn collect() -> Result<Snapshot, String> {
 
 /// Inject both policy and a lazy collector factory for deny-before-activity
 /// fixtures. No factory is called until ModuleHost accepts its grant.
-fn collect_with<S, F>(permissions: PermissionSet, factory: F) -> Result<Snapshot, String>
+fn collect_with<S, F>(permissions: PermissionSet, factory: F) -> Result<ModuleSample, String>
 where
     S: SnapshotSource + Send + 'static,
     F: FnMut() -> Result<S, String> + Send + 'static,
@@ -34,10 +49,7 @@ where
 
     let result = host.poll_once().pop().ok_or("missing STAT poll")?;
     match result.outcome {
-        PollOutcome::Sample { data } => data
-            .host_observation
-            .and_then(|observation| observation.value)
-            .ok_or_else(|| "missing STAT snapshot".to_owned()),
+        PollOutcome::Sample { data } => Ok(*data),
         other => Err(format!("STAT did not sample: {other:?}")),
     }
 }
@@ -59,7 +71,7 @@ mod tests {
                 observed_unix_s: 1234,
                 os: "fixture".into(),
                 arch: "test".into(),
-                cpu_percent: 0.0,
+                cpu_percent: Some(0.0),
                 logical_cores: 1,
                 memory_used_mib: 0,
                 memory_total_mib: 64,
@@ -86,7 +98,7 @@ mod tests {
     fn a_one_shot_status_read_keeps_the_original_snapshot_json_shape() {
         let samples = Arc::new(AtomicUsize::new(0));
         let counter = Arc::clone(&samples);
-        let snapshot = collect_with(PermissionSet::offline_read_only(), move || {
+        let data = collect_with(PermissionSet::offline_read_only(), move || {
             Ok(Fixture {
                 samples: Arc::clone(&counter),
             })
@@ -94,6 +106,10 @@ mod tests {
         .unwrap();
 
         assert_eq!(samples.load(Ordering::SeqCst), 1);
+        let report = data.host_report.unwrap();
+        assert_eq!(report.value.as_ref().unwrap().cpu_percent.value, Some(0.0));
+        assert_eq!(report.value.as_ref().unwrap().poll_interval_ms, None);
+        let snapshot = data.host_observation.unwrap().value.unwrap();
         let json = serde_json::to_value(&snapshot).unwrap();
         assert_eq!(json["os"], "fixture");
         assert_eq!(json["cpu_percent"], 0.0);
