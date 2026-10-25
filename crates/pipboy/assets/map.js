@@ -929,7 +929,7 @@
     if (view.webProbeAbort) view.webProbeAbort.abort();
     view.siteVersion++;
     if (view.siteAbort) view.siteAbort.abort();
-    mapMemory = (view.shapes.length || view.onlineShapes.length || view.baseVisible) ? {
+    mapMemory = (view.shapes.length || view.onlineShapes.length || view.boston) ? {
       center: view.siteReturn ? { ...view.siteReturn.center } : { ...view.center },
       zoom: view.siteReturn ? view.siteReturn.zoom : view.zoom,
       shapes: view.shapes, layers: view.layers, warnings: view.warnings,
