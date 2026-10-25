@@ -147,6 +147,7 @@ pub struct SimulationEvent {
 pub struct SimulatedBroker {
     owner: Arc<()>,
     preferences: HashMap<Capability, Preference>,
+    policy_valid: bool,
     active: Option<ActiveSession>,
     generation: u64,
     sequence: u64,
@@ -157,6 +158,7 @@ impl SimulatedBroker {
         Ok(Self {
             owner: Arc::new(()),
             preferences: Self::validated_preferences(entries)?,
+            policy_valid: true,
             active: None,
             generation: 0,
             sequence: 0,
@@ -196,6 +198,9 @@ impl SimulatedBroker {
         id: &str,
         confirmation: SessionConfirmation,
     ) -> Result<SimulationLease, BrokerError> {
+        if !self.policy_valid {
+            return Err(BrokerError::InvalidPreference);
+        }
         let device = SIMULATED_DEVICES
             .iter()
             .find(|device| device.id == id)
@@ -286,6 +291,7 @@ impl SimulatedBroker {
             Err(error) => {
                 self.active = None;
                 self.preferences.clear();
+                self.policy_valid = false;
                 return Err(error);
             }
         };
@@ -295,6 +301,7 @@ impl SimulatedBroker {
             self.active = None;
         }
         self.preferences = validated;
+        self.policy_valid = true;
         Ok(())
     }
 }
@@ -433,6 +440,16 @@ mod tests {
             BrokerError::InvalidPreference
         );
         assert_eq!(broker.sample(&token).unwrap_err(), BrokerError::InvalidLease);
+        assert_eq!(
+            broker
+                .open("sim:gpio", SessionConfirmation::Confirmed)
+                .unwrap_err(),
+            BrokerError::InvalidPreference
+        );
+        broker.replace_preferences(&[]).unwrap();
+        assert!(broker
+            .open("sim:gpio", SessionConfirmation::Confirmed)
+            .is_ok());
         assert_eq!(
             SimulatedBroker::new(&[choice("files.write", Preference::Requested)])
                 .err()
