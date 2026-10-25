@@ -315,7 +315,14 @@ const forms = Object.freeze({
     '</div><div id="waypoint-fields" hidden>' +
     field("name", "WAYPOINT LABEL", "Camp Alpha") + "</div>",
   "net-lab":
-    field("input", "IPV4 / CIDR", "192.168.1.50/24", 'autocomplete="off" spellcheck="false"'),
+    '<label for="lab-mode">OPERATION<select name="mode" id="lab-mode">' +
+    '<option value="scan">LIVE PRIVATE LAN SCAN</option>' +
+    '<option value="cidr">OFFLINE CIDR CALCULATOR</option></select></label>' +
+    field("input", "LAN CIDR OR LOCAL", "local", 'autocomplete="off" spellcheck="false"') +
+    '<label class="scan-consent"><input type="checkbox" name="authorized" value="yes">' +
+    'I am authorized to probe this private network</label>' +
+    '<label class="scan-consent"><input type="checkbox" name="monitor" value="yes">' +
+    'Refresh every 60 seconds while NET ENGINEER is open</label>',
   "byte-lab":
     field("input", "HEX BYTES (UP TO 4096)", "48656c6c6f", 'autocomplete="off" spellcheck="false"'),
   "diag": '<p class="workspace-subtitle">Check the local host using read-only CPU/RAM evidence. For scoped JSONL imports use pipboy diag ingest on the CLI.</p>',
@@ -384,8 +391,9 @@ function renderDetail() {
     ui.outputKind.textContent = lastOutput ? "RESULT" : "IDLE";
     ui.copy.disabled = !lastOutput;
     const selector = byId("lab-mode");
-    if (selector) selector.addEventListener("change", toggleGeoMode);
+    if (selector) selector.addEventListener("change", () => { toggleGeoMode(); toggleNetMode(); });
     toggleGeoMode();
+    toggleNetMode();
   } else {
     ui.handoff.hidden = false;
     ui.manual.textContent = info.command;
@@ -402,6 +410,21 @@ function toggleGeoMode() {
   waypoint.hidden = !exportPoint;
   for (const input of destination.querySelectorAll("input")) input.required = !exportPoint;
   for (const input of waypoint.querySelectorAll("input")) input.required = exportPoint;
+}
+
+
+function toggleNetMode() {
+  if (selectedTool !== "net-lab") return;
+  const selector = byId("lab-mode");
+  const input = byId("lab-input");
+  if (!selector || !input) return;
+  const scanning = selector.value === "scan";
+  const consent = input.closest("form")?.querySelectorAll(".scan-consent");
+  if (consent) for (const label of consent) label.hidden = !scanning;
+  input.labels[0].firstChild.textContent = scanning ? "LAN CIDR OR LOCAL" : "IPV4 / CIDR";
+  if (!scanning && input.value === "local") input.value = "192.168.1.50/24";
+  if (scanning && input.value === "192.168.1.50/24") input.value = "local";
+  ui.run.textContent = scanning ? "SCAN PRIVATE LAN" : "CALCULATE CIDR";
 }
 
 function renderAll() {
@@ -508,26 +531,53 @@ async function removeCustomTool(id) {
   }
 }
 
+let networkWatchTimer = null;
+
 async function runLab(event) {
   event.preventDefault();
   if (!selectedTool || !selectedAvailable() || working) return;
+  if (networkWatchTimer !== null) {
+    clearTimeout(networkWatchTimer);
+    networkWatchTimer = null;
+  }
   const tool = selectedTool;
   const input = Object.fromEntries(new FormData(ui.form).entries());
+  const activeScan = tool === "net-lab" && input.mode === "scan";
   working = true;
   ui.run.disabled = true;
-  ui.run.textContent = "Processing locally…";
+  ui.run.textContent = activeScan ? "SCANNING PRIVATE LAN…" : "Processing locally…";
   ui.outputKind.textContent = "RUNNING";
-  ui.output.textContent = "Executing the selected allowlisted local tool.";
+  ui.output.textContent = activeScan
+    ? "Sending bounded ICMP/TCP probes on the authorized private scope. No Internet targets."
+    : "Executing the selected allowlisted local tool.";
   try {
-    const result = await api("/api/experiment", { tool, ...input });
+    if (activeScan && input.authorized !== "yes") {
+      throw new Error("Check authorization for this private network before scanning.");
+    }
+    const result = activeScan
+      ? await api("/api/net/scan", { cidr: input.input, confirm: true })
+      : await api("/api/experiment",
+          tool === "net-lab" ? { tool, input: input.input } : { tool, ...input });
     if (selectedTool !== tool || !selectedAvailable()) return;
     lastOutput = result.output;
     ui.output.textContent = lastOutput;
-    ui.outputKind.textContent = result.kind.toUpperCase();
+    ui.outputKind.textContent = result.kind.toUpperCase().replaceAll("_", " ");
     ui.copy.disabled = false;
-    ui.footer.textContent = result.kind === "computed"
-      ? "Local result computed; no external data uploaded"
-      : "Information only; no connection established";
+    ui.footer.textContent = activeScan
+      ? "Active LAN scan complete. Counts are detected, not total connected."
+      : result.kind === "computed"
+        ? "Local result computed; no external data uploaded"
+        : "Information only; no connection established";
+    if (activeScan && input.monitor === "yes") {
+      networkWatchTimer = window.setTimeout(() => {
+        networkWatchTimer = null;
+        if (selectedTool === "net-lab" && selectedAvailable() && !working &&
+            byId("lab-mode")?.value === "scan" &&
+            ui.form.querySelector('input[name="monitor"]')?.checked) {
+          runLab({ preventDefault() {} });
+        }
+      }, 60000);
+    }
   } catch (error) {
     if (selectedTool !== tool || !selectedAvailable()) return;
     lastOutput = "";
@@ -539,8 +589,9 @@ async function runLab(event) {
     working = false;
     if (selectedTool === tool && selectedAvailable()) {
       ui.run.disabled = false;
-      const info = toolInfo(tool);
-      ui.run.textContent = info?.availability === "ready" ? "Run local test" : "Show safe handoff";
+      ui.run.textContent = activeScan ? "SCAN PRIVATE LAN" :
+        tool === "net-lab" ? "CALCULATE CIDR" :
+        toolInfo(tool)?.availability === "ready" ? "Run local test" : "Show safe handoff";
     }
   }
 }
