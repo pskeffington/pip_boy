@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Rust-Boy NET SUITE: CLI, loopback HTTP, and 12-mode engineering bench.
+"""Rust-Boy NET SUITE: CLI, loopback HTTP, and 13-mode engineering bench.
 
 Nine offline calculations are deterministic. The only live probe endpoint is
 127.0.0.1, plus the adapter is checked while unconfigured. API keys are never
@@ -113,6 +113,8 @@ with tempfile.TemporaryDirectory() as temp:
         ("health", "127.0.0.1", "443", "5"),
         ("health", "127.0.0.1", "443", "9", "--confirm"),
         ("health", "host.invalid", "443", "5", "--confirm"),
+        ("icmp", "127.0.0.1", "5"),
+        ("icmp", "not-a-host", "5", "--confirm"),
         ("unifi",),
         ("unifi", "--confirm"),
     ]:
@@ -134,9 +136,9 @@ with tempfile.TemporaryDirectory() as temp:
             code, state = api(port, "GET", "/api/state")
             assert code == 200 and state["active"]["profile"] == "overseer"
             ops = state["net_operations"]
-            assert len(ops) == 12
-            assert len([mode for mode in ops if mode["active"]]) == 3
-            assert [x["id"] for x in ops[:2]] == ["health", "unifi"]
+            assert len(ops) == 13
+            assert len([mode for mode in ops if mode["active"]]) == 4
+            assert [x["id"] for x in ops[:3]] == ["icmp", "health", "unifi"]
             assert ops[-1]["id"] == "tcp"
             assert state["unifi"]["configured"] is False
             assert "api_key" not in json.dumps(state).lower()
@@ -196,6 +198,14 @@ with tempfile.TemporaryDirectory() as temp:
             assert metrics["variation_ms"] is not None
             assert "NOT packet loss" in data["output"]
             code, error = api(port, "POST", "/api/experiment",
+                              {"tool": "net-lab", "mode": "icmp",
+                               "input": "127.0.0.1", "extra": "5"})
+            assert code == 422 and "confirmation" in error["error"].lower()
+            code, error = api(port, "POST", "/api/experiment",
+                              {"tool": "net-lab", "mode": "icmp",
+                               "input": "untrusted.example", "extra": "5", "confirm": True})
+            assert code == 409
+            code, error = api(port, "POST", "/api/experiment",
                               {"tool": "net-lab", "mode": "unifi"})
             assert code == 422 and "confirmation" in error["error"].lower()
             code, error = api(port, "POST", "/api/experiment",
@@ -220,7 +230,7 @@ with tempfile.TemporaryDirectory() as temp:
             assert not (root / "permissions.json").exists()
             assert not (root / "peers.json").exists()
             assert not (root / "tasks.json").exists()
-            print("PASS: 12-mode network suite, TCP health latency and variation, "
+            print("PASS: 13-mode network suite, TCP health, consent-gated ICMP RTT, "
                   "explicit consent, UniFi fail-closed without key, no hidden files")
         finally:
             stop(process)
