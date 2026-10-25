@@ -40,7 +40,7 @@ const ui = {
 const symbols = {
   "mission-board": "▣", "host": "⌁", "notes": "≡", "library": "▤", "game": "▣",
   "net-lab": "⌘", "byte-lab": "0x", "simulator": "◈",
-  "geo-lab": "⌖", "gpio": "◧", "radio": ")))",
+  "geo-lab": "⌖", "reclamation": "▧", "gpio": "◧", "radio": ")))",
   "ble": "⋈", "nfc": "⊞", "mesh": "◇"
 };
 let snapshot = null;
@@ -233,6 +233,11 @@ function renderExtension() {
         if (map.isConnected) window.RustBoyMap.mount(map);
       });
     }
+    if (selectedAvailable() && window.RustBoyReclamation) {
+      const station = el("div", "rb-reclamation-desktop");
+      ui.extension.append(station);
+      window.RustBoyReclamation.mount(station);
+    }
     if (selectedAvailable() && window.RustBoyTasks) {
       const queue = el("div", "job-assignments");
       ui.extension.append(queue);
@@ -371,6 +376,11 @@ function renderDetail() {
   if (info.availability === "planned") {
     ui.handoff.hidden = false;
     ui.manual.textContent = "Not implemented: no hardware access";
+    return;
+  }
+  if (selectedTool === "reclamation") {
+    ui.handoff.hidden = false;
+    ui.manual.textContent = "Site register is available in the Reclamation profile viewport and handheld TOOL screen.";
     return;
   }
   if (selectedTool === "mission-board") {
