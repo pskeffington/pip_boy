@@ -72,6 +72,7 @@ async function run() {
   assert.equal(calls[0].method, "GET");
   assert.equal(calls[0].signal, controller.signal);
   assert.equal(calls[0].credentials, "omit");
+  assert.equal(calls[0].referrerPolicy, "origin", "send origin-only Referer to Overpass");
   assert.equal(calls[0].body, undefined, "the ping must not contain location");
   const downloaded = await api.roads(view, controller.signal);
   assert.equal(downloaded.shapes.length, 6);
@@ -79,6 +80,7 @@ async function run() {
   assert.equal(downloaded.license, "ODbL");
   assert.equal(calls.length, 2);
   assert.equal(calls[1].method, "POST");
+  assert.equal(calls[1].referrerPolicy, "origin");
   assert.equal(calls[1].signal, controller.signal);
   assert.match(calls[1].body, /^data=/);
   assert.ok(calls[1].body.length < 1000, "bounding box query should be small");
