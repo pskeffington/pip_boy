@@ -171,13 +171,10 @@ impl CountyCache {
         }
         let (folder, layer) = source(source_id)?;
         let path = self.path(geoid, layer);
-        let lock = FETCH_LOCK.get_or_init(|| Mutex::new(()));
-        let _guard = lock.try_lock().map_err(|_| {
-            io::Error::new(
-                io::ErrorKind::WouldBlock,
-                "Another county fetch is in progress",
-            )
-        })?;
+        // Cached immutable ZIPs are safe to read without the global download
+        // gate. Atomic persist makes them visible only after full validation.
+        // Previously even offline reads could fail WouldBlock when unrelated
+        // county jobs/tests were running in parallel (notably on Windows).
         match Self::read_zip(&path) {
             Ok(bytes) => {
                 if allow_network {
@@ -194,6 +191,23 @@ impl CountyCache {
                 io::ErrorKind::NotFound,
                 "County archive is not cached",
             ));
+        }
+        let lock = FETCH_LOCK.get_or_init(|| Mutex::new(()));
+        let _guard = lock.try_lock().map_err(|_| {
+            io::Error::new(
+                io::ErrorKind::WouldBlock,
+                "Another county download is in progress",
+            )
+        })?;
+        // Recheck after acquiring the exclusive download gate: another
+        // caller may have completed this archive between the two reads.
+        match Self::read_zip(&path) {
+            Ok(bytes) => {
+                self.remember(geoid)?;
+                return Ok(bytes);
+            }
+            Err(error) if error.kind() == io::ErrorKind::NotFound => {}
+            Err(error) => return Err(error),
         }
         self.limit_new_county(geoid)?;
         self.ensure_root()?;
@@ -276,6 +290,21 @@ mod tests {
         assert_eq!(active["active_geoid"], "25025");
         assert_eq!(active["cached_sources"], json!(["tiger-roads"]));
         assert_eq!(active["network_used"], false);
+    }
+
+    #[test]
+    fn cache_reads_do_not_contend_with_unrelated_downloads() {
+        let temp = tempfile::tempdir().unwrap();
+        let cache = CountyCache::new(temp.path().to_path_buf());
+        fs::write(cache.path("25025", "roads"), b"PK\x03\x04local").unwrap();
+        let gate = FETCH_LOCK.get_or_init(|| Mutex::new(()));
+        let _held = gate.lock().unwrap();
+        assert_eq!(
+            cache.fetch("25025", "tiger-roads", false).unwrap(),
+            b"PK\x03\x04local"
+        );
+        let missing = cache.fetch("25025", "tiger-areawater", false).unwrap_err();
+        assert_eq!(missing.kind(), io::ErrorKind::NotFound);
     }
 
     #[test]
