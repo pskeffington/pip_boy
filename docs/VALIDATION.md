@@ -4,7 +4,7 @@ Review date: October 24, 2026 (America/New_York). Environment: Linux x86_64 cont
 
 ## Change under test
 
-G1-B/G1-C/G1-D: shared `TelemetrySession<SnapshotSource>` for TUI and finite NDJSON. The session bounds history, records source/provenance, rejects backwards collection timestamps, and calculates freshness at render time. TUI history holds 60 readings; NDJSON history holds at most the requested 1–30. No telemetry files are created. The legacy `status --json` shape is preserved.
+G1-B/G1-C/G1-D/G1-E: shared `TelemetrySession<SnapshotSource>` for TUI and finite NDJSON. The session bounds history, records source/provenance, rejects backwards collection timestamps, and calculates freshness at render time. TUI history holds 60 readings; NDJSON history holds at most the requested 1–30. No telemetry files are created. The legacy `status --json` shape is preserved.
 
 Module IDs: `stat`, `telemetry`. Existing evidence IDs: L03, L19, L31, L32, L33. TUI and finite NDJSON now use a lazy HostTelemetryModule through the lifecycle host. TUI P revokes/resumes local host-read permission. No external capability grants or device adapters were introduced; persistent per-adapter consent and OS brokering remain planned.
 
@@ -12,13 +12,15 @@ Module IDs: `stat`, `telemetry`. Existing evidence IDs: L03, L19, L31, L32, L33.
 
 | Command | Observed result |
 | --- | --- |
-| `python3 tools/validate_catalog.py` | PASS: 27 modules, 34 evidence records, 14 external sources, 8 runtime entries |
+| `python3 tools/validate_catalog.py` | PASS: 27 modules, 36 evidence records, 14 external sources, 8 runtime entries |
 | `cargo fmt --all -- --check` | PASS |
 | `cargo check --workspace --all-targets --locked` | PASS on stable |
-| `cargo test --workspace --locked` | PASS: 6 executable + 37 core tests |
+| `cargo test --workspace --locked` | PASS: 6 executable + 46 core tests |
 | `cargo clippy --workspace --all-targets --locked -- -D warnings` | PASS |
-| `cargo +1.81.0 test --workspace --locked` | PASS: same 43 tests |
+| `cargo +1.81.0 test --workspace --locked` | PASS: same 52 tests |
 | `cargo build --workspace --locked` | PASS |
+| `cargo check --workspace --all-targets --target x86_64-pc-windows-gnu --locked` | PASS on stable: cross-compilation check only, no native execution |
+| `python3 tools/smoke_notes.py` | PASS: 24 concurrent CLI appends with retry, unique IDs, no lost notes, search and schema preservation |
 | `python3 tools/smoke_runtime.py` | PASS: timed NDJSON, closed pipe, no telemetry files, TUI pause/resume and exit/error restoration |
 
 Stable toolchain: rustc 1.99.1 (58cf8f9c3, 2026-10-13). Minimum toolchain: rustc 1.81.0 (eeb90cda1, 2024-09-04).
@@ -32,6 +34,14 @@ Deterministic fixtures cover bounded shared history, stale-at-expiry, no collect
 New fixtures verify no start/sample before grants and explicit start, immediate collector release on revoke, regrant without implicit restart, scoped revocation, cleanup after partial startup failure, explicit reset after unavailable, repeated poll degradation/recovery, stop/drop cleanup, lazy factory invocation, history reset after restart, and pause text without host values.
 
 `tools/smoke_runtime.py` repeats black-box checks against the built binary: two timed NDJSON records, early completion on a closed pipe despite a 30-second requested interval, no telemetry data files, TUI pause held longer than a refresh period, resume with `1 retained / 0 dropped`, all-panel navigation, and normal/malformed-notes terminal restoration. This smoke script is added to stable CI but remote execution is unverified.
+
+## Notes storage pass
+
+The schema-1 filename and fields remain compatible. Writes now hold a stable fs2 advisory lock over read/modify/replace, flush a same-directory tempfile and persist by replacement without unlinking the original first. Unix additionally flushes the parent directory. Bounded reads (8 MiB), note count (10,000), IDs, text, schema versions and unexpected fields are validated. Search is read-only.
+
+Nine new deterministic fixtures cover no-write reads, search, invalid/future schema preservation, lock contention/release, interrupted staging, failed replacement, count/size/ID limits, private Unix modes and orphaned staging. The real CLI smoke test coordinates 24 subprocess appends through up to eight simultaneous subprocesses, retries only reported lock contention, and verifies every expected entry and unique sequential ID. No actual power-failure test was performed.
+
+New dependencies: fs2 0.4.3 and tempfile 3.27.0, reviewed against primary API/source documentation (L35/L36), compiled/tested on Linux stable/MSRV and cross-checked for the Windows GNU target. Native Windows/macOS runtime and filesystem acceptance remain open. See [storage contract](STORAGE.md).
 
 ## Earlier Linux smoke checks (commit 04f4f0f)
 
@@ -48,4 +58,4 @@ A Python subprocess/PTY harness used the built `target/debug/pipboy` with a temp
 
 ## Remaining acceptance work
 
-Remote GitHub Actions previously failed before jobs started; its current success is not established by these local checks. Publication of these local commits remains pending; verify the eventual pushed revision in Actions. macOS/Windows smoke checks, small-screen rendering, panic/signal paths, Windows note replacement and concurrent writes, observation schema migrations/field-level units, persistent per-adapter consent, and device-broker enforcement remain open. G0/G1 are not declared complete, and no hardware readiness is claimed.
+Remote GitHub Actions previously failed before jobs started; its current success is not established by these local checks. The preceding telemetry/lifecycle commits are published; verify this storage revision separately after publication. macOS/Windows smoke checks, small-screen rendering, panic/signal paths, native Windows/macOS note replacement, locking and durability, observation schema migrations/field-level units, persistent per-adapter consent, and device-broker enforcement remain open. G0/G1 are not declared complete, and no hardware readiness is claimed.

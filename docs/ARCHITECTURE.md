@@ -6,7 +6,7 @@ Rust-Boy is the public name of the modular console. The repository, executable, 
 
 - [Object model](OBJECT_MODEL.md): traits, runtime registry, permission policy, typed data proposals and lifecycle.
 - [Module catalog](MODULE_CATALOG.md): 27 scoped modules and their dependency/acceptance gates.
-- [Literature matrix](LITERATURE_MATRIX.md): 34 references tied to engineering decisions and test criteria.
+- [Literature matrix](LITERATURE_MATRIX.md): 36 references tied to engineering decisions and test criteria.
 - [Roadmap](ROADMAP.md): phase sequencing, release gates and risks.
 
 The current `ModuleHost` is an **in-process testable policy precheck** and does not isolate untrusted code. Physical device access, OS-enforced permissions and transport isolation remain planned, not implemented.
@@ -49,7 +49,7 @@ Future feature-gated adapters attach beneath core capability interfaces:
 
 ## User data
 
-PIPBOY_HOME overrides the data directory. Otherwise, use $HOME/.pipboy on Unix and %USERPROFILE%/.pipboy on Windows. Notes are written atomically to notes.json; no background synchronization. Delete the folder to remove locally stored notes. Content is not encrypted.
+PIPBOY_HOME overrides the data directory. Otherwise, use $HOME/.pipboy on Unix and %USERPROFILE%/.pipboy on Windows. Notes use a stable advisory writer lock, a flushed staging file in the data directory, and replacement of notes.json without deleting it first. Unix also syncs the containing directory; native Windows/macOS durability acceptance remains open. Reads/search create no files. No background synchronization. See [storage contract](STORAGE.md). Delete the folder to remove locally stored notes. Content is not encrypted.
 
 ## Release gates
 

@@ -14,7 +14,7 @@
 | Lifecycle state | lifecycle.rs | Integrated into ModuleHost; locally tested | External authorization/device broker |
 | Capability prechecks | capability.rs and runtime.rs | Explicit start/revoke/cleanup; TUI P control tested | Persistent per-adapter consent and device broker |
 | Finite NDJSON export | sampling.rs | Locally tested, including writer failures | Signal cancellation and other OS clock checks |
-| Local notes | notes.rs | Existing, unverified | Crash recovery, migration and Windows overwrite |
+| Local notes | notes.rs | Locked staged writes, validated limits and search; locally tested | Native Windows/macOS runtime and general schema migrations |
 | Research consistency | tools/validate_catalog.py | Passing locally | Keep catalog and Rust registry aligned |
 | Quality checks | rust.yml | Python + stable + Rust 1.81.0 matrix | Local quality checks pass; remote Actions still unverified |
 
@@ -76,7 +76,7 @@ G1 module-plan statuses remain **planned** until integration and acceptance test
 | P0 | Investigate Actions startup failure and capture passing CI | Runner/entitlement investigation |
 | P0 | Extend lifecycle host integration to other built-ins | G1-D |
 | P0 | Build persistent per-adapter consent UI and OS device broker | G1-D/G2 |
-| P0 | Fix notes overwrite/recovery and design schema migrations | G1-A |
+| P0 | Extend notes schema-1 contract to general migrations/import/export | G1-E |
 | P1 | Build testable host telemetry timing and source-quality dashboard | G1-C |
 | P1 | Accessibility/low-motion terminal profiles | G1-E |
 | P2 | Specify GPIO/device simulator fixtures; no hardware enablement yet | G1-D, G1-E |

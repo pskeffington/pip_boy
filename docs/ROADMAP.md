@@ -7,7 +7,7 @@ Rust-Boy is the public product name. The existing `pip_boy` repository, `pipboy`
 
 ## Navigate the build
 
-- [Literature matrix](LITERATURE_MATRIX.md) — 34 traceable primary/official references, limitations and corresponding tests.
+- [Literature matrix](LITERATURE_MATRIX.md) — 36 traceable primary/official references, limitations and corresponding tests.
 - [Module and feature catalog](MODULE_CATALOG.md) — 27 modules, dependency gates, capability needs, acceptance criteria.
 - [Rust object model](OBJECT_MODEL.md) — object boundaries, traits, composition and runtime access policy.
 - [G1 execution plan](G1_EXECUTION_PLAN.md) — ordered engineering acceptance packages and next implementation priority.
@@ -93,7 +93,7 @@ The build is a directed acyclic dependency plan, **not** a schedule. All module 
 
 ## G0 and G1 status summary
 
-**G0:** remote Actions previously reported startup_failure with zero executed jobs; local Linux stable/MSRV compilation, 43 tests, fmt, Clippy and CLI/TUI smoke checks now pass; remote CI and remaining platform acceptance are still open.
+**G0:** remote Actions previously reported startup_failure with zero executed jobs; local Linux stable/MSRV compilation, 52 tests, fmt, Clippy and CLI/TUI smoke checks now pass; remote CI and remaining platform acceptance are still open.
 
 **G1:** typed observation, bounded sample buffer, lifecycle transitions, finite NDJSON command and offline catalog validator have initial source implementations with telemetry now shared by TUI and finite NDJSON through a bounded session. The lazy host telemetry adapter now connects ModuleHost, lifecycle, capabilities and both frontends. Per-adapter persistent consent and device brokering remain planned. See [validation evidence](VALIDATION.md).
 

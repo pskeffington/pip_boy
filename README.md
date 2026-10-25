@@ -60,6 +60,7 @@ cargo run -p pipboy -- evidence Rust
 cargo run -p pipboy -- doctor
 cargo run -p pipboy -- notes add "Field observation"
 cargo run -p pipboy -- notes list
+cargo run -p pipboy -- notes search "battery"
 
 python3 tools/validate_catalog.py
 cargo fmt --all -- --check
@@ -82,6 +83,7 @@ Use **Left/Right** or **Tab** to change console panels, **P** to pause/resume lo
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Core boundaries, adapters, and data guarantees |
 | [docs/ROADMAP.md](docs/ROADMAP.md) | Phased implementation and acceptance gates |
 | [docs/G1_EXECUTION_PLAN.md](docs/G1_EXECUTION_PLAN.md) | Next G1 engineering slices and testable acceptance criteria |
+| [docs/STORAGE.md](docs/STORAGE.md) | Notes schema, limits, write locks and recovery rules |
 | [docs/CI_TRIAGE.md](docs/CI_TRIAGE.md) | GitHub Actions startup investigation and local verification |
 | [docs/LITERATURE_MATRIX.md](docs/LITERATURE_MATRIX.md) | Evidence matrix connecting standards and studies to modules |
 | [docs/MODULE_CATALOG.md](docs/MODULE_CATALOG.md) | Planned modules, features, dependency gates and acceptance criteria |

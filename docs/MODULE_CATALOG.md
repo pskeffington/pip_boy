@@ -13,7 +13,7 @@
 | --- | --- | --- | --- | --- | --- |
 | `stat` | Host status | P0 | implemented unverified | — | [L03](LITERATURE_MATRIX.md#l03), [L19](LITERATURE_MATRIX.md#l19), [L31](LITERATURE_MATRIX.md#l31) |
 | `library` | Reference library | P0 | implemented unverified | — | [L10](LITERATURE_MATRIX.md#l10), [L19](LITERATURE_MATRIX.md#l19) |
-| `notes` | Offline field notes | P0 | implemented unverified | — | [L04](LITERATURE_MATRIX.md#l04), [L19](LITERATURE_MATRIX.md#l19) |
+| `notes` | Offline field notes | P0 | implemented unverified | — | [L04](LITERATURE_MATRIX.md#l04), [L19](LITERATURE_MATRIX.md#l19), [L35](LITERATURE_MATRIX.md#l35), [L36](LITERATURE_MATRIX.md#l36) |
 
 ### `stat` — Host status
 
@@ -37,20 +37,23 @@
 
 ### `notes` — Offline field notes
 
+Storage pass: read-only search, bounded schema-1 loading, writer lock and staged replacement are locally tested. See [storage contract](STORAGE.md) and evidence L35/L36.
+
 **Purpose:** core · **Gate:** G0 · **Priority:** P0 · **Status:** implemented_unverified.  
 **Requested capabilities:** `files.write`.
 
-**Planned behaviors:** User-directed create/list notes; Local JSON persistence.
+**Planned behaviors:** User-directed create/list/search notes; bounded validated JSON persistence; locked staging/replacement.
 
 **Acceptance criteria:** 1. No write without explicit user action  
 2. Malformed notes rejected
+3. Successful concurrent appends preserve every entry with unique IDs
 
 ## G1 — Local observability and governance
 
 | ID | Module | Priority | State | Prerequisites | Evidence |
 | --- | --- | --- | --- | --- | --- |
 | `telemetry` | Telemetry event stream | P0 | planned | `stat` | [L01](LITERATURE_MATRIX.md#l01), [L02](LITERATURE_MATRIX.md#l02), [L03](LITERATURE_MATRIX.md#l03), [L19](LITERATURE_MATRIX.md#l19), [L25](LITERATURE_MATRIX.md#l25), [L27](LITERATURE_MATRIX.md#l27), [L30](LITERATURE_MATRIX.md#l30), [L31](LITERATURE_MATRIX.md#l31), [L32](LITERATURE_MATRIX.md#l32), [L33](LITERATURE_MATRIX.md#l33) |
-| `storage` | Storage and schema service | P0 | planned | `notes` | [L04](LITERATURE_MATRIX.md#l04), [L09](LITERATURE_MATRIX.md#l09), [L19](LITERATURE_MATRIX.md#l19), [L26](LITERATURE_MATRIX.md#l26), [L33](LITERATURE_MATRIX.md#l33) |
+| `storage` | Storage and schema service | P0 | planned | `notes` | [L04](LITERATURE_MATRIX.md#l04), [L09](LITERATURE_MATRIX.md#l09), [L19](LITERATURE_MATRIX.md#l19), [L26](LITERATURE_MATRIX.md#l26), [L33](LITERATURE_MATRIX.md#l33), [L35](LITERATURE_MATRIX.md#l35), [L36](LITERATURE_MATRIX.md#l36) |
 | `power` | Power and resources | P1 | planned | `stat` | [L03](LITERATURE_MATRIX.md#l03), [L27](LITERATURE_MATRIX.md#l27), [L29](LITERATURE_MATRIX.md#l29) |
 | `network` | Local network link status | P1 | planned | `stat` | [L20](LITERATURE_MATRIX.md#l20) |
 | `settings` | Settings and permission UI | P0 | planned | `storage` | [L16](LITERATURE_MATRIX.md#l16), [L22](LITERATURE_MATRIX.md#l22) |
@@ -70,6 +73,8 @@ Partial implementation: TUI and finite NDJSON use a lazy `HostTelemetryModule` t
 2. No background uploads or implicit files
 
 ### `storage` — Storage and schema service
+
+Notes persistence now has locked transactions, validated limits and failure fixtures. General collection migration, import/export and backup are still planned.
 
 **Purpose:** core · **Gate:** G1 · **Priority:** P0 · **Status:** planned.  
 **Requested capabilities:** `files.read`, `files.write`.

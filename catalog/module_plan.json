@@ -61,15 +61,20 @@
     ],
     "evidence": [
       "L04",
-      "L19"
+      "L19",
+      "L35",
+      "L36"
     ],
     "features": [
       "User-directed create/list notes",
-      "Local JSON persistence"
+      "Local JSON persistence",
+      "Bounded validated schema-1 notes, locked write transactions and flushed staged replacement (locally tested)",
+      "Read-only case-insensitive text search"
     ],
     "acceptance": [
       "No write without explicit user action",
-      "Malformed notes rejected"
+      "Malformed notes rejected",
+      "Concurrent successful appends have unique IDs and no lost entries; invalid/future documents are preserved"
     ]
   },
   {
@@ -128,16 +133,20 @@
       "L09",
       "L19",
       "L26",
-      "L33"
+      "L33",
+      "L35",
+      "L36"
     ],
     "features": [
       "Versioned local collections",
       "Import/export and backup",
-      "Atomic write validation"
+      "Atomic write validation",
+      "Bounded validated schema-1 notes, locked write transactions and flushed staged replacement (locally tested)"
     ],
     "acceptance": [
       "Old schemas migrate with fixtures",
-      "Interrupted write never silently destroys existing notes"
+      "Interrupted write never silently destroys existing notes",
+      "Concurrent successful appends have unique IDs and no lost entries; invalid/future documents are preserved"
     ]
   },
   {

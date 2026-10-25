@@ -24,3 +24,5 @@ The product is **Rust-Boy**. The repository path `pip_boy`, CLI `pipboy`, intern
 Every declared feature must state whether it is implemented, planned, or unavailable. Measurements require a data source. External repository references do not grant permission to copy their code, media, or product identity. Update this index when adding a new architecture or operating document.
 
 - [Executed local validation](VALIDATION.md) — toolchains, unit checks, CLI and terminal smoke evidence.
+
+- [Storage contract](STORAGE.md) — notes schema compatibility, contention, limits and recovery behavior.

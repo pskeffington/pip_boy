@@ -28,3 +28,5 @@ Never import source or media solely because it is visible on GitHub. Capture rep
 File a private security report using GitHub's security advisory feature when available. Avoid publishing credentials, location traces, or sensitive sample files in issues.
 
 Local host telemetry starts only after the host checks its read grant. TUI P revokes that grant immediately, drops the collector/history, and clears the displayed reading. Resume grants host read access for the current session and explicitly restarts collection. Grants are not persisted. Notes/library and legacy `status` are still direct built-in services; this is not a general per-adapter consent system.
+
+Notes writers use a cooperative OS lock. Readers/search are side-effect free. Schema checks reject future versions, extra fields, duplicate/zero IDs, control characters and oversized data before rewriting. Ordinary staging errors preserve the current document. Locking does not constrain external editors or untrusted code; do not delete notes.lock while any writer may be active. See [storage limits and recovery](docs/STORAGE.md).

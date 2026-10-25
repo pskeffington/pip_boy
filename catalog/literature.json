@@ -631,5 +631,41 @@
     "limitation": "General troubleshooting guidance does not identify the cause of this repository's zero-job startup_failure.",
     "acceptance": "Capture GitHub run and job metadata and successful test/formatter logs for G0 promotion.",
     "reviewed_on": "2026-10-24"
+  },
+  {
+    "id": "L35",
+    "title": "tempfile 3.27.0: NamedTempFile staged persistence",
+    "contributors": "tempfile maintainers",
+    "publisher": "docs.rs / tempfile",
+    "year": 2026,
+    "type": "official_docs",
+    "url": "https://docs.rs/tempfile/3.27.0/tempfile/struct.NamedTempFile.html",
+    "doi": null,
+    "modules": [
+      "notes",
+      "storage"
+    ],
+    "design": "Create staging files beside notes.json, flush their contents, and persist by replacement without first unlinking the current document.",
+    "limitation": "Persist does not itself sync file contents or the parent directory. Abrupt process termination may leave staging files; native filesystem and power-loss behavior require separate acceptance.",
+    "acceptance": "Inject partial staging and replacement errors; preserve original notes and clean up ordinary failure paths; never promote abandoned staging automatically.",
+    "reviewed_on": "2026-10-24"
+  },
+  {
+    "id": "L36",
+    "title": "fs2 0.4.3: cross-platform advisory file locks",
+    "contributors": "fs2 maintainers",
+    "publisher": "docs.rs / fs2",
+    "year": 2026,
+    "type": "official_docs",
+    "url": "https://docs.rs/fs2/0.4.3/src/fs2/lib.rs.html",
+    "doi": null,
+    "modules": [
+      "notes",
+      "storage"
+    ],
+    "design": "Hold one exclusive OS lock across read, modify and replacement; fail promptly on contention and retain a stable lock filename.",
+    "limitation": "Locks coordinate cooperating writers only; external editors and filesystem-specific behavior remain outside the guarantee. Do not unlink the lock file while writers may be running.",
+    "acceptance": "Verify contention fails before writes, handle drop releases the lock, and concurrent CLI writers preserve every successful append with unique IDs.",
+    "reviewed_on": "2026-10-24"
   }
 ]

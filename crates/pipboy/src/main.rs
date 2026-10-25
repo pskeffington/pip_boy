@@ -9,7 +9,7 @@ mod tui;
 
 fn help() {
     println!("{PRODUCT_NAME} | {PRODUCT_DESCRIPTOR}");
-    println!("usage: {CLI_COMMAND} [tui|status [--json]|sample [--count N --interval-ms MS]|sources [query]|modules|plan [G0..G4]|evidence [query]|doctor|notes <list|add TEXT>|help]");
+    println!("usage: {CLI_COMMAND} [tui|status [--json]|sample [--count N --interval-ms MS]|sources [query]|modules|plan [G0..G4]|evidence [query]|doctor|notes <list|add TEXT|search QUERY>|help]");
 }
 
 fn main() {
@@ -169,13 +169,23 @@ fn run() -> Result<(), Box<dyn Error>> {
                     }
                     Ok(())
                 }
+                Some("search") => {
+                    let query = args.next().ok_or("usage: pipboy notes search QUERY")?;
+                    if args.next().is_some() {
+                        return Err("usage: pipboy notes search QUERY".into());
+                    }
+                    for note in store.search(&query)? {
+                        println!("#{} [{}] {}", note.id, note.created_unix_s, note.text);
+                    }
+                    Ok(())
+                }
                 Some("add") => {
                     let text = args.collect::<Vec<_>>().join(" ");
                     let note = store.add(&text)?;
                     println!("Saved local note #{}", note.id);
                     Ok(())
                 }
-                _ => Err(format!("usage: {CLI_COMMAND} notes <list|add TEXT>").into()),
+                _ => Err(format!("usage: {CLI_COMMAND} notes <list|add TEXT|search QUERY>").into()),
             }
         }
         Some(other) => Err(format!("unknown command: {other}. Use {CLI_COMMAND} help.").into()),
