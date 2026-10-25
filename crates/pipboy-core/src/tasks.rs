@@ -46,9 +46,9 @@ fn valid_contact(value: &str) -> bool {
         && !domain.is_empty()
         && !domain.contains('@')
         && domain.contains('.')
-        && value.bytes().all(|ch| {
-            ch.is_ascii_alphanumeric() || matches!(ch, b'.' | b'_' | b'+' | b'-' | b'@')
-        })
+        && value
+            .bytes()
+            .all(|ch| ch.is_ascii_alphanumeric() || matches!(ch, b'.' | b'_' | b'+' | b'-' | b'@'))
 }
 
 fn valid_date(value: &str) -> bool {
@@ -56,7 +56,10 @@ fn valid_date(value: &str) -> bool {
     if chars.len() != 10
         || chars[4] != b'-'
         || chars[7] != b'-'
-        || !chars.iter().enumerate().all(|(i, ch)| i == 4 || i == 7 || ch.is_ascii_digit())
+        || !chars
+            .iter()
+            .enumerate()
+            .all(|(i, ch)| i == 4 || i == 7 || ch.is_ascii_digit())
     {
         return false;
     }
@@ -68,7 +71,13 @@ fn valid_date(value: &str) -> bool {
     }
     let leap = year % 4 == 0 && (year % 100 != 0 || year % 400 == 0);
     let max_day = match month {
-        2 => if leap { 29 } else { 28 },
+        2 => {
+            if leap {
+                29
+            } else {
+                28
+            }
+        }
         4 | 6 | 9 | 11 => 30,
         _ => 31,
     };
@@ -163,8 +172,14 @@ impl Task {
              STATUS: Awaiting operator update\n\
              Reply with the task reference, acknowledgment and current status.\n\
              This is a manually prepared handoff, not an authenticated transmission.",
-            self.id, self.title, self.assignee, self.role, contact,
-            self.priority, due, self.details
+            self.id,
+            self.title,
+            self.assignee,
+            self.role,
+            contact,
+            self.priority,
+            due,
+            self.details
         )
     }
 }
@@ -216,7 +231,9 @@ impl Default for TaskBoard {
 impl TaskBoard {
     fn validate(&self) -> io::Result<()> {
         if self.schema_version != SCHEMA || self.next_id == 0 || self.tasks.len() > MAX_TASKS {
-            return Err(invalid("Unknown or oversized task board; original file preserved"));
+            return Err(invalid(
+                "Unknown or oversized task board; original file preserved",
+            ));
         }
         let mut ids = HashSet::new();
         for task in &self.tasks {
@@ -233,9 +250,8 @@ impl TaskBoard {
         if data.len() as u64 > MAX_FILE {
             return Err(invalid("Task board exceeds maximum size"));
         }
-        let board: Self = serde_json::from_slice(&data).map_err(|_| {
-            invalid("Unrecognized task board; original file preserved")
-        })?;
+        let board: Self = serde_json::from_slice(&data)
+            .map_err(|_| invalid("Unrecognized task board; original file preserved"))?;
         board.validate()?;
         Ok(board)
     }
@@ -247,7 +263,9 @@ pub struct TaskStore {
 
 impl TaskStore {
     pub fn new(root: PathBuf) -> Self {
-        Self { path: root.join("tasks.json") }
+        Self {
+            path: root.join("tasks.json"),
+        }
     }
 
     pub fn from_environment() -> io::Result<Self> {
@@ -336,7 +354,9 @@ impl TaskStore {
         }
         let at = now();
         let id = board.next_id;
-        board.next_id = id.checked_add(1).ok_or_else(|| invalid("Task IDs exhausted"))?;
+        board.next_id = id
+            .checked_add(1)
+            .ok_or_else(|| invalid("Task IDs exhausted"))?;
         let task = Task {
             id,
             revision: 1,
@@ -383,14 +403,23 @@ impl TaskStore {
             .find(|task| task.id == id)
             .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "Task not found"))?;
         if revision != task.revision {
-            return Err(io::Error::new(io::ErrorKind::AlreadyExists,
-                "Task changed since last refresh; reload before editing"));
+            return Err(io::Error::new(
+                io::ErrorKind::AlreadyExists,
+                "Task changed since last refresh; reload before editing",
+            ));
         }
         let (kind, detail) = update(task)?;
         let at = now();
         task.updated_at = at.max(task.updated_at);
-        task.revision = task.revision.checked_add(1).ok_or_else(|| invalid("Revision exhausted"))?;
-        task.events.push(Event { at, kind: kind.into(), detail });
+        task.revision = task
+            .revision
+            .checked_add(1)
+            .ok_or_else(|| invalid("Revision exhausted"))?;
+        task.events.push(Event {
+            at,
+            kind: kind.into(),
+            detail,
+        });
         if task.events.len() > MAX_EVENTS {
             task.events.remove(0);
         }
@@ -399,9 +428,17 @@ impl TaskStore {
         Ok(result)
     }
 
-    pub fn set_status(&self, id: u64, revision: u64, status: Status, note: &str) -> io::Result<Task> {
+    pub fn set_status(
+        &self,
+        id: u64,
+        revision: u64,
+        status: Status,
+        note: &str,
+    ) -> io::Result<Task> {
         if !checked_text(note, 110, false) {
-            return Err(invalid("Status note must be at most 110 printable characters"));
+            return Err(invalid(
+                "Status note must be at most 110 printable characters",
+            ));
         }
         self.change(id, revision, |task| {
             if task.status == status {
@@ -412,10 +449,16 @@ impl TaskStore {
         })
     }
 
-    pub fn reassign(&self, id: u64, revision: u64, name: &str, role: &str,
-                    contact: Option<&str>) -> io::Result<Task> {
-        if !checked_text(name, 64, true) || !valid_role(role)
-            || !contact.is_none_or(valid_contact) {
+    pub fn reassign(
+        &self,
+        id: u64,
+        revision: u64,
+        name: &str,
+        role: &str,
+        contact: Option<&str>,
+    ) -> io::Result<Task> {
+        if !checked_text(name, 64, true) || !valid_role(role) || !contact.is_none_or(valid_contact)
+        {
             return Err(invalid("Invalid assignee, target job or recipient address"));
         }
         self.change(id, revision, |task| {
@@ -424,7 +467,10 @@ impl TaskStore {
             task.contact = contact.map(str::to_owned);
             task.sent_at = None;
             task.acknowledged_at = None;
-            Ok(("reassigned", format!("Assigned to {name} / {role}; handoff reset")))
+            Ok((
+                "reassigned",
+                format!("Assigned to {name} / {role}; handoff reset"),
+            ))
         })
     }
 
@@ -434,7 +480,10 @@ impl TaskStore {
                 return Err(invalid("Already marked sent"));
             }
             task.sent_at = Some(now());
-            Ok(("handoff", "Operator manually confirmed sending; delivery not verified".into()))
+            Ok((
+                "handoff",
+                "Operator manually confirmed sending; delivery not verified".into(),
+            ))
         })
     }
 
@@ -447,7 +496,10 @@ impl TaskStore {
                 return Err(invalid("Acknowledgment already recorded"));
             }
             task.acknowledged_at = Some(now());
-            Ok(("acknowledged", "Operator manually recorded acknowledgment; no remote proof".into()))
+            Ok((
+                "acknowledged",
+                "Operator manually recorded acknowledgment; no remote proof".into(),
+            ))
         })
     }
 }
@@ -495,9 +547,13 @@ mod tests {
         let ack = store.acknowledge(task.id, 2).unwrap();
         assert_eq!(ack.revision, 3);
         assert!(ack.acknowledged_at.is_some());
-        let started = store.set_status(task.id, 3, Status::InProgress, "Working").unwrap();
+        let started = store
+            .set_status(task.id, 3, Status::InProgress, "Working")
+            .unwrap();
         assert_eq!(started.revision, 4);
-        let done = store.set_status(task.id, 4, Status::Done, "Reviewed").unwrap();
+        let done = store
+            .set_status(task.id, 4, Status::Done, "Reviewed")
+            .unwrap();
         assert_eq!(done.status, Status::Done);
         let again = TaskStore::new(temp.path().join("state"));
         assert_eq!(again.task(1).unwrap().status, Status::Done);
@@ -506,7 +562,10 @@ mod tests {
         #[cfg(unix)]
         {
             use std::os::unix::fs::PermissionsExt;
-            assert_eq!(fs::metadata(again.path()).unwrap().permissions().mode() & 0o777, 0o600);
+            assert_eq!(
+                fs::metadata(again.path()).unwrap().permissions().mode() & 0o777,
+                0o600
+            );
         }
     }
 
@@ -516,21 +575,40 @@ mod tests {
         let store = TaskStore::new(temp.path().to_path_buf());
         let task = store.create(new_task()).unwrap();
         let sent = store.mark_sent(task.id, task.revision).unwrap();
-        assert_eq!(store.mark_sent(task.id, task.revision).unwrap_err().kind(),
-            io::ErrorKind::AlreadyExists);
-        let changed = store.reassign(task.id, sent.revision, "Engineer Two",
-            "head-engineer", None).unwrap();
+        assert_eq!(
+            store.mark_sent(task.id, task.revision).unwrap_err().kind(),
+            io::ErrorKind::AlreadyExists
+        );
+        let changed = store
+            .reassign(
+                task.id,
+                sent.revision,
+                "Engineer Two",
+                "head-engineer",
+                None,
+            )
+            .unwrap();
         assert!(changed.sent_at.is_none() && changed.acknowledged_at.is_none());
         assert_eq!(changed.role, "head-engineer");
-        assert!(changed.events.iter().any(|event| event.kind == "reassigned"));
+        assert!(changed
+            .events
+            .iter()
+            .any(|event| event.kind == "reassigned"));
         assert!(store.acknowledge(changed.id, changed.revision).is_err());
     }
 
     #[test]
     fn validation_rejects_invalid_dates_bad_contacts_and_control_characters() {
         assert!(valid_date("2028-02-29"));
-        for date in ["2027-02-29", "2026-04-31", "2026-13-01", "2026-1-2",
-            "1999-12-31", "2030/02/01", "2026-00-12"] {
+        for date in [
+            "2027-02-29",
+            "2026-04-31",
+            "2026-13-01",
+            "2026-1-2",
+            "1999-12-31",
+            "2030/02/01",
+            "2026-00-12",
+        ] {
             assert!(!valid_date(date), "{date}");
         }
         assert!(valid_contact("ops+night@example.org"));
@@ -560,7 +638,10 @@ mod tests {
         fs::write(store.path(), "{\"schema_version\":99}").unwrap();
         assert!(store.load().is_err());
         assert!(store.create(new_task()).is_err());
-        assert_eq!(fs::read_to_string(store.path()).unwrap(), "{\"schema_version\":99}");
+        assert_eq!(
+            fs::read_to_string(store.path()).unwrap(),
+            "{\"schema_version\":99}"
+        );
     }
 
     #[test]
@@ -574,7 +655,9 @@ mod tests {
             if let Ok(updated) = next {
                 revision = updated.revision;
             } else {
-                let updated = store.set_status(task.id, revision, Status::Todo, "Ready").unwrap();
+                let updated = store
+                    .set_status(task.id, revision, Status::Todo, "Ready")
+                    .unwrap();
                 revision = updated.revision;
             }
         }

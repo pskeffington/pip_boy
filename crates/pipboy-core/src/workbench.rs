@@ -58,7 +58,8 @@ pub const PALETTE: &[Tool] = &[
     Tool {
         id: "mission-board",
         name: "TASK CONTROL",
-        description: "Persistent Overseer assignments, priority, due date, status and manual handoff.",
+        description:
+            "Persistent Overseer assignments, priority, due date, status and manual handoff.",
         availability: Availability::Ready,
         command: "pipboy dashboard --micro",
     },

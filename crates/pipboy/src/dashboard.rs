@@ -402,11 +402,16 @@ fn tasks_read(store: &WorkbenchStore) -> Result<Response, Response> {
 fn tasks_create(req: &Request, store: &WorkbenchStore) -> Result<Response, Response> {
     let (_, manager) = manager_role(store)?;
     if !manager {
-        return Err(Response::error(403, "Pin Task Control or load Overseer to create assignments"));
+        return Err(Response::error(
+            403,
+            "Pin Task Control or load Overseer to create assignments",
+        ));
     }
     let body = parse_json_body(
         req,
-        &["title", "details", "assignee", "role", "contact", "priority", "due"],
+        &[
+            "title", "details", "assignee", "role", "contact", "priority", "due",
+        ],
     )?;
     let task: NewTask = serde_json::from_value(body)
         .map_err(|_| Response::error(422, "Invalid new task fields"))?;
@@ -426,16 +431,30 @@ fn positive_integer(body: &Value, key: &str) -> Result<u64, Response> {
 fn tasks_change(req: &Request, store: &WorkbenchStore) -> Result<Response, Response> {
     let body = parse_json_body(
         req,
-        &["id", "revision", "operation", "status", "note", "assignee", "role", "contact"],
+        &[
+            "id",
+            "revision",
+            "operation",
+            "status",
+            "note",
+            "assignee",
+            "role",
+            "contact",
+        ],
     )?;
     let id = positive_integer(&body, "id")?;
     let revision = positive_integer(&body, "revision")?;
     let operation = str_field(&body, "operation")?;
     let (role, manager) = manager_role(store)?;
     let tasks = task_store(store);
-    let existing = tasks.task(id).map_err(|_| Response::error(404, "Task not found"))?;
+    let existing = tasks
+        .task(id)
+        .map_err(|_| Response::error(404, "Task not found"))?;
     if !manager && existing.role != role {
-        return Err(Response::error(403, "Only the assigned role or Task Control can update this task"));
+        return Err(Response::error(
+            403,
+            "Only the assigned role or Task Control can update this task",
+        ));
     }
     let changed = match operation {
         "status" => {
@@ -473,7 +492,10 @@ fn tasks_change(req: &Request, store: &WorkbenchStore) -> Result<Response, Respo
 fn tasks_handoff(req: &Request, store: &WorkbenchStore) -> Result<Response, Response> {
     let (_, manager) = manager_role(store)?;
     if !manager {
-        return Err(Response::error(403, "Task handoff is an Overseer/Task Control operation"));
+        return Err(Response::error(
+            403,
+            "Task handoff is an Overseer/Task Control operation",
+        ));
     }
     let body = parse_json_body(req, &["id"])?;
     let id = positive_integer(&body, "id")?;
@@ -523,15 +545,9 @@ fn dispatch(req: &Request, store: &WorkbenchStore, port: u16) -> Response {
         ("GET", "/favicon.ico") => Response::new(204, "text/plain; charset=utf-8", Vec::new()),
         ("GET", "/api/state") => state(store).unwrap_or_else(|error| error),
         ("GET", "/api/tasks") => tasks_read(store).unwrap_or_else(|error| error),
-        ("POST", "/api/tasks/create") => {
-            tasks_create(req, store).unwrap_or_else(|error| error)
-        }
-        ("POST", "/api/tasks/change") => {
-            tasks_change(req, store).unwrap_or_else(|error| error)
-        }
-        ("POST", "/api/tasks/handoff") => {
-            tasks_handoff(req, store).unwrap_or_else(|error| error)
-        },
+        ("POST", "/api/tasks/create") => tasks_create(req, store).unwrap_or_else(|error| error),
+        ("POST", "/api/tasks/change") => tasks_change(req, store).unwrap_or_else(|error| error),
+        ("POST", "/api/tasks/handoff") => tasks_handoff(req, store).unwrap_or_else(|error| error),
         ("POST", "/api/profile") => {
             let result = (|| {
                 let body = parse_json_body(req, &["id", "confirm"])?;
@@ -870,15 +886,19 @@ mod tests {
         let empty = dispatch(&request("GET", "/api/tasks", Value::Null), &store, 8765);
         assert_eq!(empty.status, 200);
         assert!(!root.exists());
-        let make = request("POST", "/api/tasks/create", json!({
-            "title": "Check radio room",
-            "details": "Record any unusual noise",
-            "assignee": "Engineer One",
-            "role": "head-engineer",
-            "contact": "engineer@example.org",
-            "priority": "high",
-            "due": "2026-11-03"
-        }));
+        let make = request(
+            "POST",
+            "/api/tasks/create",
+            json!({
+                "title": "Check radio room",
+                "details": "Record any unusual noise",
+                "assignee": "Engineer One",
+                "role": "head-engineer",
+                "contact": "engineer@example.org",
+                "priority": "high",
+                "due": "2026-11-03"
+            }),
+        );
         let created = dispatch(&make, &store, 8765);
         assert_eq!(created.status, 200);
         let data: Value = serde_json::from_slice(&created.body).unwrap();
@@ -893,50 +913,96 @@ mod tests {
         let content: Value = serde_json::from_slice(&handoff.body).unwrap();
         assert_eq!(content["sent"], false);
         assert!(content["text"].as_str().unwrap().contains("RB-0001"));
-        assert_eq!(dispatch(
-            &request("POST", "/api/tasks/change",
-                json!({"id":1,"revision":1,"operation":"acknowledge"})),
-            &store,
-            8765,
-        ).status, 422);
-        assert_eq!(dispatch(
-            &request("POST", "/api/tasks/change",
-                json!({"id":1,"revision":1,"operation":"sent"})),
-            &store,
-            8765,
-        ).status, 200);
-        assert_eq!(dispatch(
-            &request("POST", "/api/tasks/change",
-                json!({"id":1,"revision":1,"operation":"sent"})),
-            &store,
-            8765,
-        ).status, 409);
+        assert_eq!(
+            dispatch(
+                &request(
+                    "POST",
+                    "/api/tasks/change",
+                    json!({"id":1,"revision":1,"operation":"acknowledge"})
+                ),
+                &store,
+                8765,
+            )
+            .status,
+            422
+        );
+        assert_eq!(
+            dispatch(
+                &request(
+                    "POST",
+                    "/api/tasks/change",
+                    json!({"id":1,"revision":1,"operation":"sent"})
+                ),
+                &store,
+                8765,
+            )
+            .status,
+            200
+        );
+        assert_eq!(
+            dispatch(
+                &request(
+                    "POST",
+                    "/api/tasks/change",
+                    json!({"id":1,"revision":1,"operation":"sent"})
+                ),
+                &store,
+                8765,
+            )
+            .status,
+            409
+        );
         store.apply_preset("head-engineer").unwrap();
         let jobs = dispatch(&request("GET", "/api/tasks", Value::Null), &store, 8765);
         let assigned: Value = serde_json::from_slice(&jobs.body).unwrap();
         assert_eq!(assigned["board"]["tasks"][0]["role"], "head-engineer");
         assert_eq!(assigned["manager"], false);
         assert_eq!(dispatch(&make, &store, 8765).status, 403);
-        assert_eq!(dispatch(
-            &request("POST", "/api/tasks/change",
-                json!({"id":1,"revision":2,"operation":"reassign",
-                    "assignee":"Somebody", "role":"overseer"})),
-            &store, 8765,
-        ).status, 403);
-        assert_eq!(dispatch(
-            &request("POST", "/api/tasks/change",
-                json!({"id":1,"revision":2,"operation":"acknowledge"})),
-            &store,
-            8765,
-        ).status, 200);
-        assert_eq!(dispatch(
-            &request("POST", "/api/tasks/change",
-                json!({"id":1,"revision":3,"operation":"status","status":"in_progress",
-                    "note":"Inspection underway"})),
-            &store,
-            8765,
-        ).status, 200);
-        assert_eq!(task_store(&store).task(1).unwrap().status, Status::InProgress);
+        assert_eq!(
+            dispatch(
+                &request(
+                    "POST",
+                    "/api/tasks/change",
+                    json!({"id":1,"revision":2,"operation":"reassign",
+                    "assignee":"Somebody", "role":"overseer"})
+                ),
+                &store,
+                8765,
+            )
+            .status,
+            403
+        );
+        assert_eq!(
+            dispatch(
+                &request(
+                    "POST",
+                    "/api/tasks/change",
+                    json!({"id":1,"revision":2,"operation":"acknowledge"})
+                ),
+                &store,
+                8765,
+            )
+            .status,
+            200
+        );
+        assert_eq!(
+            dispatch(
+                &request(
+                    "POST",
+                    "/api/tasks/change",
+                    json!({"id":1,"revision":3,"operation":"status","status":"in_progress",
+                    "note":"Inspection underway"})
+                ),
+                &store,
+                8765,
+            )
+            .status,
+            200
+        );
+        assert_eq!(
+            task_store(&store).task(1).unwrap().status,
+            Status::InProgress
+        );
         assert!(!root.join("permissions.json").exists());
     }
 
@@ -944,18 +1010,31 @@ mod tests {
     fn task_mutations_require_same_origin_and_do_not_destroy_corrupted_stores() {
         let temp = tempfile::tempdir().unwrap();
         let store = WorkbenchStore::new(temp.path().to_path_buf());
-        let mut malicious = request("POST", "/api/tasks/create", json!({
-            "title": "Do work", "assignee": "Person", "role": "head-engineer", "priority":"normal"
-        }));
-        malicious.headers.insert("origin".to_owned(), "http://attacker.invalid".to_owned());
+        let mut malicious = request(
+            "POST",
+            "/api/tasks/create",
+            json!({
+                "title": "Do work", "assignee": "Person", "role": "head-engineer", "priority":"normal"
+            }),
+        );
+        malicious
+            .headers
+            .insert("origin".to_owned(), "http://attacker.invalid".to_owned());
         assert_eq!(dispatch(&malicious, &store, 8765).status, 403);
         assert!(!task_store(&store).path().exists());
         std::fs::write(task_store(&store).path(), "bad-json").unwrap();
-        let valid = request("POST", "/api/tasks/create", json!({
-            "title": "Do work", "assignee": "Person", "role": "head-engineer", "priority":"normal"
-        }));
+        let valid = request(
+            "POST",
+            "/api/tasks/create",
+            json!({
+                "title": "Do work", "assignee": "Person", "role": "head-engineer", "priority":"normal"
+            }),
+        );
         assert_eq!(dispatch(&valid, &store, 8765).status, 422);
-        assert_eq!(std::fs::read_to_string(task_store(&store).path()).unwrap(), "bad-json");
+        assert_eq!(
+            std::fs::read_to_string(task_store(&store).path()).unwrap(),
+            "bad-json"
+        );
     }
 
     #[test]
