@@ -46,7 +46,7 @@ jobs:
       - name: Runtime CLI and terminal smoke checks
         if: matrix.toolchain == 'stable'
         run: |
-          cargo build -p pipboy --locked
+          cargo build --workspace --locked
           python3 tools/smoke_runtime.py
           python3 tools/smoke_notes.py
           python3 tools/smoke_permissions.py
@@ -55,6 +55,7 @@ jobs:
           python3 tools/smoke_transport.py
           python3 tools/smoke_mock_adapters.py
           python3 tools/smoke_native_cli.py
+          python3 tools/smoke_broker.py
 
   native:
     name: Native ${{ matrix.os }}
@@ -81,7 +82,7 @@ jobs:
         run: |
           cargo check --workspace --all-targets --locked
           cargo test --workspace --locked
-          cargo build -p pipboy --locked
+          cargo build --workspace --locked
       - name: Offline preferences and virtual-device smoke
         shell: bash
         run: |
@@ -91,6 +92,7 @@ jobs:
           ${{ matrix.python }} tools/smoke_transport.py
           ${{ matrix.python }} tools/smoke_mock_adapters.py
           ${{ matrix.python }} tools/smoke_native_cli.py
+          ${{ matrix.python }} tools/smoke_broker.py
       - name: Native macOS terminal PTY journey
         if: matrix.os == 'macos-latest'
         shell: bash

@@ -81,6 +81,42 @@ def validate():
         "adapter preferences and runtime capability vocabulary disagree",
     )
 
+    # The separate deny-all subprocess has an exact external capability
+    # roster. Drift must be caught before accepting an unreviewed direction
+    # such as a receiver becoming a transmitter.
+    broker_source = (
+        ROOT / "crates/rust-boy-broker/src/main.rs"
+    ).read_text(encoding="utf-8")
+    broker_match = re.search(
+        r"const CAPABILITY_OPERATIONS: &\\[\\(&str, &str\\)\\] = &\\[(.*?)\\];",
+        broker_source,
+        flags=re.DOTALL,
+    )
+    require(broker_match is not None, "missing deny-all broker protocol roster")
+    broker_pairs = re.findall(
+        r'\\("([^"]+)",\\s*"([^"]+)"\\)',
+        broker_match.group(1),
+    )
+    require(
+        len(broker_pairs) == len(set(broker_pairs))
+        and {key for key, _ in broker_pairs}
+        == {key for key, value in vocabulary.items() if value in expected_adapters},
+        "deny-all broker capability roster differs from the trusted source",
+    )
+    broker_forbidden = (
+        "std::net::", "std::fs::", "serialport::", "btleplug::",
+        "rppal::", "std::process::Command", "CreateFileW",
+    )
+    require(
+        not any(api in broker_source for api in broker_forbidden),
+        "deny-all broker must not open external device/network/FS handles",
+    )
+    require(
+        "allowed: false" in broker_source
+        and '"physical_device_backend_disabled"' in broker_source,
+        "deny-all broker lacks explicit policy denial",
+    )
+
     # Fixed simulator inventory must map exactly one virtual fixture per
     # future capability. It must never fall back to hardware at runtime.
     simulator_source = (
