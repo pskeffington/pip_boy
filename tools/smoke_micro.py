@@ -144,7 +144,7 @@ with tempfile.TemporaryDirectory() as work:
         assert code == 200
         assert response["active"]["profile"] == "security-chief"
         assert [slot["tool"] for slot in response["active"]["slots"]] == [
-            "host", "net-lab", "byte-lab", "notes"
+            "host", "diag", "net-lab", "byte-lab", "notes"
         ]
         assert not (root / "permissions.json").exists()
         assert not (root / "notes.json").exists()
