@@ -1005,13 +1005,19 @@ fn dispatch(req: &Request, store: &WorkbenchStore, port: u16) -> Response {
             BOSTON_MAP_JS.as_bytes(),
         ),
         ("GET", "/assets/boston-coast-base.js") => Response::new(
-            200, "text/javascript; charset=utf-8", BOSTON_COAST_JS.as_bytes(),
+            200,
+            "text/javascript; charset=utf-8",
+            BOSTON_COAST_JS.as_bytes(),
         ),
         ("GET", "/assets/boston-land-base.js") => Response::new(
-            200, "text/javascript; charset=utf-8", BOSTON_LAND_JS.as_bytes(),
+            200,
+            "text/javascript; charset=utf-8",
+            BOSTON_LAND_JS.as_bytes(),
         ),
         ("GET", "/assets/county-map.js") => Response::new(
-            200, "text/javascript; charset=utf-8", COUNTY_MAP_JS.as_bytes(),
+            200,
+            "text/javascript; charset=utf-8",
+            COUNTY_MAP_JS.as_bytes(),
         ),
         ("GET", "/assets/map.js") => {
             Response::new(200, "text/javascript; charset=utf-8", MAP_JS.as_bytes())
