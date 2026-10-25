@@ -72,8 +72,8 @@ def compile_source(raw_bytes: bytes) -> dict:
         line = [ident, street_class, lookup[name]]
         for lon, lat, *_ in points:
             # Quantization only: source point, not interpolated or fabricated.
-            line.extend([round((lon + 71) * 1_000_000),
-                         round((lat - 42) * 1_000_000)])
+            line.extend([math.floor((lon + 71) * 1_000_000 + 0.5),
+                         math.floor((lat - 42) * 1_000_000 + 0.5)])
         roads.append(line)
     if len(roads) != 10634 or len(names) != 2522:
         raise ValueError("Pinned extract feature/name counts changed")
