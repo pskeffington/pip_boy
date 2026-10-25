@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
-"""Rust-Boy NET SUITE: CLI, loopback HTTP, and ten-mode engineering bench.
+"""Rust-Boy NET SUITE: CLI, loopback HTTP, and 12-mode engineering bench.
 
-All eight offline calculations + legacy CIDR are deterministic. The only
-network test opens one 127.0.0.1 listening socket, and every TCP probe requires
-an explicit --confirm or same-origin JSON confirm flag. No host scans, DNS,
-external sockets, OS route changes, telemetry or data-file writes are tested.
+Nine offline calculations are deterministic. The only live probe endpoint is
+127.0.0.1, plus the adapter is checked while unconfigured. API keys are never
+used or injected by smoke tests. No host scan, DNS or external test traffic.
 """
 import http.client
 import json
@@ -20,9 +19,12 @@ BIN = ROOT / "target" / "debug" / ("pipboy.exe" if os.name == "nt" else "pipboy"
 
 
 def cli(home, *arguments, success=True):
+    env = {key: value for key, value in os.environ.items()
+           if not key.startswith("RUSTBOY_UNIFI_")}
+    env["PIPBOY_HOME"] = str(home)
     result = subprocess.run(
         [str(BIN), "workbench", "net", *arguments],
-        cwd=ROOT, env=dict(os.environ, PIPBOY_HOME=str(home)),
+        cwd=ROOT, env=env,
         capture_output=True, text=True, encoding="utf-8", timeout=15
     )
     if success:
@@ -50,9 +52,12 @@ def api(port, method, path, payload=None, origin=True):
 
 
 def launch(home):
+    env = {key: value for key, value in os.environ.items()
+           if not key.startswith("RUSTBOY_UNIFI_")}
+    env["PIPBOY_HOME"] = str(home)
     process = subprocess.Popen(
         [str(BIN), "dashboard", "--port", "0", "--micro"],
-        cwd=ROOT, env=dict(os.environ, PIPBOY_HOME=str(home)),
+        cwd=ROOT, env=env,
         stdout=subprocess.PIPE, stderr=subprocess.PIPE,
         text=True, encoding="utf-8"
     )
@@ -105,15 +110,23 @@ with tempfile.TemporaryDirectory() as temp:
         ("tcp", "127.0.0.1", "80"),
         ("tcp", "example.com", "80", "--confirm"),
         ("tcp", "127.0.0.1", "0", "--confirm"),
+        ("health", "127.0.0.1", "443", "5"),
+        ("health", "127.0.0.1", "443", "9", "--confirm"),
+        ("health", "host.invalid", "443", "5", "--confirm"),
+        ("unifi",),
+        ("unifi", "--confirm"),
     ]:
         cli(root, *bad, success=False)
     assert not root.exists(), "Offline planning, rejection or palette reads wrote files"
 
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as listener:
         listener.bind(("127.0.0.1", 0))
-        listener.listen(2)
+        listener.listen(32)
         port_str = str(listener.getsockname()[1])
         assert "CONNECTED" in cli(root, "tcp", "127.0.0.1", port_str, "--confirm")
+        cli_health = cli(root, "health", "127.0.0.1", port_str, "5", "--confirm")
+        assert "NETWORK HEALTH" in cli_health and "Failed: 0" in cli_health
+        assert "NOT packet loss" in cli_health
         assert not root.exists(), "Explicit TCP diagnostic wrote workbench files"
 
         process, port = launch(root)
@@ -121,9 +134,12 @@ with tempfile.TemporaryDirectory() as temp:
             code, state = api(port, "GET", "/api/state")
             assert code == 200 and state["active"]["profile"] == "overseer"
             ops = state["net_operations"]
-            assert len(ops) == 10
-            assert len([mode for mode in ops if mode["active"]]) == 1
+            assert len(ops) == 12
+            assert len([mode for mode in ops if mode["active"]]) == 3
+            assert [x["id"] for x in ops[:2]] == ["health", "unifi"]
             assert ops[-1]["id"] == "tcp"
+            assert state["unifi"]["configured"] is False
+            assert "api_key" not in json.dumps(state).lower()
             assert not root.exists(), "State inspection initialized a workbench"
             code, denied = api(port, "POST", "/api/experiment", {
                 "tool": "net-lab", "mode": "cidr6", "input": "2001:db8::1/64"
@@ -160,6 +176,31 @@ with tempfile.TemporaryDirectory() as temp:
                                 dict(request, confirm=True))
             assert code == 200 and checked["kind"] == "probe", checked
             assert "CONNECTED" in checked["output"]
+            # Live health is a finite set of TCP connect timings, not packet loss.
+            health_req = {"tool": "net-lab", "mode": "health", "input": "127.0.0.1",
+                          "extra": port_str, "samples": "5"}
+            code, error = api(port, "POST", "/api/experiment", health_req)
+            assert code == 422
+            code, error = api(port, "POST", "/api/experiment",
+                              dict(health_req, confirm=True), origin=False)
+            assert code == 403
+            code, error = api(port, "POST", "/api/experiment",
+                              dict(health_req, samples="9", confirm=True))
+            assert code == 422
+            code, data = api(port, "POST", "/api/experiment",
+                             dict(health_req, confirm=True))
+            assert code == 200 and data["kind"] == "health", data
+            metrics = data["metrics"]
+            assert metrics["attempts"] == 5 and metrics["failed"] == 0, metrics
+            assert metrics["method"] == "tcp_connect"
+            assert metrics["variation_ms"] is not None
+            assert "NOT packet loss" in data["output"]
+            code, error = api(port, "POST", "/api/experiment",
+                              {"tool": "net-lab", "mode": "unifi"})
+            assert code == 422 and "confirmation" in error["error"].lower()
+            code, error = api(port, "POST", "/api/experiment",
+                              {"tool": "net-lab", "mode": "unifi", "confirm": True})
+            assert code == 409 and "unavailable" in error["error"].lower()
             code, error = api(port, "POST", "/api/experiment", {
                 "tool": "net-lab", "mode": "other", "input": "127.0.0.1"
             })
@@ -179,7 +220,7 @@ with tempfile.TemporaryDirectory() as temp:
             assert not (root / "permissions.json").exists()
             assert not (root / "peers.json").exists()
             assert not (root / "tasks.json").exists()
-            print("PASS: ten-mode Rust network suite, IPv4/IPv6/VLAN/MAC/MTU/route math, "
-                  "presets, loopback-only explicitly confirmed TCP, no auto-sockets or hidden files")
+            print("PASS: 12-mode network suite, TCP health latency and variation, "
+                  "explicit consent, UniFi fail-closed without key, no hidden files")
         finally:
             stop(process)

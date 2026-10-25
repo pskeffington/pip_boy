@@ -245,8 +245,9 @@ mod tests {
 
     #[test]
     fn fixed_local_tls_configuration_and_secret_validation() {
+        let absolute_ca = if cfg!(windows) { "C:\\unifi-ca.pem" } else { "/tmp/unifi-ca.pem" };
         assert!(Config::parse("192.168.1.1", "abcd-01234567890", "443",
-            "unifi.example.net", Some("/tmp/unifi-ca.pem"), "os").is_ok());
+            "unifi.example.net", Some(absolute_ca), "os").is_ok());
         assert!(Config::parse("10.1.1.1", "abcd-01234567890", "8443",
             "10.1.1.1", None, "direct").is_ok());
         for ip in ["8.8.8.8", "169.254.10.1", "224.0.0.1", "unifi.example"] {
