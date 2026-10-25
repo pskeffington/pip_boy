@@ -211,7 +211,13 @@ class ConPty:
                     self.output_read, data, 4096, ctypes.byref(amount), None
                 )
                 if not ok:
-                    self.messages.put(("read_error", ctypes.get_last_error()))
+                    error = ctypes.get_last_error()
+                    # Windows reports ordinary pipe shutdown as a read error
+                    # after the child or pseudoconsole closes its write end.
+                    if error in (109, 232, 233):
+                        self.messages.put(None)
+                    else:
+                        self.messages.put(("read_error", error))
                     break
                 if amount.value == 0:
                     self.messages.put(None)
