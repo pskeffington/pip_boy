@@ -404,6 +404,179 @@
   }
 
 
+
+  function regionalOutline(ctx, view) {
+    if (!view.baseVisible || view.county) return;
+    const land=view.landBase,coast=view.coastBase;
+    if (land && land.schema===1 && Array.isArray(land.polygons)) {
+      ctx.globalAlpha=1;
+      for(const polygon of land.polygons){
+        ctx.beginPath();
+        for(const ring of polygon){
+          ring.forEach((point,index)=>{
+            const p=screenPoint(view,point[0],point[1]);
+            if(index===0)ctx.moveTo(p[0],p[1]);else ctx.lineTo(p[0],p[1]);
+          });
+          ctx.closePath();
+        }
+        ctx.fillStyle="rgba(42,80,55,0.26)";
+        ctx.fill("evenodd");
+        ctx.lineWidth=0.7;
+        ctx.strokeStyle="rgba(119,175,139,0.38)";
+        ctx.stroke();
+      }
+    }
+    if(coast && coast.schema===1){
+      // Natural Earth's actual coastline vertices; not a game shoreline.
+      ctx.beginPath();
+      for(const path of coast.coastline||[]){
+        path.forEach((point,index)=>{
+          const p=screenPoint(view,point[0],point[1]);
+          if(index===0)ctx.moveTo(p[0],p[1]);else ctx.lineTo(p[0],p[1]);
+        });
+      }
+      ctx.strokeStyle="#7daea0";
+      ctx.lineWidth=1.7;
+      ctx.stroke();
+      ctx.beginPath();
+      for(const ring of coast.countyBoundary||[]){
+        ring.forEach((point,index)=>{
+          const p=screenPoint(view,point[0],point[1]);
+          if(index===0)ctx.moveTo(p[0],p[1]);else ctx.lineTo(p[0],p[1]);
+        });
+        ctx.closePath();
+      }
+      if(typeof ctx.setLineDash==="function")ctx.setLineDash([3,5]);
+      ctx.strokeStyle="rgba(216,220,152,0.72)";
+      ctx.lineWidth=1.1;
+      ctx.stroke();
+      if(typeof ctx.setLineDash==="function")ctx.setLineDash([]);
+    }
+  }
+
+  function countyPath(ctx, view) {
+    if(!view.county) return;
+    for(const polygon of view.county.polygons){
+      for(const ring of polygon){
+        ring.forEach((point,index)=>{
+          const p=screenPoint(view,point[0],point[1]);
+          if(index===0)ctx.moveTo(p[0],p[1]);else ctx.lineTo(p[0],p[1]);
+        });
+        ctx.closePath();
+      }
+    }
+  }
+
+  function countyOutline(ctx,view) {
+    if(!view.county)return;
+    ctx.globalAlpha=1;
+    ctx.beginPath();
+    countyPath(ctx,view);
+    ctx.lineWidth=2;
+    ctx.strokeStyle="#e5e2a5";
+    ctx.stroke();
+  }
+
+  function countyMask(ctx,view,draw) {
+    if(!view.county||typeof ctx.save!=="function"||
+       typeof ctx.clip!=="function"||typeof ctx.restore!=="function")return draw();
+    ctx.save();
+    ctx.beginPath();
+    countyPath(ctx,view);
+    ctx.clip("evenodd");
+    draw();
+    ctx.restore();
+  }
+
+  function fitCounty(view,area) {
+    const [w,s,e,n]=area.bounds;
+    const left=project(w,0)[0],right=project(e,0)[0];
+    const top=project(w,n)[1],bottom=project(w,s)[1];
+    const width=Math.max(1e-5,right-left),height=Math.max(1e-5,bottom-top);
+    view.zoom=clamp(Math.floor(Math.log2(Math.min(
+      Math.max(80,view.width-40)/width,
+      Math.max(65,view.height-45)/height))),MIN_ZOOM,16);
+    view.center=inverse((left+right)/2,(top+bottom)/2);
+    view.follow=false;
+  }
+
+  function stopCountyRequest(view) {
+    view.countyToken++;
+    if(view.countyAbort)view.countyAbort.abort();
+    view.countyAbort=null;
+    view.countyBusy=false;
+  }
+
+  function backToBoston(view) {
+    stopCountyRequest(view);
+    view.county=null;
+    view.countyStatus.textContent="BOSTON / OFFLINE BASE READY";
+    view.center=view.boston?{...view.boston.center}:{lat:0,lon:0};
+    view.zoom=view.boston?12:2;
+    view.follow=false;
+    view.gpsState="MANUAL MAP CENTER / NOT GPS";
+    view.countyPanel.hidden=true;
+    refresh(view);
+  }
+
+  async function requestCounty(view,lat,lon) {
+    if(active!==view||view.sitesVisible||view.siteCentered){
+      view.countyStatus.textContent="CLOSE SAVED SITES BEFORE COUNTY LOOKUP";
+      return;
+    }
+    if(!window.RustBoyCountyMap||navigator.onLine===false){
+      view.countyStatus.textContent="CENSUS UNAVAILABLE / OFFLINE MAP PRESERVED";
+      return;
+    }
+    if(!Number.isFinite(lat)||!Number.isFinite(lon)||
+       Math.abs(lat)>90||Math.abs(lon)>180){
+      view.countyStatus.textContent="INVALID COUNTY POSITION";
+      return;
+    }
+    if(view.countyLoads>=4){
+      view.countyStatus.textContent="SESSION COUNTY LOOKUP LIMIT REACHED";
+      return;
+    }
+    stopCountyRequest(view);
+    const ticket=++view.countyToken;
+    const abort=new AbortController();
+    view.countyAbort=abort;
+    view.countyBusy=true;
+    view.countyLoads++;
+    view.countyStatus.textContent="CENSUS / RESOLVING COUNTY + ROADS";
+    if(view.webEnabled)webOff(view,false);
+    refresh(view);
+    try{
+      const area=await window.RustBoyCountyMap.load(lat,lon,abort.signal);
+      if(active!==view||view.countyToken!==ticket||abort.signal.aborted)return;
+      if(!area||!Array.isArray(area.shapes)||!area.shapes.length ||
+         !Array.isArray(area.polygons)||!area.id)throw Error("EMPTY COUNTY GEOMETRY");
+      // Atomic installation: failed/partial downloads never replace prior maps.
+      view.county=area;
+      view.onlineShapes=[];
+      view.webMeta=null;
+      fitCounty(view,area);
+      view.countyStatus.textContent=area.name.toUpperCase()+" COUNTY / "+area.id+
+        " / "+area.shapes.length+" VERIFIED VECTOR PARTS";
+      view.gpsState="COUNTY FROM EXPLICIT POSITION / NOT A LIVE GPS TRACK";
+      view.countyPanel.hidden=true;
+      refresh(view);
+    }catch(error){
+      if(active===view&&view.countyToken===ticket&&!abort.signal.aborted){
+        view.countyStatus.textContent="CENSUS LOAD FAILED / "+
+          (error instanceof Error?error.message.slice(0,96):"UNAVAILABLE")+
+          " / PREVIOUS MAP KEPT";
+        refresh(view);
+      }
+    }finally{
+      if(active===view&&view.countyToken===ticket){
+        view.countyBusy=false;
+        view.countyAbort=null;
+        refresh(view);
+      }
+    }
+  }
+
   function bostonVisible(shape, view) {
     if (!shape.bostonBase) return true;
     // Original road class (CFCC) determines detail, not a fabricated feature.
@@ -418,7 +591,7 @@
   }
 
   function drawBostonLabels(ctx, view) {
-    if (!view.baseVisible || !view.boston || view.zoom < 11.8) return;
+    if (!view.baseVisible || !view.boston || view.county || view.zoom < 11.8) return;
     const placed = [], names = new Set();
     const limit = view.width <= 520 ? 8 : 15;
     ctx.globalAlpha = 0.95;
@@ -448,12 +621,15 @@
     ctx.fillStyle = "#0b1a12";
     ctx.fillRect(0, 0, view.width, view.height);
     drawGrid(ctx, view);
+    regionalOutline(ctx, view);
     ctx.lineJoin = "round";
     ctx.lineCap = "round";
     let labels = 0;
     // Real Boston snapshot sits under opt-in OSM reference and imported RustGIS.
-    const baseShapes = view.baseVisible && view.boston ? view.boston.shapes : [];
-    for (const shape of [...baseShapes, ...view.onlineShapes, ...view.shapes]) {
+    const baseShapes = view.baseVisible && view.boston && !view.county ?
+      view.boston.shapes : [];
+    const renderShapes = (shapes) => {
+    for (const shape of shapes) {
       if (!bostonVisible(shape, view)) continue;
       const style = shape.style || {};
       ctx.globalAlpha = Number.isFinite(style.opacity) ? style.opacity : 1;
@@ -503,8 +679,11 @@
         }
       }
     }
-
-
+    };
+    renderShapes(baseShapes);
+    if (view.county) countyMask(ctx,view,()=>renderShapes(view.county.shapes));
+    renderShapes([...view.onlineShapes,...view.shapes]);
+    countyOutline(ctx,view);
     drawBostonLabels(ctx, view);
     // Site markers remain distinct from imported RustGIS and opt-in OSM layers.
     view.siteMarkers = [];
