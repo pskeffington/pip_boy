@@ -627,9 +627,15 @@ fn dispatch(req: &Request, store: &WorkbenchStore, port: u16) -> Response {
         ("GET", "/assets/micro.js") => {
             Response::new(200, "text/javascript; charset=utf-8", MICRO_JS.as_bytes())
         }
-        ("GET", "/assets/map-import.js") => Response::new(200, "text/javascript; charset=utf-8", MAP_IMPORT_JS.as_bytes()),
-        ("GET", "/assets/map.js") => Response::new(200, "text/javascript; charset=utf-8", MAP_JS.as_bytes()),
-        ("GET", "/assets/map.css") => Response::new(200, "text/css; charset=utf-8", MAP_CSS.as_bytes()),
+        ("GET", "/assets/map-import.js") => {
+            Response::new(200, "text/javascript; charset=utf-8", MAP_IMPORT_JS.as_bytes())
+        }
+        ("GET", "/assets/map.js") => {
+            Response::new(200, "text/javascript; charset=utf-8", MAP_JS.as_bytes())
+        }
+        ("GET", "/assets/map.css") => {
+            Response::new(200, "text/css; charset=utf-8", MAP_CSS.as_bytes())
+        }
         ("GET", "/assets/tasks.js") => {
             Response::new(200, "text/javascript; charset=utf-8", TASKS_JS.as_bytes())
         }
