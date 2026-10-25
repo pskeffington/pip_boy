@@ -1,10 +1,8 @@
 //! Explicit local workbench management. No pin operation executes a tool.
-use pipboy_core::workbench::{
-    crc32_hex, encode_hex, inspect_hex, tool, WorkbenchStore, PALETTE,
-};
-use std::error::Error;
-use pipboy_core::network_suite; 
 use crate::network_probe;
+use pipboy_core::network_suite;
+use pipboy_core::workbench::{crc32_hex, encode_hex, inspect_hex, tool, WorkbenchStore, PALETTE};
+use std::error::Error;
 
 pub fn run(args: Vec<String>) -> Result<(), Box<dyn Error>> {
     let usage = "usage: pipboy workbench <list [--json]|profiles [--json]|use PROFILE --replace|palette [--json]|add TOOL|remove ID|rename TITLE|clear --confirm|bytes <encode TEXT|inspect HEX|crc32 HEX>|net <list|cidr IPv4/PREFIX|cidr6 IPv6/PREFIX|split4 PARENT CHILD|route IP PREFIXES|aggregate4 A B|overlap4 A B|mac MAC|vlan VID,PCP,DEI|mtu BYTES|tcp IP PORT --confirm>>";
@@ -179,8 +177,16 @@ pub fn run(args: Vec<String>) -> Result<(), Box<dyn Error>> {
                 [mode] if mode == "list" => {
                     println!("NETWORK BENCH / NO AUTOMATIC I/O");
                     for op in network_suite::OPERATIONS {
-                        println!("{:<12} {:<18} {}", op.id, op.name,
-                            if op.active { "EXPLICIT TCP CONNECT" } else { "OFFLINE" });
+                        println!(
+                            "{:<12} {:<18} {}",
+                            op.id,
+                            op.name,
+                            if op.active {
+                                "EXPLICIT TCP CONNECT"
+                            } else {
+                                "OFFLINE"
+                            }
+                        );
                     }
                     Ok(())
                 }

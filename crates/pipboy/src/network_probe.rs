@@ -40,8 +40,10 @@ mod tests {
     fn no_connection_without_confirmation_and_local_loopback_probe() {
         let listener = TcpListener::bind("127.0.0.1:0").unwrap();
         let port = listener.local_addr().unwrap().port().to_string();
-        assert_eq!(tcp_once("127.0.0.1", &port, false).unwrap_err().kind(),
-            io::ErrorKind::PermissionDenied);
+        assert_eq!(
+            tcp_once("127.0.0.1", &port, false).unwrap_err().kind(),
+            io::ErrorKind::PermissionDenied
+        );
         let output = tcp_once("127.0.0.1", &port, true).unwrap();
         assert!(output.contains("CONNECTED"), "{output}");
         assert!(output.contains("One TCP connection attempt"));

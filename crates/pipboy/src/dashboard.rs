@@ -735,7 +735,8 @@ fn dispatch(req: &Request, store: &WorkbenchStore, port: u16) -> Response {
                 let body = parse_json_body(
                     req,
                     &[
-                        "tool", "mode", "input", "extra", "confirm", "lat", "lon", "lat2", "lon2", "name",
+                        "tool", "mode", "input", "extra", "confirm", "lat", "lon", "lat2", "lon2",
+                        "name",
                     ],
                 )?;
                 experiment(&body, store)

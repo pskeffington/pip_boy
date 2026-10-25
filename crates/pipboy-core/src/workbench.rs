@@ -101,7 +101,8 @@ pub const PALETTE: &[Tool] = &[
     Tool {
         id: "net-lab",
         name: "NET SUITE",
-        description: "IPv4/IPv6, routes, subnet splitting, MAC, VLAN, MTU and confirmed TCP reachability.",
+        description:
+            "IPv4/IPv6, routes, subnet splitting, MAC, VLAN, MTU and confirmed TCP reachability.",
         availability: Availability::Ready,
         command: "pipboy workbench net list",
     },

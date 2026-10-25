@@ -256,8 +256,8 @@
       ],
       "mission": "Troubleshoot embedded systems, networks and hardware using reproducible diagnostics.",
       "baseline_tools": [
-        "host",
         "net-lab",
+        "host",
         "byte-lab",
         "simulator",
         "notes"
