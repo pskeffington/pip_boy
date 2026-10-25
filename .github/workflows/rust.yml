@@ -50,3 +50,4 @@ jobs:
           python3 tools/smoke_notes.py
           python3 tools/smoke_permissions.py
           python3 tools/smoke_simulator.py
+          python3 tools/smoke_replay.py
