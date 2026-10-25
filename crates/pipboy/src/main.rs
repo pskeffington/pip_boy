@@ -8,6 +8,7 @@ use pipboy_core::permissions::{
 };
 use pipboy_core::runtime::{Capability, LocalOperation, ModuleHost, PermissionSet};
 use pipboy_core::simulator_replay::{replay_fixture, ReplayScenario};
+use pipboy_core::virtual_transport::VirtualTransport;
 use std::error::Error;
 mod console;
 mod sampling;
@@ -16,7 +17,7 @@ mod tui;
 
 fn help() {
     println!("{PRODUCT_NAME} | {PRODUCT_DESCRIPTOR}");
-    println!("usage: {CLI_COMMAND} [tui|status [--json]|sample [--count N --interval-ms MS]|sources [query]|modules|plan [G0..G4]|evidence [query]|doctor|permissions <list|request KEY|deny KEY|clear KEY>|simulate <list|run ID [--confirm]|replay ID SCENARIO [--confirm]>|notes <list|add TEXT|search QUERY|export|import FILE>|help]");
+    println!("usage: {CLI_COMMAND} [tui|status [--json]|sample [--count N --interval-ms MS]|sources [query]|modules|plan [G0..G4]|evidence [query]|doctor|permissions <list|request KEY|deny KEY|clear KEY>|simulate <list|run ID [--confirm]|replay ID SCENARIO [--confirm]|transport ID --count N --capacity N [--confirm]>|notes <list|add TEXT|search QUERY|export|import FILE>|help]");
 }
 
 fn main() {
@@ -218,6 +219,51 @@ fn run() -> Result<(), Box<dyn Error>> {
                 println!("{}", serde_json::to_string_pretty(&event)?);
                 Ok(())
             }
+            Some("transport") => {
+                let usage =
+                    "usage: pipboy simulate transport ID --count N --capacity N [--confirm]";
+                let id = args.next().ok_or(usage)?;
+                if args.next().as_deref() != Some("--count") {
+                    return Err(usage.into());
+                }
+                let count = args.next().ok_or(usage)?.parse::<usize>()?;
+                if args.next().as_deref() != Some("--capacity") {
+                    return Err(usage.into());
+                }
+                let capacity = args.next().ok_or(usage)?.parse::<usize>()?;
+                let confirmation = match args.next().as_deref() {
+                    Some("--confirm") if args.next().is_none() => SessionConfirmation::Confirmed,
+                    None => SessionConfirmation::Absent,
+                    _ => return Err(usage.into()),
+                };
+                let preferences = PreferenceStore::from_environment()?.list()?;
+                let mut transport = VirtualTransport::new(&preferences, capacity)?;
+                transport.open(&id, confirmation)?;
+                transport.pump(count)?;
+                let dropped = transport.dropped();
+                let mut retained = Vec::with_capacity(transport.retained());
+                while let Some(event) = transport.receive()? {
+                    retained.push(event);
+                }
+                transport.close()?;
+                let capability = retained
+                    .first()
+                    .ok_or("virtual transport generated no events")?
+                    .capability;
+                let report = serde_json::json!({
+                    "schema_version": 1,
+                    "simulated": true,
+                    "source": "rust-boy/bounded-virtual-transport",
+                    "device_id": id,
+                    "capability": capability,
+                    "capacity": capacity,
+                    "requested": count,
+                    "dropped": dropped,
+                    "retained": retained
+                });
+                println!("{}", serde_json::to_string_pretty(&report)?);
+                Ok(())
+            }
             Some("replay") => {
                 let id = args
                     .next()
@@ -239,7 +285,7 @@ fn run() -> Result<(), Box<dyn Error>> {
                 Ok(())
             }
             _ => Err(
-                "usage: pipboy simulate <list|run ID [--confirm]|replay ID SCENARIO [--confirm]>"
+                "usage: pipboy simulate <list|run ID [--confirm]|replay ID SCENARIO [--confirm]|transport ID --count N --capacity N [--confirm]>"
                     .into(),
             ),
         },

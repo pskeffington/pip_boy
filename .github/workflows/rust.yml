@@ -52,6 +52,7 @@ jobs:
           python3 tools/smoke_permissions.py
           python3 tools/smoke_simulator.py
           python3 tools/smoke_replay.py
+          python3 tools/smoke_transport.py
 
   native:
     name: Native ${{ matrix.os }}
@@ -85,3 +86,4 @@ jobs:
           ${{ matrix.python }} tools/smoke_permissions.py
           ${{ matrix.python }} tools/smoke_simulator.py
           ${{ matrix.python }} tools/smoke_replay.py
+          ${{ matrix.python }} tools/smoke_transport.py
