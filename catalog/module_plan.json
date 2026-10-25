@@ -326,11 +326,13 @@
     "features": [
       "Rotary encoder/button event inputs",
       "Debounce and long-press handling",
-      "Keyboard-equivalent action mapping"
+      "Keyboard-equivalent action mapping",
+      "Typed InputSource + MockInputSource emits no-measurement virtual events (new CI pending)"
     ],
     "acceptance": [
       "Replay fixture on non-Pi host",
-      "Recover cleanly from device unavailability"
+      "Recover cleanly from device unavailability",
+      "Missing explicit mock confirmation or saved denial blocks input fixture; no fabricated pin state"
     ]
   },
   {
@@ -391,11 +393,13 @@
     "features": [
       "480x320 and 720x720 layout profiles",
       "No-flicker refresh",
-      "Frame snapshots"
+      "Frame snapshots",
+      "Typed DisplayBackend + MockDisplayBackend accepts 1–80 printable ASCII mock frames without actual rendering (new CI pending)"
     ],
     "acceptance": [
       "Layout fixtures at each profile",
-      "Accessible fallback without visual effects"
+      "Accessible fallback without visual effects",
+      "Display receipt must say rendered_to_hardware=false and reject escape/control sequences"
     ]
   },
   {
@@ -418,11 +422,13 @@
       "Selected-port read-only session",
       "Framed input with size limits",
       "Device disconnect recovery",
-      "VirtualTransport prototype demonstrates fixture-only FIFO; real serial enumeration/read remains planned"
+      "VirtualTransport prototype demonstrates fixture-only FIFO; real serial enumeration/read remains planned",
+      "Typed SerialReader + MockSerialReader returns 1–32 explicit injected bytes only (new CI pending)"
     ],
     "acceptance": [
       "No implicit port enumeration or open",
-      "Malformed frames and unplug tested"
+      "Malformed frames and unplug tested",
+      "Serial fixtures never open OS ports, and missing confirmation/saved denial fail closed"
     ]
   },
   {
@@ -449,7 +455,8 @@
       "G1 precursor: 11 fixed in-memory virtual fixtures, explicit per-session confirmation and bounded truthful event envelope (Ubuntu CI verified at f445814)",
       "G1 source-only fixed nominal/disconnect-recover/revoke replay with synthetic 0–700 ms times and truthful JSON trace (Ubuntu CI verified at f445814)",
       "G1 precursor: cancellation and injected logical TTL scenarios, with bounded 1–60000 ms timeout (Ubuntu CI verified at f445814)",
-      "G2 prototype: bounded 1–64 mock-event FIFO, pump up to 128, dropped count and revocation-safe reads (new tests pending)"
+      "G2 prototype: bounded 1–64 mock-event FIFO, pump up to 128, dropped count and revocation-safe reads (new tests pending)",
+      "G2 typed mock adapter fixture suite exposes GPIO/display/serial interfaces and JSON provenance (new tests pending)"
     ],
     "acceptance": [
       "CI runs without hardware",
@@ -460,7 +467,8 @@
       "Source-fixed replay has at most eight steps, no wall-clock timing, and no auto-regrant",
       "Cancel and deadline boundary permanently invalidate old virtual lease; no implicit restart",
       "Backward logical clock tick fails closed; zero/out-of-range TTL and overflow never open the broker",
-      "Mock queue drops oldest events deterministically and never releases buffered events after cancellation, denial, disconnect or expiration"
+      "Mock queue drops oldest events deterministically and never releases buffered events after cancellation, denial, disconnect or expiration",
+      "All three typed adapters remain truthful synthetic-only; no actual device grant"
     ]
   },
   {

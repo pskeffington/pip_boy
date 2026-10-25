@@ -1,6 +1,12 @@
 # Rust-Boy | Local validation evidence
 
-Updated October 25, 2026 (America/New_York). This record includes GitHub-hosted Ubuntu Linux CI evidence; older sections retain historical development-state notes. macOS/Windows and real-device acceptance remain open.
+Updated October 25, 2026 (America/New_York). This record includes GitHub-hosted Ubuntu Linux CI evidence; older sections retain historical development-state notes. The previous native macOS/Windows build/test/offline-smoke matrix passed at [run 40161267203](https://github.com/pskeffington/pip_boy/actions/runs/40161267203); further TUI/platform and real-device acceptance remain open.
+
+## Typed adapter and native console follow-on — execution pending
+
+The core now exports `InputSource`, `DisplayBackend` and `SerialReader` traits with bounded `MockInputSource`, `MockDisplayBackend` and `MockSerialReader` implementations in `mock_adapters.rs`. Ten new Rust unit tests exercise trait-object dispatch, explicit simulated provenance, printable 1–80 character display frames, injected 1–32 byte serial data, saved denials, no implicit confirmation, revocation/cancellation and repeatable JSON. The CLI exposes `pipboy simulate adapter input|display|serial [--confirm]` using only source-defined fixtures. A new `tools/smoke_mock_adapters.py` checks JSON and policy refusal paths. No device or network I/O was introduced.
+
+The native CI suite now includes `tools/smoke_native_cli.py` on Linux, macOS and Windows to verify noninteractive terminal-output behavior, no ANSI escape sequences, strict status JSON, no silent filesystem writes and CLI errors. On macOS, the job additionally runs the existing POSIX PTY `tools/smoke_runtime.py` for TUI keyboard and restoration behavior. **Windows ConPTY and accessibility acceptance remain open**, as do physical adapters and real device authorization. These additional checks are authored but are not yet verified for the current code revision. See [MOCK_ADAPTERS.md](MOCK_ADAPTERS.md).
 
 ## New cross-platform and virtual transport pass — execution pending
 

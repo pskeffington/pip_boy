@@ -4,7 +4,7 @@
 
 Rust-Boy is an independent, modular toolkit for desktop terminals and future wearable field computers. It combines local host diagnostics, a curated research library, and a user-controlled offline journal under one minimal native interface. Planned adapters extend it to Raspberry Pi hardware, maps, receive-only radios, and authenticated local communications.
 
-> **Project status — GitHub-hosted Ubuntu quality matrix verified on the development branch.** [CI push run 40160762403](https://github.com/pskeffington/pip_boy/actions/runs/40160762403) and [PR run 40160765839](https://github.com/pskeffington/pip_boy/actions/runs/40160765839) both passed at `f445814`: catalog validation, format, compile, Clippy, **97 Rust unit tests on each toolchain** (stable and 1.81.0), and five CLI/TUI smoke suites. STAT, LIBRARY, NOTES, scoped in-process permissions, preference storage and virtual simulation/replay have tested Linux paths. External hardware, real-device authorization/OS broker, and macOS/Windows acceptance remain **planned or unverified**. Saved adapter requests never activate a device. See [validation evidence](docs/VALIDATION.md).
+> **Project status — Linux, macOS and Windows CI baseline verified on the feature branch.** [Push run 40161263824](https://github.com/pskeffington/pip_boy/actions/runs/40161263824) and [PR run 40161267203](https://github.com/pskeffington/pip_boy/actions/runs/40161267203) passed all five jobs at `46cc627`: catalog validation, stable/MSRV compilation and tests, formatting, Clippy, six Linux smoke suites, and native macOS/Windows build/tests plus offline virtual-device smoke. A new set of typed GPIO-input, display and serial fixture interfaces and native console/PTTY checks is undergoing validation on the current branch. External physical devices and an OS-enforced authorization broker remain **unimplemented**. Saved adapter requests never turn on a device. See [validation evidence](docs/VALIDATION.md).
 
 ## Rust-Boy identity
 
@@ -70,6 +70,9 @@ cargo run -p pipboy -- simulate replay sim:sdr revoke --confirm
 cargo run -p pipboy -- simulate replay sim:ble cancel --confirm
 cargo run -p pipboy -- simulate replay sim:network timeout --confirm
 cargo run -p pipboy -- simulate transport sim:sdr --count 5 --capacity 2 --confirm
+cargo run -p pipboy -- simulate adapter input --confirm
+cargo run -p pipboy -- simulate adapter display --confirm
+cargo run -p pipboy -- simulate adapter serial --confirm
 cargo run -p pipboy -- notes add "Field observation"
 cargo run -p pipboy -- notes list
 cargo run -p pipboy -- notes search "battery"
@@ -83,6 +86,8 @@ python3 tools/smoke_permissions.py # run after cargo build -p pipboy
 python3 tools/smoke_simulator.py   # fixed in-memory fixtures only
 python3 tools/smoke_replay.py      # synthetic trace fixtures only
 python3 tools/smoke_transport.py   # bounded fake event FIFO only
+python3 tools/smoke_mock_adapters.py # typed offline input/display/serial fixtures
+python3 tools/smoke_native_cli.py    # portable console/JSON/no-ANSI output checks
 cargo clippy --workspace --all-targets -- -D warnings
 ```
 
@@ -104,6 +109,10 @@ Two new fixed mock replay scenarios exercise cancellation and bounded logical-ti
 
 The new `simulate transport` CLI generates bounded *fixture-only* events through a 1–64 event in-memory FIFO. It accepts a finite `--count` of 1–128 and records every oldest-event drop. A stored preference cannot authorize a virtual session: `--confirm` is required, and an explicit saved denial takes precedence. A cancelled, disconnected, expired or revoked virtual session cannot drain old buffered data. There is no real serial, BLE, SDR, mesh or network transport. See [virtual transport contract](docs/VIRTUAL_TRANSPORT.md). The new code is undergoing CI validation on Linux, macOS and Windows.
 
+## Typed mock adapters
+
+Three new Rust core traits (`InputSource`, `DisplayBackend`, and `SerialReader`) now have explicit, bounded *virtual-only* implementations. CLI demonstration reports a mock GPIO input status (no sampled pin value), a non-rendered display receipt, or explicitly injected serial bytes. The examples never connect to a physical display, GPIO device, or serial port. A new cross-platform CLI smoke suite and macOS POSIX terminal restoration checks are included in CI; see [typed mock adapter contract](docs/MOCK_ADAPTERS.md).
+
 ## Repository navigation
 
 | Resource | Purpose |
@@ -119,6 +128,7 @@ The new `simulate transport` CLI generates bounded *fixture-only* events through
 | [docs/PERMISSIONS.md](docs/PERMISSIONS.md) | External adapter preferences, storage and consent boundary |
 | [docs/SIMULATION.md](docs/SIMULATION.md) | Fixed virtual device fixtures, session revocation and mock-only outputs |
 | [docs/VIRTUAL_TRANSPORT.md](docs/VIRTUAL_TRANSPORT.md) | Bounded fake FIFO, drop accounting, per-lease read checks and cross-platform CI |
+| [docs/MOCK_ADAPTERS.md](docs/MOCK_ADAPTERS.md) | Typed input/display/serial fixture interfaces and no-hardware contract |
 | [docs/CI_TRIAGE.md](docs/CI_TRIAGE.md) | GitHub Actions startup investigation and local verification |
 | [docs/LITERATURE_MATRIX.md](docs/LITERATURE_MATRIX.md) | Evidence matrix connecting standards and studies to modules |
 | [docs/MODULE_CATALOG.md](docs/MODULE_CATALOG.md) | Planned modules, features, dependency gates and acceptance criteria |

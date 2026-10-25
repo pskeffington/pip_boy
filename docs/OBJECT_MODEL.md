@@ -84,6 +84,10 @@ Registered modules now remain Disabled until `start(id)` succeeds. Replace the p
 
 Deterministic `ReplayScenario` fixtures now layer on top of the mock broker: the fixed `nominal`, `disconnect-recover`, and `revoke` journeys output explicit acceptance/rejection steps with synthetic logical time, no sensor values, and no automatic restart. They are G1-D source artifacts, not an implemented G2 physical simulator. See [SIMULATION.md](SIMULATION.md).
 
+### G2 typed adapter boundary
+
+`InputSource`, `DisplayBackend` and `SerialReader` now exist as Rust traits with `MockInputSource`, `MockDisplayBackend` and `MockSerialReader` test implementations. The mock operations wrap consent-gated `VirtualTransport` and only return labeled synthetic events. Display frames are ASCII-limited, receipt indicates no hardware rendering, and serial frames contain explicitly injected bounded bytes; see [MOCK_ADAPTERS.md](MOCK_ADAPTERS.md). Physical adapters, per-device OS handles and independently enforced revocation remain planned; typed traits alone cannot secure untrusted native code.
+
 ## Proposed crate evolution
 
 ```text

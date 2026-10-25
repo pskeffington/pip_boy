@@ -14,6 +14,7 @@ Rust-Boy is the public product name. The existing `pip_boy` repository, `pipboy`
 - [CI triage](CI_TRIAGE.md) — zero-job startup investigation and required quality evidence.
 - [Adapter permissions](PERMISSIONS.md) — persisted preference state, explicit CLI and authorization boundary.
 - [Device simulator precursor](SIMULATION.md) — in-memory fixture broker, active simulated leases, confirmation and revocation.
+- [Typed adapter interfaces](MOCK_ADAPTERS.md) — input/display/serial mock contracts and OS limitations.
 - [Architecture](ARCHITECTURE.md) — host / UI / core / adapter boundaries.
 - [Research library](RESEARCH_LIBRARY.md) — external open-source Pip-Boy implementation references.
 
@@ -30,7 +31,8 @@ The build is a directed acyclic dependency plan, **not** a schedule. All module 
 - [x] Add workflow triggers and stable/1.81.0 compatibility matrix, executed successfully on feature branch at `f445814` (97 tests each).
 - [x] GitHub Actions admitted jobs and [passed the full Ubuntu Rust quality matrix](https://github.com/pskeffington/pip_boy/actions/runs/40160220866) after replacing unsupported third-party setup/cache actions with runner-native `rustup`.
 - [x] Validate dependency lockfile and pinned toolchain compatibility. **Local Linux: passed; lockfile committed.**
-- [ ] Validate native macOS/Windows build, test, and offline fixture smoke jobs, then extend to TUI launch/exit and persistence acceptance. A new CI matrix exists; green results must be captured at the exact commit.
+- [x] Native macOS/Windows build, unit test and offline fixture smoke jobs passed in [run 40161263824](https://github.com/pskeffington/pip_boy/actions/runs/40161263824). Native portable output and POSIX/macOS TUI restoration checks are expanded in the next pass (new runs pending).
+- [ ] Complete native Windows ConPTY TUI launch/exit, assistive-tech and persistence/forced-error acceptance.
 - [ ] Verify terminal restoration on panic/error and note persistence during interrupted writes.
 
 **G0 exit:** green checks and reproducible build logs; tested CLI and TUI with no implicit external IO. Do not call CI startup failure a code test failure or a passing check.
@@ -60,7 +62,8 @@ The build is a directed acyclic dependency plan, **not** a schedule. All module 
 **P0: device broker and simulator**; **P1: GPIO, display, serial**.
 
 - [ ] Select concrete Raspberry Pi and display board revisions with documented wiring, connector limits and operating supply.
-- [ ] Introduce `InputSource`, `DisplayBackend`, `SerialReader` traits and simulated implementations; never bind the core to Linux-only APIs.
+- [x] Introduce typed `InputSource`, `DisplayBackend`, `SerialReader` traits and bounded simulated implementations (new source/tests undergoing CI); no platform-specific OS dependency.
+- [ ] Connect a real implementation of each trait only after OS-broker and device identity reviews.
 - [ ] Support rotary encoder, buttons, and terminal input through one action enum, with debounce/long-press tests.
 - [ ] Set adapter timeouts, request cancellations, hot-unplug recovery and reversible settings.
 - [ ] Make native dependencies optional by compile-time feature / target gating.

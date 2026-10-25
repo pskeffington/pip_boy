@@ -24,6 +24,8 @@ Virtual lease cancellation and deadlines are only in-memory mock behavior. The b
 
 The bounded `VirtualTransport` queue only holds synthetic `sim:*` events; explicit CLI `--confirm` is for a single simulation and is never persisted as a device grant. The current in-process queue checks broker session state before reads and clears data after mock cancellation or revocation, but this **does not** protect against untrusted native code, enforce OS permissions, or implement encrypted/authenticated communications. A physical transport needs a separate broker, secure peer identity and real-world timeout/revocation semantics.
 
+The typed mock input/display/serial adapters also remain in-memory only: they reject missing confirmation or saved denials, return explicit simulated records and never measure a GPIO pin, render to a physical screen, or read serial hardware. The mock display rejects control bytes/escape sequences. The serial payload is an explicitly injected fixture, not information received over a port. No real adapter authorization, encrypted channel or OS isolation is implied by these trait interfaces. See [typed adapter contract](docs/MOCK_ADAPTERS.md).
+
 ## Future devices
 
 Location, serial ports, GPIO, SDR/radio, BLE, Wi-Fi, and mesh transports require separate adapters, permission gates, simulator tests, and user-facing indicators. Do not silently initiate scans, pair devices, transmit, or modify settings. No interference, jamming, credential interception, or covert collection features.

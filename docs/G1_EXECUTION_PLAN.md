@@ -17,10 +17,11 @@
 | Local notes | notes.rs | Locked staged writes, validated limits, search and explicit export/import; locally tested | Native Windows/macOS runtime and general schema migrations |
 | Adapter preferences | permissions.rs; CLI permissions | Versioned requested/denied preferences, bounded locked persistence and fail-closed parsing authored (tests pending) | Actual consent flow, OS broker, native platforms and tamper resistance |
 | Virtual broker prototype | device_simulator.rs, simulator_replay.rs; CLI simulate | 11 virtual fixtures and five replay scenarios passed Ubuntu stable/1.81.0 CI | Real OS broker, trusted UX, hardware and wall-clock watchdogs |
-| Virtual transport prototype | virtual_transport.rs; CLI simulate transport | Bounded fixture-only FIFO, drop accounting, revoked-read prevention and 8 new unit fixtures authored | Stable/MSRV and native macOS/Windows validation of current commit, then transport isolation design |
+| Virtual transport prototype | virtual_transport.rs; CLI simulate transport | Bounded fixture-only FIFO, drop accounting and revoked-read prevention passed Linux/macOS/Windows CI at 46cc627 | Real device brokers and transport isolation |
+| Typed adapter precursor | mock_adapters.rs; CLI simulate adapter | InputSource/DisplayBackend/SerialReader traits, fixed in-memory GPIO/display/serial mocks, 10 Rust test fixtures and CLI smoke suite authored | Execute new checks on stable/MSRV, native macOS/Windows and macOS PTY, then review OS-specific backends |
 | Console navigation | console.rs / tui.rs | Compact layout, scrolling, explicit note reload and Linux resize smoke checks | Native platforms, assistive-tech and contrast acceptance |
 | Research consistency | tools/validate_catalog.py | Passing locally | Keep catalog and Rust registry aligned |
-| Quality checks | rust.yml | Ubuntu push/PR CI green at `f445814`: Python catalog, stable/1.81.0 (97 tests each), fmt, Clippy, five smoke suites | Native macOS/Windows, hardware and accessibility acceptance |
+| Quality checks | rust.yml | Cross-platform Ubuntu/macOS/Windows five-job matrix green at 46cc627; new adapter/terminal checks authored | New exact-commit CI, native Windows ConPTY, accessibility/hardware acceptance |
 
 See [VALIDATION.md](VALIDATION.md) for executed Linux checks. TUI and NDJSON use `ModuleHost` with a lazy telemetry adapter; the status CLI has now been routed through the same host (validated in Ubuntu CI at `f445814`). TUI P controls local host-read grant/revocation. Preference persistence is authored but is not an active grant; session authorization, general adapter consent and OS brokering remain planned.
 
