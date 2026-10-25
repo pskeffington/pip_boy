@@ -18,6 +18,9 @@ const MAX_BODY: usize = 4096;
 const HTML: &str = include_str!("../assets/dashboard.html");
 const CSS: &str = include_str!("../assets/dashboard.css");
 const JS: &str = include_str!("../assets/dashboard.js");
+const MICRO_HTML: &str = include_str!("../assets/micro.html");
+const MICRO_CSS: &str = include_str!("../assets/micro.css");
+const MICRO_JS: &str = include_str!("../assets/micro.js");
 
 struct Request {
     method: String,
@@ -369,6 +372,15 @@ fn dispatch(req: &Request, store: &WorkbenchStore, port: u16) -> Response {
     }
     match (req.method.as_str(), req.path.as_str()) {
         ("GET", "/") => Response::new(200, "text/html; charset=utf-8", HTML.as_bytes()),
+        ("GET", "/micro") | ("GET", "/micro/") => {
+            Response::new(200, "text/html; charset=utf-8", MICRO_HTML.as_bytes())
+        }
+        ("GET", "/assets/micro.css") => {
+            Response::new(200, "text/css; charset=utf-8", MICRO_CSS.as_bytes())
+        }
+        ("GET", "/assets/micro.js") => {
+            Response::new(200, "text/javascript; charset=utf-8", MICRO_JS.as_bytes())
+        },
         ("GET", "/assets/dashboard.css") => {
             Response::new(200, "text/css; charset=utf-8", CSS.as_bytes())
         }
@@ -481,20 +493,26 @@ fn open_browser(url: &str) {
 }
 
 pub fn run(args: Vec<String>) -> Result<(), Box<dyn Error>> {
-    let usage = "usage: pipboy dashboard [--port 0..65535] [--open (macOS)]";
+    let usage = "usage: pipboy dashboard [--port 0..65535] [--open (macOS)] [--micro]";
     let mut port = DEFAULT_PORT;
     let mut open = false;
+    let mut micro = false;
     let mut iter = args.into_iter();
     while let Some(flag) = iter.next() {
         match flag.as_str() {
             "--port" => port = iter.next().ok_or(usage)?.parse::<u16>()?,
             "--open" if !open => open = true,
+            "--micro" if !micro => micro = true,
             _ => return Err(usage.into()),
         }
     }
     let listener = TcpListener::bind((Ipv4Addr::LOCALHOST, port))?;
     let port = listener.local_addr()?.port();
-    let url = format!("http://127.0.0.1:{port}/");
+    let url = if micro {
+        format!("http://127.0.0.1:{port}/micro")
+    } else {
+        format!("http://127.0.0.1:{port}/")
+    };
     println!("RUST-BOY DASHBOARD / LOCAL ONLY");
     println!("Open {url}");
     println!("Eight job templates, Custom last; live hardware and RustGIS are not connected.");
@@ -559,7 +577,15 @@ mod tests {
         assert_eq!(state["profiles"][7]["tools"], json!([]));
         assert_eq!(state["engine"]["rustgis"], "not_integrated");
         assert!(!temp.path().join("fresh").exists());
-        for endpoint in ["/", "/assets/dashboard.css", "/assets/dashboard.js"] {
+        for endpoint in [
+            "/",
+            "/assets/dashboard.css",
+            "/assets/dashboard.js",
+            "/micro",
+            "/micro/",
+            "/assets/micro.css",
+            "/assets/micro.js",
+        ] {
             let r = dispatch(&request("GET", endpoint, Value::Null), &store, 8765);
             assert_eq!(r.status, 200);
             assert!(!r.body.is_empty());
@@ -704,5 +730,14 @@ mod tests {
         assert!(JS.contains("/api/state"));
         assert!(CSS.contains("@media"));
         assert!(!JS.contains("eval("));
+        assert!(MICRO_HTML.contains("/assets/micro.css"));
+        assert!(MICRO_HTML.contains("/assets/micro.js"));
+        assert!(MICRO_HTML.contains("id=\"micro-rail\""));
+        assert!(MICRO_CSS.contains("@media"));
+        assert!(MICRO_CSS.contains("480px"));
+        assert!(MICRO_JS.contains("/api/state"));
+        assert!(MICRO_JS.contains("/api/profile"));
+        assert!(MICRO_JS.contains("/api/custom/add"));
+        assert!(!MICRO_JS.contains("eval("));
     }
 }
