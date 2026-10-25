@@ -27,6 +27,6 @@ One successful sample run with `--count 5 --capacity 2` returns a version-1, `si
 
 `virtual_transport.rs` contains eight unit tests for bounds, deterministic overflow, deny-before-sampling, revoke, disconnect/reconnect, virtual TTL and cancellation, malformed policy reload, and backward clock. `tools/smoke_transport.py` validates strict command parsing, JSON schema, sequence/drop counts, request-versus-confirmation, saved denial, future schema preservation and no filesystem side effects.
 
-The GitHub quality workflow now adds native macOS and Windows stable builds/tests plus offline permissions/simulator/replay/transport smokes. These complement the Linux stable and Rust 1.81.0 tests; native terminal PTY/accessibility acceptance and real device tests remain separate. Do not promote G2 device, serial, radio or mesh module status based solely on this in-memory prototype.
+The GitHub quality workflow now adds native macOS and Windows stable builds/tests plus offline permissions/simulator/replay/transport smokes. These complement the Linux stable and the currently supported Rust 1.90.0 tests (earlier 1.81.0 results are historical); native terminal PTY/accessibility acceptance and real device tests remain separate. Do not promote G2 device, serial, radio or mesh module status based solely on this in-memory prototype.
 
 See [SIMULATION.md](SIMULATION.md), [G1 execution plan](G1_EXECUTION_PLAN.md), [roadmap](ROADMAP.md), and [validation record](VALIDATION.md).

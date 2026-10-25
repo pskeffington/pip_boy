@@ -7,6 +7,46 @@ Rust-Boy is the public product name. The existing `pip_boy` repository, `pipboy`
 
 > **Verified integration baseline:** [Five-job Linux/macOS/Windows CI](https://github.com/pskeffington/pip_boy/actions/runs/40164915215) passed at `e7d1090`, including macOS PTY, Windows ConPTY, and the strict deny-all broker suite. **This does not complete a packaged release or enable physical devices.** The catalog's `implemented_unverified` status denotes a pending module acceptance review, not an absence of CI execution.
 
+## G1 compact micro HUD — four-inch acceptance
+
+The handheld primary dashboard, role selection and tool lists now use concise, paginated screens rather than scrollable long-form panels. Task Control has staged entry, two-task pages, and separate detail actions. Local lab input/results are distinct. Peer send/sync remain explicitly confirmed actions; camera and RustGIS renderers remain disconnected placeholders. [Micro UI guide](MICRO_UI.md).
+
+**Pending acceptance:** manually verify Safari/Firefox at 480×320 and 800×480, including text truncation, touch targets, keyboard/ESC behavior, modal paging, focus at zoom and 4-inch Pi hardware. At extreme sizes, allow detail scrolling rather than clipping required controls.
+
+## G1 explicit Rust-Boy device-to-device task link
+
+The new [peer task transport](PEER_TASK_TRANSPORT.md) introduces enrolled device labels, validated peer destinations and **explicit** host-key-pinned OpenSSH task delivery between two Rust-Boy installations. A receiver durably imports the job in its own task file; on-demand SSH reports convey operator acknowledgment and progress back without silently overwriting the manager's status. The task UI replaces the old email draft with a peer-device picker. No auto-connect, native mesh/radio, background sync or PS4 integration is implied.
+
+The test's local SSH substitute covers typed sender/receiver behavior, but real Mac-to-Pi host verification, restricted authorized_keys, network loss/retry and low-resolution UI acceptance are still external release gates. Future G2 extensions: native authenticated peer identity, durable offline outbox/retries, revocation, secure BLE/mesh transports and push notifications.
+
+## G1 Overseer management and job-specific work queues
+
+[Task Control](TASK_CONTROL.md) is now an offline real module for Overseer with persistent work assignments, role and person fields, priorities, due dates, statuses, operator-marked sends/acknowledgments, bounded history and expected-revision edit conflict rejection. Both micro and desktop views share the same Rust task store, and non-management jobs show their assigned role queue while retaining their specialized tools. **Sharing is manual via copy/email draft**; no background notification, authenticated delivery or live cross-device synchronization is claimed.
+
+**Next gates:** test all R1 task interactions across macOS/Windows, manually review the 4-inch ergonomics, then separately design a secure roster, authenticated receiving inbox/outbox, replay-safe acknowledgment protocol and optional reminders. Do not describe a handoff preview as an actual transmission.
+
+## G1 micro display shell — implementation and acceptance
+
+[Micro handheld mode](MICRO_UI.md) now has a distinct `/micro` shell served by the same local Rust dashboard. It uses original phosphor-style scanlines and restrained glow, a dedicated top status ribbon, one scrolling content viewport, and six fixed thumb-sized tabs (**STAT / GEAR / MAP / DATA / LINK / CONF**). Occupational presets are loaded from the real Rust registry; Custom remains the final empty template. Implemented local labs and explicit profile persistence are shared with desktop. The micro `--micro` launcher, route, asset and end-to-end loopback smoke checks are CI-gated.
+
+**Current limitations:** no real RustGIS navigation renderer, no GNSS or TAK transport, no live IP camera feed, no device battery telemetry, and no Pi touchscreen performance claim. The Scout and Security Chief fixture panels label these absences. The next G1 screen milestone is manual visual/keyboard/touch review at **480×320** and **800×480**, then independent Raspberry Pi 5 hardware testing before GNSS, camera or native RustGIS integration.
+
+## G1 graphical dashboard / job-template experiment station
+
+The [local graphical dashboard](DASHBOARD_UI.md) is the first experimental UI shell. A Rust-only loopback HTTP service hosts original responsive assets; job templates and availability labels come from `PRESETS`/`PALETTE`, with seven ready-made profiles and Custom last. The UI saves explicitly confirmed template changes via the existing WorkbenchStore and exposes allowlisted **offline** GIS, CIDR, hex and user-invoked host experiments. Test coverage includes same-origin denial, local-only bind, persistence and responsive assets; final viewport readability still requires real browser and Pi-screen checks.
+
+**Integration order:** (1) accept Rust dashboard CI on macOS, Windows and 1.90; (2) manually validate Safari/Firefox at desktop, 800×480 and 480×320; (3) improve job-specific widgets and safe input; (4) prototype RustGIS process/renderer integration in Scout; (5) pursue OS-enforced camera/GNSS/TAK access gates. The current Scout viewport is a labeled **reference grid**, not functioning RustGIS navigation; Security Chief cameras are **focus-layout fixtures**, not streams. No embedded runtime module executes on profile load.
+
+## Role-specific roadmap — R0 through R3
+
+The [eight-role workbench plan](ROLE_ROADMAP.md) and [machine-readable role matrix](../catalog/role_roadmap.json) define per-job needs, preloaded tools, new modules, dependencies and objective acceptance tests. The [Vault-Tec lore matrix](VAULT_TEC_LORE_MATRIX.md) distinguishes canon from themed adaptations. **Security Chief** prioritizes a user-requested [2×2 camera wall with focused single-feed view](SECURITY_CAMERA_WALL.md) after deterministic offline mocks; real streams and ONVIF compatibility require separately accepted device and privacy gates.
+
+**Verification policy:** The predecessor workbench and Scout branches passed the full native CI matrix before the compiler upgrade. The Rust 1.90 transition is a new compatibility gate: only an exact-SHA run on the upgraded branch proves it passed. The R0 labels remain provisional for any untested hardware, and real device permissions are not silently enabled.
+
+## Reclamation Scout: GIS + Raspberry Pi + TAK
+
+[Scout architecture and acceptance gates](SCOUT_GIS_TAK.md) define the current independent RFC 7946 Point geometry tools and the future separately gated ARM64 RustGIS adapter and OpenTAKServer/CoT connector. **ATAK itself remains Android-only, and no Pi-native ATAK app or TAK connection is shipped.** Rust-Boy now requires Rust 1.90+, matching RustGIS's compiler minimum; direct RustGIS integration remains deferred for API, licensing, ARM64 and performance verification. This work does not alter the external RustGIS repository.
+
 ## Navigate the build
 
 - [Literature matrix](LITERATURE_MATRIX.md) — 37 traceable primary/official references, limitations and corresponding tests.
@@ -47,7 +87,8 @@ The build is a directed acyclic dependency plan, **not** a schedule. All module 
 **P0: telemetry, storage, settings, accessibility, diagnostics**; **P1: power, network link**.
 
 - [x] Draft versioned `Observation<T>` envelope with source, provenance, optional wall clock, process-session time, unit, quality and expiry (unit-tested; field-level integration remains open).
-- [ ] Verify schema compatibility, implement field-level units and connect observations to each frontend.
+- [x] Add local host field units/quality/reasons and connect a shared report to console and opt-in detailed status/NDJSON; deterministic fixtures and Linux checks executed. See [host telemetry](HOST_TELEMETRY.md).
+- [ ] Complete stored-observation schema migrations and external ingestion validation; native field-report CI and hardware accuracy acceptance remain separate.
 - [ ] Separate local read-only metrics from user-initiated notes/storage writes.
 - [x] Author a bounded in-memory sample buffer with drop accounting and finite NDJSON host sampling (executed in CI; storage/migration acceptance remains open).
 - [ ] Integrate sample buffer with actual UI/runtime, add property-based invariants and output/interruption fixtures.
@@ -132,7 +173,7 @@ The next engineering handoff is [G1_EXECUTION_PLAN.md](G1_EXECUTION_PLAN.md). Do
 
 ## Risk register
 
-1. **CI startup failure (active):** blocks code-level verification. Repair platform access/runner state before claiming G0 complete.
+1. **CI regressions:** require passing checks for each new source revision. The historical startup blocker was resolved; the current five-job baseline is linked above.
 2. **Platform-specific APIs:** GPIO/serial/BLE/SDR can require native libraries or user privileges; postpone runtime wiring until target selection.
 3. **Legal datasets:** OSM data licensing and OSM Foundation raster tile policy are different; do not scrape community tiles for offline caching.
 4. **Messaging security:** pairing is not authentication of a human peer, and HPKE is not a complete messaging app; threat model and protocol review are mandatory.
@@ -140,3 +181,13 @@ The next engineering handoff is [G1_EXECUTION_PLAN.md](G1_EXECUTION_PLAN.md). Do
 6. **Object-model drift:** runtime module registry must agree with the roadmap manifest; automated cross-validation is required.
 
 **Explicit non-goals:** proprietary game assets; unauthorized scans, surveillance, jamming or infrastructure control; silent device access; arbitrary native plugin loading; unsupported claims of live GNSS/radio/mesh capabilities.
+
+## Fallout 4 companion acceptance (requested: all versions)
+
+An opt-in read-only direct TCP browser and incremental decoder are implemented. See [game mode and edition matrix](GAME_MODE.md). Separate gates remain: actual legacy/Anniversary PC service tests; AE game-side bridge/enabler validation; console-build service availability; gameplay command validation; local-map image rendering; and a recorded real-game end-to-end session for each supported build. Protocol mocks cannot complete these gates. No all-version compatibility claim is approved.
+
+**Priority change:** Mac → PlayStation launch/setup/diagnostics now leads game-mode work. PC/AE and other console expansion are deferred; see [Mac/PlayStation acceptance](MAC_PLAYSTATION.md).
+
+The source launcher has a verified native macOS CI baseline. Follow-on readiness checks and prompted-launcher regressions remain controlled-peer evidence; a real Mac/PS4 or Mac/PS5 session and supported gameplay commands are still required before full compatibility can be claimed.
+
+The game browser now has separate navigation/value panes, long-list selection visibility, parent-context restoration, bounded text scrolling and recovery from resize or replaced/removed object references. These are native-client usability improvements; they do not substitute for the live console or gameplay-command gates.

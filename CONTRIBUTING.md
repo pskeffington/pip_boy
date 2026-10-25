@@ -4,7 +4,7 @@ Rust-Boy is an open-source, offline-first Rust console. Contributions are welcom
 
 ## Set up
 
-Install Rust (minimum 1.81), Git and Python 3 for the optional validation scripts. The checked-in `Cargo.lock` is authoritative.
+Install Rust (minimum 1.90), Git and Python 3 for the optional validation scripts. The checked-in `Cargo.lock` is authoritative.
 
 ```bash
 git clone https://github.com/pskeffington/pip_boy.git
@@ -14,6 +14,26 @@ cargo run --locked -p pipboy -- doctor
 ```
 
 Core layout: `crates/pipboy` (CLI/TUI), `crates/pipboy-core` (local core and mock adapters), `crates/rust-boy-broker` (separate **deny-only** process), `catalog/` (evidence and planned modules), `tools/` (validation), and `docs/` (technical contracts).
+
+## Peer transport and trusted remote commands
+
+The optional SSH bridge is implemented in `crates/pipboy/src/peer.rs` with validated configuration in `pipboy-core::peers`; typed durable receive/report storage belongs to `pipboy-core::tasks`. Do not add an unauthenticated listener, TOFU host-key enrollment, a shell-based arbitrary remote command or implicit task send on role load. Preserve the restricted `peer bridge SOURCE` command allowlist, idempotent receiver storage, and the distinction between a stored-delivery receipt and manual acknowledgment. Run `python3 tools/smoke_peer.py` and review [peer security](docs/PEER_TASK_TRANSPORT.md). The CI SSH substitute is not a cryptographic verification test.
+
+## Task Control development
+
+The separate `crates/pipboy-core/src/tasks.rs` owns all validation, durable storage, revision-conflict checks and human handoff text. The local browser UI lives in `crates/pipboy/assets/tasks.{js,css}` and is shared by the desktop and micro renderers. Do not duplicate task state inside profile JSON, confuse an email draft with a send, or mark manual acknowledgment as verified. Follow [Task Control security contract](docs/TASK_CONTROL.md); test `python3 tools/smoke_tasks.py` after compiling the Rust binary.
+
+## Micro UI development
+
+The micro renderer is separately maintained at `crates/pipboy/assets/micro.{html,css,js}`; the Rust server serves it at `/micro` without creating a second backend. Source roles, tools, availability and permission settings **must** continue to come from the Rust API, not a duplicate JavaScript role catalog. The same confirmed profile-change API and local-workbench storage are shared with desktop. Keep bottom tabs and touch targets stable at 480×320 and 800×480, preserve keyboard and reduced-motion behavior, and never display fabricated camera frames, battery charge, GPS fixes or RustGIS maps.
+
+To test: `cargo run --locked -p pipboy -- dashboard --micro --open` on macOS; `node --check crates/pipboy/assets/micro.js`; `python3 tools/smoke_micro.py` after a build. Before merging, manually inspect both handheld widths and native Pi hardware when available. See [micro acceptance plan](docs/MICRO_UI.md).
+
+## Dashboard development
+
+The [graphical dashboard](docs/DASHBOARD_UI.md) is a local browser shell served by `crates/pipboy/src/dashboard.rs`. UI assets live under `crates/pipboy/assets/`; do not add external font/CDN/API references or new network routes without review. The job-template source of truth is `pipboy-core::workbench::PRESETS`, and physical/simulated availability is `PALETTE`. Do **not** add a hard-coded duplicate role list to JavaScript; keep Custom last.
+
+Start with `cargo run --locked -p pipboy -- dashboard --open` on Mac; run `python3 tools/smoke_dashboard.py` after building the binary. Only allowlisted, bounded, explicitly requested Rust core operations can run from the dashboard. Scope non-loopback access, device transport, authentication, RustGIS/TAK/video integration and any storage of sensitive user information as separate changes.
 
 ## Run the checks
 
@@ -28,6 +48,10 @@ python3 tools/smoke_broker.py
 ```
 
 GitHub Actions also runs the CLI, notes, permission, simulator, transport and mock-adapter smoke scripts; native macOS PTY and Windows ConPTY tests are platform-specific. Check [the workflow](.github/workflows/rust.yml) and [validation records](docs/VALIDATION.md). A test defined but not executed is **not** a passing result.
+
+## Role feature contract
+
+A new role needs an entry in [catalog/role_roadmap.json](catalog/role_roadmap.json), a cited [lore classification](docs/VAULT_TEC_LORE_MATRIX.md), an [operational R0–R3 roadmap](docs/ROLE_ROADMAP.md), explicitly permitted default tools, and real acceptance evidence. The role validator compares the manifest against `PRESETS`; run `python3 tools/validate_roles.py` alongside other offline checks. Security camera integrations additionally require [camera-media acceptance](docs/SECURITY_CAMERA_WALL.md). No new role may silently grant network or hardware permissions.
 
 ## Contribution requirements
 

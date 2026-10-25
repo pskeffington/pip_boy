@@ -18,12 +18,15 @@
     "features": [
       "CPU/memory/OS/uptime snapshot",
       "Human-readable and JSON output",
-      "One-shot status CLI uses lazy ModuleHost lifecycle and host-read precheck (new tests defined; execution pending)"
+      "One-shot status CLI uses lazy ModuleHost lifecycle and host-read precheck (CI verified)",
+      "CPU/RAM-only collector with monotonic CPU cadence and explicit unavailable CPU values",
+      "Opt-in --details text/JSON with per-field units, quality and missing-value reasons"
     ],
     "acceptance": [
       "Status runs without network or devices",
       "No fabricated hardware values",
-      "Denied host.read never constructs a collector; status --json retains legacy Snapshot fields"
+      "Denied host.read never constructs a collector; status --json retains legacy Snapshot fields",
+      "Warm-up/early polls never fabricate zero CPU; invalid field values are omitted from detailed reports"
     ]
   },
   {
@@ -115,11 +118,13 @@
       "Provenance-tagged samples",
       "NDJSON export and interval controls",
       "Bounded in-memory buffers",
-      "TUI/finite NDJSON use a lazy lifecycle-host telemetry adapter with bounded history and freshness (locally tested)"
+      "TUI/finite NDJSON use a lazy lifecycle-host telemetry adapter with bounded history and freshness (locally tested)",
+      "Shared field-quality dashboard and opt-in detailed finite NDJSON; poll-start interval and per-field stale propagation"
     ],
     "acceptance": [
       "Tests cover source, clock and sample freshness",
-      "No background uploads or implicit files"
+      "No background uploads or implicit files",
+      "Measured zero, missing/invalid values, exact cadence/expiry boundaries and no double collection are covered by deterministic fixtures"
     ]
   },
   {
@@ -394,7 +399,7 @@
       "480x320 and 720x720 layout profiles",
       "No-flicker refresh",
       "Frame snapshots",
-      "Typed DisplayBackend + MockDisplayBackend accepts 1–80 printable ASCII mock frames without actual rendering (new CI pending)"
+      "Typed DisplayBackend + MockDisplayBackend accepts 1\u201380 printable ASCII mock frames without actual rendering (new CI pending)"
     ],
     "acceptance": [
       "Layout fixtures at each profile",
@@ -423,7 +428,7 @@
       "Framed input with size limits",
       "Device disconnect recovery",
       "VirtualTransport prototype demonstrates fixture-only FIFO; real serial enumeration/read remains planned",
-      "Typed SerialReader + MockSerialReader returns 1–32 explicit injected bytes only (new CI pending)"
+      "Typed SerialReader + MockSerialReader returns 1\u201332 explicit injected bytes only (new CI pending)"
     ],
     "acceptance": [
       "No implicit port enumeration or open",
@@ -453,9 +458,9 @@
       "Mock GPIO/serial/display adapters",
       "Recorded golden traces",
       "G1 precursor: 11 fixed in-memory virtual fixtures, explicit per-session confirmation and bounded truthful event envelope (Ubuntu CI verified at f445814)",
-      "G1 source-only fixed nominal/disconnect-recover/revoke replay with synthetic 0–700 ms times and truthful JSON trace (Ubuntu CI verified at f445814)",
-      "G1 precursor: cancellation and injected logical TTL scenarios, with bounded 1–60000 ms timeout (Ubuntu CI verified at f445814)",
-      "G2 prototype: bounded 1–64 mock-event FIFO, pump up to 128, dropped count and revocation-safe reads (new tests pending)",
+      "G1 source-only fixed nominal/disconnect-recover/revoke replay with synthetic 0\u2013700 ms times and truthful JSON trace (Ubuntu CI verified at f445814)",
+      "G1 precursor: cancellation and injected logical TTL scenarios, with bounded 1\u201360000 ms timeout (Ubuntu CI verified at f445814)",
+      "G2 prototype: bounded 1\u201364 mock-event FIFO, pump up to 128, dropped count and revocation-safe reads (new tests pending)",
       "G2 typed mock adapter fixture suite exposes GPIO/display/serial interfaces and JSON provenance (new tests pending)"
     ],
     "acceptance": [
@@ -826,6 +831,31 @@
     "acceptance": [
       "Release requires green jobs and human acceptance",
       "No SLSA compliance claim without evidence"
+    ]
+  },
+  {
+    "id": "game",
+    "name": "Fallout 4 game companion",
+    "gate": "G3",
+    "priority": "P1",
+    "domain": "game",
+    "status": "planned",
+    "depends_on": [],
+    "capabilities": [
+      "network.fetch"
+    ],
+    "evidence": [
+      "L38"
+    ],
+    "features": [
+      "Implemented opt-in read-only TCP browser and incremental object decoder",
+      "Explicit IP:port and confirmation; no discovery or automatic game commands",
+      "All-version compatibility target: live PC/AE/console acceptance remains open"
+    ],
+    "acceptance": [
+      "Controlled-peer binary/heartbeat/update and terminal journeys pass on native CI",
+      "Record live build-specific sessions; validate AE service bridge and console service availability",
+      "Gameplay actions and map image rendering need separate validated implementations"
     ]
   }
 ]

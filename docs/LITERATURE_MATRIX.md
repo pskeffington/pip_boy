@@ -83,3 +83,5 @@ This is an **engineering evidence matrix**, not a claim of systematic-review com
 ## Updating the matrix
 
 For a new reference, assign a stable `L##` ID, a primary URL, year and evidence type, an explicit supported design decision, a limitation, and an acceptance check. Link it to one or more module IDs. Keep bibliographic metadata and constraints separate from copied upstream content. Update docs and `catalog/literature.json` together.
+
+| <a id="l38"></a>**L38** | [Fallout 4 companion protocol](https://github.com/mattbaker/pipboyspec/blob/master/communication.md) | Community maintainer specification, accessed 2026 | `game` | Bounded little-endian frames, heartbeat responses, persistent object references and dictionary removals before insertions | Not a Bethesda compatibility guarantee; validate actual PC/AE/console builds and game-side service availability. |

@@ -14,6 +14,7 @@ use std::time::Duration;
 struct Options {
     count: usize,
     interval_ms: u64,
+    details: bool,
 }
 
 impl Default for Options {
@@ -21,6 +22,7 @@ impl Default for Options {
         Self {
             count: 3,
             interval_ms: 1_000,
+            details: false,
         }
     }
 }
@@ -35,6 +37,13 @@ impl Options {
         while i < args.len() {
             let key = args[i].as_str();
             i += 1;
+            if key == "--details" {
+                if options.details {
+                    return Err("--details repeated".into());
+                }
+                options.details = true;
+                continue;
+            }
             let raw = args
                 .get(i)
                 .ok_or_else(|| format!("{key} requires a value"))?;
@@ -104,14 +113,16 @@ fn stream<S: SnapshotSource + Send + 'static, W: Write>(
             wait(Duration::from_millis(options.interval_ms));
         }
         let poll = host.poll_once().pop().ok_or("missing host poll")?;
-        let observation = match poll.outcome {
+        let json = match poll.outcome {
+            PollOutcome::Sample { data } if options.details => {
+                serde_json::to_string(&data.host_report.ok_or("missing host field report")?)?
+            }
             PollOutcome::Sample { data } => {
-                data.host_observation.ok_or("missing host observation")?
+                serde_json::to_string(&data.host_observation.ok_or("missing host observation")?)?
             }
             other => return Err(format!("host telemetry did not sample: {other:?}").into()),
         };
-        let result = writeln!(output, "{}", serde_json::to_string(&observation)?)
-            .and_then(|()| output.flush());
+        let result = writeln!(output, "{json}").and_then(|()| output.flush());
         match result {
             Ok(()) => {}
             Err(error) if error.kind() == io::ErrorKind::BrokenPipe => return Ok(()),
@@ -141,7 +152,8 @@ mod tests {
             Options::parse(&args(&["--interval-ms", "2000", "--count", "5"])).unwrap(),
             Options {
                 count: 5,
-                interval_ms: 2000
+                interval_ms: 2000,
+                details: false
             },
         );
     }
@@ -158,6 +170,7 @@ mod tests {
             vec!["--count", "2", "--count", "3"],
             vec!["--bogus", "1"],
             vec!["--count"],
+            vec!["--details", "--details"],
         ] {
             assert!(Options::parse(&args(&values)).is_err(), "{values:?}");
         }
@@ -171,7 +184,7 @@ mod tests {
                 observed_unix_s: 1234,
                 os: "fixture".into(),
                 arch: "test".into(),
-                cpu_percent: 0.0,
+                cpu_percent: Some(0.0),
                 logical_cores: 1,
                 memory_used_mib: 0,
                 memory_total_mib: 1,
@@ -210,6 +223,44 @@ mod tests {
         assert_eq!(rows.len(), 3);
         assert_eq!(calls.load(std::sync::atomic::Ordering::SeqCst), 3);
         assert_eq!(waits, vec![Duration::from_secs(1); 2]);
+    }
+
+    #[test]
+    fn detailed_ndjson_uses_the_same_single_poll_with_units_and_real_zero() {
+        let calls = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
+        let mut output = Vec::new();
+        let options = Options::parse(&args(&["--details", "--count", "2"])).unwrap();
+        stream(
+            {
+                let calls = calls.clone();
+                move || Ok(Fixture(calls.clone()))
+            },
+            &options,
+            &mut output,
+            |_| {},
+        )
+        .unwrap();
+        let output = String::from_utf8(output).unwrap();
+        let rows: Vec<
+            pipboy_core::observation::Observation<pipboy_core::host_report::HostReadings>,
+        > = output
+            .lines()
+            .map(|line| serde_json::from_str(line).unwrap())
+            .collect();
+        assert_eq!(rows.len(), 2);
+        assert_eq!(calls.load(std::sync::atomic::Ordering::SeqCst), 2);
+        assert_eq!(rows[0].value.as_ref().unwrap().poll_interval_ms, None);
+        assert!(rows[1].value.as_ref().unwrap().poll_interval_ms.is_some());
+        for row in rows {
+            row.validate().unwrap();
+            let fields = row.value.unwrap();
+            assert_eq!(fields.cpu_percent.value, Some(0.0));
+            assert_eq!(
+                fields.cpu_percent.unit,
+                pipboy_core::host_report::Unit::Percent
+            );
+            assert_eq!(fields.memory_used_mib.value, Some(0));
+        }
     }
 
     struct FailedOutput(io::ErrorKind);

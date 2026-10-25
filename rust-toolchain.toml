@@ -1,3 +1,4 @@
+# Local development tracks stable; CI separately checks the exact Rust 1.90.0 MSRV.
 [toolchain]
 channel = "stable"
 components = ["rustfmt", "clippy"]

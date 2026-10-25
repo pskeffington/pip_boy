@@ -488,7 +488,7 @@
   {
     "id": "L27",
     "title": "Energy Efficiency across Programming Languages: How do Energy, Time, and Memory Relate?",
-    "contributors": "Rui Pereira; Marco Couto; Francisco Ribeiro; Rui Rua; Jácome Cunha; João Paulo Fernandes; João Saraiva",
+    "contributors": "Rui Pereira; Marco Couto; Francisco Ribeiro; Rui Rua; J\u00e1come Cunha; Jo\u00e3o Paulo Fernandes; Jo\u00e3o Saraiva",
     "publisher": "ACM / SLE 2017",
     "year": 2017,
     "type": "peer_reviewed",
@@ -544,7 +544,7 @@
   {
     "id": "L30",
     "title": "Bringing Up OpenSky: A Large-scale ADS-B Sensor Network for Research",
-    "contributors": "Matthias Schäfer; Martin Strohmeier; Vincent Lenders; Ivan Martinovic; Matthias Wilhelm",
+    "contributors": "Matthias Sch\u00e4fer; Martin Strohmeier; Vincent Lenders; Ivan Martinovic; Matthias Wilhelm",
     "publisher": "ACM/IEEE IPSN 2014",
     "year": 2014,
     "type": "peer_reviewed",
@@ -686,5 +686,22 @@
     "limitation": "line_count uses the unstable-rendered-line-info feature in Ratatui 0.29; upgrades require retesting. API documentation does not certify screen-reader compatibility or terminal accessibility.",
     "acceptance": "Test compact and undersized frames, empty and long lists, Unicode wrapped text tails, item selection bounds and scroll clamping after resize.",
     "reviewed_on": "2026-10-24"
+  },
+  {
+    "id": "L38",
+    "title": "Fallout 4 Pip-Boy companion communication protocol (community specification)",
+    "contributors": "mattbaker/pipboyspec and RobCoIndustries/pipboylib contributors",
+    "publisher": "Maintainer-authored GitHub protocol documentation",
+    "year": 2026,
+    "type": "protocol_reference",
+    "url": "https://github.com/mattbaker/pipboyspec/blob/master/communication.md",
+    "doi": null,
+    "modules": [
+      "game"
+    ],
+    "design": "Bound little-endian frames, preserve object IDs across incremental updates and apply dictionary removals before insertions.",
+    "limitation": "Community description accessed in 2026, not a Bethesda support guarantee; actual game editions and gameplay commands need live acceptance.",
+    "acceptance": "Fragmentation, heartbeat echo, transaction rollback, reference updates, busy/oversize and native terminal tests, followed by real-game sessions.",
+    "reviewed_on": "2026-10-25"
   }
 ]

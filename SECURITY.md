@@ -12,6 +12,40 @@ Rust-Boy is an **experimental local field console**, not a safety-of-life, secur
 
 The `ModuleHost` capability checks and mock leases are cooperative **in-process** controls; they are **not** an OS sandbox for untrusted native code. A separate deny-only process is likewise **not** a working OS permission broker.
 
+## Device-to-device task trust and persistent local data
+
+The current Task Control UI uses explicitly paired OpenSSH peers, **not email**. The sender verifies a previously approved host key, uses a chosen private SSH key, disables password and SSH-agent fallback, limits execution time/output, and passes only a validated JSON assignment to a fixed remote Rust-Boy command. The recommended receiver uses a dedicated OS account and a key-specific \`authorized_keys\` **\`restrict,command="/absolute/pipboy peer bridge SOURCE"\`** rule: the Rust-Boy forced bridge allows only typed receive and matching status-receipt requests, not an arbitrary shell, port forwarding or other processes. Host key fingerprints must be verified out-of-band; \`ssh-keyscan\` output alone is untrusted.
+
+\`peers.json\` stores peer aliases, approved SSH targets, paths to SSH keys/known_hosts and local trusted labels **but no private key bytes**. \`tasks.json\` contains plaintext assignments, nonsecret origin references, stored-delivery receipt and separately imported remote progress. Data files are private to the OS account on Unix and atomically replaced; they are **not encrypted at rest**, and a locally logged-in user can switch roles. Roles and trusted sender *labels* are not human/device cryptographic identities. The forced key-level restriction is the receiver's supported source authentication boundary in this phase.
+
+No task is transmitted or synchronized on job selection, server startup or state GET. Sending requires explicit operator confirmation; remote progress refresh is also explicit. SSH response validation/receiver-side deduplication prevent a sender retry from silently creating repeated local tasks. There are **no** background task notifications, BLE/mesh/generic LAN listeners or direct video/GNSS actions.
+
+A compromised receiver OS account or unrestricted SSH authorized key can still perform account-level operations: **do not use this preview for safety-critical, confidential or regulated workflows**. Physical host-key, key-revocation, Linux/macOS Pi deployment and interrupted-delivery tests are pending. See [peer transport contract](docs/PEER_TASK_TRANSPORT.md).
+
+## Micro display and device boundary
+
+The `/micro` view and `dashboard --micro` launch switch only the UI route; they **do not** change the Rust service's loopback binding, expose the app on LAN, or enable any new endpoint or permission. Both UIs use the same strict JSON Host/Origin/CSP rules, atomic profile store and allowlisted Rust experiments. Role changes require a visible **CONFIRM REPLACE** action. The micro CRT effect toggle is cosmetic and remains in memory only.
+
+The Security Chief 2×2 tiles are **UI-only disconnected camera placeholders**, and Scout's crosshair grid is **not** a GNSS fix or RustGIS navigation display. The micro status must never fabricate battery charge, position, camera health or radio state. Real camera/GNSS/TAK integration requires separate protected transport and hardware testing. See [micro operator guide](docs/MICRO_UI.md).
+
+## Local graphical dashboard security
+
+The optional `pipboy dashboard` command creates a **local-only HTTP listener bound to 127.0.0.1**, serving embedded original HTML/CSS/JS and strictly allowlisted JSON routes. It does not bind to LAN interfaces. Browser requests have an exact Host requirement; changing saved workbench state requires a same-origin JSON POST from `http://127.0.0.1:<port>`, explicit confirmation for role replacement and bounded input (8 KiB headers, 4 KiB bodies). The response uses restrictive CSP, `nosniff`, frame denial, no CORS and no-store. No arbitrary commands, general file browsing, exposed note contents, hidden streams or credentials are part of this service.
+
+**Limitations:** same-origin headers and loopback binding protect against common remote web attacks, but are not a security sandbox against other local applications or a compromised user account. Do not proxy, port-forward or expose this development interface publicly. A remote device/web deployment needs authenticated sessions, stronger CSRF protection, authorization and an independent review. The browser's Scout viewport is a *not-connected* reference grid and the Security Chief camera fixture does not receive video. See [dashboard guide](docs/DASHBOARD_UI.md).
+
+## Occupational profiles and future camera sources
+
+Profiles are declarative UI configurations only. Choosing Overseer, Security Chief, or Custom cannot grant any capability, run user code, discover a device, open a network endpoint or authenticate to a camera. The new R0 profile code is still subject to CI acceptance. The workbench state is a local JSON description of pinned tools, **not** an authorization token.
+
+The requested Security Chief **four-camera wall** is still an [integration plan](docs/SECURITY_CAMERA_WALL.md); the dashboard has a purely local four-tile focus/back layout fixture, not working IP-camera streams. Live IP-camera integration must use explicit allowlisted endpoints, reviewed JPEG/MJPEG/RTSP decoders, credential storage outside plaintext JSON (macOS Keychain when available), TLS validation and per-feed stream limits. Disabling a feed must release resources. No background video recording, audio capture, automatic ONVIF discovery, default-password attempts, PTZ control or upload is permitted by profile activation. Retained frames must be clearly marked stale, never live.
+
+## Scout GIS and future TAK bridge
+
+Scout GIS is **offline and operator-invoked**: WGS84 waypoint/distance and bounded read-only GeoJSON Point inspection. It does not sample the user's position, request GNSS, scan local networks, or transmit CoT events. GeoJSON files explicitly exported by the operator contain plaintext coordinates; keep them private and use appropriate access controls. Do not add telemetry collection or persistent automatic location history by simply selecting Reclamation Scout.
+
+TAK integration is not currently implemented. A future Raspberry Pi OpenTAKServer connector needs explicit destination approval, verified TLS identity/certificates, client/source authorization, message TTL and replay checks, rate limits, log redaction, and immediate disconnect on revocation. It must not accept or rebroadcast untrusted position/identity claims as authenticated personnel. ATAK-CIV is Android software, not a native Pi OS application. See [Scout GIS and TAK-on-Pi](docs/SCOUT_GIS_TAK.md).
+
 ## Trust boundaries and planned hardware
 
 | Boundary | Current protection | Not yet available |
@@ -34,3 +68,7 @@ Please include the affected revision, platform, reproduction steps and security 
 ## Third-party code and assets
 
 A research-catalog link is not a license grant. Review source licenses, dependency provenance, hardware rights and media restrictions before importing material. Do not add copyrighted game artwork, unlicensed firmware, live geolocation traces or secrets to this repository.
+
+## Explicit game companion connection
+
+`pipboy game --connect IP:PORT --confirm` authorizes one direct plaintext TCP connection to the specified Fallout 4 host. It transmits heartbeat responses only; game actions are not implemented. No discovery, DNS, automatic retry or saved state is used. Treat the endpoint as untrusted and use a trusted local network. See [game protocol bounds](docs/GAME_MODE.md). This opt-in path does not enable physical device adapters.

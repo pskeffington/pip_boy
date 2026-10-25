@@ -4,10 +4,19 @@ use pipboy_core::branding::PRODUCT_NAME;
 use pipboy_core::catalog::CatalogSource;
 use pipboy_core::notes::Note;
 use pipboy_core::registry::{Readiness, MODULES};
+use pipboy_core::workbench::{tool, Workbench, PALETTE, PRESETS};
 use ratatui::prelude::*;
 use ratatui::widgets::{Block, Borders, List, ListItem, ListState, Paragraph, Tabs, Wrap};
 
-pub const PANELS: &[&str] = &["STAT", "LIBRARY", "NOTES", "MAP", "RADIO", "MESH"];
+pub const PANELS: &[&str] = &[
+    "STAT",
+    "LIBRARY",
+    "NOTES",
+    "WORKBENCH",
+    "MAP",
+    "RADIO",
+    "MESH",
+];
 
 #[derive(Clone, Copy)]
 pub enum Action {
@@ -24,10 +33,15 @@ pub enum Action {
 #[derive(Default)]
 pub struct Navigation {
     pub panel: usize,
-    selected: [usize; 6],
-    scroll: [u16; 6],
-    max_scroll: [u16; 6],
-    page_rows: [u16; 6],
+    selected: [usize; 7],
+    scroll: [u16; 7],
+    max_scroll: [u16; 7],
+    page_rows: [u16; 7],
+    pub palette_open: bool,
+    pub palette_selected: usize,
+    pub profiles_open: bool,
+    pub profile_selected: usize,
+    pub profile_confirm: bool,
 }
 
 impl Navigation {
@@ -35,11 +49,21 @@ impl Navigation {
         let panel = self.panel;
         let last = item_count.saturating_sub(1);
         let step = self.page_rows[panel].saturating_sub(1).max(1);
-        let collection = panel == 1 || panel == 2;
+        let collection = matches!(panel, 1..=3);
         let previous = self.selected[panel];
         match action {
-            Action::Next => self.panel = (panel + 1) % PANELS.len(),
-            Action::Previous => self.panel = (panel + PANELS.len() - 1) % PANELS.len(),
+            Action::Next => {
+                self.panel = (panel + 1) % PANELS.len();
+                self.palette_open = false;
+                self.profiles_open = false;
+                self.profile_confirm = false;
+            }
+            Action::Previous => {
+                self.panel = (panel + PANELS.len() - 1) % PANELS.len();
+                self.palette_open = false;
+                self.profiles_open = false;
+                self.profile_confirm = false;
+            }
             Action::Up if collection => self.selected[panel] = previous.saturating_sub(1),
             Action::Down if collection => {
                 self.selected[panel] = previous.saturating_add(1).min(last)
@@ -65,6 +89,44 @@ impl Navigation {
             self.scroll[panel] = 0;
         }
     }
+
+    pub fn selected_bench_slot(&self, board: &Workbench) -> Option<u64> {
+        board.slots.get(self.selected[3]).map(|slot| slot.id)
+    }
+
+    pub fn focus_last_bench_slot(&mut self, board: &Workbench) {
+        self.selected[3] = board.slots.len().saturating_sub(1);
+        self.scroll[3] = 0;
+    }
+
+    pub fn profile_move(&mut self, action: Action) {
+        let last = PRESETS.len().saturating_sub(1);
+        self.profile_selected = match action {
+            Action::Up => self.profile_selected.saturating_sub(1),
+            Action::Down => self.profile_selected.saturating_add(1).min(last),
+            Action::PageUp => self.profile_selected.saturating_sub(5),
+            Action::PageDown => self.profile_selected.saturating_add(5).min(last),
+            Action::Home => 0,
+            Action::End => last,
+            Action::Next | Action::Previous => self.profile_selected,
+        };
+        self.profile_confirm = false;
+        self.scroll[3] = 0;
+    }
+
+    pub fn palette_move(&mut self, action: Action) {
+        let last = PALETTE.len().saturating_sub(1);
+        self.palette_selected = match action {
+            Action::Up => self.palette_selected.saturating_sub(1),
+            Action::Down => self.palette_selected.saturating_add(1).min(last),
+            Action::PageUp => self.palette_selected.saturating_sub(5),
+            Action::PageDown => self.palette_selected.saturating_add(5).min(last),
+            Action::Home => 0,
+            Action::End => last,
+            Action::Next | Action::Previous => self.palette_selected,
+        };
+        self.scroll[3] = 0;
+    }
 }
 
 #[derive(Clone, Copy)]
@@ -72,6 +134,7 @@ pub struct View<'a> {
     pub stat: &'a str,
     pub library: &'a [CatalogSource],
     pub notes: &'a [Note],
+    pub workbench: &'a Workbench,
 }
 
 pub fn render(frame: &mut Frame, navigation: &mut Navigation, view: View<'_>) {
@@ -94,9 +157,10 @@ pub fn render(frame: &mut Frame, navigation: &mut Navigation, view: View<'_>) {
     if area.width < 70 {
         frame.render_widget(
             Paragraph::new(format!(
-                "{} ({}/6) | Tab: panel",
+                "{} ({}/{}) | Tab: panel",
                 PANELS[navigation.panel],
-                navigation.panel + 1
+                navigation.panel + 1,
+                PANELS.len()
             ))
             .block(Block::bordered().title(PRODUCT_NAME)),
             sections[0],
@@ -168,6 +232,101 @@ pub fn render(frame: &mut Frame, navigation: &mut Navigation, view: View<'_>) {
                 });
             (labels, detail)
         }
+        3 => {
+            if navigation.profiles_open {
+                navigation.profile_selected = navigation
+                    .profile_selected
+                    .min(PRESETS.len().saturating_sub(1));
+                let selected = navigation.profile_selected;
+                let labels = PRESETS
+                    .iter()
+                    .map(|entry| format!("{} / {}", entry.title, entry.role_fidelity))
+                    .collect();
+                let entry = &PRESETS[selected];
+                let enabled: Vec<_> = entry
+                    .tools
+                    .iter()
+                    .filter_map(|id| tool(id).map(|tool| tool.name))
+                    .collect();
+                let detail = format!(
+                    "VAULT PROFILE / {}\n\n{}\n\nLORE: {} / {}\n\nREADY TOOLS ({}):\n{}\n\n{}",
+                    entry.title,
+                    entry.description,
+                    entry.lore_evidence,
+                    entry.role_fidelity,
+                    entry.tools.len(),
+                    if enabled.is_empty() {
+                        "Empty by design (advanced Custom mode)".to_owned()
+                    } else {
+                        enabled.join(", ")
+                    },
+                    if navigation.profile_confirm {
+                        "REPLACE CURRENT PINS?\nY: replace entire workbench | N/Esc: cancel"
+                    } else {
+                        "Enter: choose this complete profile | Esc: cancel\nNo tool is executed by selecting a profile"
+                    }
+                );
+                (labels, detail)
+            } else if navigation.palette_open {
+                navigation.palette_selected = navigation.palette_selected.min(PALETTE.len() - 1);
+                let selected = navigation.palette_selected;
+                let labels = PALETTE
+                    .iter()
+                    .map(|entry| format!("{} / {}", entry.name, entry.availability.label()))
+                    .collect();
+                let entry = &PALETTE[selected];
+                let detail = format!(
+                    "TOOL PALETTE / {}\nSTATUS: {}\n\n{}\n\nCOMMAND: {}\n\n{}",
+                    entry.name,
+                    entry.availability.label(),
+                    entry.description,
+                    entry.command,
+                    if entry.availability.can_pin() {
+                        "Enter: pin to your workbench (does not execute it)"
+                    } else {
+                        "Not available: hardware requires a future authorized device broker"
+                    }
+                );
+                (labels, detail)
+            } else {
+                let selected =
+                    navigation.selected[3].min(view.workbench.slots.len().saturating_sub(1));
+                navigation.selected[3] = selected;
+                let labels = view
+                    .workbench
+                    .slots
+                    .iter()
+                    .map(|slot| {
+                        let name = tool(&slot.tool)
+                            .map(|entry| entry.name)
+                            .unwrap_or("UNKNOWN");
+                        format!("#{} {name}", slot.id)
+                    })
+                    .collect();
+                let detail = view
+                    .workbench
+                    .slots
+                    .get(selected)
+                    .and_then(|slot| tool(&slot.tool).map(|entry| (slot, entry)))
+                    .map(|(slot, entry)| {
+                        format!(
+                            "{} / SLOT #{}\nSTATUS: {}\n\n{}\n\nCOMMAND: {}\n\nPinning is not execution. Commands still require their own permissions and flags.\n\nP: role | A: palette | X: unpin | R: reload",
+                            entry.name,
+                            slot.id,
+                            entry.availability.label(),
+                            entry.description,
+                            entry.command
+                        )
+                    })
+                    .unwrap_or_else(|| {
+                        format!(
+                            "{}\nEMPTY / ZERO SLOTS\n\nPress P to select a complete role, or A to open the tool palette.\nAdd only the tools you want; nothing runs automatically.\n\nCLI: pipboy workbench palette\nCLI: pipboy workbench add byte-lab\n\nNo network scanning, physical device access or telemetry upload.",
+                            view.workbench.title
+                        )
+                    });
+                (labels, detail)
+            }
+        }
         panel => {
             let id = PANELS[panel].to_ascii_lowercase();
             let detail = MODULES
@@ -184,13 +343,19 @@ pub fn render(frame: &mut Frame, navigation: &mut Navigation, view: View<'_>) {
             (Vec::new(), detail)
         }
     };
-    let detail_area = if navigation.panel == 1 || navigation.panel == 2 {
+    let detail_area = if matches!(navigation.panel, 1..=3) {
         let regions = Layout::vertical([
             Constraint::Length(((sections[1].height as u32 * 2 / 5) as u16).max(3)),
             Constraint::Min(3),
         ])
         .split(sections[1]);
-        let selected = navigation.selected[navigation.panel];
+        let selected = if navigation.panel == 3 && navigation.profiles_open {
+            navigation.profile_selected
+        } else if navigation.panel == 3 && navigation.palette_open {
+            navigation.palette_selected
+        } else {
+            navigation.selected[navigation.panel]
+        };
         let title = if labels.is_empty() {
             " ITEMS: 0 ".to_owned()
         } else {
@@ -237,8 +402,19 @@ pub fn render(frame: &mut Frame, navigation: &mut Navigation, view: View<'_>) {
             .style(Style::default().fg(Color::Green)),
         detail_area,
     );
-    frame.render_widget(Paragraph::new("Tab: panel | Up/Down: item or text\nPgUp/PgDn: text | Home/End: first/last\nP: pause/resume | R: notes | Q: quit")
-        .style(Style::default().fg(Color::Gray)), sections[2]);
+    let footer = if navigation.panel == 3 && navigation.profiles_open {
+        "PROFILES: arrows choose Enter select\nY: apply | N/Esc cancel | Q: quit"
+    } else if navigation.panel == 3 && navigation.palette_open {
+        "PALETTE: arrows select Enter pin\nEsc: cancel | Tab: next | Q: quit"
+    } else if navigation.panel == 3 {
+        "WORKBENCH P:roles A:tools X:remove\nUp/Down: select | R: reload | Q: quit"
+    } else {
+        "Tab: panel | Up/Down: item or text\nPgUp/PgDn: text | Home/End: first/last\nP: pause/resume | R: notes | Q: quit"
+    };
+    frame.render_widget(
+        Paragraph::new(footer).style(Style::default().fg(Color::Gray)),
+        sections[2],
+    );
 }
 
 #[cfg(test)]
@@ -272,6 +448,7 @@ mod tests {
             stat: "STAT fixture",
             library: &library,
             notes: &notes,
+            workbench: &Workbench::default(),
         };
         for (width, height) in [
             (0, 0),
@@ -307,7 +484,7 @@ mod tests {
     fn navigation_bounds_empty_lists_and_preserves_panel_selection() {
         let mut navigation = Navigation::default();
         navigation.apply(Action::Previous, 0);
-        assert_eq!(navigation.panel, 5);
+        assert_eq!(navigation.panel, 6);
         navigation.apply(Action::Next, 0);
         assert_eq!(navigation.panel, 0);
         navigation.apply(Action::Next, 0);
@@ -340,6 +517,7 @@ mod tests {
             stat: "fixture",
             library: &[],
             notes: &notes,
+            workbench: &Workbench::default(),
         };
         let mut navigation = Navigation {
             panel: 2,
@@ -370,6 +548,7 @@ mod tests {
             stat: "fixture",
             library: &[],
             notes: &[],
+            workbench: &Workbench::default(),
         };
         let mut navigation = Navigation {
             panel: 2,
@@ -378,9 +557,37 @@ mod tests {
         assert!(screen(80, 24, &mut navigation, view).contains("No local notes"));
         navigation.panel = 1;
         assert!(screen(80, 24, &mut navigation, view).contains("No source references"));
-        for panel in 3..6 {
+        for panel in 4..7 {
             navigation.panel = panel;
             assert!(screen(80, 24, &mut navigation, view).contains("PLANNED / NOT CONNECTED"));
         }
+    }
+    #[test]
+    fn role_picker_renders_complete_profiles_and_custom_without_side_effects() {
+        let mut navigation = Navigation {
+            panel: 3,
+            profiles_open: true,
+            ..Navigation::default()
+        };
+        let board = Workbench::default();
+        let view = View {
+            stat: "unused",
+            library: &[],
+            notes: &[],
+            workbench: &board,
+        };
+        let text = screen(100, 28, &mut navigation, view);
+        assert!(text.contains("Overseer Operations"));
+        assert!(text.contains("VAULT PROFILE"));
+        assert!(text.contains("READY TOOLS"));
+        navigation.profile_move(Action::End);
+        let text = screen(100, 28, &mut navigation, view);
+        assert!(text.contains("Custom Workbench"));
+        assert!(text.contains("Empty by design"));
+        navigation.profile_confirm = true;
+        assert!(screen(100, 28, &mut navigation, view).contains("REPLACE CURRENT PINS"));
+        navigation.apply(Action::Next, 0);
+        assert!(!navigation.profiles_open);
+        assert!(!navigation.profile_confirm);
     }
 }

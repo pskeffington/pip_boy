@@ -1,0 +1,80 @@
+# Rust-Boy on Mac → Fallout 4 on PlayStation
+
+**Current development priority:** launch natively from macOS and connect to a PlayStation's exposed Fallout 4 companion service. PC/Anniversary/other-platform expansion is deferred. The native client and mock-peer launcher tests do not certify an actual PS4/PS5 game build. Game mode is read-only.
+
+## PS4 local field acceptance (new)
+Use the PS4's actual IP from Settings > Network > View Connection Status, or run an explicit, one-shot discovery broadcast. A discovery response is **not** authenticated proof of console identity.
+
+```bash
+./scripts/launch-playstation.command --discover-ps4
+./scripts/launch-playstation.command 192.168.1.50 --diagnose
+./scripts/launch-playstation.command 192.168.1.50 --observe-seconds 30
+./scripts/launch-playstation.command 192.168.1.50
+```
+
+Discovery sends the legacy `{"cmd":"autodiscover"}` UDP request to broadcast port 28000 **only when expressly requested**; listens for bounded PS4 advertisements for approximately 1.3 seconds; never automatically connects. If discovery is blocked, entering the PS4 IP directly is preferred. No internet service or console modification is needed, but the installed Fallout 4 edition **must** expose its companion service. Diagnostic success requires handshake plus a complete reachable root; it is not proof of a specific PS4 build.
+
+The opt-in observation mode collects **counts only in memory** for up to 120 seconds after the complete root becomes ready: heartbeat replies, update frames, and changed bounded views. During the observation, open your inventory and change a stat or equipped item in Fallout 4. Expect some observed change if the game and service expose that change. The JSON report is printed once on completion and not written to disk by Rust-Boy. A zero count does not by itself prove failure. A dropped connection returns an error, not a false success. Only heartbeat responses are sent; no equip/use/drop/map or game command is transmitted.
+
+**Acceptance record for an actual PS4:** Mac model and macOS version; PS4 model/system version; installed Fallout 4 edition/version and companion setting; connection and diagnostic results; observed live changes; idle heartbeat behavior; competing-app busy behavior; disconnect/recovery and terminal restoration. Record any console-side connection rejection rather than labeling a mock fixture as real-world acceptance.
+
+## Launch from Finder
+
+1. Keep the entire repository folder together. Install Rust/Cargo first if not already available; the launcher builds Rust-Boy for the Mac running it. This is a source launcher, not a notarized `.app` or universal prebuilt binary.
+2. Connect the Mac and console to the same home LAN. Wired/Wi-Fi combinations are fine when the router permits local traffic. A guest network, client isolation or VPN routing can block it.
+3. Launch Fallout 4 on PlayStation and load a save. On builds exposing it, turn on **Pip-Boy App Enabled** in Gameplay settings and restart the game if necessary. Close another companion app before connecting.
+4. Find the **console's** LAN IP. Bethesda documents PS4: Settings → Network → View Connection Status → IP Address. On PS5, inspect Network connection status for the console address. Do not enter the Mac's IP or `127.0.0.1` for a real console.
+5. Double-click [`scripts/launch-playstation.command`](../scripts/launch-playstation.command). Terminal opens; enter the console IP when prompted. Q/Escape/Ctrl+C exits. The IP is not saved. If macOS refuses a downloaded script, inspect the source and use the Terminal invocation below rather than disabling system protections.
+
+The launcher quotes the address, works when launched outside the repository and from paths containing spaces, and uses the installed native Rust toolchain. It does not download dependencies before Cargo runs, install console mods, scan the LAN or alter firewall/privacy settings. Initial Cargo builds may download locked Rust dependencies.
+
+## Launch or diagnose from Terminal
+
+From the repository folder, substituting your PlayStation IP:
+
+```bash
+./scripts/launch-playstation.command 192.168.1.50
+./scripts/launch-playstation.command 192.168.1.50 --diagnose
+# Prompt for the console IP and emit a diagnostic report:
+./scripts/launch-playstation.command --diagnose
+# Equivalent CLI:
+cargo run --locked -p pipboy -- game --playstation 192.168.1.50 --confirm
+cargo run --locked -p pipboy -- game --playstation 192.168.1.50 --confirm --diagnose
+```
+
+The preset uses TCP 27000. An explicit `IP:PORT` is accepted for diagnostics/test fixtures; bare IPv6 uses port 27000, and an IPv6 address with a port must use `[address]:port`. Hostnames are not resolved. Connection consent and saved `network.fetch` denials behave as described in [game mode](GAME_MODE.md).
+
+The diagnostic waits for both a valid language/version announcement and the complete reachable game root, then prints JSON containing `status: ready`, endpoint, selected target profile, handshake and available root fields. A root arriving before the announcement remains pending. Prompt instructions go to standard error, so standard output remains a single JSON report even when the address is entered interactively. Malformed, missing or excessive announcements do not produce a successful report.
+
+`console_identity_verified: false` means the selected profile is not authentication or hardware identification; the protocol does not establish either. `game_actions_enabled: false` states that gameplay commands are absent. A diagnostic reads data and responds to heartbeats only; it does not equip/drop/travel or persist game state. `--diagnose` may precede or follow an explicit IP; repeated options and multiple addresses are rejected.
+
+## Troubleshoot the actual connection
+
+| Result | Check |
+| --- | --- |
+| Connection refused | Correct console IP, Fallout 4 running, and this exact game build exposes the companion service |
+| Timeout / unreachable | Same LAN, guest/client isolation, VPN routing, network permissions if applicable; no internet port forwarding is required |
+| Busy | Close the companion app/device already connected, then launch again |
+| Handshake missing / invalid | The endpoint did not announce a valid Fallout 4 language/version; verify the console address and available game service |
+| Root timeout | Load a save, check App Enabled/service availability, and inspect the actual game build |
+| Saved network denial | Review the saved preference; `pipboy permissions clear network.fetch` explicitly removes it |
+| Build fails / Cargo absent | Use a supported native Rust toolchain; launcher does not install one automatically |
+
+On macOS versions with Local Network privacy controls, review System Settings → Privacy & Security → Local Network if access was denied or a relevant prompt appears. Applicability depends on the macOS release and launching application; do not assume every Terminal build needs a privacy toggle. Rust-Boy never changes privacy settings itself.
+
+The browser labels incomplete game data explicitly. The initial-root timeout applies to startup only: a later incremental update may introduce references in separate packets without terminating an established session. Live stat changes and terminal restoration after a game disconnect are exercised against a controlled peer; the actual PlayStation acceptance gate below remains open.
+
+The terminal browser keeps a long inventory's selection visible beside its data, or above it in a compact window. Enter/Right opens an object; Backspace/Left returns with your position preserved. R returns to the game root. Page Up/Down and Home/End scroll the selected value within its actual bounds. The browser displays resize guidance below 40×12 and recovers the previous selection after enlargement. Opened objects follow live replacement references; removal returns to a surviving parent.
+
+## PS4 and PS5 scope
+
+Bethesda's original announcement explicitly lists PS4 companion support. That historical statement does not certify today's patched PS4 edition, PS4 software running on PS5, or native PS5 software. Record which edition is actually launched, not just the console model. PC F4SE/Anniversary enablers are not a PlayStation solution. If the installed build exposes no companion service, changing the Mac launcher cannot create it. No unsupported PS5 settings-transfer workaround is claimed.
+
+The live acceptance gate requires a real Mac/console pair: record macOS/CPU architecture, console model, installed PS4/PS5 game edition/version, successful diagnostic, browsing stats/inventory/map data, observed in-game updates, heartbeat continuity, busy/disconnect behavior and terminal restoration. This environment has no such console session, so those results remain pending.
+
+## Primary references
+
+- [Bethesda original supported platforms](https://bethesda.net/en-US/news/fallout-4-pip-boy-app-now-available) (2015 announcement, not a current-version guarantee).
+- [Bethesda console-IP instructions](https://help.bethesda.net/app/answers/detail/a_id/31479/).
+- [Bethesda busy-connection explanation](https://help.bethesda.net/app/answers/detail/a_id/31478/).
+- [Apple Local Network privacy controls](https://support.apple.com/en-gb/guide/mac-help/mchla4f49138/mac) and [developer guidance](https://developer.apple.com/documentation/technotes/tn3179-understanding-local-network-privacy).

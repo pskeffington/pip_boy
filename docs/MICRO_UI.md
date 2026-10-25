@@ -1,0 +1,78 @@
+# Rust-Boy | Micro handheld shell
+
+**Status:** functional local micro UI preview. The desktop dashboard remains available and unchanged except for a **MICRO** entry. The micro view shares the same Rust service, `PRESETS` registry, `PALETTE`, atomic `WorkbenchStore`, and allowlisted offline tool APIs. It is **not** a wearable hardware image, native RustGIS raster renderer, production GNSS service or live camera client. On the GIS feature branch, MAP can import native RustGIS vector maps and display an explicitly approved browser location.
+
+## Launch on Mac
+
+```bash
+# From the feat/micro-compact-hud branch:
+./scripts/launch-micro.command
+
+# Or from Cargo:
+cargo run --locked -p pipboy -- dashboard --micro --open
+```
+
+The Mac launcher opens **http://127.0.0.1:8765/micro** and stops when the Terminal process is interrupted (Ctrl+C). If the default port is busy, run `cargo run --locked -p pipboy -- dashboard --micro --port 8790 --open`. The desktop page is still **/** on the *same* local server; use the **DESK** link to return, or the desktop's **MICRO** link to switch back. On Raspberry Pi, omit `--open` and navigate to the local `/micro` URL from that Pi. The port binds **127.0.0.1 only**; it cannot be reached from another device over the LAN.
+
+### Hardware-oriented layout
+
+This is an independent phosphor-style renderer, not a collapsed desktop sidebar. Its main six pages use a fixed tab rail, short labels and a **no-scroll viewport** at 480×320. Tool grids and profile selection have visible Previous/Next pages; a short toast replaces the extra visible footer. Unusually long results or accessibility zoom may scroll in the detail view rather than conceal controls. CRT effects can be disabled. No original game artwork is used.
+
+| Display | Intended adaptation | Current verification |
+| --- | --- | --- |
+| Desktop browser | Centered simulated handheld housing (up to 900×520) | Rust HTTP/assets and JS syntax tests |
+| 800×480 | Compact six-tab HUD, paged role/task selectors | Manual browser acceptance pending |
+| 480×320 | Short primary screens without scroll; task list and tools paginated | Manual browser acceptance pending |
+| 320px width/portrait | Reduced chrome, detail scroll fallback for accessibility | Manual browser acceptance pending |
+
+No physical screen, Raspberry Pi graphics stack, battery sensor or refresh-rate measurement has yet been validated. **PWR is shown as "NOT DETECTED"**, not a fabricated charge percentage.
+
+## Minimal screen contract
+
+**STAT:** one role label, quick action and real Open/Late/Blocked counts. No repeated job name or empty sensor graphic. **GEAR/DATA:** up to six tools per page. **CONF:** change role, switch CRT effects, reload; Custom's palette has four modules per page. **Role picker:** four options per page, Custom last. **TASK CONTROL:** two assignments per page, two-step creation, Info/Text (when present)/Status/Device/Log tabs and an Assign tab when allowed. **MAP:** native RustGIS vector map, opt-in GPS and independently labeled WEB ON OSM reference layer. **LINK:** disconnected Security camera screens still show NO SIGNAL; no fabricated feeds. **Local labs:** input and result on separate screens. The primary frame normally does not vertically scroll at 480×320; the renderer restores scrolling if browser zoom, larger fonts, or unexpected content would clip controls. Deep results can also scroll.
+
+## Direct device task delivery
+
+The Task Control detail now offers **SEND TO SELECTED DEVICE** only for explicitly enrolled OpenSSH peers. Once the destination durably saves the task, the manager sees its peer ID and stored receipt. Recipient operators can acknowledge and work on tasks in their own job HUD; the Overseer must deliberately request **REFRESH REMOTE STATUS** to view updates. This replaces the previous email-draft workflow; no background connections or task notifications are added. Pairing and host fingerprint verification are CLI/OS steps; see [peer setup](PEER_TASK_TRANSPORT.md).
+
+## Overseer and role duty displays
+
+On a new install, Overseer begins with **TASK CONTROL** pre-pinned. STAT summarizes actual locally recorded open/overdue/blocked tasks and provides direct access to the task board; GEAR opens the same management module. Creation, reassignment, manual handoff and acknowledgement take explicit clicks. The other job HUDs show their **assigned duties**, filtering by their job ID, rather than a generic management control panel. Older saved Overseer boards need an explicit profile reload to receive the new Task Control pin without resetting task data.
+
+See [Task Control and manual dispatch](TASK_CONTROL.md). Neither the task HUD nor the screen's green styling implies live network delivery or authenticated operators.
+
+## Operation
+
+**Tabs** (large bottom controls): **STAT** current profile/local status and shortcuts; **GEAR** pins and tool launcher; **MAP** local WGS84 map viewport with imported RustGIS vector layers and explicit browser geolocation (GIS waypoint/distance lab available when pinned); **DATA** local reference and research tools; **LINK** disconnected transport summary, or Security Chief's four-camera mock interaction; **CONF** role switch, CRT effects toggle, reload and Custom tool palette.
+
+**Keyboard:** 1–6 jumps directly to pages when not editing a text field; **Escape** exits a focused module or camera, then returns to STAT. Standard Tab/Shift+Tab focus and Enter/Space activate controls. Security Chief LINK uses **1–4** for camera placeholder focus; Escape returns to the four-tile grid. The role selector uses a four-at-a-time pager for all seven presets with **Custom last**.
+
+**Profile state:** Selecting a job in the modal is only a preview. **LOAD ROLE** activates it and replaces only pinned module tiles. The change is persisted to the same workbench file used by desktop and TUI; no tools are executed and no extra permissions are granted. Custom begins empty, and only tools supported by the palette can be pinned. A documented "RESET CUSTOM" action clears Custom's pins after explicit confirmation.
+
+**Active offline labs:** For a profile containing the relevant tool, tap **GEAR** → **SCOUT GIS**, **NET LAB**, **BYTE LAB** or **HOST STAT**. The result is computed locally when **RUN** is pressed, using the existing Rust `/api/experiment` endpoint. The browser never auto-fetches host telemetry. Notes/library/simulator/game display safe manual handoffs, not arbitrary command execution. Scout's MAP page can open **WAYPOINT** or **DISTANCE** directly.
+
+**Security Chief fixture:** LINK displays four clearly disconnected camera tiles. Tap a tile to focus; tap it again, press BACK or Escape to return to the 2×2 wall. No stream URLs, snapshots, IP probing, video decoding, recording or camera sessions are present.
+
+## Security and acceptance
+
+The micro route `/micro` serves embedded HTML, CSS and JS through the existing Rust server. Its API calls use the exact same 127.0.0.1-only Host and Origin checks, bounded JSON requests, strict CSP and workbench state validation as the desktop UI. Micro does not store secrets or location; settings toggles remain only in page memory. Do not port-forward or publicly expose the development server.
+
+```bash
+cargo fmt --all -- --check
+cargo check --workspace --all-targets --locked
+cargo test --workspace --locked
+cargo clippy --workspace --all-targets --locked -- -D warnings
+cargo build --workspace --locked
+node --check crates/pipboy/assets/micro.js
+node --check crates/pipboy/assets/tasks.js
+python3 tools/smoke_micro.py
+python3 tools/smoke_tasks.py
+```
+
+The new smoke script starts an actual Rust loopback server with `--micro --port 0`, confirms both desktop and micro routes, verifies the six-page markup, responsive breakpoints and no external JS URLs, then exercises profile persistence, Scout GIS, Custom pinning and denial of unauthorized requests. It is part of Linux and native macOS/Windows CI. **A passing static/HTTP test is not a visual certification.** Follow up by checking rendered browser screenshots and touch/keyboard usage at 800×480 and 480×320, including focus order, text legibility, scroll clipping, and modal operation.
+
+**Next:** verify RustGIS vector import, GPS consent and online OSM reference at handheld size; native RustGIS raster rendering, hardware GNSS and TAK/camera transport remain separately gated.
+
+## GPS map preview (feature branch)
+
+MAP mounts the shared [RustGIS-native map and GPS viewer](SCOUT_GPS_MAP.md): explicit browser GPS permission, native RustGIS JSON/map/mobile-package and GeoJSON imports, source manifest, follow, accuracy, and pan/zoom. On the online-reference feature branch it sends an infrequent coordinate-free reachability ping when MAP opens; tapping **WEB ON** explicitly permits bounded Overpass queries for OSM roads, waterways, buildings, parks and landmarks. This is **community reference geography**, not a substitute for imported authoritative layers. It does not embed native RustGIS, supply basemap tiles or open USB serial GNSS.

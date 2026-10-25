@@ -11,6 +11,50 @@ Rust-Boy is the public name of the modular console. The repository, executable, 
 
 The current `ModuleHost` is an **in-process testable policy precheck** and does not isolate untrusted code. Physical device access, OS-enforced permissions and transport isolation remain planned, not implemented.
 
+## Explicit peer task transport (no Rust-Boy network listener)
+
+A separate `pipboy-core::peers` private config holds local device labels, trusted sender labels and explicitly approved OpenSSH destinations. `pipboy peer send ID ALIAS --confirm` and the protected dashboard route invoke a fixed SSH command with strict host-key and key authentication. A receiving SSH account executes a **restricted `pipboy peer bridge SOURCE` forced command**: it only permits receive or source-specific receipt reporting, validates trusted source and stores the typed assignment through the task store. The sender checks the receiver's stored-task ID before persisting delivery; recipient acknowledgments/status are retrieved only on explicit `peer sync`. Host fingerprints must be verified out-of-band when enrolling a peer. This backend does not expose its own network service or run a discovery scan.
+
+The sender's status, authenticated SSH delivery receipt, receiving device's manual acknowledgment and receiver-reported progress remain distinct. Job template selection grants no SSH privilege and triggers no networking. See [peer transport guide](PEER_TASK_TRANSPORT.md).
+
+## Task Control data and operational boundaries
+
+The Rust `pipboy-core::tasks` module persists a distinct, versioned `tasks.json` board under `PIPBOY_HOME`; the `workbench.json` file still stores role/pin configuration only. Task create/update requests use the existing loopback API but **never** start a communication channel. A reusable browser component `assets/tasks.js` powers both desktop and handheld mission boards. Overseer/Custom with `mission-board` pinned sees the full local manager board; other job profiles see only their locally assigned queue. These UI scopes are **not authenticated role-based access control**.
+
+Task records include expected-revision optimistic concurrency, bounded events and explicit manual `sent_at` / `acknowledged_at` tracking. Clipboard handoffs and email drafts are only prepared after operator action; no automatic sending or receipt inference is performed. The local store rejects invalid/future schemas without replacing them. See [Task Control contract](TASK_CONTROL.md).
+
+## Compact handheld renderer
+
+`assets/micro.{html,css,js}` owns the 480×320 page and tab layout. `RustBoyTasks.mount(..., {compact:true})` selects an independently paginated micro task presentation; desktop continues using the full component. The shared Rust REST API, task store, peer SSH transport, role catalog and capability checks are not duplicated. The normal micro root view suppresses vertical scrolling; long technical outputs and detail accessibility fallbacks remain reachable. No hardware action occurs simply by displaying a screen.
+
+## Dual graphical presentation: desktop and micro
+
+The Rust `pipboy dashboard` process serves two intentionally distinct local views: `/` for the desktop workstation and `/micro` for the dedicated handheld frame (or use `dashboard --micro --open` on Mac). Both send requests to the **same** bounded JSON API and authoritative `pipboy-core::workbench::PRESETS` / `PALETTE` / WorkbenchStore. A role change in one view is reflected in the other after reload. Neither view may acquire new permissions merely by displaying a tile.
+
+The micro renderer has a fixed status header, six-tab rail and one scrollable active viewport rather than responsive desktop columns. It uses original CSS effects, no game artwork, no external scripts/CDNs, and only allowlisted offline tool operations. Scout's map and the Security Chief camera grid are clearly marked **unconnected UI fixtures**. The API still runs only on IPv4 loopback with strict request checks. See [micro controls](MICRO_UI.md).
+
+## Local graphical UI and template state
+
+The new `pipboy dashboard [--port N] [--open]` command runs a loopback-only HTTP service and serves static, embedded original UI assets. The browser is a **presentation client**, not a device broker. `GET /api/state` projects `pipboy-core::workbench::{PRESETS, PALETTE, Workbench}` to the UI; profile activation and Custom pin/unpin go through the same versioned, atomic WorkbenchStore used by the TUI and CLI. Explicitly invoked GIS/NET/HEX calculations call the existing Rust core functions and **never** shell out arbitrary commands. The service neither exposes note contents nor automatically opens live devices.
+
+```text
+Mac/Pi local browser (keyboard, mouse, touch)
+              |
+         127.0.0.1 only
+              |
+       pipboy dashboard (Rust)
+         /              \
+  GET projection      approved JSON POST
+         |              |
+       PRESETS      WorkbenchStore + offline tools
+         \              /
+           pipboy-core
+                  |
+        no device broker grants
+```
+
+The 4-inch reference layouts and mock camera focus are **visual UX fixtures**. A future RustGIS process/renderer integration in Reclamation Scout is a separate gate and must not be substituted with a simulated map. See [dashboard contract](DASHBOARD_UI.md) and [Scout GIS interoperability](SCOUT_GIS_TAK.md).
+
 ## Boundaries
 
     User keyboard / physical controls (future)
@@ -44,6 +88,8 @@ Future feature-gated adapters attach beneath core capability interfaces:
 7. Cross-platform first: Linux, macOS, Windows; add arm64 Raspberry Pi build checks in a later gate.
 
 ## Shared telemetry session
+
+`host_report.rs` derives field-level units, quality and bounded reason codes from the same retained snapshot, without additional collection. `ModuleSample` carries both the raw observation and this detailed report. The TUI and opt-in CLI `--details` output share it; stale propagation is applied at render time. `Collector` requests only CPU/RAM refreshes and gates CPU deltas with a monotonic cadence; the TUI does not prime by sleeping. See [host telemetry](HOST_TELEMETRY.md) for schemas and CPU null semantics.
 
 `TelemetrySession<SnapshotSource>` owns a bounded in-memory observation history. The TUI retains 60 readings; finite NDJSON retains at most the requested 1–30 readings. Both use the same source/provenance and monotonic expiry logic. Tests inject fixture collectors and timestamps. Reading a freshness view never samples the host. `status --json` keeps its existing raw Snapshot format. Both frontends now use `HostTelemetryModule` through `ModuleHost`; collector initialization follows an explicit permitted start. TUI P immediately revokes host reads and clears cached/buffered data; resume grants local reads and explicitly starts a fresh buffer. The one-shot `status` CLI now also uses the lazy `HostTelemetryModule` through `ModuleHost`, with an explicit local read grant, while retaining the original raw `status --json` Snapshot format. LIBRARY and NOTES CLI/TUI paths now use scoped `ModuleHost::run_local` read/write prechecks (execution testing pending). These synchronous operations do not represent running device lifecycle modules; the OS sandbox and device broker are still unimplemented.
 

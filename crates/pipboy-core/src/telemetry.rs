@@ -2,6 +2,7 @@
 //! Collection and clocks are injected so fixtures never need host I/O or sleeps.
 
 use crate::buffer::SampleBuffer;
+use crate::host_report::{self, HostReadings};
 use crate::metrics::{Collector, Snapshot};
 use crate::observation::{Observation, Quality};
 use std::time::Duration;
@@ -21,6 +22,7 @@ pub struct TelemetrySession<S> {
     history: SampleBuffer<Observation<Snapshot>>,
     expires_after_ms: u64,
     last_poll_ms: Option<u64>,
+    poll_interval_ms: Option<u64>,
 }
 
 impl<S: SnapshotSource> TelemetrySession<S> {
@@ -31,6 +33,7 @@ impl<S: SnapshotSource> TelemetrySession<S> {
             history: SampleBuffer::new(capacity)?,
             expires_after_ms,
             last_poll_ms: None,
+            poll_interval_ms: None,
         })
     }
 
@@ -64,6 +67,7 @@ impl<S: SnapshotSource> TelemetrySession<S> {
             Some(self.expires_after_ms),
         )?;
         self.history.push(observation);
+        self.poll_interval_ms = self.last_poll_ms.map(|last| session_ms - last);
         self.last_poll_ms = Some(session_ms);
         Ok(())
     }
@@ -77,6 +81,11 @@ impl<S: SnapshotSource> TelemetrySession<S> {
 
     pub fn retained(&self) -> usize {
         self.history.len()
+    }
+
+    pub fn latest_report(&self, session_ms: u64) -> Option<Observation<HostReadings>> {
+        self.latest(session_ms)
+            .map(|observation| host_report::describe(&observation, self.poll_interval_ms))
     }
 
     pub fn dropped(&self) -> u64 {
@@ -99,7 +108,7 @@ mod tests {
                 observed_unix_s: 1234,
                 os: "fixture".into(),
                 arch: "test".into(),
-                cpu_percent: 0.0,
+                cpu_percent: Some(0.0),
                 logical_cores: 2,
                 memory_used_mib: 10,
                 memory_total_mib: 20,
@@ -124,8 +133,13 @@ mod tests {
         assert_eq!(current.quality, Quality::Valid);
         assert_eq!(current.captured_session_ms, 200);
         assert_eq!(current.provenance, "local:sysinfo");
-        assert_eq!(current.value.unwrap().cpu_percent, 0.0);
+        assert_eq!(current.value.unwrap().cpu_percent, Some(0.0));
         assert_eq!(session.latest(700).unwrap().quality, Quality::Stale);
+        let report = session.latest_report(700).unwrap();
+        let readings = report.value.unwrap();
+        assert_eq!(readings.poll_interval_ms, Some(100));
+        assert_eq!(readings.cpu_percent.quality, Quality::Stale);
+        assert_eq!(readings.cpu_percent.value, Some(0.0));
         assert_eq!(calls.get(), 3); // Rendering does not collect.
     }
 

@@ -16,15 +16,22 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Offline manifest validation
-        run: python3 tools/validate_catalog.py
+        run: |
+          python3 tools/validate_catalog.py
+          python3 tools/validate_roles.py
+          python3 tools/validate_rust_version.py
 
   rust:
     name: Rust ${{ matrix.toolchain }}
     runs-on: ubuntu-latest
+    # The checked-in rust-toolchain.toml selects stable; override that here
+    # so the exact MSRV job genuinely compiles with its requested toolchain.
+    env:
+      RUSTUP_TOOLCHAIN: ${{ matrix.toolchain }}
     strategy:
       fail-fast: false
       matrix:
-        toolchain: ["stable", "1.81.0"]
+        toolchain: ["stable", "1.90.0"]
     steps:
       - uses: actions/checkout@v4
       - name: Install matrix Rust toolchain
@@ -33,9 +40,37 @@ jobs:
           rustup default "${{ matrix.toolchain }}"
           rustc --version
           cargo --version
+      - name: Assert active matrix compiler
+        run: |
+          current="$(rustup show active-toolchain)"
+          case "$current" in
+            "${{ matrix.toolchain }}"-*) ;;
+            *) printf 'Wrong toolchain: %s\n' "$current"; exit 1 ;;
+          esac
+          if [ "${{ matrix.toolchain }}" = "1.90.0" ]; then
+            rustc --version | grep -Eq '^rustc 1\.90\.0 '
+          fi
       - name: Formatting
         if: matrix.toolchain == 'stable'
         run: cargo fmt --all -- --check
+      - name: Install JavaScript test runtime
+        if: matrix.toolchain == 'stable'
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Dashboard JavaScript and native RustGIS map tests
+        if: matrix.toolchain == 'stable'
+        run: |
+          node --check crates/pipboy/assets/dashboard.js
+          node --check crates/pipboy/assets/micro.js
+          node --check crates/pipboy/assets/tasks.js
+          node --check crates/pipboy/assets/map.js
+          node --check crates/pipboy/assets/map-import.js
+          node --check crates/pipboy/assets/map-online.js
+          node tools/test_rustgis_map_import.cjs
+          node tools/test_rustgis_map_view.cjs
+          node tools/test_rustgis_online.cjs
+          node tools/test_rustgis_online_view.cjs
       - name: Compile all targets
         run: cargo check --workspace --all-targets --locked
       - name: Unit tests
@@ -56,6 +91,13 @@ jobs:
           python3 tools/smoke_mock_adapters.py
           python3 tools/smoke_native_cli.py
           python3 tools/smoke_broker.py
+          python3 tools/smoke_game.py
+          python3 tools/smoke_workbench.py
+          python3 tools/smoke_scout.py
+          python3 tools/smoke_dashboard.py
+          python3 tools/smoke_micro.py
+          python3 tools/smoke_tasks.py
+          python3 tools/smoke_peer.py
 
   native:
     name: Native ${{ matrix.os }}
@@ -93,6 +135,13 @@ jobs:
           ${{ matrix.python }} tools/smoke_mock_adapters.py
           ${{ matrix.python }} tools/smoke_native_cli.py
           ${{ matrix.python }} tools/smoke_broker.py
+          ${{ matrix.python }} tools/smoke_game.py
+          ${{ matrix.python }} tools/smoke_workbench.py
+          ${{ matrix.python }} tools/smoke_scout.py
+          ${{ matrix.python }} tools/smoke_dashboard.py
+          ${{ matrix.python }} tools/smoke_micro.py
+          ${{ matrix.python }} tools/smoke_tasks.py
+          ${{ matrix.python }} tools/smoke_peer.py
       - name: Native macOS terminal PTY journey
         if: matrix.os == 'macos-latest'
         shell: bash

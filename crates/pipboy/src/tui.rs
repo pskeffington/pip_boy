@@ -1,25 +1,27 @@
 use crate::console::{self, Action, Navigation, View};
-use crossterm::event::{self, Event, KeyCode, KeyEventKind};
+use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use crossterm::execute;
 use crossterm::terminal::{
     disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen,
 };
 use pipboy_core::catalog::sources;
+use pipboy_core::host_report::{self, HostReadings};
 use pipboy_core::host_telemetry::HostTelemetryModule;
 use pipboy_core::lifecycle::State;
-use pipboy_core::metrics::{Collector, Snapshot};
+use pipboy_core::metrics::Collector;
 use pipboy_core::notes::NoteStore;
 use pipboy_core::observation::Observation;
 use pipboy_core::runtime::{Capability, LocalOperation, ModuleHost, PermissionSet, PollOutcome};
+use pipboy_core::workbench::{WorkbenchStore, PALETTE, PRESETS};
 use ratatui::prelude::*;
 use std::error::Error;
 use std::io;
 use std::time::{Duration, Instant};
 
-struct TerminalGuard;
+pub(crate) struct TerminalGuard;
 
 impl TerminalGuard {
-    fn enter() -> Result<Self, Box<dyn Error>> {
+    pub(crate) fn enter() -> Result<Self, Box<dyn Error>> {
         enable_raw_mode()?;
         if let Err(error) = execute!(io::stdout(), EnterAlternateScreen) {
             disable_raw_mode()?;
@@ -36,16 +38,16 @@ impl Drop for TerminalGuard {
     }
 }
 
+fn exit_requested(key: KeyEvent) -> bool {
+    key.kind == KeyEventKind::Press
+        && (matches!(key.code, KeyCode::Esc | KeyCode::Char('q' | 'Q'))
+            || (matches!(key.code, KeyCode::Char('c' | 'C'))
+                && key.modifiers.contains(KeyModifiers::CONTROL)
+                && (key.modifiers - (KeyModifiers::CONTROL | KeyModifiers::SHIFT)).is_empty()))
+}
+
 pub fn run() -> Result<(), Box<dyn Error>> {
-    let module = HostTelemetryModule::new(
-        || {
-            let mut collector = Collector::new();
-            collector.prime();
-            Ok(collector)
-        },
-        60,
-        Duration::from_secs(4),
-    )?;
+    let module = HostTelemetryModule::new(|| Ok(Collector::new()), 60, Duration::from_secs(4))?;
     let session_start = module.session_start();
     let mut host = ModuleHost::new(PermissionSet::offline_read_only());
     host.register(Box::new(module))?;
@@ -54,6 +56,8 @@ pub fn run() -> Result<(), Box<dyn Error>> {
     let mut latest = Some(initial);
     let library = host.run_local(LocalOperation::LibraryRead, sources)?;
     let store = NoteStore::from_environment()?;
+    let bench_store = WorkbenchStore::from_environment()?;
+    let mut workbench = bench_store.load()?;
     let mut navigation = Navigation::default();
     let mut notes = Vec::new();
     let mut last_sample = Instant::now();
@@ -72,6 +76,7 @@ pub fn run() -> Result<(), Box<dyn Error>> {
                     stat: &body_stat,
                     library: &library,
                     notes: &notes,
+                    workbench: &workbench,
                 },
             )
         })?;
@@ -81,8 +86,89 @@ pub fn run() -> Result<(), Box<dyn Error>> {
                 if key.kind != KeyEventKind::Press {
                     continue;
                 }
+                if navigation.panel == 3 && navigation.profiles_open {
+                    match key.code {
+                        KeyCode::Esc | KeyCode::Char('n' | 'N') => {
+                            navigation.profile_confirm = false;
+                            navigation.profiles_open = false;
+                        }
+                        KeyCode::Enter => navigation.profile_confirm = true,
+                        KeyCode::Char('y' | 'Y') if navigation.profile_confirm => {
+                            if let Some(entry) = PRESETS.get(navigation.profile_selected) {
+                                bench_store.apply_preset(entry.id)?;
+                                workbench = bench_store.load()?;
+                                navigation.focus_last_bench_slot(&workbench);
+                                navigation.profile_confirm = false;
+                                navigation.profiles_open = false;
+                            }
+                        }
+                        KeyCode::Up => navigation.profile_move(Action::Up),
+                        KeyCode::Down => navigation.profile_move(Action::Down),
+                        KeyCode::PageUp => navigation.profile_move(Action::PageUp),
+                        KeyCode::PageDown => navigation.profile_move(Action::PageDown),
+                        KeyCode::Home => navigation.profile_move(Action::Home),
+                        KeyCode::End => navigation.profile_move(Action::End),
+                        KeyCode::Tab | KeyCode::Right => navigation.apply(Action::Next, 0),
+                        KeyCode::BackTab | KeyCode::Left => {
+                            navigation.apply(Action::Previous, 0);
+                        }
+                        _ if exit_requested(key) => break,
+                        _ => {}
+                    }
+                    continue;
+                }
+                if navigation.panel == 3 && navigation.palette_open {
+                    match key.code {
+                        KeyCode::Esc => navigation.palette_open = false,
+                        KeyCode::Enter => {
+                            if let Some(entry) = PALETTE.get(navigation.palette_selected) {
+                                if entry.availability.can_pin() {
+                                    if !workbench.slots.iter().any(|slot| slot.tool == entry.id) {
+                                        bench_store.add(entry.id)?;
+                                        workbench = bench_store.load()?;
+                                    }
+                                    navigation.focus_last_bench_slot(&workbench);
+                                    navigation.palette_open = false;
+                                }
+                            }
+                        }
+                        KeyCode::Up => navigation.palette_move(Action::Up),
+                        KeyCode::Down => navigation.palette_move(Action::Down),
+                        KeyCode::PageUp => navigation.palette_move(Action::PageUp),
+                        KeyCode::PageDown => navigation.palette_move(Action::PageDown),
+                        KeyCode::Home => navigation.palette_move(Action::Home),
+                        KeyCode::End => navigation.palette_move(Action::End),
+                        KeyCode::Tab | KeyCode::Right => navigation.apply(Action::Next, 0),
+                        KeyCode::BackTab | KeyCode::Left => navigation.apply(Action::Previous, 0),
+                        _ if exit_requested(key) => break,
+                        _ => {}
+                    }
+                    continue;
+                }
+                if exit_requested(key) {
+                    break;
+                }
                 match key.code {
-                    KeyCode::Char('q') | KeyCode::Char('Q') | KeyCode::Esc => break,
+                    KeyCode::Char('p' | 'P') if navigation.panel == 3 => {
+                        navigation.profiles_open = true;
+                        navigation.profile_confirm = false;
+                        navigation.profile_selected = PRESETS
+                            .iter()
+                            .position(|entry| entry.id == workbench.profile)
+                            .unwrap_or(0);
+                    }
+                    KeyCode::Char('a' | 'A') if navigation.panel == 3 => {
+                        navigation.palette_open = true;
+                    }
+                    KeyCode::Char('x' | 'X') | KeyCode::Delete if navigation.panel == 3 => {
+                        if let Some(id) = navigation.selected_bench_slot(&workbench) {
+                            bench_store.remove(id)?;
+                            workbench = bench_store.load()?;
+                        }
+                    }
+                    KeyCode::Char('r' | 'R') if navigation.panel == 3 => {
+                        workbench = bench_store.load()?;
+                    }
                     KeyCode::Right | KeyCode::Tab | KeyCode::Left | KeyCode::BackTab => {
                         let action = if matches!(key.code, KeyCode::Right | KeyCode::Tab) {
                             Action::Next
@@ -92,6 +178,9 @@ pub fn run() -> Result<(), Box<dyn Error>> {
                         navigation.apply(action, 0);
                         if navigation.panel == 2 {
                             notes = host.run_local(LocalOperation::NotesRead, || store.list())?;
+                        }
+                        if navigation.panel == 3 {
+                            workbench = bench_store.load()?;
                         }
                     }
                     KeyCode::Up
@@ -108,10 +197,11 @@ pub fn run() -> Result<(), Box<dyn Error>> {
                             KeyCode::Home => Action::Home,
                             _ => Action::End,
                         };
-                        let count = if navigation.panel == 1 {
-                            library.len()
-                        } else {
-                            notes.len()
+                        let count = match navigation.panel {
+                            1 => library.len(),
+                            2 => notes.len(),
+                            3 => workbench.slots.len(),
+                            _ => 0,
                         };
                         navigation.apply(action, count);
                     }
@@ -148,7 +238,7 @@ pub fn run() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-fn read_stat(host: &mut ModuleHost) -> Result<(Observation<Snapshot>, String), String> {
+fn read_stat(host: &mut ModuleHost) -> Result<(Observation<HostReadings>, String), String> {
     let poll = host
         .poll_once()
         .into_iter()
@@ -156,7 +246,7 @@ fn read_stat(host: &mut ModuleHost) -> Result<(Observation<Snapshot>, String), S
         .ok_or("missing STAT module")?;
     match poll.outcome {
         PollOutcome::Sample { data } => Ok((
-            data.host_observation.ok_or("missing STAT observation")?,
+            data.host_report.ok_or("missing STAT field report")?,
             data.detail,
         )),
         other => Err(format!("STAT did not sample: {other:?}")),
@@ -164,7 +254,7 @@ fn read_stat(host: &mut ModuleHost) -> Result<(Observation<Snapshot>, String), S
 }
 
 fn stat_body(
-    observation: Option<&Observation<Snapshot>>,
+    observation: Option<&Observation<HostReadings>>,
     state: State,
     history: &str,
     now: u64,
@@ -175,14 +265,13 @@ fn stat_body(
     else {
         return format!("STAT: {state:?} / PAUSED\nHost read permission revoked. Buffered readings cleared.\nPress P to grant local host read access and resume.");
     };
-    observation.update_freshness(now);
-    let Some(snapshot) = observation.value.as_ref() else {
+    host_report::refresh(&mut observation, now);
+    let Some(readings) = observation.value.as_ref() else {
         return "STAT: UNKNOWN / no reading".into();
     };
     format!(
-        "STAT: {state:?}\nHOST: {} / {}\nCPU: {:.1}% ({} logical cores)\nRAM: {} / {} MiB\nUPTIME: {} seconds\nSOURCE: {} | {:?} | age {} ms\nHISTORY: {} (memory only)\n\nP pauses collection and clears buffered readings.",
-        snapshot.os, snapshot.arch, snapshot.cpu_percent, snapshot.logical_cores,
-        snapshot.memory_used_mib, snapshot.memory_total_mib, snapshot.uptime_s,
+        "STAT: {state:?}\n{}\nSOURCE: {} | {:?} | age {} ms\nHISTORY: {} (memory only)\n\nP pauses collection and clears buffered readings.",
+        host_report::display_fields(readings),
         observation.provenance, observation.quality, now.saturating_sub(observation.captured_session_ms), history,
     )
 }
@@ -191,11 +280,71 @@ fn stat_body(
 mod tests {
     use super::*;
     #[test]
+    fn interrupt_requires_an_explicit_press_and_preserves_other_shortcuts() {
+        for modifiers in [
+            KeyModifiers::CONTROL,
+            KeyModifiers::CONTROL | KeyModifiers::SHIFT,
+        ] {
+            assert!(exit_requested(KeyEvent::new(KeyCode::Char('c'), modifiers)));
+        }
+        for modifiers in [
+            KeyModifiers::NONE,
+            KeyModifiers::ALT,
+            KeyModifiers::CONTROL | KeyModifiers::ALT,
+        ] {
+            assert!(!exit_requested(KeyEvent::new(
+                KeyCode::Char('c'),
+                modifiers
+            )));
+        }
+        let mut release = KeyEvent::new(KeyCode::Char('c'), KeyModifiers::CONTROL);
+        release.kind = KeyEventKind::Release;
+        assert!(!exit_requested(release));
+    }
+
+    #[test]
     fn pause_message_has_no_host_values_and_explains_resume() {
         let text = stat_body(None, State::Disabled, "old history", 1000);
         assert!(text.contains("PAUSED"));
         assert!(text.contains("Press P"));
         assert!(!text.contains("CPU:"));
         assert!(!text.contains("old history"));
+    }
+
+    #[test]
+    fn dashboard_distinguishes_warmup_and_stale_values_without_collecting() {
+        let sample = pipboy_core::metrics::Snapshot {
+            observed_unix_s: 1234,
+            os: "fixture".into(),
+            arch: "test".into(),
+            cpu_percent: None,
+            logical_cores: 2,
+            memory_used_mib: 0,
+            memory_total_mib: 64,
+            uptime_s: 0,
+        };
+        let raw = Observation::new(
+            "host.stats",
+            "fixture",
+            None,
+            100,
+            None,
+            Some(sample),
+            pipboy_core::observation::Quality::Valid,
+            Some(500),
+        )
+        .unwrap();
+        let report = host_report::describe(&raw, None);
+        let current = stat_body(Some(&report), State::Running, "1 retained / 0 dropped", 100);
+        assert!(current.contains("CPU: Unknown (warming up or unavailable)"));
+        assert!(current.contains("RAM: 0 [Valid] / 64 [Valid] MiB"));
+        assert!(current.contains("first poll; interval unknown"));
+        let stale = stat_body(Some(&report), State::Running, "history", 600);
+        assert!(stale.contains("64 [Stale]"));
+        assert!(stale.contains("CPU: Unknown"));
+        let paused = stat_body(Some(&report), State::Disabled, "old history", 600);
+        assert!(!paused.contains("fixture"));
+        assert!(!paused.contains("64"));
+        assert!(!paused.contains("old history"));
     }
 }

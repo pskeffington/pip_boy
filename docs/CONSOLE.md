@@ -9,10 +9,16 @@ The TUI supports keyboard navigation with static presentation and explicit statu
 | Page Up/Page Down | Scroll the selected detail text by a viewport, with one-line overlap |
 | Home/End | First/last source or note; top/bottom text on other panels |
 | R | Reload notes while in NOTES |
-| P | Revoke/resume local host telemetry and clear its history on pause |
-| Q, Escape | Exit and restore the terminal |
+| P on STAT | Revoke/resume local host telemetry and clear its history on pause |
+| P on WORKBENCH | Open the eight-role picker; Enter prepares replacement, Y confirms, N/Esc cancels |
+| A on WORKBENCH | Browse the built-in tool palette; Enter pins a supported tool without running it |
+| X/Delete on WORKBENCH | Unpin selected tool; does not delete notes or permission settings |
+| R on WORKBENCH | Reload pinned layout from local workbench JSON |
+| Q, Escape, Ctrl+C | Exit and restore the terminal |
 
 ## Collections and freshness
+
+STAT shows explicit field quality beside CPU, cores, memory, OS/architecture and uptime. CPU starts as unknown until a full sampling window is available; startup and resume do not sleep to prime it. Expiry marks measured fields stale, while unknown/invalid fields keep no numeric value. P clears both detailed readings and raw history. See [host telemetry](HOST_TELEMETRY.md) for units, timing and CLI compatibility.
 
 LIBRARY and NOTES show an item selector above a scrollable detail pane. Every stored note is reachable, most recently stored first; the old 12-note display cutoff is removed. The selected note's entire text can be paged, including content wrapping below a narrow viewport. LIBRARY details show repository, license status, reference-only disposition, URL and summary. Selecting a URL does not open it or initiate network access.
 
@@ -29,3 +35,9 @@ Rendering and navigation live in console.rs and perform no file, collector or te
 ## Executed checks
 
 Memory-backed fixtures exercise all six panels at tiny, compact and standard sizes, empty collections, selection bounds, older notes, Unicode wrapped text tails and resize clamping. Linux and native macOS PTY smoke checks exercise note reload, End selection, shrink/grow recovery, pause/resume and normal/error terminal restoration, with macOS CI passing at [run 40162059963](https://github.com/pskeffington/pip_boy/actions/runs/40162059963). A new first-party Windows ConPTY regression now uses the OS pseudoconsole API to exercise launch, P pause/resume, shrink/grow, Q exit, alternate-screen restoration and corrupt-notes exit, without third-party runner actions. **The Windows ConPTY test passed** in [GitHub Actions run 40162936734](https://github.com/pskeffington/pip_boy/actions/runs/40162936734), including clean exit and corrupt-notes restoration. Windows ConPTY is a terminal test, not an OS device-permission broker. Contrast and assistive-technology acceptance remain open; see [validation evidence](VALIDATION.md).
+
+## Keyboard interrupt contract
+
+Ctrl+C is handled as a key press in raw terminal mode and follows the same normal return/terminal guard cleanup as Q and Escape, including on the resize fallback screen. Ctrl+Shift+C also exits if the terminal delivers it; a terminal may reserve that shortcut for copying. Plain C and Ctrl+Alt+C do not exit. This covers keyboard events, not externally delivered SIGTERM, SIGHUP, forced termination or a guarantee of panic recovery. CLI sampling signal cancellation remains a separate open gate.
+
+Regression coverage includes a live Linux/macOS PTY Ctrl+C journey with exact terminal-attribute and alternate-screen restoration, and a Windows ConPTY Ctrl+C journey after pause/resume and shrinking to 20×5. Both require exit code zero and no user-data writes.

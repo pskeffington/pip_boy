@@ -1,0 +1,54 @@
+# Rust-Boy | Fallout 4 game mode
+
+Status: implemented **read-only companion browser**, with controlled-server protocol and terminal tests. Actual Fallout 4 builds/platforms are **not yet live-validated**. This is not a complete replacement for every official Pip-Boy app feature. Equip/use/drop, quest toggles, travel, radio control and local-map image rendering are not implemented.
+
+**Current priority: [Mac launch → PlayStation](MAC_PLAYSTATION.md).** The broader edition matrix below is retained as deferred scope.
+
+## Broader edition compatibility target (deferred)
+
+The requested target covers all versions; **no edition is yet certified with a real running game**. A client cannot connect to a service the game does not expose.
+
+| Installation | Connection route | Current acceptance |
+| --- | --- | --- |
+| PC legacy / pre-Anniversary, including differing storefronts | Built-in companion TCP service where available | Rust client implemented; actual builds untested |
+| PC Anniversary Edition | Game-side service enabler or a separately validated bridge required | Native client can speak the legacy protocol; enabler integration untested |
+| PS4 / Xbox One builds | Companion service only if that exact build exposes it | Not tested; no universal console support claimed |
+| PS5 / Xbox Series native or backward-compatible builds | Depends on the exact installed game build/service | Not tested; cannot assume equivalence to the older build |
+| Modded installations | Retain/re-enable a compatible service or supply a validated bridge | No automatic mod installation or process injection |
+
+The [AE companion enabler author's description](https://www.nexusmods.com/fallout4/mods/108133) reports that Anniversary Edition removed the old menu option and stopped starting the service. This is a third-party game-side project, not bundled or verified by Rust-Boy. Its supported builds, prerequisites and binary trust must be checked before installation. Rust-Boy does not alter the game or install this mod automatically. Console editions without an exposed service remain blocked; PC-only service mods do not establish console support.
+
+## Connect to your game
+
+1. Identify the edition below. On builds exposing the legacy service, enable **Pip-Boy App Enabled** in Settings → Gameplay, restart if required, and load a save. Do not assume Anniversary Edition or a native console edition exposes this service.
+2. Close other companion apps: a busy server accepts only one companion connection.
+3. On the same PC, try `127.0.0.1:27000`. From another computer use the game host's LAN IP and TCP port 27000. Permit the connection through the host firewall on your trusted network if needed. Do not expose the companion port to the internet.
+4. Run Rust-Boy on a computer able to reach the game host:
+
+```bash
+cargo run --locked -p pipboy -- game --connect 127.0.0.1:27000 --confirm
+# A single bounded JSON view for diagnostics:
+cargo run --locked -p pipboy -- game --connect 127.0.0.1:27000 --confirm --snapshot
+```
+
+`--connect` requires a literal IP:port (IPv6 uses `[address]:port`). `--confirm` explicitly authorizes this one TCP connection. Arguments and saved adapter preferences are validated before connecting. A saved `network.fetch` denial blocks the connection even with `--confirm`; explicitly clear it with `pipboy permissions clear network.fetch` to change that choice. Corrupt/future preference files fail before connection and are preserved. Reading an absent preference file creates nothing. No discovery broadcast, DNS lookup, automatic retry, background connection, game-state file or telemetry upload occurs. Normal STAT/LIBRARY/NOTES startup remains offline. The separate physical-device broker is unchanged and remains deny-only.
+
+Game mode opens a terminal browser with separate object navigation and selected-value panes. Up/Down selects a game object and keeps it visible in long lists; Enter/Right opens it; Backspace/Left returns to its parent with selection and text position preserved. R returns to the root. Page Up/Down scrolls the selected value; Home/End reaches its first/last text page. Scrolling clamps to the rendered content, including after a resize. Wide terminals use side-by-side panes; compact terminals stack them, with resize guidance below 40×12. Q/Escape/Ctrl+C exits and restores the terminal.
+
+Browse the game's actual root categories for stats, SPECIAL, inventory, quests and map coordinate/object data. Names and availability come from the game; absent objects are not invented. Selection follows named keys when updates reorder a dictionary. An opened path follows replacement references and returns to a surviving parent when removed, rather than leaving an orphaned object's data on screen. No game action is transmitted: outbound bytes are heartbeat responses only. Root/selected views are generic JSON rather than fixed field mappings, so schema differences remain inspectable.
+
+## Protocol and resource limits
+
+The independent Rust implementation follows the published [pipboyspec communication reference](https://github.com/mattbaker/pipboyspec/blob/master/communication.md) and [pipboylib protocol reference](https://github.com/RobCoIndustries/pipboylib/blob/b1d936f0bbffb5c702a8e06faf5563b1fa109475/docs/server-msg-spec.md) / [decoder behavior](https://github.com/RobCoIndustries/pipboylib/blob/b1d936f0bbffb5c702a8e06faf5563b1fa109475/src/decoding/parseBinaryDatabase.js). These are community protocol descriptions, not a Bethesda compatibility guarantee; no upstream implementation or game assets are bundled.
+
+Frames have a four-byte little-endian payload size and a one-byte channel. The client accumulates fragmented input, accepts coalesced frames, echoes server heartbeat frames, parses the language/version handshake, refuses busy state, and applies type-3 database updates by object ID. Dictionary removals apply before insertions so a replacement with the same key survives. Scalar, array and dictionary values are retained across incremental updates. An incomplete/invalid update never partially changes the database. Snapshot output waits until root zero is an object and all reachable references exist.
+
+Limits: 8 MiB frame; 100,000 database objects; 16 MiB encoded retained database; 4,096-byte wire strings; 32-level/5,000-node resolved views; 32-level browser navigation; 262,144 visible text characters. Missing references and cyclic/limited views have explicit markers. Snapshot JSON is a bounded diagnostic view, not a lossless full-game export. Invalid floats/types, oversized input, connection loss and busy state stop with an error. Connect timeout is three seconds, initial language/version and complete-root timeouts ten seconds, no-receive timeout fifteen seconds, write timeout two seconds. The announcement is bounded to 4,096 bytes; `lang` and `version` must be nonempty strings of at most 256 bytes without control characters. Additional announcement fields are retained. Snapshot and diagnostic success require both the announcement and complete root. The initial-root deadline does not reject later incremental updates whose references arrive separately. Update age is shown separately from receipt/heartbeat activity. Disconnected values are not presented as live; the view exits. Game-provided control characters are removed before terminal rendering.
+
+## Validation and remaining acceptance
+
+`tools/smoke_game.py` starts only a temporary loopback mock peer and verifies fragmented frames, heartbeat replies, a root whose reference arrives later, snapshot values, delayed/missing/invalid/oversized announcements, busy/oversize refusal, strict arguments/consent, no gameplay commands/files, and interactive browser exit/restoration. A session held beyond the startup deadline then receives a new split reference and displays the updated HP value. Another journey opens a 40-item inventory, selects item 26, opens/returns from its value, shrinks to 20×5 and restores 100×24 while preserving context, then exits. A disconnect journey verifies an error exit and terminal restoration. EOF, TCP reset or Windows connection-aborted are accepted only at the final peer-close check, not during active exchange. It uses POSIX PTY on Linux/macOS and native ConPTY on Windows. On macOS it also runs the actual launcher from a path containing spaces with explicit and prompted IPs, clean diagnostic JSON and interactive Ctrl+C exit. Core tests cover transactional updates, live references, dictionary replacement/removal, cycles, missing references and non-finite values. Six pure browser tests cover long-list visibility, named selection, reference replacement/removal, scroll limits/resizing, eight viewport sizes, empty states, control stripping and the 32-level navigation limit. Native CI runs the smoke suite on all three OSs.
+
+Before calling this fully game-compatible, record a real game session: platform, exact Fallout 4 version, App Enabled setting, successful connection, category browsing, observed inventory/stat/map changes, heartbeat continuity, disconnect/busy behavior, and terminal restoration. Neither synthetic fixtures nor CI can establish those results. Real game actions and map images need separate implementations and game-side verification.
+
+Interactive live-update tests use a distinct nine-digit fixture value, with a deliberate short-number decoy in connection metadata. Matching a short number in a raw terminal stream is insufficient evidence of an observed game update.

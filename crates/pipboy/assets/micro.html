@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#09120b">
+  <meta name="description" content="Rust-Boy local micro handheld workbench">
+  <title>Rust-Boy // Micro Field Terminal</title>
+  <link rel="stylesheet" href="/assets/micro.css">
+  <link rel="stylesheet" href="/assets/map.css">
+  <link rel="stylesheet" href="/assets/tasks.css">
+  <script src="/assets/tasks.js" defer></script>
+  <script src="/assets/map-import.js" defer></script>
+  <script src="/assets/map-online.js" defer></script>
+  <script src="/assets/map.js" defer></script>
+  <script src="/assets/micro.js" defer></script>
+</head>
+<body class="micro-phosphor">
+  <div class="hardware-wrap">
+    <div class="hardware-label" aria-hidden="true"><span>RB / FIELD</span><span>MICRO</span></div>
+    <div class="micro-device" id="micro-device">
+      <header class="topbar">
+        <button id="role-switch" type="button" class="role-switch" aria-label="Select occupational profile" aria-haspopup="dialog">
+          <span class="rb-mark" aria-hidden="true">RB<span>/</span></span>
+          <span id="role-short">OVERSEER</span>
+          <span aria-hidden="true" class="down-chevron">⌄</span>
+        </button>
+        <div class="right-status">
+          <span class="status-local"><span class="tiny-led" aria-hidden="true"></span>LOCAL</span>
+          <time id="local-clock" aria-label="Device local time">--:--</time>
+          <a class="desk-link" href="/" aria-label="Return to desktop dashboard">DESK</a>
+        </div>
+      </header>
+
+      <div class="view-heading">
+        <div class="heading-left">
+          <span id="page-code" class="micro-label">01</span>
+          <h1 id="page-title">STATUS</h1>
+        </div>
+        <span class="mode-indicator" id="mode-indicator">OFFLINE</span>
+      </div>
+
+      <main id="micro-viewport" class="micro-viewport" tabindex="-1" aria-label="Handheld active screen">
+        <section id="micro-content" class="micro-content" aria-live="off">
+          <div class="boot-message">LOADING…</div>
+        </section>
+      </main>
+
+      <nav class="tab-rail" id="micro-rail" aria-label="Micro workbench pages">
+        <button data-tab="stat" class="tab" type="button" aria-current="page"><span class="tab-symbol" aria-hidden="true">▤</span><span>STAT</span></button>
+        <button data-tab="gear" class="tab" type="button"><span class="tab-symbol" aria-hidden="true">▦</span><span>GEAR</span></button>
+        <button data-tab="map" class="tab" type="button"><span class="tab-symbol" aria-hidden="true">⌖</span><span>MAP</span></button>
+        <button data-tab="data" class="tab" type="button"><span class="tab-symbol" aria-hidden="true">≡</span><span>DATA</span></button>
+        <button data-tab="link" class="tab" type="button"><span class="tab-symbol" aria-hidden="true">⌁</span><span>LINK</span></button>
+        <button data-tab="conf" class="tab" type="button"><span class="tab-symbol" aria-hidden="true">⚙</span><span>CONF</span></button>
+      </nav>
+
+      <footer class="micro-bottom">
+        <span id="micro-foot-message">LOCAL</span>
+        <span class="keys-help">1–6 · ESC</span>
+      </footer>
+    </div>
+    <div class="hardware-footer" aria-hidden="true"><span>RUST-BOY</span><span>LOCAL</span></div>
+  </div>
+
+  <dialog id="roles-dialog" class="roles-dialog" aria-labelledby="roles-heading">
+    <div class="dialog-wrap">
+      <div class="dialog-head">
+        <span class="micro-label">JOB / ROLE</span>
+        <button id="close-roles" type="button" class="tiny-button" aria-label="Close profile selector">✕</button>
+      </div>
+      <h2 id="roles-heading">LOAD ROLE</h2>
+      <p class="dialog-copy">Select a role. Custom starts empty.</p>
+      <div id="roles-list" class="roles-list" role="group" aria-label="Available profiles"></div>
+      <div class="role-pager" aria-label="Role pages">
+        <button id="role-prev" type="button" class="micro-button compact" aria-label="Previous roles">◀</button>
+        <span id="role-page" class="micro-label">1 / 2</span>
+        <button id="role-next" type="button" class="micro-button compact" aria-label="Next roles">▶</button>
+      </div>
+      <div class="dialog-summary">
+        <strong id="chosen-role-name">OVERSEER</strong>
+        <span id="chosen-role-detail">ROLE</span>
+      </div>
+      <div class="dialog-actions">
+        <button id="cancel-roles" type="button" class="micro-button ghost">CANCEL</button>
+        <button id="apply-role" type="button" class="micro-button solid">LOAD ROLE</button>
+      </div>
+      <p class="dialog-warning">PINS ONLY · DOES NOT RUN TOOLS</p>
+    </div>
+  </dialog>
+
+  <div id="micro-toast" class="micro-toast" role="status" aria-live="polite" hidden></div>
+</body>
+</html>

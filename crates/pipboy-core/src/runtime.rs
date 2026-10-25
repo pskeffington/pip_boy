@@ -2,6 +2,7 @@
 //! This application policy is not an operating-system sandbox.
 
 pub use crate::capability::{Capability, PermissionSet};
+use crate::host_report::HostReadings;
 use crate::lifecycle::{Event, ModuleLifecycle, State};
 use crate::metrics::Snapshot;
 use crate::observation::Observation;
@@ -15,6 +16,8 @@ pub struct ModuleSample {
     pub detail: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub host_observation: Option<Observation<Snapshot>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub host_report: Option<Observation<HostReadings>>,
 }
 
 /// Only trusted built-ins may implement this interface. Construction and
@@ -323,6 +326,7 @@ mod tests {
                 source: self.id.to_string(),
                 detail: "fixture".to_string(),
                 host_observation: None,
+                host_report: None,
             })
         }
     }
@@ -347,6 +351,7 @@ mod tests {
                 source: "library-fixture".to_owned(),
                 detail: "offline-only".to_owned(),
                 host_observation: None,
+                host_report: None,
             })
         }
     }
@@ -511,6 +516,7 @@ mod tests {
                 source: "fixture".into(),
                 detail: "ok".into(),
                 host_observation: None,
+                host_report: None,
             })
         }
     }

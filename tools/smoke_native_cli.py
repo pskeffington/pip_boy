@@ -50,11 +50,43 @@ def main():
         assert status["observed_unix_s"] > 1_600_000_000
         assert isinstance(status["os"], str) and status["os"]
         assert isinstance(status["arch"], str) and status["arch"]
-        assert isinstance(status["cpu_percent"], (int, float))
+        assert status["cpu_percent"] is None or (
+            isinstance(status["cpu_percent"], (int, float)) and 0 <= status["cpu_percent"] <= 100
+        )
         assert status["memory_total_mib"] >= status["memory_used_mib"] >= 0
         assert status["uptime_s"] >= 0
 
         assert "STAT" in run(env, "status")
+        details = json.loads(run(env, "status", "--details", "--json"))
+        assert details["schema_version"] == 1
+        assert details["source_id"] == "host.stats"
+        assert details["provenance"] == "local:sysinfo"
+        fields = details["value"]
+        assert fields["payload_schema_version"] == 1
+        assert fields["poll_interval_ms"] is None
+        units = {
+            "os": "text", "arch": "text", "cpu_percent": "percent",
+            "logical_cores": "count", "memory_used_mib": "MiB",
+            "memory_total_mib": "MiB", "uptime_s": "s",
+        }
+        for key, unit in units.items():
+            field = fields[key]
+            assert set(field) == {"value", "unit", "quality", "reason"}
+            assert field["unit"] == unit
+            if field["quality"] in ("unknown", "invalid"):
+                assert field["value"] is None and field["reason"]
+            else:
+                assert field["quality"] == "valid"
+                assert field["value"] is not None and field["reason"] is None
+        assert "field quality" in run(env, "status", "--details")
+        assert json.loads(run(env, "status", "--json", "--details"))["schema_version"] == 1
+        samples = [json.loads(row) for row in run(
+            env, "sample", "--details", "--count", "2", "--interval-ms", "500"
+        ).splitlines()]
+        assert len(samples) == 2
+        assert samples[0]["value"]["poll_interval_ms"] is None
+        assert samples[1]["value"]["poll_interval_ms"] >= 500
+        assert all(row["value"]["cpu_percent"]["unit"] == "percent" for row in samples)
         assert "stat" in run(env, "modules")
         assert "sim:gpio" in run(env, "simulate", "list")
         assert "no OS device discovery" in run(env, "simulate", "list")
@@ -68,6 +100,10 @@ def main():
 
         for invalid in (
             ("status", "--json", "extra"),
+            ("status", "--details", "--details"),
+            ("status", "--json", "--json"),
+            ("status", "--details", "extra"),
+            ("sample", "--details", "--details"),
             ("modules", "extra"),
             ("simulate", "adapter", "invalid"),
             ("simulate", "adapter", "input"),

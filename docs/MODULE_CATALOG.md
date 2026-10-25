@@ -2,7 +2,7 @@
 
 **Status: roadmap, not finished hardware.** Source of truth: [`catalog/module_plan.json`](../catalog/module_plan.json). Snapshot: 2026-10-24.
 
-- **Implemented, unverified** means code exists but successful compilation, CI, and platform smoke tests are not yet demonstrated.
+- **Implemented, unverified** is the module acceptance state; applicable CI has run, while broader release/accessibility acceptance remains open. See [validation](VALIDATION.md).
 - **Planned** means design and acceptance criteria only; no hardware, GNSS, SDR, mesh or remote service connectivity is represented as live.
 - A capability listed here is a **required permission**, not one currently acquired or enforced by an OS.
 - Modules are grouped by dependency gate; timing is intentionally unspecified.
@@ -16,6 +16,8 @@
 | `notes` | Offline field notes | P0 | implemented unverified | — | [L04](LITERATURE_MATRIX.md#l04), [L19](LITERATURE_MATRIX.md#l19), [L35](LITERATURE_MATRIX.md#l35), [L36](LITERATURE_MATRIX.md#l36), [L37](LITERATURE_MATRIX.md#l37) |
 
 ### `stat` — Host status
+
+Field-level units/quality, CPU warm-up and poll timing now share a core report across console and `--details` CLI output. See [host telemetry](HOST_TELEMETRY.md). Module acceptance remains open.
 
 **Purpose:** core · **Gate:** G0 · **Priority:** P0 · **Status:** implemented_unverified.  
 **Requested capabilities:** `host.read`.
@@ -348,3 +350,7 @@ Partial implementation: pure renderer/navigation, 40x12 compact layout, fallback
 ## Traceability
 
 For every implementation PR, link a module ID, an evidence ID, an acceptance test, and permission/capability review. The `pipboy plan` and `pipboy evidence` CLI commands will report these manifests once the core loader is integrated.
+
+### `game` — Fallout 4 companion
+
+G3 acceptance remains planned; a read-only native TCP browser/decoder precursor is implemented. Required permission: explicitly confirmed `network.fetch` for a literal endpoint. Evidence: L38. See [edition matrix, setup, limits and outstanding live acceptance](GAME_MODE.md).

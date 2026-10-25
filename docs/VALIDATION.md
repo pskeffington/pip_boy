@@ -1,6 +1,70 @@
 # Rust-Boy | Validation evidence
 
-Updated October 25, 2026 (America/New_York). **Current verified source baseline:** [PR CI 40164915215](https://github.com/pskeffington/pip_boy/actions/runs/40164915215) passed catalog, Linux stable and Rust 1.81.0, native macOS PTY, native Windows ConPTY and the deny-all physical-broker tests at `e7d1090`. This is not physical-hardware, packaging or accessibility certification. **Sections farther below preserve historical development snapshots**; any older “pending”, “unexecuted” or “startup failure” wording describes the state *at the cited historical revision*, not the current status.
+
+## Rust 1.90 minimum-supported toolchain transition — October 25, 2026
+
+The Reclamation Scout development branch declares `[workspace.package] rust-version = "1.90"` and now **enforces** Rust **1.90.0** alongside stable in GitHub Actions, using an explicit `RUSTUP_TOOLCHAIN` matrix override and compiler-version assertion. This change is intended to align the compiler floor with RustGIS while keeping the Rust 2021 edition and the existing lockfile. The exact updated commit requires its own complete CI result before promotion. **Historical compiler verification correction:** An earlier job named Rust **1.81.0** installed that compiler but actually used stable (`rustc 1.99.0` in [run 40172664621](https://github.com/pskeffington/pip_boy/actions/runs/40172664621)), because the checked-in `rust-toolchain.toml` overrode `rustup default`. Thus older job labels do **not** independently verify Rust 1.81.0 compatibility. Historical passing suites below remain evidence of the code under the **compiler actually used** and of native runtime tests, not independent MSRV or RustGIS/Raspberry Pi acceptance.
+
+Updated October 25, 2026 (America/New_York). **Verified published baseline:** [PR CI 40168791127](https://github.com/pskeffington/pip_boy/actions/runs/40168791127) passed all five jobs at `176516e`: catalog, Linux stable and Rust 1.81.0, native macOS PTY and the actual source launcher, native Windows ConPTY and deny-all physical-broker checks. This is not live PlayStation, physical-hardware, packaging or accessibility certification. **Sections farther below preserve historical development snapshots**; any older “pending”, “unexecuted” or “startup failure” wording describes the state *at the cited historical revision*, not the current status.
+
+## Live-update test marker regression
+
+The browser revision `09dbf2d` passed catalog, Linux stable/MSRV and native macOS, including 147 Rust tests and actual source-launcher/inventory journeys ([CI 40169810949](https://github.com/pskeffington/pip_boy/actions/runs/40169810949)). Windows passed its 146 Rust tests and inventory journey, but the delayed-reference peer again reported WSAECONNABORTED despite a successful terminal child exit.
+
+The terminal harness had accepted the short raw-output substring `90` as evidence of the updated HP value. Connection metadata or terminal sequences could satisfy that check before the delayed update. The follow-on waits for a unique nine-digit fixture value and deliberately includes `fixture-90` in interactive announcement metadata. A local mutation check restores the old `90` marker and requires that the delayed-reference journey fail, proving the decoy catches premature exit; the unmodified suite then verifies the actual delayed value. This changes test synchronization only; the Rust browser implementation remains unchanged from `09dbf2d`. Fresh hosted Windows verification is required for this strengthened check.
+
+## Game browser navigation follow-on
+
+The pure `game_view.rs` renderer separates object navigation from selected JSON, keeps the selected row visible, preserves parent context, clamps text scrolling to actual wrapping, adapts between side-by-side/stacked panes, and shows resize guidance below 40×12. Named selection survives dictionary insertions. An opened path follows replacement references or returns to a surviving parent after removal. Left/Right, R and End supplement existing navigation; the 32-level bound remains.
+
+Six new deterministic memory-render/state tests exercise a 40-item inventory, parent restoration, reordered/removed/replaced game references, Unicode text tails and resize clamping, eight viewport sizes including zero dimensions, empty objects, terminal controls and cycles/depth. Local Linux stable and Rust 1.81.0 each passed **24 CLI + 111 core + 12 broker = 147 tests**. The expanded actual-client PTY peer journey opens inventory, selects item 26, opens/returns, shrinks/restores the terminal and exits; it passed locally. Current-head hosted macOS/Windows execution remains to be verified.
+
+## Game readiness and prompted Mac launcher follow-on
+
+Diagnostic/snapshot readiness now requires a bounded language/version announcement as well as a complete reachable root. Malformed announcement fields are rejected and unknown fields retained. The browser distinguishes waiting for an announcement from waiting for complete data. A later split-reference update no longer incorrectly triggers the initial-root timeout after an established connection.
+
+The Mac source launcher accepts `--diagnose` before/after an address or without an address to prompt. Prompt text goes to stderr, preserving machine-readable JSON on stdout. Missing input, repeated/unknown flags and extra addresses fail explicitly. Native Mac regression journeys exercise explicit-IP diagnostics, prompted diagnostics and an interactive prompt → live update → Ctrl+C path from a project path containing spaces and a different working directory. Literal shell-like addresses, saved network denial and corrupt preferences are also covered.
+
+The expanded controlled-peer suite checks delayed/missing/invalid/oversized announcements, live HP updates, a split reference after the ten-second startup deadline, and disconnect/error terminal restoration in PTY/ConPTY. Local Linux stable and Rust 1.81.0 each passed **18 CLI + 111 core + 12 broker = 141 tests**. Stable formatting, Clippy with warnings denied, workspace build, catalog validation, native CLI, runtime PTY and the expanded game peer/PTY smoke suite passed. Bash syntax validation passed. The three actual-launcher journeys and refusal cases also passed on Linux with a controlled `uname` shim substituting only the launcher platform gate, using the actual compiled client and loopback peer; this is shell/CLI contract evidence, not native macOS acceptance. Actual Mac launcher execution still requires native CI at this follow-on's published head.
+
+Published at `6979a66`: [CI 40169394680](https://github.com/pskeffington/pip_boy/actions/runs/40169394680) passed catalog, both Linux toolchains and native macOS, including the actual prompted source launcher. Windows compiled and passed its 140 unit tests, then the mock peer reported WSAECONNABORTED despite a successful terminal child exit. The follow-on accepts EOF/reset/aborted only at the final close boundary; heartbeat and active-stream failures remain errors. The later marker investigation above identifies why a successful child exit was insufficient proof of the delayed update. This historical run does not establish complete Windows acceptance.
+
+No actual PlayStation session is available; this pass does not complete live game or gameplay-control acceptance.
+
+## Mac → PlayStation launch pass
+
+Adds a PlayStation IP preset (TCP 27000 by default), protocol-aware diagnostic JSON, console-specific failure advice, and `scripts/launch-playstation.command` for Finder/Terminal. Diagnostic readiness requires a complete reachable game root, not merely TCP success; selected PlayStation profile is explicitly not authenticated console identity. Other edition expansion is deferred.
+
+Local Linux stable and Rust 1.81.0 passed **17 CLI + 111 core + 12 broker = 140 tests**; formatting, Clippy, build, source validation, native CLI and game mock-peer smoke passed. The game suite checks the preset/diagnostic contract and rejects conflicting options/hostnames. **Verified:** [PR CI 40168791127](https://github.com/pskeffington/pip_boy/actions/runs/40168791127) passed all five jobs at `176516e`, including actual native macOS launcher execution through a repository symlink containing spaces, from a different working directory, against a temporary protocol peer. Executable mode is part of the launcher contract.
+
+An actual PlayStation game session remains unavailable; PS4/PS5 build-specific support is not attested by the mock peer. See [Mac → PlayStation setup and live acceptance](MAC_PLAYSTATION.md).
+
+## Fallout 4 companion precursor — controlled-peer validation
+
+The opt-in read-only game browser is implemented with a transactional binary database decoder and direct TCP client. Local stable and Rust 1.81.0 passed **16 CLI + 111 core + 12 broker = 139 tests**; stable Clippy, build, formatting, offline catalog, native CLI and runtime PTY smoke passed. `tools/smoke_game.py` passed a loopback mock game with byte-fragmented frames, heartbeat verification, late references, busy/oversize refusal, no gameplay commands/data-file writes, and interactive PTY navigation/exit restoration. The same game harness is wired into Windows ConPTY and macOS/Linux CI. New hosted CI remains to be verified at publication.
+
+**No actual game session was available.** All-version support, AE game-side enabler/bridge, console availability, gameplay controls and map images remain open. Synthetic protocol success is not proof of live game compatibility. See [game mode](GAME_MODE.md), module `game`, evidence L38.
+
+## TUI keyboard-interrupt pass — local checks passed
+
+Ctrl+C now returns through normal terminal guard cleanup; Ctrl+Shift+C is also accepted when delivered as a key event. Plain C, Alt+C, Ctrl+Alt+C and key-release events do not trigger the interrupt path. The POSIX PTY regression verifies actual Ctrl+C input, zero exit status, exact terminal attributes and alternate-screen restoration. Windows ConPTY coverage adds Ctrl+C after pause/resume and shrink to 20×5. Native CI must validate that new Windows journey. This is keyboard-event handling, not external OS signal cancellation.
+
+Local Linux stable 1.99.1 and Rust 1.81.0 each passed **16 CLI + 107 core + 12 broker = 135 tests**. Formatting, Clippy with warnings denied, workspace build, catalog validation and the updated POSIX runtime smoke passed. Modules: console/telemetry; evidence: L05/L37. See [console contract](CONSOLE.md).
+
+## G1-B/G1-C host field-quality pass — local checks passed
+
+Built from merged foundation `794da68`. The new `host_report.rs` provides seven typed field readings with units, quality and finite reason codes; `status --details [--json]`, `sample --details` and the console derive them from the same single snapshot. The default JSON keys are preserved; unavailable CPU is explicitly null. CPU initialization requests only CPU/RAM and gates refreshes with monotonic elapsed time; the TUI no longer sleeps to prime CPU. Poll-start intervals reset with a new session. See the [host telemetry contract](HOST_TELEMETRY.md).
+
+Executed locally on Linux with locked dependencies:
+
+- Stable Rust **1.99.1**: format check, workspace unit tests, Clippy with `-D warnings`, and workspace binary build passed.
+- Minimum-supported Rust **1.81.0**: workspace compile/unit tests passed. Both toolchains passed **15 CLI + 107 core + 12 broker = 134 tests**.
+- All nine black-box suites passed: `smoke_native_cli`, `smoke_runtime`, `smoke_notes`, `smoke_permissions`, `smoke_simulator`, `smoke_replay`, `smoke_transport`, `smoke_mock_adapters`, and `smoke_broker`.
+- Offline catalog validation passed: **27 modules, 37 evidence records, 14 external sources, 8 runtime entries**.
+
+New fixtures cover exact CPU cadence, early/repeated/backward ticks, genuine zero, unavailable CPU/core/OS/memory values, NaN/infinity/range checks, inconsistent memory, expiry, report provenance/JSON round-trip, no duplicate collection, and paused-value clearing. The existing cross-platform `smoke_native_cli.py` now also checks detailed text/JSON/NDJSON, units, null reasons, timing, argument rejection and absence of data-file/ANSI side effects. Evidence IDs: L03, L19, L31, L32, L33; modules: `stat`, `telemetry`.
+
+Native macOS/Windows execution for this new pass must be confirmed in its associated [quality workflow](https://github.com/pskeffington/pip_boy/actions/workflows/rust.yml) before merge. No dependency or permission change, hardware enablement, stored-observation migration, measured CPU accuracy/overhead baseline or accessibility certification is claimed.
 
 ## G2-A deny-all broker protocol — cross-platform CI verified
 
