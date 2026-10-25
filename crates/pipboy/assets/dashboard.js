@@ -230,13 +230,24 @@ function renderExtension() {
     ui.extension.append(map);
     if (window.RustBoyMap) {
       requestAnimationFrame(() => {
-        if (map.isConnected) window.RustBoyMap.mount(map);
+        if (map.isConnected) window.RustBoyMap.mount(map, {
+          reclamation: selectedAvailable() &&
+            snapshot.active.slots.some((slot) => slot.tool === "reclamation")
+        });
       });
     }
     if (selectedAvailable() && window.RustBoyReclamation) {
       const station = el("div", "rb-reclamation-desktop");
       ui.extension.append(station);
-      window.RustBoyReclamation.mount(station);
+      window.RustBoyReclamation.mount(station, {
+        onMap: (site) => {
+          if (window.RustBoyMap && window.RustBoyMap.queueSiteFocus(site.id)) {
+            if (typeof map.scrollIntoView === "function") {
+              map.scrollIntoView({ block: "nearest" });
+            }
+          }
+        }
+      });
     }
     if (selectedAvailable() && window.RustBoyTasks) {
       const queue = el("div", "job-assignments");
