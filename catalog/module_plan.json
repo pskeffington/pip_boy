@@ -37,11 +37,13 @@
     ],
     "evidence": [
       "L10",
-      "L19"
+      "L19",
+      "L37"
     ],
     "features": [
       "Bundled GitHub source catalog",
-      "License and reuse classification"
+      "License and reuse classification",
+      "Keyboard selection and scrollable reference details, without opening links"
     ],
     "acceptance": [
       "Catalog validates unique IDs",
@@ -63,13 +65,15 @@
       "L04",
       "L19",
       "L35",
-      "L36"
+      "L36",
+      "L37"
     ],
     "features": [
       "User-directed create/list notes",
       "Local JSON persistence",
       "Bounded validated schema-1 notes, locked write transactions and flushed staged replacement (locally tested)",
-      "Read-only case-insensitive text search"
+      "Read-only case-insensitive text search",
+      "All notes selectable in TUI, newest first; explicit R reload and scrollable full text"
     ],
     "acceptance": [
       "No write without explicit user action",
@@ -246,16 +250,19 @@
     "capabilities": [],
     "evidence": [
       "L05",
-      "L18"
+      "L18",
+      "L37"
     ],
     "features": [
       "Keyboard-only navigation",
       "Contrast and color-independent status labels",
-      "Reduced-motion / low-bandwidth mode"
+      "Reduced-motion / low-bandwidth mode",
+      "Keyboard-selectable collection/detail views, compact 40x12 layout and smaller-screen fallback (locally tested)"
     ],
     "acceptance": [
       "80x24 and smaller terminal fixtures",
-      "No status relies on color alone"
+      "No status relies on color alone",
+      "All panels render at tiny/compact/normal sizes; older entries and wrapped text tails remain reachable after resizing"
     ]
   },
   {

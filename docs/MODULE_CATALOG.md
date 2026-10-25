@@ -12,8 +12,8 @@
 | ID | Module | Priority | State | Prerequisites | Evidence |
 | --- | --- | --- | --- | --- | --- |
 | `stat` | Host status | P0 | implemented unverified | — | [L03](LITERATURE_MATRIX.md#l03), [L19](LITERATURE_MATRIX.md#l19), [L31](LITERATURE_MATRIX.md#l31) |
-| `library` | Reference library | P0 | implemented unverified | — | [L10](LITERATURE_MATRIX.md#l10), [L19](LITERATURE_MATRIX.md#l19) |
-| `notes` | Offline field notes | P0 | implemented unverified | — | [L04](LITERATURE_MATRIX.md#l04), [L19](LITERATURE_MATRIX.md#l19), [L35](LITERATURE_MATRIX.md#l35), [L36](LITERATURE_MATRIX.md#l36) |
+| `library` | Reference library | P0 | implemented unverified | — | [L10](LITERATURE_MATRIX.md#l10), [L19](LITERATURE_MATRIX.md#l19), [L37](LITERATURE_MATRIX.md#l37) |
+| `notes` | Offline field notes | P0 | implemented unverified | — | [L04](LITERATURE_MATRIX.md#l04), [L19](LITERATURE_MATRIX.md#l19), [L35](LITERATURE_MATRIX.md#l35), [L36](LITERATURE_MATRIX.md#l36), [L37](LITERATURE_MATRIX.md#l37) |
 
 ### `stat` — Host status
 
@@ -57,7 +57,7 @@ Storage pass: read-only search, bounded schema-1 loading, writer lock and staged
 | `power` | Power and resources | P1 | planned | `stat` | [L03](LITERATURE_MATRIX.md#l03), [L27](LITERATURE_MATRIX.md#l27), [L29](LITERATURE_MATRIX.md#l29) |
 | `network` | Local network link status | P1 | planned | `stat` | [L20](LITERATURE_MATRIX.md#l20) |
 | `settings` | Settings and permission UI | P0 | planned | `storage` | [L16](LITERATURE_MATRIX.md#l16), [L22](LITERATURE_MATRIX.md#l22) |
-| `accessibility` | Accessible console | P0 | planned | `stat`, `settings` | [L05](LITERATURE_MATRIX.md#l05), [L18](LITERATURE_MATRIX.md#l18) |
+| `accessibility` | Accessible console | P0 | planned | `stat`, `settings` | [L05](LITERATURE_MATRIX.md#l05), [L18](LITERATURE_MATRIX.md#l18), [L37](LITERATURE_MATRIX.md#l37) |
 | `diagnostics` | Diagnostics and evidence audit | P0 | planned | `library`, `settings` | [L16](LITERATURE_MATRIX.md#l16), [L17](LITERATURE_MATRIX.md#l17), [L26](LITERATURE_MATRIX.md#l26), [L32](LITERATURE_MATRIX.md#l32), [L34](LITERATURE_MATRIX.md#l34) |
 
 ### `telemetry` — Telemetry event stream
@@ -115,6 +115,8 @@ Notes persistence now has locked transactions, validated limits and failure fixt
 2. Settings migration and revocation tests
 
 ### `accessibility` — Accessible console
+
+Partial implementation: pure renderer/navigation, 40x12 compact layout, fallback below that size, keyboard item selection and wrapped-detail scrolling. Memory-backed fixtures and Linux resize/reload smoke checks pass; native assistive-tech and contrast acceptance remain open. See [console controls](CONSOLE.md).
 
 **Purpose:** presentation · **Gate:** G1 · **Priority:** P0 · **Status:** planned.  
 **Requested capabilities:** none.

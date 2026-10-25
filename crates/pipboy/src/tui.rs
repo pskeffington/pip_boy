@@ -1,19 +1,17 @@
+use crate::console::{self, Action, Navigation, View};
 use crossterm::event::{self, Event, KeyCode, KeyEventKind};
 use crossterm::execute;
 use crossterm::terminal::{
     disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen,
 };
-use pipboy_core::branding::{CLI_COMMAND, PRODUCT_NAME};
 use pipboy_core::catalog::sources;
 use pipboy_core::host_telemetry::HostTelemetryModule;
 use pipboy_core::lifecycle::State;
 use pipboy_core::metrics::{Collector, Snapshot};
 use pipboy_core::notes::NoteStore;
 use pipboy_core::observation::Observation;
-use pipboy_core::registry::{Readiness, MODULES};
 use pipboy_core::runtime::{Capability, ModuleHost, PermissionSet, PollOutcome};
 use ratatui::prelude::*;
-use ratatui::widgets::{Block, Borders, Paragraph, Tabs, Wrap};
 use std::error::Error;
 use std::io;
 use std::time::{Duration, Instant};
@@ -38,8 +36,6 @@ impl Drop for TerminalGuard {
     }
 }
 
-const PANELS: &[&str] = &["STAT", "LIBRARY", "NOTES", "MAP", "RADIO", "MESH"];
-
 pub fn run() -> Result<(), Box<dyn Error>> {
     let module = HostTelemetryModule::new(
         || {
@@ -58,74 +54,26 @@ pub fn run() -> Result<(), Box<dyn Error>> {
     let mut latest = Some(initial);
     let library = sources()?;
     let store = NoteStore::from_environment()?;
-    let mut panel = 0usize;
+    let mut navigation = Navigation::default();
+    let mut notes = Vec::new();
     let mut last_sample = Instant::now();
 
     let _guard = TerminalGuard::enter()?;
     let mut terminal = Terminal::new(CrosstermBackend::new(io::stdout()))?;
     loop {
-        let notes = if panel == 2 {
-            Some(store.list()?)
-        } else {
-            None
-        };
         let session_ms = u64::try_from(session_start.elapsed().as_millis()).unwrap_or(u64::MAX);
         let state = host.state("stat").unwrap_or(State::Unavailable);
         let body_stat = stat_body(latest.as_ref(), state, &history_info, session_ms);
         terminal.draw(|frame| {
-            let sections = Layout::vertical([
-                Constraint::Length(3),
-                Constraint::Min(5),
-                Constraint::Length(2),
-            ]).split(frame.area());
-
-            let tab = Tabs::new(PANELS.iter().copied())
-                .block(Block::default().borders(Borders::ALL).title(format!(" {PRODUCT_NAME} // RUST NATIVE ")))
-                .select(panel)
-                .style(Style::default().fg(Color::DarkGray))
-                .highlight_style(Style::default().fg(Color::Green).add_modifier(Modifier::BOLD));
-            frame.render_widget(tab, sections[0]);
-
-            let body = match panel {
-                0 => body_stat,
-                1 => {
-                    let mut text = format!("{} linked source projects | metadata snapshot only\n\n", library.len());
-                    for entry in &library {
-                        text.push_str(&format!("{} / {} / {}\n", entry.project, entry.license, entry.category));
-                    }
-                    text
-                }
-                2 => {
-                    let mut text = format!("LOCAL NOTES (plaintext; user-owned)\nAdd notes with: {CLI_COMMAND} notes add \"text\"\n\n");
-                    if let Some(ref notes) = notes {
-                        for note in notes.iter().rev().take(12) {
-                            text.push_str(&format!("#{}  {}\n", note.id, note.text));
-                        }
-                    }
-                    text
-                }
-                index => {
-                    let module_id = PANELS[index].to_ascii_lowercase();
-                    let module = MODULES.iter().find(|value| value.id == module_id);
-                    match module {
-                        Some(module) if module.readiness == Readiness::Planned =>
-                            format!("{}: PLANNED / NOT CONNECTED\n\n{}\n\nThis panel does not invent live devices, fixes, peer links or signals.", module.title.to_uppercase(), module.description),
-                        _ => "Module not available".to_owned(),
-                    }
-                }
-            };
-            frame.render_widget(
-                Paragraph::new(body)
-                    .block(Block::default().borders(Borders::ALL).title(" CONSOLE "))
-                    .style(Style::default().fg(Color::Green))
-                    .wrap(Wrap { trim: false }),
-                sections[1],
-            );
-            frame.render_widget(
-                Paragraph::new(" LEFT/RIGHT or TAB: panel    P: pause/resume STAT    Q: quit ")
-                    .style(Style::default().fg(Color::Gray)),
-                sections[2],
-            );
+            console::render(
+                frame,
+                &mut navigation,
+                View {
+                    stat: &body_stat,
+                    library: &library,
+                    notes: &notes,
+                },
+            )
         })?;
 
         if event::poll(Duration::from_millis(100))? {
@@ -135,9 +83,40 @@ pub fn run() -> Result<(), Box<dyn Error>> {
                 }
                 match key.code {
                     KeyCode::Char('q') | KeyCode::Char('Q') | KeyCode::Esc => break,
-                    KeyCode::Right | KeyCode::Tab => panel = (panel + 1) % PANELS.len(),
-                    KeyCode::Left | KeyCode::BackTab => {
-                        panel = (panel + PANELS.len() - 1) % PANELS.len()
+                    KeyCode::Right | KeyCode::Tab | KeyCode::Left | KeyCode::BackTab => {
+                        let action = if matches!(key.code, KeyCode::Right | KeyCode::Tab) {
+                            Action::Next
+                        } else {
+                            Action::Previous
+                        };
+                        navigation.apply(action, 0);
+                        if navigation.panel == 2 {
+                            notes = store.list()?;
+                        }
+                    }
+                    KeyCode::Up
+                    | KeyCode::Down
+                    | KeyCode::PageUp
+                    | KeyCode::PageDown
+                    | KeyCode::Home
+                    | KeyCode::End => {
+                        let action = match key.code {
+                            KeyCode::Up => Action::Up,
+                            KeyCode::Down => Action::Down,
+                            KeyCode::PageUp => Action::PageUp,
+                            KeyCode::PageDown => Action::PageDown,
+                            KeyCode::Home => Action::Home,
+                            _ => Action::End,
+                        };
+                        let count = if navigation.panel == 1 {
+                            library.len()
+                        } else {
+                            notes.len()
+                        };
+                        navigation.apply(action, count);
+                    }
+                    KeyCode::Char('r') | KeyCode::Char('R') if navigation.panel == 2 => {
+                        notes = store.list()?
                     }
                     KeyCode::Char('p') | KeyCode::Char('P') => {
                         if host.permissions().allows(Capability::HostRead) {

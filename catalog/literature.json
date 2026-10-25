@@ -667,5 +667,24 @@
     "limitation": "Locks coordinate cooperating writers only; external editors and filesystem-specific behavior remain outside the guarantee. Do not unlink the lock file while writers may be running.",
     "acceptance": "Verify contention fails before writes, handle drop releases the lock, and concurrent CLI writers preserve every successful append with unique IDs.",
     "reviewed_on": "2026-10-24"
+  },
+  {
+    "id": "L37",
+    "title": "Ratatui 0.29.0 Paragraph wrapping and rendered line information",
+    "contributors": "Ratatui maintainers",
+    "publisher": "Ratatui / docs.rs",
+    "year": 2026,
+    "type": "official_docs",
+    "url": "https://docs.rs/ratatui/0.29.0/ratatui/widgets/struct.Paragraph.html",
+    "doi": null,
+    "modules": [
+      "accessibility",
+      "library",
+      "notes"
+    ],
+    "design": "Measure wrapped detail text with the same Paragraph implementation used to render it; clamp scroll offsets after resizing and separate collection selection from text scrolling.",
+    "limitation": "line_count uses the unstable-rendered-line-info feature in Ratatui 0.29; upgrades require retesting. API documentation does not certify screen-reader compatibility or terminal accessibility.",
+    "acceptance": "Test compact and undersized frames, empty and long lists, Unicode wrapped text tails, item selection bounds and scroll clamping after resize.",
+    "reviewed_on": "2026-10-24"
   }
 ]

@@ -70,7 +70,7 @@ cargo clippy --workspace --all-targets -- -D warnings
 
 The `sample` command is intentionally bounded to 1–30 samples at 500–30000 ms intervals, writing NDJSON only to stdout. It does not create a recording or start a background service. Actual CPU sampling is subject to the sysinfo platform-dependent minimum refresh interval. The TUI retains at most 60 observations in memory and displays source, freshness, reading age, and dropped-record counts. Closing an NDJSON output pipe stops collection cleanly.
 
-Use **Left/Right** or **Tab** to change console panels, **P** to pause/resume local host collection (clearing buffered readings), and **Q** to exit. Note files are plaintext and stored under `PIPBOY_HOME` or the platform's default Rust-Boy data directory. Do not store passwords, credentials, or sensitive records in notes.
+Use **Left/Right** or **Tab** to change panels, **Up/Down** to select entries or scroll STAT, **Page Up/Down** to scroll detail text, **Home/End** for first/last, **R** to reload notes, **P** to pause/resume host collection, and **Q** to exit. The compact layout supports 40×12; smaller terminals show resize/exit guidance. See [console controls](docs/CONSOLE.md). Note files are plaintext and stored under `PIPBOY_HOME` or the platform's default Rust-Boy data directory. Do not store passwords, credentials, or sensitive records in notes.
 
 ## Repository navigation
 

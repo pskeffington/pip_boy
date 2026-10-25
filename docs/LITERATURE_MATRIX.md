@@ -1,6 +1,6 @@
 # Rust-Boy | Evidence-to-implementation literature matrix
 
-**Review snapshot:** 2026-10-24. **Evidence entries:** 36. Authoritative machine-readable index: [`catalog/literature.json`](../catalog/literature.json).
+**Review snapshot:** 2026-10-24. **Evidence entries:** 37. Authoritative machine-readable index: [`catalog/literature.json`](../catalog/literature.json).
 
 ## Method
 
@@ -57,6 +57,8 @@ This is an **engineering evidence matrix**, not a claim of systematic-review com
 
 | <a id="l35"></a>**L35** | [tempfile 3.27.0: NamedTempFile staged persistence](https://docs.rs/tempfile/3.27.0/tempfile/struct.NamedTempFile.html) | tempfile maintainers · docs.rs / tempfile | Official docs, 2026 | `notes`, `storage` | Create staging files beside notes.json, flush their contents, and persist by replacement without first unlinking the current document. | Persist does not itself sync file contents or the parent directory. Abrupt process termination may leave staging files; native filesystem and power-loss behavior require separate acceptance. **Gate:** Inject partial staging and replacement errors; preserve original notes and clean up ordinary failure paths; never promote abandoned staging automatically. |
 | <a id="l36"></a>**L36** | [fs2 0.4.3: cross-platform advisory file locks](https://docs.rs/fs2/0.4.3/src/fs2/lib.rs.html) | fs2 maintainers · docs.rs / fs2 | Official docs, 2026 | `notes`, `storage` | Hold one exclusive OS lock across read, modify and replacement; fail promptly on contention and retain a stable lock filename. | Locks coordinate cooperating writers only; external editors and filesystem-specific behavior remain outside the guarantee. Do not unlink the lock file while writers may be running. **Gate:** Verify contention fails before writes, handle drop releases the lock, and concurrent CLI writers preserve every successful append with unique IDs. |
+
+| <a id="l37"></a>**L37** | [Ratatui 0.29.0 Paragraph wrapping and rendered line information](https://docs.rs/ratatui/0.29.0/ratatui/widgets/struct.Paragraph.html) | Ratatui maintainers · Ratatui / docs.rs | Official docs, 2026 | `accessibility`, `library`, `notes` | Measure wrapped detail text with the same widget used for rendering and clamp scrolling after resize. | The line-count feature is experimental and must be retested on dependency upgrades; no accessibility certification. **Gate:** Compact/tiny frames, Unicode text tails, older entries, empty lists and resize clamping pass. |
 
 ## Interpretation and conflicts
 

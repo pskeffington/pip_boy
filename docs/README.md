@@ -26,3 +26,5 @@ Every declared feature must state whether it is implemented, planned, or unavail
 - [Executed local validation](VALIDATION.md) — toolchains, unit checks, CLI and terminal smoke evidence.
 
 - [Storage contract](STORAGE.md) — notes schema compatibility, contention, limits and recovery behavior.
+
+- [Console controls](CONSOLE.md) — keyboard navigation, full note/source details and resize behavior.

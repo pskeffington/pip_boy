@@ -6,7 +6,7 @@ Rust-Boy is the public name of the modular console. The repository, executable, 
 
 - [Object model](OBJECT_MODEL.md): traits, runtime registry, permission policy, typed data proposals and lifecycle.
 - [Module catalog](MODULE_CATALOG.md): 27 scoped modules and their dependency/acceptance gates.
-- [Literature matrix](LITERATURE_MATRIX.md): 36 references tied to engineering decisions and test criteria.
+- [Literature matrix](LITERATURE_MATRIX.md): 37 references tied to engineering decisions and test criteria.
 - [Roadmap](ROADMAP.md): phase sequencing, release gates and risks.
 
 The current `ModuleHost` is an **in-process testable policy precheck** and does not isolate untrusted code. Physical device access, OS-enforced permissions and transport isolation remain planned, not implemented.
@@ -54,3 +54,7 @@ PIPBOY_HOME overrides the data directory. Otherwise, use $HOME/.pipboy on Unix a
 ## Release gates
 
 No release marked production-ready until CI, hardware simulation, terminal restoration, failure-path tests, dependency audit, accessibility review, and platform smoke tests pass. See ROADMAP.md.
+
+## Console rendering
+
+`console.rs` owns pure navigation and frame rendering; it opens no files or collectors. `tui.rs` maps terminal events to actions and manages telemetry and explicit note reloads. Collections use an item selector and a separately scrollable detail pane. Notes load on entering NOTES or pressing R; ordinary redraws reuse the in-memory list. See [console controls and size behavior](CONSOLE.md).

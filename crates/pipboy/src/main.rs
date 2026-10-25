@@ -4,6 +4,7 @@ use pipboy_core::catalog::{sources, validate_sources};
 use pipboy_core::metrics::Collector;
 use pipboy_core::notes::NoteStore;
 use std::error::Error;
+mod console;
 mod sampling;
 mod tui;
 

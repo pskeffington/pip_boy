@@ -12,16 +12,16 @@ Module IDs: `stat`, `telemetry`. Existing evidence IDs: L03, L19, L31, L32, L33.
 
 | Command | Observed result |
 | --- | --- |
-| `python3 tools/validate_catalog.py` | PASS: 27 modules, 36 evidence records, 14 external sources, 8 runtime entries |
+| `python3 tools/validate_catalog.py` | PASS: 27 modules, 37 evidence records, 14 external sources, 8 runtime entries |
 | `cargo fmt --all -- --check` | PASS |
 | `cargo check --workspace --all-targets --locked` | PASS on stable |
-| `cargo test --workspace --locked` | PASS: 6 executable + 46 core tests |
+| `cargo test --workspace --locked` | PASS: 10 executable + 46 core tests |
 | `cargo clippy --workspace --all-targets --locked -- -D warnings` | PASS |
-| `cargo +1.81.0 test --workspace --locked` | PASS: same 52 tests |
+| `cargo +1.81.0 test --workspace --locked` | PASS: same 56 tests |
 | `cargo build --workspace --locked` | PASS |
 | `cargo check --workspace --all-targets --target x86_64-pc-windows-gnu --locked` | PASS on stable: cross-compilation check only, no native execution |
 | `python3 tools/smoke_notes.py` | PASS: 24 concurrent CLI appends with retry, unique IDs, no lost notes, search and schema preservation |
-| `python3 tools/smoke_runtime.py` | PASS: timed NDJSON, closed pipe, no telemetry files, TUI pause/resume and exit/error restoration |
+| `python3 tools/smoke_runtime.py` | PASS: timed NDJSON, closed pipe, no telemetry files, TUI pause/resume, reload/oldest-note selection, resize fallback/recovery and exit/error restoration |
 
 Stable toolchain: rustc 1.99.1 (58cf8f9c3, 2026-10-13). Minimum toolchain: rustc 1.81.0 (eeb90cda1, 2024-09-04).
 
@@ -43,6 +43,14 @@ Nine new deterministic fixtures cover no-write reads, search, invalid/future sch
 
 New dependencies: fs2 0.4.3 and tempfile 3.27.0, reviewed against primary API/source documentation (L35/L36), compiled/tested on Linux stable/MSRV and cross-checked for the Windows GNU target. Native Windows/macOS runtime and filesystem acceptance remain open. See [storage contract](STORAGE.md).
 
+## Console accessibility pass
+
+Four new memory-backed tests cover navigation bounds/preserved selection, empty/planned views, every panel at seven sizes (42 combinations including 0x0, 1x1, 20x5, 39x11, 40x12, 60x16 and 100x24), and access to an older note's wrapped Unicode text tail followed by scroll clamping after enlargement.
+
+The runtime PTY smoke test also modifies the temporary notes file externally, verifies explicit R reload, reaches the oldest note with End, shrinks to 20x5 for fallback guidance, grows back to 80x24 with selection intact, and exits without modifying the notes file. Notes are no longer re-read on each redraw, and no fixed 12-note display limit remains. Ratatui's locked 0.29.0 rendered-line-info feature is used for matching scroll bounds to the actual word wrapper.
+
+Stable and Rust 1.81.0 now pass 56 tests. The updated workspace also passes the Windows GNU target compile check; native execution is not established. See [console contract](CONSOLE.md).
+
 ## Earlier Linux smoke checks (commit 04f4f0f)
 
 A Python subprocess/PTY harness used the built `target/debug/pipboy` with a temporary `PIPBOY_HOME` and `TERM=xterm-256color`:
@@ -58,4 +66,4 @@ A Python subprocess/PTY harness used the built `target/debug/pipboy` with a temp
 
 ## Remaining acceptance work
 
-Remote GitHub Actions previously failed before jobs started; its current success is not established by these local checks. The preceding telemetry/lifecycle commits are published; verify this storage revision separately after publication. macOS/Windows smoke checks, small-screen rendering, panic/signal paths, native Windows/macOS note replacement, locking and durability, observation schema migrations/field-level units, persistent per-adapter consent, and device-broker enforcement remain open. G0/G1 are not declared complete, and no hardware readiness is claimed.
+Remote GitHub Actions previously failed before jobs started; its current success is not established by these local checks. Storage is published as 2223c2c; verify subsequent console revisions separately in Actions. macOS/Windows smoke checks, assistive-technology/contrast acceptance, panic/signal paths, native Windows/macOS note replacement, locking and durability, observation schema migrations/field-level units, persistent per-adapter consent, and device-broker enforcement remain open. G0/G1 are not declared complete, and no hardware readiness is claimed.
