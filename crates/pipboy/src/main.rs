@@ -2,6 +2,7 @@ use pipboy_core::blueprint::{literature, plans, validate_blueprint};
 use pipboy_core::branding::{CLI_COMMAND, PRODUCT_DESCRIPTOR, PRODUCT_NAME};
 use pipboy_core::catalog::{sources, validate_sources};
 use pipboy_core::notes::NoteStore;
+use pipboy_core::permissions::{adapter_capability, Preference, PreferenceStore, ADAPTER_CAPABILITIES};
 use pipboy_core::runtime::{Capability, LocalOperation, ModuleHost, PermissionSet};
 use std::error::Error;
 mod console;
@@ -11,7 +12,7 @@ mod tui;
 
 fn help() {
     println!("{PRODUCT_NAME} | {PRODUCT_DESCRIPTOR}");
-    println!("usage: {CLI_COMMAND} [tui|status [--json]|sample [--count N --interval-ms MS]|sources [query]|modules|plan [G0..G4]|evidence [query]|doctor|notes <list|add TEXT|search QUERY|export|import FILE>|help]");
+    println!("usage: {CLI_COMMAND} [tui|status [--json]|sample [--count N --interval-ms MS]|sources [query]|modules|plan [G0..G4]|evidence [query]|doctor|permissions <list|request KEY|deny KEY|clear KEY>|notes <list|add TEXT|search QUERY|export|import FILE>|help]");
 }
 
 fn main() {
@@ -140,6 +141,51 @@ fn run() -> Result<(), Box<dyn Error>> {
             }
             Ok(())
         }
+        Some("permissions") => {
+            let verb = args.next();
+            match verb.as_deref() {
+                Some("list") if args.next().is_none() => {
+                    let store = PreferenceStore::from_environment()?;
+                    let entries = store.list()?;
+                    for capability in ADAPTER_CAPABILITIES {
+                        let preference = entries
+                            .iter()
+                            .find(|item| item.capability == capability.key())
+                            .map(|item| item.preference.label())
+                            .unwrap_or("unset");
+                        println!("{:<20} {}", capability.key(), preference);
+                    }
+                    println!("INFO: preferences do not grant access or start adapters");
+                    Ok(())
+                }
+                Some("request" | "deny" | "clear") => {
+                    let key = args
+                        .next()
+                        .ok_or("usage: pipboy permissions <request|deny|clear> KEY")?;
+                    if args.next().is_some() {
+                        return Err("usage: pipboy permissions <request|deny|clear> KEY".into());
+                    }
+                    let capability = adapter_capability(&key)?;
+                    let store = PreferenceStore::from_environment()?;
+                    let changed = match verb.as_deref() {
+                        Some("request") => store.set(capability, Preference::Requested)?,
+                        Some("deny") => store.set(capability, Preference::Denied)?,
+                        _ => store.clear(capability)?,
+                    };
+                    println!(
+                        "{}: {} {}",
+                        if changed { "UPDATED" } else { "UNCHANGED" },
+                        capability.key(),
+                        verb.as_deref().unwrap_or("unknown")
+                    );
+                    println!("INFO: this is a saved preference, not an active permission");
+                    Ok(())
+                }
+                _ => Err(
+                    "usage: pipboy permissions <list|request KEY|deny KEY|clear KEY>".into(),
+                ),
+            }
+        }
         Some("doctor") => {
             let entries = sources()?;
             validate_sources(&entries)?;
@@ -157,6 +203,8 @@ fn run() -> Result<(), Box<dyn Error>> {
             );
             let store = NoteStore::from_environment()?;
             println!("INFO: notes location {}", store.path().display());
+            let preferences = PreferenceStore::from_environment()?;
+            println!("PASS: {} persisted adapter preferences validated", preferences.list()?.len());
             println!("INFO: map, radio, mesh, GPIO and device I/O are not implemented");
             println!("INFO: doctor does not probe or connect to nearby devices");
             Ok(())
