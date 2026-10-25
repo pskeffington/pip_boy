@@ -950,6 +950,26 @@ mod tests {
     }
 
     #[test]
+    fn lan_scan_requires_pinned_tool_consent_and_private_scope() {
+        let temp = tempfile::tempdir().unwrap();
+        let store = WorkbenchStore::new(temp.path().join("state"));
+        let scoped = request("POST", "/api/net/scan",
+            json!({"cidr":"192.168.1.0/24","confirm":true}));
+        assert_eq!(dispatch(&scoped, &store, 8765).status, 409);
+        assert_eq!(dispatch(&request("POST", "/api/profile",
+            json!({"id":"head-engineer","confirm":true})), &store, 8765).status, 200);
+        assert_eq!(dispatch(&request("POST", "/api/net/scan",
+            json!({"cidr":"192.168.1.0/24"})), &store, 8765).status, 422);
+        assert_eq!(dispatch(&request("POST", "/api/net/scan",
+            json!({"cidr":"8.8.8.8/32","confirm":true})), &store, 8765).status, 422);
+        assert_eq!(dispatch(&request("POST", "/api/net/scan",
+            json!({"cidr":"192.168.1.0/16","confirm":true})), &store, 8765).status, 422);
+        let mut cross_origin = scoped;
+        cross_origin.headers.insert("origin".into(), "https://other.invalid".into());
+        assert_eq!(dispatch(&cross_origin, &store, 8765).status, 403);
+    }
+
+    #[test]
     fn role_activation_custom_pinning_and_offline_lab_work_end_to_end() {
         let temp = tempfile::tempdir().unwrap();
         let root = temp.path().join("state");
