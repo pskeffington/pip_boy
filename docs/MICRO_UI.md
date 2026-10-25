@@ -69,4 +69,4 @@ The new smoke script starts an actual Rust loopback server with `--micro --port 
 
 ## GPS map preview (feature branch)
 
-MAP mounts the shared offline [RustGIS-native map and GPS viewer](SCOUT_GPS_MAP.md): explicit browser GPS permission, native RustGIS JSON/map/mobile-package and GeoJSON imports, source manifest, follow, accuracy and pan/zoom. It does not embed native RustGIS, supply basemap tiles or open USB serial GNSS.
+MAP mounts the shared [RustGIS-native map and GPS viewer](SCOUT_GPS_MAP.md): explicit browser GPS permission, native RustGIS JSON/map/mobile-package and GeoJSON imports, source manifest, follow, accuracy, and pan/zoom. On the online-reference feature branch it sends an infrequent coordinate-free reachability ping when MAP opens; tapping **WEB ON** explicitly permits bounded Overpass queries for OSM roads, waterways, buildings, parks and landmarks. This is **community reference geography**, not a substitute for imported authoritative layers. It does not embed native RustGIS, supply basemap tiles or open USB serial GNSS.
