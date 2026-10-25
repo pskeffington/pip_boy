@@ -543,11 +543,6 @@ function showTool() {
     return root;
   }
   const meta = toolInfo(openedTool);
-  const row = make("div", "frame-head");
-  row.append(
-    make("span", "mini-pill", meta?.availability === "ready" ? "LOCAL" : "MANUAL")
-  );
-  root.append(row);
   if (!meta) {
     root.append(make("p", "warning", "Unknown module. Return to the deck."));
     return root;
