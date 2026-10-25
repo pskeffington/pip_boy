@@ -64,6 +64,42 @@ SCENARIOS = {
         ],
         "rejections": {3: "invalid_lease", 4: "confirmation_required"},
     },
+    "cancel": {
+        "times": [0, 100, 200, 300, 400],
+        "actions": [
+            "confirm_open",
+            "sample_fixture",
+            "cancel",
+            "sample_stale_lease",
+            "open_without_new_confirmation",
+        ],
+        "states": [
+            "fixture_active",
+            "fixture_active",
+            "inactive",
+            "inactive",
+            "inactive",
+        ],
+        "rejections": {3: "invalid_lease", 4: "confirmation_required"},
+    },
+    "timeout": {
+        "times": [0, 100, 200, 300, 400],
+        "actions": [
+            "confirm_open",
+            "sample_fixture",
+            "advance_to_deadline",
+            "sample_stale_lease",
+            "open_without_new_confirmation",
+        ],
+        "states": [
+            "fixture_active",
+            "fixture_active",
+            "inactive",
+            "inactive",
+            "inactive",
+        ],
+        "rejections": {3: "invalid_lease", 4: "confirmation_required"},
+    },
 }
 
 
@@ -143,6 +179,8 @@ def main():
             ("nominal", "gpio.read", "sim:gpio"),
             ("disconnect-recover", "serial.read", "sim:serial"),
             ("revoke", "sdr.receive", "sim:sdr"),
+            ("cancel", "ble.discover", "sim:ble"),
+            ("timeout", "network.fetch", "sim:network"),
         ):
             args = (
                 "simulate", "replay", device, scenario, "--confirm"
@@ -194,7 +232,7 @@ def main():
 
     print(
         "PASS: deterministic synthetic traces, disconnect/recovery, revocation, "
-        "bounded state transitions, denial, malformed policy and no physical I/O"
+        "bounded state transitions, cancellation, logical deadlines, denial, malformed policy and no physical I/O"
     )
 
 
