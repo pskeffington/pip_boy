@@ -1,7 +1,8 @@
 //! Offline-first data and capability layer for the Rust-Boy native console.
 //!
-//! This crate does not open network connections, interact with serial ports,
-//! discover nearby devices, or perform radio transmissions.
+//! This crate exposes explicit, operator-gated local network probes and
+//! UniFi read-only HTTPS discovery; it never scans merely by being imported.
+//! Serial port and radio interfaces remain inactive.
 
 pub mod blueprint;
 pub mod branding;
@@ -11,6 +12,7 @@ pub mod catalog;
 pub mod device_simulator;
 pub mod diagnostics;
 pub mod network_probe;
+pub mod unifi;
 pub mod game;
 pub mod host_report;
 pub mod lifecycle;
