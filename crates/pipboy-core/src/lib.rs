@@ -9,6 +9,7 @@ pub mod buffer;
 pub mod capability;
 pub mod catalog;
 pub mod device_simulator;
+pub mod diagnostics;
 pub mod game;
 pub mod host_report;
 pub mod lifecycle;
