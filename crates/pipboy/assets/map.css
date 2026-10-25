@@ -25,3 +25,11 @@
   .rb-map-button { min-height:25px; padding:3px 5px; font-size:9px; }
   .rb-map-stage { min-height:55px; }
 }
+
+/* Native RustGIS layer manifest is collapsed unless the operator opens it. */
+.rb-map-sources { flex:none; max-width:100%; font:10px ui-monospace, Consolas, monospace;
+  border-top:1px solid #345439; color:#aacfa4; }
+.rb-map-sources[hidden] { display:none; }
+.rb-map-sources summary { cursor:pointer; padding:2px; font-weight:bold; }
+.rb-map-source-text { margin:2px 0; max-height:98px; overflow:auto; white-space:pre-wrap;
+  overflow-wrap:anywhere; font:10px ui-monospace, Consolas, monospace; }
