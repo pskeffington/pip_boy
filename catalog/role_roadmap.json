@@ -728,6 +728,7 @@
       ],
       "mission": "Build a truly offline WGS84 field kit on Mac and Pi, interoperable with RustGIS and eventually opt-in TAK nodes.",
       "baseline_tools": [
+        "reclamation",
         "geo-lab",
         "game",
         "net-lab",
@@ -753,7 +754,7 @@
           "id": "N2",
           "priority": "must",
           "need": "Offline trip notes, saved landmarks and position uncertainty labels",
-          "status": "planned"
+          "status": "partially_available"
         },
         {
           "id": "N3",
