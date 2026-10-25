@@ -67,6 +67,30 @@ impl HostedModule {
     }
 }
 
+/// A synchronous, trusted built-in operation. This is not an OS sandbox.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum LocalOperation {
+    LibraryRead,
+    NotesRead,
+    NotesWrite,
+}
+
+impl LocalOperation {
+    fn module_id(self) -> &'static str {
+        match self {
+            Self::LibraryRead => "library",
+            Self::NotesRead | Self::NotesWrite => "notes",
+        }
+    }
+
+    fn required(self) -> &'static [Capability] {
+        match self {
+            Self::LibraryRead | Self::NotesRead => &[Capability::FilesRead],
+            Self::NotesWrite => &[Capability::FilesRead, Capability::FilesWrite],
+        }
+    }
+}
+
 pub struct ModuleHost {
     grants: PermissionSet,
     modules: Vec<HostedModule>,
@@ -98,6 +122,39 @@ impl ModuleHost {
                 entry.disable(Event::Revoke);
             }
         }
+    }
+
+    /// Checks permission before invoking a synchronous local operation.
+    /// Explicit caller intent and authorization must supply write grants.
+    pub fn run_local<T, E>(
+        &self,
+        operation: LocalOperation,
+        action: impl FnOnce() -> Result<T, E>,
+    ) -> Result<T, String>
+    where
+        E: std::fmt::Display,
+    {
+        let descriptor = MODULES
+            .iter()
+            .find(|entry| entry.id == operation.module_id())
+            .ok_or_else(|| format!("unknown local module {}", operation.module_id()))?;
+        if descriptor.readiness != Readiness::Ready {
+            return Err(format!("module {} is not implemented", descriptor.id));
+        }
+        let missing: Vec<_> = operation
+            .required()
+            .iter()
+            .filter(|capability| !self.grants.allows(**capability))
+            .map(|capability| capability.key())
+            .collect();
+        if !missing.is_empty() {
+            return Err(format!(
+                "{} denied: {}",
+                descriptor.id,
+                missing.join(", ")
+            ));
+        }
+        action().map_err(|error| format!("{} operation failed: {error}", descriptor.id))
     }
 
     pub fn state(&self, id: &str) -> Option<State> {
@@ -308,6 +365,36 @@ mod tests {
             required,
             calls: Arc::clone(calls),
         })
+    }
+
+    #[test]
+    fn local_denial_does_not_execute_callback() {
+        let host = ModuleHost::new(PermissionSet::empty());
+        let mut called = false;
+        let error = host.run_local(LocalOperation::LibraryRead, || {
+            called = true;
+            Ok::<(), std::io::Error>(())
+        }).unwrap_err();
+        assert!(error.contains("files.read"));
+        assert!(!called);
+    }
+
+    #[test]
+    fn local_read_only_cannot_write_but_explicit_grant_can() {
+        let mut host = ModuleHost::new(PermissionSet::offline_read_only());
+        assert_eq!(host.run_local(LocalOperation::NotesRead, || Ok::<_, String>(7)).unwrap(), 7);
+        let denied = host.run_local(LocalOperation::NotesWrite, || Ok::<_, String>(8));
+        assert!(denied.unwrap_err().contains("files.write"));
+        host.grant(Capability::FilesWrite);
+        assert_eq!(host.run_local(LocalOperation::NotesWrite, || Ok::<_, String>(9)).unwrap(), 9);
+        host.revoke(Capability::FilesWrite);
+        assert!(host.run_local(LocalOperation::NotesWrite, || Ok::<_, String>(10)).is_err());
+    }
+
+    #[test]
+    fn local_operation_errors_propagate() {
+        let host = ModuleHost::new(PermissionSet::offline_read_only());
+        assert!(host.run_local(LocalOperation::NotesRead, || Err::<(), _>("fixture failure")).unwrap_err().contains("fixture failure"));
     }
 
     #[test]
