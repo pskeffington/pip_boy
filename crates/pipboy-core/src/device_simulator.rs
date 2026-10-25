@@ -657,7 +657,9 @@ mod tests {
         assert_eq!(broker.sample(&old).unwrap_err(), BrokerError::InvalidLease);
         assert_eq!(broker.cancel(&old).unwrap_err(), BrokerError::InvalidLease);
         assert_eq!(
-            broker.open("sim:ble", SessionConfirmation::Absent).unwrap_err(),
+            broker
+                .open("sim:ble", SessionConfirmation::Absent)
+                .unwrap_err(),
             BrokerError::ConfirmationRequired
         );
         let fresh = broker
@@ -680,7 +682,9 @@ mod tests {
         assert_eq!(broker.sample(&old).unwrap_err(), BrokerError::InvalidLease);
         assert!(broker.active_device().is_none());
         assert_eq!(
-            broker.open("sim:serial", SessionConfirmation::Absent).unwrap_err(),
+            broker
+                .open("sim:serial", SessionConfirmation::Absent)
+                .unwrap_err(),
             BrokerError::ConfirmationRequired
         );
     }
@@ -709,8 +713,14 @@ mod tests {
         let lease = broker
             .open("sim:gpio", SessionConfirmation::Confirmed)
             .unwrap();
-        assert_eq!(broker.advance_to(99).unwrap_err(), BrokerError::ClockReversed);
-        assert_eq!(broker.sample(&lease).unwrap_err(), BrokerError::InvalidLease);
+        assert_eq!(
+            broker.advance_to(99).unwrap_err(),
+            BrokerError::ClockReversed
+        );
+        assert_eq!(
+            broker.sample(&lease).unwrap_err(),
+            BrokerError::InvalidLease
+        );
         assert_eq!(BrokerError::ClockReversed.code(), "clock_reversed");
         assert!(!broker.advance_to(u64::MAX - 5).unwrap());
         assert_eq!(

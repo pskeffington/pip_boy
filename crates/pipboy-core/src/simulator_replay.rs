@@ -251,8 +251,14 @@ mod tests {
             ReplayScenario::from_key("revoke"),
             Some(ReplayScenario::Revoke)
         );
-        assert_eq!(ReplayScenario::from_key("cancel"), Some(ReplayScenario::Cancel));
-        assert_eq!(ReplayScenario::from_key("timeout"), Some(ReplayScenario::Timeout));
+        assert_eq!(
+            ReplayScenario::from_key("cancel"),
+            Some(ReplayScenario::Cancel)
+        );
+        assert_eq!(
+            ReplayScenario::from_key("timeout"),
+            Some(ReplayScenario::Timeout)
+        );
         assert_eq!(ReplayScenario::from_key("hardware"), None);
     }
 
@@ -356,7 +362,11 @@ mod tests {
         .unwrap();
         assert_eq!(trace.steps.len(), 5);
         assert_eq!(
-            trace.steps.iter().map(|step| step.logical_ms).collect::<Vec<_>>(),
+            trace
+                .steps
+                .iter()
+                .map(|step| step.logical_ms)
+                .collect::<Vec<_>>(),
             [0, 100, 200, 300, 400]
         );
         assert_eq!(trace.steps[2].action, "advance_to_deadline");

@@ -225,8 +225,9 @@ fn run() -> Result<(), Box<dyn Error>> {
                 let scenario_key = args
                     .next()
                     .ok_or("usage: pipboy simulate replay ID SCENARIO [--confirm]")?;
-                let scenario = ReplayScenario::from_key(&scenario_key)
-                    .ok_or("unknown replay scenario (nominal|disconnect-recover|revoke|cancel|timeout)")?;
+                let scenario = ReplayScenario::from_key(&scenario_key).ok_or(
+                    "unknown replay scenario (nominal|disconnect-recover|revoke|cancel|timeout)",
+                )?;
                 let confirmation = match args.next().as_deref() {
                     Some("--confirm") if args.next().is_none() => SessionConfirmation::Confirmed,
                     None => SessionConfirmation::Absent,
