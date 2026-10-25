@@ -57,7 +57,7 @@ The 4-inch reference layouts and mock camera focus are **visual UX fixtures**. A
 
 ## Operator-authorized LAN inspection
 
-NET ENGINEER is the first live network tool. Only an explicit CLI command or same-origin, confirmed dashboard POST to /api/net/scan starts a bounded ICMP/TCP sweep of a selected RFC1918 /24..../32. The dashboard remains loopback-only, and long scans use limited request workers. Its report distinguishes verified responders from stale-prone neighbor-cache entries; it is not a total-client count. UI opt-in can refresh every 60 seconds while NET ENGINEER stays open. See [network diagnostics contract](NETWORK_ENGINEERING.md). No router controller credentials, vulnerability scanning, or remote Internet probing are enabled.
+NET ENGINEER is the first live network tool. Only an explicit CLI command or same-origin, confirmed dashboard POST to /api/net/scan starts a bounded ICMP/TCP sweep of a selected RFC1918 /24..../32. The dashboard remains loopback-only, and long scans use limited request workers. Its report distinguishes verified responders from stale-prone neighbor-cache entries; it is not a total-client count. UI opt-in can refresh every 60 seconds while NET ENGINEER stays open. See [network diagnostics contract](NETWORK_ENGINEERING.md). An optional read-only UniFi API adapter uses server-environment credentials over verified TLS to an explicitly configured RFC1918 controller; no credentials are exposed through dashboard routes. No controller mutations, vulnerability scanning, or Internet probing are enabled.
 
 ## Boundaries
 
