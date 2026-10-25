@@ -38,8 +38,8 @@ The [graphical dashboard implementation](DASHBOARD_UI.md) provides a shared UI f
 | Profile ID | Job station | Lore type | Existing palette tools | Future modules |
 | --- | --- | --- | --- | --- |
 | `overseer` | Overseer Operations | canonical job | `mission-board`, `host`, `notes`, `library`, `game` | `alerts`, `reports` |
-| `head-engineer` | Head Engineer Station | canonical job | `host`, `net-lab`, `byte-lab`, `simulator`, `notes` | `serial-console`, `sensor-console`, `device-graph` |
-| `security-chief` | Security Chief Station | canonical job | `host`, `net-lab`, `byte-lab`, `notes` | `camera-wall`, `camera-health`, `event-log` |
+| `head-engineer` | Head Engineer Station | canonical job | `host`, `diag`, `net-lab`, `byte-lab`, `simulator`, `notes` | `serial-console`, `sensor-console`, `device-graph` |
+| `security-chief` | Security Chief Station | canonical job | `host`, `diag`, `net-lab`, `byte-lab`, `notes` | `camera-wall`, `camera-health`, `event-log` |
 | `vault-doctor` | Vault Doctor Station | canonical job | `library`, `notes`, `host` | `environment`, `checklists`, `reference-index` |
 | `university-researcher` | University Research Station | role inspired | `byte-lab`, `library`, `notes`, `simulator`, `net-lab` | `data-lab`, `experiment-log`, `graph-view` |
 | `reclamation-scout` | Reclamation Field Kit | role inspired | `geo-lab`, `game`, `net-lab`, `notes`, `host` | `map`, `coordinate-lab`, `gnss`, `track-log`, `tak-bridge`, `rustgis-adapter` |
@@ -73,7 +73,7 @@ The [graphical dashboard implementation](DASHBOARD_UI.md) provides a shared UI f
 
 **Purpose:** Troubleshoot embedded systems, networks and hardware using reproducible diagnostics.  
 **Lore:** canonical job · `VT-01`, `RB-01`  
-**Preloaded now:** `host`, `net-lab`, `byte-lab`, `simulator`, `notes`  
+**Preloaded now:** `host`, `diag`, `net-lab`, `byte-lab`, `simulator`, `notes`  
 **New modules:** `serial-console`, `sensor-console`, `device-graph`
 
 **Operational needs**
