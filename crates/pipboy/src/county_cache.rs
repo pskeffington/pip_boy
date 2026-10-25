@@ -174,7 +174,13 @@ impl CountyCache {
             io::Error::new(io::ErrorKind::WouldBlock, "Another county fetch is in progress")
         })?;
         match Self::read_zip(&path) {
-            Ok(bytes) => return Ok(bytes),
+            Ok(bytes) => {
+                if allow_network {
+                    self.ensure_root()?;
+                    self.remember(geoid)?;
+                }
+                return Ok(bytes);
+            },
             Err(error) if error.kind() == io::ErrorKind::NotFound => {}
             Err(error) => return Err(error),
         }
