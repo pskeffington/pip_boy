@@ -40,7 +40,7 @@ Boundaries: 64 KiB per import, 2,048 bytes per nonempty line, 128 records, 64-by
 - `pipboy diag host` reuses the existing `status::collect()` `host.read` lifecycle.
 - Imported JSONL is treated as untrusted operator-provided evidence; its provenance and time are not verified.
 - The loopback dashboard offers only one-shot local host analysis and retains existing request protections.
-- Collector adapters for authorized network systems, storage SMART, USB hardware, firmware, serial, sensors and Unifi are **not yet implemented**. Follow-up work needs separate scoped permissions, per-device identity and safe acquisition strategies.
+- The separate [NET ENGINEER](NETWORK_ENGINEERING.md) adapter now performs explicitly confirmed private LAN probes. These are **not** DIAG offline imports or authoritative managed-client inventories. Storage SMART, USB hardware, firmware, serial, sensors and an authenticated UniFi connector remain unimplemented. Follow-up work needs separate scoped permissions, per-device identity and safe acquisition strategies.
 
 ## Validation
 
