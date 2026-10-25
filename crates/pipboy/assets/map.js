@@ -18,6 +18,8 @@
   let mapMemory = null; // volatile geographic features only; never store GPS fixes
   let webRequestCount = 0;
   let webNextRequestAt = 0;
+  let webProbeAt = 0;
+  let webProbeSuccess = null;
 
   function clamp(value, lower, upper) {
     return Math.min(upper, Math.max(lower, value));
@@ -325,6 +327,55 @@
   }
 
 
+
+  // The only automatic outbound request: an infrequent, coordinate-free status
+  // ping upon entering MAP. Actual bbox queries require WEB ON.
+  async function probeWeb(view) {
+    if (active !== view || view.webEnabled || view.webProbePromise) return;
+    if (navigator.onLine === false) {
+      view.webStatus = "OFFLINE / WEB MAP UNAVAILABLE";
+      refresh(view);
+      return;
+    }
+    if (Date.now() - webProbeAt < 10 * 60 * 1000 && webProbeSuccess !== null) {
+      view.webStatus = webProbeSuccess ? "WEB AVAILABLE / TAP WEB ON" : "WEB STATUS UNAVAILABLE";
+      refresh(view);
+      return;
+    }
+    const service = window.RustBoyOnline;
+    if (!service) return;
+    const controller = new AbortController();
+    view.webProbeAbort = controller;
+    const timeout = setTimeout(() => controller.abort(), 5000);
+    view.webStatus = "PING WEB STATUS / NO COORDINATES SENT";
+    refresh(view);
+    const pending = (async () => {
+      try {
+        await service.ping(controller.signal);
+        webProbeSuccess = true;
+        webProbeAt = Date.now();
+        if (active === view && !view.webEnabled) {
+          view.webStatus = "WEB AVAILABLE / TAP WEB ON";
+        }
+      } catch (_) {
+        if (!controller.signal.aborted || active === view) {
+          webProbeSuccess = false;
+          webProbeAt = Date.now();
+        }
+        if (active === view && !view.webEnabled) {
+          view.webStatus = "WEB STATUS UNAVAILABLE / OFFLINE MAP READY";
+        }
+      } finally {
+        clearTimeout(timeout);
+        if (view.webProbeAbort === controller) view.webProbeAbort = null;
+        view.webProbePromise = null;
+        if (active === view && !view.webEnabled) refresh(view);
+      }
+    })();
+    view.webProbePromise = pending;
+    await pending;
+  }
+
   function centerInside(bounds, center) {
     if (!bounds || !center) return false;
     const dx = (bounds[2] - bounds[0]) * 0.23;
@@ -388,7 +439,13 @@
     try {
       view.webStatus = "PING OVERPASS / NO LOCATION IN PING";
       refresh(view);
-      await service.ping(abort.signal);
+      if (view.webProbePromise) await view.webProbePromise;
+      if (active !== view || !view.webEnabled || abort.signal.aborted) return;
+      if (!webProbeSuccess || Date.now() - webProbeAt >= 10 * 60 * 1000) {
+        await service.ping(abort.signal);
+        webProbeSuccess = true;
+        webProbeAt = Date.now();
+      }
       if (active !== view || !view.webEnabled || abort.signal.aborted) return;
       view.webStatus = "FETCH ROADS + LANDMARKS / OSM";
       refresh(view);
@@ -547,6 +604,7 @@
     if (view.webReconnect) window.removeEventListener("online", view.webReconnect);
     if (view.webDisconnect) window.removeEventListener("offline", view.webDisconnect);
     if (view.webAbort) view.webAbort.abort();
+    if (view.webProbeAbort) view.webProbeAbort.abort();
     mapMemory = (view.shapes.length || view.onlineShapes.length) ? {
       center: { lat: view.center.lat, lon: view.center.lon }, zoom: view.zoom,
       shapes: view.shapes, layers: view.layers, warnings: view.warnings,
@@ -637,6 +695,7 @@
       onlineShapes: mapMemory ? mapMemory.onlineShapes || [] : [],
       webMeta: mapMemory ? mapMemory.webMeta || null : null,
       webEnabled: false, webBusy: false, webAbort: null,
+      webProbeAbort: null, webProbePromise: null,
       webReconnect: null, webDisconnect: null, webStatus: "WEB OFF",
       attribution, webStatusNode, webButton: null, webRefresh: null,
       fix: null, watchId: null, gpsState: "GPS OFF",
@@ -773,7 +832,9 @@
     }, { passive: false });
 
     view.webReconnect = () => {
-      if (active === view && view.webEnabled) void webFetch(view);
+      if (active !== view) return;
+      if (view.webEnabled) void webFetch(view);
+      else void probeWeb(view);
     };
     view.webDisconnect = () => {
       if (active === view && view.webEnabled) {
@@ -792,7 +853,10 @@
       view.windowResize = () => resize(view);
       window.addEventListener("resize", view.windowResize);
     }
-    window.requestAnimationFrame(() => resize(view));
+    window.requestAnimationFrame(() => {
+      resize(view);
+      void probeWeb(view);
+    });
     return view;
   }
 
