@@ -716,7 +716,20 @@ function back() {
   }
 }
 
+function ensureVisible() {
+  // Primary pages are normally no-scroll. At zoom or with unexpected content,
+  // recover scroll access rather than clipping actions.
+  ui.screen.classList.remove("micro-overflow");
+  if (ui.screen.dataset.depth === "root"
+      && ui.content.scrollHeight > ui.viewport.clientHeight + 1) {
+    ui.screen.classList.add("micro-overflow");
+  }
+}
+
 function init() {
+  const observer = new MutationObserver(ensureVisible);
+  observer.observe(ui.content, { childList: true, subtree: true });
+  window.addEventListener("resize", ensureVisible);
   ui.tabs.forEach((item) => item.addEventListener("click", () => setTab(item.dataset.tab)));
   ui.roleSwitch.addEventListener("click", openRoles);
   ui.closeRoles.addEventListener("click", () => ui.rolesDialog.close());

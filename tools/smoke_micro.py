@@ -92,6 +92,8 @@ with tempfile.TemporaryDirectory() as work:
         assert b'data-depth="root"' in css and b'overflow:hidden' in css
         assert b'id="role-prev"' in html and b'id="role-next"' in html
         assert b"LOAD ROLE" in js
+        assert b"MutationObserver(ensureVisible)" in js
+        assert b'micro-overflow[data-depth="root"]' in css
         assert b"MAILTO:" not in js.upper()
         assert b"https://" not in js, "Micro UI must not include third-party fetch targets"
 

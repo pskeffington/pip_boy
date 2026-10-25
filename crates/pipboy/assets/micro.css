@@ -351,3 +351,7 @@ small { font-size:11px; }
   .lab-entry .field input { height:31px; }
   .micro-device[data-depth="detail"] .mono-output { max-height:118px; }
 }
+
+
+/* Accessibility fallback if zoom/large fonts overflow normal primary pages. */
+.micro-device.micro-overflow[data-depth="root"] .micro-viewport { overflow-y:auto; }
