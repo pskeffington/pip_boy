@@ -10,10 +10,13 @@ import sys
 import tempfile
 import threading
 import time
+import traceback
 
 ROOT = Path(__file__).resolve().parents[1]
 BIN = ROOT / 'target' / 'debug' / ('pipboy.exe' if os.name == 'nt' else 'pipboy')
 HELLO = b'{"version":"fixture","lang":"en"}'
+LIVE_VALUE = 314159265
+LIVE_MARKER = str(LIVE_VALUE).encode()
 ROOT_UPDATE = bytes([8, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0]) + b'HP\0' + bytes([0, 0])
 
 
@@ -84,7 +87,7 @@ def interactive(command, env, prompt_address=None, expected_code=0, browser_mode
                     host.wait_for(marker, since=offset)
                 host.send(b'r\x03')
             else:
-                host.wait_for(b'90', timeout=20)
+                host.wait_for(LIVE_MARKER, timeout=20)
                 host.wait_for(b'playstation')
                 if expected_code == 0:
                     host.send(b'\x1b[B\r\x08\x03')
@@ -114,7 +117,7 @@ def interactive(command, env, prompt_address=None, expected_code=0, browser_mode
             (b'ITEM_25', b'r\x03'),
         ]
     else:
-        steps = [(b'90', b'\x1b[B\r\x7f\x03' if expected_code == 0 else None)]
+        steps = [(LIVE_MARKER, b'\x1b[B\r\x7f\x03' if expected_code == 0 else None)]
     stage = 0
     offset = 0
     prompted = prompt_address is None
@@ -171,6 +174,9 @@ def exercise(mode):
                 with server.accept()[0] as client:
                     client.settimeout(8)
                     hello = HELLO
+                    if interactive_mode:
+                        # A short numeric match must not mistake metadata for HP.
+                        hello = b'{"version":"fixture-90","lang":"en"}'
                     if mode == 'invalid-handshake':
                         hello = b'{"version":true,"lang":"en"}'
                     elif mode == 'oversize-handshake':
@@ -215,16 +221,16 @@ def exercise(mode):
                         replacement = bytes([8, 0, 0, 0, 0, 1, 0, 2, 0, 0, 0]) + b'HP\0' + bytes([0, 0])
                         client.sendall(frame(3, replacement) + frame(0))
                         assert receive_exact(client, 5) == b'\0' * 5
-                        client.sendall(frame(3, scalar(90, identifier=2)))
+                        client.sendall(frame(3, scalar(LIVE_VALUE, identifier=2)))
                     elif interactive_mode:
-                        client.sendall(frame(3, scalar(90)))
+                        client.sendall(frame(3, scalar(LIVE_VALUE)))
                     if mode == 'disconnect':
                         # Wait until the actual view has had time to render the update.
                         time.sleep(.5)
                         return
                     expect_close(client)
             except Exception as error:
-                errors.append(error)
+                errors.append((str(error), traceback.format_exc()))
 
         thread = threading.Thread(target=peer, daemon=True)
         thread.start()

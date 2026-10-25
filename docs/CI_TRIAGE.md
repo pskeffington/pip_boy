@@ -4,6 +4,10 @@
 
 [Example failed workflow](https://github.com/pskeffington/pip_boy/actions/runs/40149614562)
 
+## Game terminal smoke synchronization
+
+At `09dbf2d`, native Windows compiled and passed 146 Rust tests plus the inventory terminal journey, then the delayed-reference mock peer reported WSAECONNABORTED. The child had exited successfully, but a short raw-output `90` match could accept connection metadata or a terminal sequence before the live HP update. A unique nine-digit value and deliberate `fixture-90` announcement decoy now distinguish actual live rendering from metadata. A mutation check restoring the old marker must fail. Do not treat successful process exit alone as evidence that a requested game update was observed. Windows EOF/reset/aborted handling is limited to the final expected-close check; active protocol errors remain failures. See [validation evidence](VALIDATION.md).
+
 ## Historical startup-failure diagnostic procedure
 
 1. Open the failed run in GitHub Actions. Read the run-level banner/annotations; zero-job runs do not contain compiler logs.
