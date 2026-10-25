@@ -191,7 +191,7 @@ mod tests {
         assert_eq!(calls.load(Ordering::SeqCst), 0);
 
         host.permissions_mut().grant(Capability::FilesWrite);
-        assert!(matches!(host.poll_once()[0].outcome, PollOutcome::Sample { .. }));
+        assert!(matches!(&host.poll_once()[0].outcome, PollOutcome::Sample { .. }));
         assert_eq!(calls.load(Ordering::SeqCst), 1);
 
         host.permissions_mut().revoke(Capability::FilesWrite);
