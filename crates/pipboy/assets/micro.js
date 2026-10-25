@@ -23,12 +23,15 @@ const ui = {
   applyRole: $("apply-role"),
   closeRoles: $("close-roles"),
   cancelRoles: $("cancel-roles"),
-  toast: $("micro-toast")
+  toast: $("micro-toast"),
+  rolePrev: $("role-prev"),
+  roleNext: $("role-next"),
+  rolePaging: $("role-page")
 };
 const pages = ["stat", "gear", "map", "data", "link", "conf"];
 const pageTitles = {
-  stat: "SYSTEM STATUS", gear: "MODULE DECK", map: "NAVIGATION",
-  data: "DATA & RECORDS", link: "DEVICE LINKS", conf: "CONFIGURATION"
+  stat: "STATUS", gear: "TOOLS", map: "MAP",
+  data: "DATA", link: "LINK", conf: "SETTINGS"
 };
 const glyphs = {
   "mission-board": "▣", "host": "⌁", "notes": "≡", "library": "▤", "game": "▣",
@@ -37,43 +40,43 @@ const glyphs = {
 };
 const roleStations = Object.freeze({
   "overseer": {
-    heading: "OPERATIONS CONTROL",
-    purpose: "Delegated missions, deadlines, handoffs and crew accountability.",
-    quick: "TASK CONTROL", tool: "mission-board"
+    heading: "OPS",
+    purpose: "TASKS / TEAM",
+    quick: "TASKS", tool: "mission-board"
   },
   "head-engineer": {
-    heading: "ENGINEERING BENCH",
-    purpose: "Host health, network planning, byte inspection and test fixtures.",
-    quick: "NETWORK DIAGNOSTICS", tool: "net-lab"
+    heading: "ENGINEER",
+    purpose: "SYSTEM / NET",
+    quick: "NET LAB", tool: "net-lab"
   },
   "security-chief": {
-    heading: "SECURITY WATCH",
-    purpose: "Camera wall, incident triage and assigned security duties.",
-    quick: "FOUR-CAMERA VIEW", page: "link"
+    heading: "SECURITY",
+    purpose: "CAMERAS / WATCH",
+    quick: "CAM WALL", page: "link"
   },
   "vault-doctor": {
-    heading: "CLINICAL REFERENCE",
-    purpose: "Reference material, local notes and assigned care-environment checklists.",
-    quick: "REFERENCE LIBRARY", tool: "library"
+    heading: "MEDICAL",
+    purpose: "REFERENCE / NOTES",
+    quick: "LIBRARY", tool: "library"
   },
   "university-researcher": {
-    heading: "RESEARCH BENCH",
-    purpose: "Reproducible experiments, reference review and technical datasets.",
-    quick: "BYTE ANALYSIS", tool: "byte-lab"
+    heading: "RESEARCH",
+    purpose: "LAB / DATA",
+    quick: "BYTE LAB", tool: "byte-lab"
   },
   "reclamation-scout": {
-    heading: "FIELD RECONNAISSANCE",
-    purpose: "Waypoints, offline distances, site notes and assigned field duties.",
-    quick: "SCOUT GIS", tool: "geo-lab", page: "map"
+    heading: "SCOUT",
+    purpose: "MAP / WAYPOINTS",
+    quick: "GIS", tool: "geo-lab", page: "map"
   },
   "records-custodian": {
-    heading: "RECORDS OFFICE",
-    purpose: "Local archives, evidence notes and assigned retrievals.",
-    quick: "RECORDS LIBRARY", tool: "library"
+    heading: "RECORDS",
+    purpose: "ARCHIVE / NOTES",
+    quick: "LIBRARY", tool: "library"
   },
   "custom": {
-    heading: "OPERATOR PLAYGROUND",
-    purpose: "A blank, user-built station with explicitly selected local modules.",
+    heading: "CUSTOM",
+    purpose: "USER / TOOLS",
     quick: "ADD TOOLS", page: "conf"
   }
 });
@@ -93,6 +96,10 @@ let pendingProfile = null;
 let busy = false;
 let toastTimer = null;
 let reducedEffects = false;
+const viewPage = { gear: 0, data: 0, conf: 0 };
+let paletteOpen = false;
+let rolePage = 0;
+const MICRO_PAGE_SIZE = 6;
 
 const make = (name, cls, text) => {
   const node = document.createElement(name);
@@ -170,11 +177,11 @@ function labelForProfile(profile) {
 function renderHeading() {
   ui.roleShort.textContent = labelForProfile(activeProfile());
   const index = pages.indexOf(tab);
-  ui.code.textContent = String(index + 1).padStart(2, "0") + " / " + tab.toUpperCase();
+  ui.code.textContent = String(index + 1).padStart(2, "0");
   const label = openedTool === "assigned-duties" ? "ASSIGNED DUTIES"
     : openedTool ? toolInfo(openedTool)?.name : pageTitles[tab];
   ui.title.textContent = label || pageTitles[tab];
-  ui.mode.textContent = snapshot.engine.rustgis === "integrated" ? "LOCAL" : "OFFLINE";
+  ui.mode.textContent = "LOCAL";
   for (const item of ui.tabs) {
     const current = item.dataset.tab === tab;
     if (current) item.setAttribute("aria-current", "page");
@@ -219,44 +226,54 @@ function field(key, title, value, options = {}) {
 
 function showStat() {
   const root = panel();
+  root.classList.add("micro-home");
   const profileId = snapshot.active.profile;
   const station = roleStations[profileId] || roleStations.custom;
-  root.append(sectionTop(station.heading, "LOCAL / OPERATOR"));
-  const hero = make("div", "hero-status");
-  const content = make("div", "block-box lit");
-  content.append(
-    make("span", "micro-label", "ACTIVE JOB / COMMAND STATION"),
-    make("div", "hero-title scan-glow", labelForProfile(activeProfile())),
-    make("div", "hero-sub", station.purpose)
-  );
-  const display = make("div", "instrument");
-  display.setAttribute("aria-label", "Decorative instrument backdrop, not a live sensor feed");
-  display.append(make("span", "", "NO LIVE SENSOR FEED"));
-  hero.append(content, display);
-  root.append(hero);
-  const actions = make("div", "button-row");
+  root.append(sectionTop(station.heading, station.purpose));
+  const actions = make("div", "quick-row micro-home-actions");
   if (station.tool && hasTool(station.tool)) {
     actions.append(button(station.quick, () => openTool(station.tool), "micro-button solid"));
   } else if (station.page) {
     actions.append(button(station.quick, () => setTab(station.page), "micro-button solid"));
   }
   if (station.page && station.tool) {
-    actions.append(button("VIEW " + station.page.toUpperCase(), () => setTab(station.page), "micro-button"));
+    actions.append(button("MAP", () => setTab(station.page), "micro-button"));
   }
-  actions.append(button("MODULES", () => setTab("gear"), "micro-button"));
+  actions.append(button("TOOLS", () => setTab("gear"), "micro-button"));
   root.append(actions);
   const taskSection = make("div", "task-station-summary");
   root.append(taskSection);
   if (window.RustBoyTasks) {
     window.RustBoyTasks.summary(taskSection, {
+      compact: true,
       role: profileId,
       onOpen: profileId === "overseer" && hasTool("mission-board")
         ? () => openTool("mission-board") : openDuties
     });
   }
-  root.append(make("p", "panel-note",
-    "Local state only. An assigned task is not delivered or acknowledged automatically."));
   return root;
+}
+
+/** Paging is bounded to the visible screen; modules are not hidden offscreen. */
+function pagedTiles(root, ids, key, renderItem = toolTile) {
+  const count = Math.max(1, Math.ceil(ids.length / MICRO_PAGE_SIZE));
+  viewPage[key] = Math.min(viewPage[key], count - 1);
+  const offset = viewPage[key] * MICRO_PAGE_SIZE;
+  const grid = make("div", "tile-grid");
+  ids.slice(offset, offset + MICRO_PAGE_SIZE).forEach((id, index) =>
+    grid.append(renderItem(id, offset + index)));
+  root.append(grid);
+  if (count > 1) {
+    const pager = make("div", "micro-pager");
+    const prev = button("◀", () => { viewPage[key]--; render(); }, "micro-button compact");
+    const next = button("▶", () => { viewPage[key]++; render(); }, "micro-button compact");
+    prev.disabled = viewPage[key] === 0;
+    next.disabled = viewPage[key] >= count - 1;
+    prev.setAttribute("aria-label", "Previous tool page");
+    next.setAttribute("aria-label", "Next tool page");
+    pager.append(prev, make("span", "micro-label", (viewPage[key] + 1) + "/" + count), next);
+    root.append(pager);
+  }
 }
 
 function toolTile(id, index) {
@@ -272,10 +289,10 @@ function toolTile(id, index) {
   const copy = make("span", "tile-copy");
   copy.append(
     make("strong", "", meta.name),
-    make("small", "", meta.availability === "ready" ? "READY / LOCAL"
-      : meta.availability === "simulated" ? "SYNTHETIC ONLY"
-        : meta.availability === "explicit_connection" ? "OPT-IN / NOT CONNECTED"
-          : "NOT IMPLEMENTED")
+    make("small", "", meta.availability === "ready" ? "READY"
+      : meta.availability === "simulated" ? "SIM"
+        : meta.availability === "explicit_connection" ? "OPT-IN"
+          : "PLANNED")
   );
   card.append(symbol, copy);
   card.title = "Tile " + (index + 1) + ": " + meta.description;
@@ -284,32 +301,25 @@ function toolTile(id, index) {
 
 function showGear() {
   const root = panel();
-  root.append(sectionTop("PINNED MODULES", String(allPinned().length).padStart(2, "0") + " SLOTS"));
-  const pinned = allPinned();
-  if (pinned.length) {
-    const grid = make("div", "tile-grid");
-    pinned.forEach((id, index) => grid.append(toolTile(id, index)));
-    root.append(grid);
-  } else {
-    root.append(make("div", "custom-empty",
-      "CUSTOM WORKBENCH / EMPTY. Choose CONF to pin your own modules."));
-    root.append(button("OPEN TOOL PALETTE", () => setTab("conf"), "micro-button solid"));
+  const pins = allPinned();
+  root.append(sectionTop("PINNED", String(pins.length) + " TOOLS"));
+  if (pins.length) pagedTiles(root, pins, "gear");
+  else {
+    root.append(make("div", "custom-empty", "NO TOOLS"));
+    root.append(button("ADD TOOLS", () => { paletteOpen = true; setTab("conf"); },
+      "micro-button solid"));
   }
-  root.append(make("p", "panel-note",
-    "Opening a tool shows its local controls or manual handoff. Loading a profile does not execute tools."));
   return root;
 }
 
 function showMap() {
   const root = panel();
-  root.append(sectionTop("SCOUT / GEOSPATIAL", hasTool("geo-lab") ? "GIS LAB READY" : "NOT PINNED"));
+  root.append(sectionTop("SCOUT / MAP", hasTool("geo-lab") ? "GIS READY" : "UNAVAILABLE"));
   const map = make("div", "offline-grid");
   map.setAttribute("role", "img");
   map.setAttribute("aria-label", "Decorative geospatial reference grid, not a working map");
-  map.append(make("span", "grid-label", "RUSTGIS NOT ATTACHED / NO LIVE POSITION"));
+  map.append(make("span", "grid-label", "NO MAP / NO GPS"));
   root.append(map);
-  root.append(make("p", "panel-copy",
-    "Offline waypoint and distance math is available when Scout GIS is pinned. The real RustGIS map renderer and GNSS integration are later gates."));
   const actions = make("div", "quick-row");
   if (hasTool("geo-lab")) {
     actions.append(
@@ -317,7 +327,7 @@ function showMap() {
       button("DISTANCE", () => openTool("geo-lab", "distance"))
     );
   } else {
-    actions.append(button("LOAD SCOUT ROLE", openRoles, "micro-button solid"));
+    actions.append(button("SCOUT ROLE", openRoles, "micro-button solid"));
   }
   root.append(actions);
   return root;
@@ -325,22 +335,14 @@ function showMap() {
 
 function showData() {
   const root = panel();
-  const dataTools = allPinned().filter((id) =>
+  const tools = allPinned().filter((id) =>
     ["notes", "library", "byte-lab", "simulator", "geo-lab", "net-lab"].includes(id));
-  root.append(sectionTop("RECORDS / OFFLINE TOOLS", String(dataTools.length) + " AVAILABLE"));
+  root.append(sectionTop("DATA", String(tools.length) + " TOOLS"));
   if (snapshot.active.profile !== "overseer") {
-    root.append(button("MY ASSIGNED DUTIES", openDuties, "micro-button solid"));
+    root.append(button("MY DUTIES", openDuties, "micro-button solid"));
   }
-  if (dataTools.length) {
-    const list = make("div", "tile-grid");
-    dataTools.forEach((id, index) => list.append(toolTile(id, index)));
-    root.append(list);
-  } else {
-    root.append(make("div", "custom-empty", "No data tools are pinned in this profile."));
-    root.append(button("VIEW MODULES", () => setTab("gear"), "micro-button"));
-  }
-  root.append(make("p", "panel-note",
-    "Notes remain in their local CLI store; this screen does not inspect private note contents or transmit observations."));
+  if (tools.length) pagedTiles(root, tools, "data");
+  else root.append(make("div", "custom-empty", "NO DATA TOOLS"));
   return root;
 }
 
@@ -353,17 +355,17 @@ function cameraTile(number, focus = false) {
     ? "Camera " + number + " placeholder, return to all four"
     : "Focus camera " + number + " placeholder");
   cell.append(make("strong", "", "CAM " + String(number).padStart(2, "0")),
-    make("small", "", "NO VIDEO / NO SOURCE"));
+    make("small", "", "NO SIGNAL"));
   return cell;
 }
 
 function showLink() {
   const root = panel();
   if (snapshot.active.profile === "security-chief") {
-    root.append(sectionTop("CAMERA WALL / UI FIXTURE", "0/4 CONNECTED"));
+    root.append(sectionTop("CAMERAS", "0 / 4 LIVE"));
     if (focusedCamera !== null) {
       root.append(cameraTile(focusedCamera, true));
-      root.append(button("◀ BACK TO FOUR FEEDS", () => {
+      root.append(button("◀ GRID", () => {
         focusedCamera = null;
         render();
       }, "micro-button"));
@@ -372,75 +374,63 @@ function showLink() {
       for (let number = 1; number <= 4; number++) quad.append(cameraTile(number));
       root.append(quad);
     }
-    root.append(make("p", "panel-note",
-      "Tap a tile to focus. This is a layout-only prototype: no IP cameras are scanned, streamed or recorded."));
     return root;
   }
-  root.append(sectionTop("TRANSPORT / DEVICE STATUS", "NO LIVE LINKS"));
+  root.append(sectionTop("CONNECTIONS", "OFFLINE"));
   const grid = make("div", "signal-grid");
   for (const [type, state] of [
-    ["TAK / COT", "NOT CONNECTED"],
-    ["GNSS", "NOT ENABLED"],
-    ["IP CAMERAS", "NOT CONNECTED"],
-    ["PLAYSTATION", "MANUAL OPT-IN"]
+    ["TAK", "OFF"],
+    ["GNSS", "OFF"],
+    ["CAMERAS", "OFF"],
+    ["PLAYSTATION", "OPT-IN"]
   ]) {
     const cell = make("div", "signal-cell");
     cell.append(make("span", "", type), make("strong", "", state));
     grid.append(cell);
   }
   root.append(grid);
-  if (hasTool("game")) root.append(button("GAME LINK INSTRUCTIONS", () => openTool("game"), "micro-button"));
-  root.append(make("p", "panel-copy",
-    "Network operations require their own explicit CLI/device-broker authorization. No connection begins from this screen."));
+  if (hasTool("game")) root.append(button("GAME LINK", () => openTool("game"), "micro-button"));
   return root;
 }
 
 function showConf() {
   const root = panel();
-  root.append(sectionTop("OPERATOR CONFIG", "LOCAL SETTINGS"));
-  const current = make("div", "block-box lit");
-  current.append(
-    make("div", "micro-label", "SAVED JOB TEMPLATE"),
-    make("div", "preview-row")
-  );
-  current.lastElementChild.append(
-    make("strong", "", activeProfile()?.title || "UNKNOWN"),
-    button("CHANGE", openRoles, "micro-button compact")
-  );
+  const custom = snapshot.active.profile === "custom";
+  if (custom && paletteOpen) {
+    root.append(sectionTop("TOOL PALETTE", "CUSTOM"));
+    const back = button("◀ SETTINGS", () => { paletteOpen = false; render(); }, "micro-button compact");
+    root.append(back);
+    const pinned = new Set(allPinned());
+    pagedTiles(root, snapshot.palette, "conf", (item) => {
+      const exists = pinned.has(item.id);
+      const tile = button("", () => exists ? removeCustom(item.id) : addCustom(item.id),
+        "tool-pick");
+      tile.disabled = item.availability === "planned" || busy;
+      tile.append(make("strong", "", (exists ? "− " : "+ ") + item.name),
+        make("small", "", item.availability === "planned"
+          ? "PLANNED" : exists ? "PINNED" : "ADD"));
+      return tile;
+    });
+    return root;
+  }
+  root.append(sectionTop("SETTINGS", "LOCAL"));
+  const current = make("div", "block-box lit preview-row compact-profile");
+  current.append(make("strong", "", activeProfile()?.title || "UNKNOWN"),
+    button("CHANGE", openRoles, "micro-button compact"));
   root.append(current);
   const effects = make("div", "button-row");
   effects.append(
-    button(reducedEffects ? "CRT EFFECTS OFF" : "CRT EFFECTS ON", () => {
+    button(reducedEffects ? "CRT OFF" : "CRT ON", () => {
       reducedEffects = !reducedEffects;
       document.body.classList.toggle("scanlines-off", reducedEffects);
       document.body.classList.toggle("glow-off", reducedEffects);
       render();
     }, "micro-button"),
-    button("RELOAD STATE", reload, "micro-button")
+    button("RELOAD", reload, "micro-button")
   );
+  if (custom) effects.append(button("ADD TOOLS", () => { paletteOpen = true; render(); },
+    "micro-button solid"));
   root.append(effects);
-  if (snapshot.active.profile === "custom") {
-    root.append(sectionTop("ADVANCED / CUSTOM PALETTE", "ZERO AUTO GRANTS"));
-    const grid = make("div", "tool-palette");
-    const pinned = new Set(allPinned());
-    for (const item of snapshot.palette) {
-      const exists = pinned.has(item.id);
-      const unavailable = item.availability === "planned";
-      const tile = button("", () => exists ? removeCustom(item.id) : addCustom(item.id), "tool-pick");
-      tile.disabled = unavailable || busy;
-      tile.append(
-        make("strong", "", (exists ? "− " : "+ ") + item.name),
-        make("small", "", unavailable ? "NOT BUILT" : exists ? "REMOVE PIN" : item.availability.toUpperCase().replace(/_/g, " "))
-      );
-      grid.append(tile);
-    }
-    root.append(grid);
-  } else {
-    root.append(make("p", "panel-copy",
-      "Custom is the last job template. Switch to Custom to start with an empty, user-selected tool deck."));
-  }
-  root.append(make("p", "panel-note",
-    "No measured battery indicator is available yet. Power, GPS and camera statuses are not simulated as live readings."));
   return root;
 }
 
@@ -538,14 +528,15 @@ function showTool() {
   const row = make("div", "frame-head");
   row.append(
     button("◀ BACK", () => { openedTool = null; render(); }, "micro-button compact"),
-    make("span", "mini-pill", meta?.availability === "ready" ? "OFFLINE / LOCAL" : "MANUAL ONLY")
+    make("span", "mini-pill", meta?.availability === "ready" ? "LOCAL" : "MANUAL")
   );
   root.append(row);
   if (!meta) {
     root.append(make("p", "warning", "Unknown module. Return to the deck."));
     return root;
   }
-  root.append(make("p", "panel-copy", meta.description));
+  // The module title is already in the page heading; keep advanced help on
+  // the dedicated tool screen rather than repeating long descriptions.
   const supported = ["geo-lab", "net-lab", "byte-lab", "host", "notes", "library", "simulator", "game"];
   if (supported.includes(openedTool)) {
     inputForm(root, openedTool);
@@ -562,6 +553,7 @@ function showTool() {
 function render() {
   if (!snapshot) return;
   renderHeading();
+  ui.screen.dataset.depth = openedTool ? "detail" : "root";
   ui.content.replaceChildren(openedTool ? showTool() :
     tab === "stat" ? showStat() :
       tab === "gear" ? showGear() :
@@ -576,7 +568,7 @@ async function reload() {
     if (openedTool && !hasTool(openedTool)) openedTool = null;
     focusedCamera = null;
     render();
-    notify("LOCAL WORKBENCH / SYNCHRONIZED");
+    notify("SYNCED");
   } catch (error) {
     ui.code.textContent = "LOCAL / ERROR";
     ui.content.replaceChildren(make("div", "block-box error", error.message));
@@ -587,19 +579,29 @@ async function reload() {
 function openRoles() {
   if (!snapshot || busy) return;
   pendingProfile = snapshot.active.profile;
+  rolePage = Math.max(0, Math.floor(snapshot.profiles.findIndex((r) =>
+    r.id === pendingProfile) / 4));
+  renderRolePage();
+  selectRole(pendingProfile);
+  if (!ui.rolesDialog.open) ui.rolesDialog.showModal();
+}
+
+function renderRolePage() {
   ui.rolesList.replaceChildren();
-  snapshot.profiles.forEach((role, index) => {
+  const roles = snapshot.profiles.slice(rolePage * 4, rolePage * 4 + 4);
+  roles.forEach((role, index) => {
     const row = button("", () => selectRole(role.id), "profile-row");
     row.dataset.role = role.id;
-    row.append(make("span", "num", String(index + 1).padStart(2, "0")));
+    row.append(make("span", "num", String(rolePage * 4 + index + 1).padStart(2, "0")));
     const info = make("div");
-    info.append(make("strong", "", role.title), make("span", "", role.id === "custom"
-      ? "EMPTY / ADVANCED USER" : String(role.tools.length) + " PRELOADED TOOLS"));
+    info.append(make("strong", "", role.title));
     row.append(info);
     ui.rolesList.append(row);
   });
-  selectRole(pendingProfile);
-  if (!ui.rolesDialog.open) ui.rolesDialog.showModal();
+  const count = Math.max(1, Math.ceil(snapshot.profiles.length / 4));
+  ui.rolePaging.textContent = (rolePage + 1) + " / " + count;
+  ui.rolePrev.disabled = rolePage === 0;
+  ui.roleNext.disabled = rolePage >= count - 1;
 }
 
 function selectRole(id) {
@@ -610,12 +612,12 @@ function selectRole(id) {
     row.setAttribute("aria-pressed", String(row.dataset.role === id));
   }
   ui.chosenName.textContent = choice.title;
-  ui.chosenDetail.textContent = choice.description;
+  ui.chosenDetail.textContent = choice.id === "custom" ? "EMPTY" : choice.tools.length + " TOOLS";
   const unchanged = id === snapshot.active.profile
     && !(id === "custom" && snapshot.active.slots.length);
   ui.applyRole.disabled = unchanged || busy;
   ui.applyRole.textContent = id === "custom" && snapshot.active.profile === "custom"
-    ? "CONFIRM RESET CUSTOM" : "CONFIRM REPLACE";
+    ? "RESET CUSTOM" : "LOAD ROLE";
 }
 
 async function activateRole() {
@@ -631,7 +633,8 @@ async function activateRole() {
     tab = "stat";
     render();
     ui.viewport.scrollTop = 0;
-    notify("PROFILE LOADED / NO TOOL EXECUTED");
+    paletteOpen = false;
+    notify("ROLE LOADED");
   } catch (error) {
     notify(error.message, true);
   } finally {
@@ -645,7 +648,7 @@ async function addCustom(id) {
   busy = true;
   try {
     snapshot = await api("/api/custom/add", { id });
-    notify("TOOL PINNED / NOT EXECUTED");
+    notify("PINNED");
     render();
   } catch (error) {
     notify(error.message, true);
@@ -664,7 +667,7 @@ async function removeCustom(id) {
     snapshot = await api("/api/custom/remove", { id: slot.id });
     if (openedTool === id) openedTool = null;
     render();
-    notify("TOOL REMOVED / LAYOUT ONLY");
+    notify("REMOVED");
   } catch (error) {
     notify(error.message, true);
   } finally {
@@ -693,6 +696,18 @@ function init() {
   ui.closeRoles.addEventListener("click", () => ui.rolesDialog.close());
   ui.cancelRoles.addEventListener("click", () => ui.rolesDialog.close());
   ui.applyRole.addEventListener("click", activateRole);
+  ui.rolePrev.addEventListener("click", () => {
+    if (rolePage === 0) return;
+    rolePage--;
+    renderRolePage();
+    selectRole(snapshot.profiles[rolePage * 4].id);
+  });
+  ui.roleNext.addEventListener("click", () => {
+    if ((rolePage + 1) * 4 >= snapshot.profiles.length) return;
+    rolePage++;
+    renderRolePage();
+    selectRole(snapshot.profiles[rolePage * 4].id);
+  });
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape") {
       // Browsers handle closing the native modal themselves.
