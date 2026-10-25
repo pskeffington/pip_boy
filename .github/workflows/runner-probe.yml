@@ -14,5 +14,9 @@ jobs:
   admission:
     runs-on: ubuntu-latest
     steps:
-      - name: Verify runner job can start
-        run: echo "Rust-Boy runner probe started"
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Verify runner job and checkout
+        run: |
+          echo "Rust-Boy runner probe started"
+          test -f Cargo.toml
