@@ -16,7 +16,13 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-      - name: Verify runner job and checkout
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          components: rustfmt, clippy
+      - name: Verify runner, checkout and Rust
         run: |
-          echo "Rust-Boy runner probe started"
           test -f Cargo.toml
+          rustc --version
+          cargo --version
