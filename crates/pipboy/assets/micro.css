@@ -355,3 +355,6 @@ small { font-size:11px; }
 
 /* Accessibility fallback if zoom/large fonts overflow normal primary pages. */
 .micro-device.micro-overflow[data-depth="root"] .micro-viewport { overflow-y:auto; }
+
+/* Task pages are fitted, but never silently hide controls at large zoom. */
+.micro-device.micro-overflow[data-depth="tasks"] .micro-viewport { overflow-y:auto; }

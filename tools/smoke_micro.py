@@ -94,6 +94,10 @@ with tempfile.TemporaryDirectory() as work:
         assert b"LOAD ROLE" in js
         assert b"MutationObserver(ensureVisible)" in js
         assert b'micro-overflow[data-depth="root"]' in css
+        assert b'micro-overflow[data-depth="tasks"]' in css
+        assert b"function compactBoard()" in request(port, "GET", "/assets/tasks.js")[2]
+        assert b"function compactCreate()" in request(port, "GET", "/assets/tasks.js")[2]
+        assert b"function compactDetail(task)" in request(port, "GET", "/assets/tasks.js")[2]
         assert b"MAILTO:" not in js.upper()
         assert b"https://" not in js, "Micro UI must not include third-party fetch targets"
 

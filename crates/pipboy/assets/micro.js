@@ -720,7 +720,7 @@ function ensureVisible() {
   // Primary pages are normally no-scroll. At zoom or with unexpected content,
   // recover scroll access rather than clipping actions.
   ui.screen.classList.remove("micro-overflow");
-  if (ui.screen.dataset.depth === "root"
+  if (["root", "tasks"].includes(ui.screen.dataset.depth)
       && ui.content.scrollHeight > ui.viewport.clientHeight + 1) {
     ui.screen.classList.add("micro-overflow");
   }
