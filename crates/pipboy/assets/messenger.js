@@ -103,7 +103,11 @@
       if (!selected) {
         thread.append(el("div","rb-msg-empty",
           "NO PAIRED DEVICES · SET UP A DEDICATED SSH KEY AND PIN HOST FINGERPRINT"));
-      } else if(!messages.length) {
+      } else if(!state.peers.includes(selected)) {
+        thread.append(el("div","rb-msg-empty",
+          "RECEIVE ONLY / PAIR A RETURN SSH KEY TO REPLY"));
+      }
+      if(selected && !messages.length) {
         thread.append(el("div","rb-msg-empty",
           "NO SAVED MESSAGES FOR "+selected.toUpperCase()));
       }
@@ -131,7 +135,7 @@
             }catch(error){
               if(!closed)notice("RETRY FAILED / LOCAL MESSAGE PRESERVED",true);
             }finally{
-              busy=false;if(!closed){send.disabled=!selected;retry.disabled=false;}
+              busy=false;if(!closed){send.disabled=!selected || !state?.peers?.includes(selected);retry.disabled=false;}
             }
           });
           retry.setAttribute("aria-label","Retry queued message "+message.id+
@@ -143,7 +147,7 @@
     }
 
     function refreshPeers() {
-      const choices=Array.isArray(state?.peers) ? state.peers : [];
+      const choices=Array.isArray(state?.conversations) ? state.conversations : [];
       peerSelect.replaceChildren();
       if (!choices.length) {
         const option=el("option","","NO PAIRED DEVICES");
@@ -157,7 +161,7 @@
       }
       peerSelect.value=selected;
       peerSelect.disabled=!choices.length || busy;
-      send.disabled=!selected || busy;
+      send.disabled=!selected || !state.peers.includes(selected) || busy;
       renderStatus();
       drawMessages();
     }
@@ -172,7 +176,7 @@
         const data=await request("/api/messages",undefined,controller.signal);
         if(closed || current!==version)return;
         if(data.schema_version!==1 || !Array.isArray(data.messages) ||
-           !Array.isArray(data.peers) ||
+           !Array.isArray(data.peers) || !Array.isArray(data.conversations) ||
            data.transport!=="pinned_openssh_explicit" ||
            data.e2ee!==false || data.storage!=="plaintext_local_only"){
           throw new Error("Unrecognized Messenger security contract");
@@ -186,11 +190,12 @@
     }
 
     peerSelect.addEventListener("change",()=>{
-      selected=peerSelect.value;page=0;drawMessages();send.disabled=!selected || busy;
+      selected=peerSelect.value;page=0;drawMessages();
+      send.disabled=!selected || !state?.peers?.includes(selected) || busy;
     });
     form.addEventListener("submit",async event=>{
       event.preventDefault();
-      if(closed || busy || !selected)return;
+      if(closed || busy || !selected || !state?.peers?.includes(selected))return;
       const body=input.value;
       const bytes=new TextEncoder().encode(body).length;
       if(!body.trim() || bytes>1024){
@@ -213,8 +218,8 @@
       }finally{
         busy=false;
         if(!closed){
-          refresh.disabled=false;peerSelect.disabled=!state?.peers?.length;
-          send.disabled=!selected;
+          refresh.disabled=false;peerSelect.disabled=!state?.conversations?.length;
+          send.disabled=!selected || !state?.peers?.includes(selected);
         }
       }
     });
