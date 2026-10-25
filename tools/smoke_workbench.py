@@ -79,7 +79,7 @@ with tempfile.TemporaryDirectory() as temporary:
     board = json.loads(call(env, "list", "--json"))
     assert board["profile"] == "security-chief"
     assert [slot["tool"] for slot in board["slots"]] == [
-        "host", "net-lab", "byte-lab", "notes"
+        "host", "diag", "net-lab", "byte-lab", "notes"
     ]
     assert not (root / "notes.json").exists()
     assert not (root / "permissions.json").exists()
