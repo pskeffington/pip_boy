@@ -52,3 +52,36 @@ jobs:
           python3 tools/smoke_permissions.py
           python3 tools/smoke_simulator.py
           python3 tools/smoke_replay.py
+
+  native:
+    name: Native ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            python: python3
+          - os: windows-latest
+            python: python
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install native Rust toolchain
+        shell: bash
+        run: |
+          rustup toolchain install stable --profile minimal
+          rustup default stable
+          rustc --version
+          cargo --version
+      - name: Compile, unit test and build
+        shell: bash
+        run: |
+          cargo check --workspace --all-targets --locked
+          cargo test --workspace --locked
+          cargo build -p pipboy --locked
+      - name: Offline preferences and virtual-device smoke
+        shell: bash
+        run: |
+          ${{ matrix.python }} tools/smoke_permissions.py
+          ${{ matrix.python }} tools/smoke_simulator.py
+          ${{ matrix.python }} tools/smoke_replay.py
