@@ -13,6 +13,7 @@ Rust-Boy is the public product name. The existing `pip_boy` repository, `pipboy`
 - [G1 execution plan](G1_EXECUTION_PLAN.md) — ordered engineering acceptance packages and next implementation priority.
 - [CI triage](CI_TRIAGE.md) — zero-job startup investigation and required quality evidence.
 - [Adapter permissions](PERMISSIONS.md) — persisted preference state, explicit CLI and authorization boundary.
+- [Device simulator precursor](SIMULATION.md) — in-memory fixture broker, active simulated leases, confirmation and revocation.
 - [Architecture](ARCHITECTURE.md) — host / UI / core / adapter boundaries.
 - [Research library](RESEARCH_LIBRARY.md) — external open-source Pip-Boy implementation references.
 
@@ -65,6 +66,8 @@ The build is a directed acyclic dependency plan, **not** a schedule. All module 
 - [ ] Make native dependencies optional by compile-time feature / target gating.
 - [ ] Add cross-build for arm64 Linux and hardware-in-loop acceptance tests.
 
+**G2 precursor (G1-D source authored, unverified):** an in-memory `SimulatedBroker` now has 11 fixed virtual fixtures, explicit simulation confirmation, preference denial, generation-based lease revocation and truthful fake-only events. This is not the G2 hardware simulator, OS broker, event playback suite or physical adapter.
+
 **G2 exit:** clean simulator replay on CI and verified physical input on selected hardware; no automatic port opening, scanning, or unsafe fallback.
 
 ### G3: Location, sensors, receivers, and peer tools — **planned**
@@ -99,7 +102,7 @@ The build is a directed acyclic dependency plan, **not** a schedule. All module 
 
 **G1:** typed observation, bounded sample buffer, lifecycle transitions, finite NDJSON command and offline catalog validator have initial source implementations with telemetry now shared by TUI and finite NDJSON through a bounded session. The lazy host telemetry adapter now connects ModuleHost, lifecycle and capabilities to the TUI and finite sampling command; the one-shot status CLI has also been wired through it (new tests awaiting execution). The new `PreferenceStore` and CLI record requested/denied adapter intent only, with authored schema/locking/smoke tests not yet executed. No preference enables radio, GNSS, mesh, BLE, GPIO or network access; actual consent and brokering remain planned. See [permissions contract](PERMISSIONS.md) and [validation evidence](VALIDATION.md).
 
-**G2–G4:** still planned, with no external hardware, location, scanning or transmission enabled.
+**G2–G4:** still planned, with no external hardware, location, scanning or transmission enabled. The G1 virtual broker cannot be used as a hardware permission service.
 
 The next engineering handoff is [G1_EXECUTION_PLAN.md](G1_EXECUTION_PLAN.md). Do not merge or release based on static files alone.
 

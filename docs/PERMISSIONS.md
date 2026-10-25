@@ -19,6 +19,10 @@ pipboy permissions clear sdr.receive
 
 The key set is: `device.enumerate`, `gpio.read`, `display.write`, `serial.read`, `gnss.read`, `sdr.receive`, `ble.discover`, `mesh.transmit`, `sensor.read`, `audio.play`, and `network.fetch`. Core `host.read`, `files.read` and `files.write` remain tied to currently implemented CLI/module operations and cannot be saved as adapter preferences.
 
+## Simulator-only confirmation (no active real-device grant)
+
+`pipboy simulate list` lists 11 *hard-coded* virtual fixtures, and `pipboy simulate run sim:sdr --confirm` demonstrates a short-lived confirmation and lease. A saved `requested` preference alone cannot start even a simulation; a saved `denied` preference blocks it despite `--confirm`. The simulator never opens an OS interface and cannot supply a real device authorization token. See [SIMULATION.md](SIMULATION.md). Actual per-device consent and a privileged OS broker remain unimplemented.
+
 ## Local schema and limits
 
 - Path: `PIPBOY_HOME/permissions.json` (otherwise the same default Rust-Boy data directory as notes).
@@ -48,6 +52,7 @@ cargo test --workspace --locked
 cargo clippy --workspace --all-targets --locked -- -D warnings
 cargo build -p pipboy --locked
 python3 tools/smoke_permissions.py
+python3 tools/smoke_simulator.py
 python3 tools/smoke_notes.py
 python3 tools/smoke_runtime.py
 ```

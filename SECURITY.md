@@ -16,6 +16,10 @@ Rust-Boy is an experimental offline-first field systems console, not a safety-of
 
 The in-process Rust `ModuleHost` provides **lifecycle and capability policy checks** for built-in trusted modules, not operating-system isolation. The static manifest cannot prevent malicious linked code from invoking OS functions. Hardware operations will require a separate device broker with explicit user consent and scoped handles before those adapters can be enabled. See [docs/OBJECT_MODEL.md](docs/OBJECT_MODEL.md).
 
+## G1 simulated broker (no real authorization)
+
+`SimulatedBroker` and `pipboy simulate` operate only on 11 fixed, in-memory `sim:*` fixtures. A session requires `--confirm` in the CLI, and a saved `denied` preference always wins. Requested intent never grants a session. The simulation emits `simulated: true` and no device readings; cross-broker and revoked leases are invalid. This **cooperative in-process harness is not an OS privilege broker**, and `--confirm` must never be reused to open real devices. Real trusted consent, OS handle isolation and physical adapters remain planned. See [simulation contract](docs/SIMULATION.md).
+
 ## Future devices
 
 Location, serial ports, GPIO, SDR/radio, BLE, Wi-Fi, and mesh transports require separate adapters, permission gates, simulator tests, and user-facing indicators. Do not silently initiate scans, pair devices, transmit, or modify settings. No interference, jamming, credential interception, or covert collection features.

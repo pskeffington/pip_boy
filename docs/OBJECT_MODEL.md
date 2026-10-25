@@ -30,6 +30,7 @@ flowchart TD
 | `PermissionSet` | Initially offline/read-only; manual grants require explicit application action | Host, not an adapter |
 | `LocalOperation` | Read/write capability precheck for trusted one-shot LIBRARY/NOTES actions | Short-lived caller policy |
 | `PreferenceStore` | Bounded versioned requested/denied intent for future external adapters, never active grants | Local `permissions.json` file |
+| `SimulatedBroker` / `SimulationLease` | Fixed virtual fixtures, explicit per-session confirmation, deny/revoke checks and non-replayable in-process lease | Process-local memory only; no OS handle |
 | `ModulePoll` | Explicit `Sample`, `Denied`, `Inactive`, `Failed` status plus lifecycle state for observability | Return value, no hidden success |
 | `Observation<T>` (implemented typed envelope) | Source, time, unit, validity and provenance of measurements | One sample; enforce data constraints |
 | `DeviceBroker` (G2 planned) | Authorized OS I/O handles for selected hardware | Controlled platform adapter |
@@ -75,6 +76,10 @@ Use concrete generic adapters for high-throughput SDR and packet decode paths wh
 ### Runtime API migration
 
 Registered modules now remain Disabled until `start(id)` succeeds. Replace the prototype `permissions_mut()` access with `grant(capability)` and `revoke(capability)` so revocation can release resources immediately. Each `ModulePoll` carries lifecycle state; `Inactive` distinguishes a permitted but stopped module from denial. `ModuleSample.host_observation` supplies typed host data while NDJSON command output retains the observation envelope.
+
+### Simulated-broker precursor
+
+`SimulatedBroker` accepts a validated preference snapshot and requires explicit `SessionConfirmation::Confirmed` for each virtual fixture. It never reads devices or uses network APIs, and its lease cannot be serialized or reused across broker instances. Saved `requested` preference is insufficient; `denied` wins. The CLI demonstrates this contract with `simulate list|run ID --confirm`. Policy reload and explicit revoke invalidate an active lease before its next sample; nothing monitors the preferences file in the background. These new tests await execution and this API cannot authorize future real drivers. See [SIMULATION.md](SIMULATION.md).
 
 ## Proposed crate evolution
 

@@ -80,6 +80,29 @@ def validate():
         "adapter preferences and runtime capability vocabulary disagree",
     )
 
+    # Fixed simulator inventory must map exactly one virtual fixture per
+    # future capability. It must never fall back to hardware at runtime.
+    simulator_source = (
+        ROOT / "crates/pipboy-core/src/device_simulator.rs"
+    ).read_text(encoding="utf-8")
+    fixture_match = re.search(
+        r"pub const SIMULATED_DEVICES: &\[SimulatedDevice\] = &\[(.*?)\];",
+        simulator_source,
+        flags=re.DOTALL,
+    )
+    require(fixture_match is not None, "missing simulated device inventory")
+    fixture_ids = re.findall(r'id:\s*"(sim:[^"]+)"', fixture_match.group(1))
+    fixture_capabilities = re.findall(
+        r"capability:\s*Capability::(\w+)", fixture_match.group(1)
+    )
+    require(
+        len(fixture_ids) == len(fixture_capabilities)
+        and len(fixture_ids) == len(set(fixture_ids))
+        and len(fixture_capabilities) == len(set(fixture_capabilities))
+        and set(fixture_capabilities) == expected_adapters,
+        "simulated device fixture roster disagrees with capability keys",
+    )
+
 
     for entry in literature:
         eid = entry["id"]

@@ -236,13 +236,14 @@
       "Reversible configuration",
       "Disabled-by-default external I/O",
       "Session-only local host-read pause/resume implemented; persistent per-adapter consent remains planned",
-      "Version-1 bounded persistent adapter request/deny/clear preferences and CLI (not authorization; tests authored and pending)"
+      "Version-1 bounded persistent adapter request/deny/clear preferences and CLI (not authorization; tests authored and pending)",
+      "Simulation-only one-shot CLI confirmation and in-process deny-first broker prototype (unverified; real-device consent still planned)"
     ],
     "acceptance": [
       "Permissions tested before adapter callback",
       "Settings migration and revocation tests",
       "Read/list creates no data files; unsupported/future/duplicate/oversized preferences are preserved and rejected",
-      "Stored requested preference never grants hardware/network access; active-session broker remains unimplemented"
+      "Stored requested preference never grants hardware/network access; trusted real-device authorization remains unimplemented"
     ]
   },
   {
@@ -355,11 +356,13 @@
     "features": [
       "Explicit device selection",
       "Capabilities and permission broker",
-      "Safe disconnect and timeouts"
+      "Safe disconnect and timeouts",
+      "G1 precursor: in-memory SimulatedBroker uses private broker-scoped leases; real OS handle broker not implemented"
     ],
     "acceptance": [
       "Unknown/unapproved device stays closed",
-      "Revoke permission blocks adapter invocation"
+      "Revoke permission blocks adapter invocation",
+      "Do not interpret virtual device confirmation as authorization to open a real device"
     ]
   },
   {
@@ -436,11 +439,14 @@
     "features": [
       "Deterministic event playback",
       "Mock GPIO/serial/display adapters",
-      "Recorded golden traces"
+      "Recorded golden traces",
+      "G1 precursor: 11 fixed in-memory virtual fixtures, explicit per-session confirmation and bounded truthful event envelope (new tests pending)"
     ],
     "acceptance": [
       "CI runs without hardware",
-      "Replay gives same state transitions"
+      "Replay gives same state transitions",
+      "Saved requested preference does not start a virtual device; Denied blocks even confirmed simulation",
+      "Revocation, close, policy reload and cross-broker replay cannot reuse stale leases"
     ]
   },
   {

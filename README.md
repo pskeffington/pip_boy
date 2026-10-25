@@ -62,6 +62,8 @@ cargo run -p pipboy -- permissions list
 cargo run -p pipboy -- permissions request sdr.receive
 cargo run -p pipboy -- permissions deny sdr.receive
 cargo run -p pipboy -- permissions clear sdr.receive
+cargo run -p pipboy -- simulate list
+cargo run -p pipboy -- simulate run sim:gpio --confirm
 cargo run -p pipboy -- notes add "Field observation"
 cargo run -p pipboy -- notes list
 cargo run -p pipboy -- notes search "battery"
@@ -72,6 +74,7 @@ python3 tools/validate_catalog.py
 cargo fmt --all -- --check
 cargo test --workspace
 python3 tools/smoke_permissions.py # run after cargo build -p pipboy
+python3 tools/smoke_simulator.py   # fixed in-memory fixtures only
 cargo clippy --workspace --all-targets -- -D warnings
 ```
 
@@ -82,6 +85,10 @@ Use **Left/Right** or **Tab** to change panels, **Up/Down** to select entries or
 ## Saved adapter preferences
 
 The new `permissions` CLI records `unset`, `requested`, or `denied` intent in a bounded, versioned local JSON file. A `requested` value is only a preference for future functionality: Rust-Boy still does not authorize radio, mesh, GNSS, Bluetooth, GPIO, device enumeration or network access. `permissions list` does not create files. See the [permission storage and threat boundary](docs/PERMISSIONS.md). The implementation requires compilation and runtime acceptance before use is considered verified.
+
+## G1 virtual-device simulator
+
+`simulate list` reports 11 **hard-coded virtual fixtures**, never real connected devices. `simulate run sim:gpio --confirm` requires explicit confirmation for that one in-memory event and emits JSON with `simulated: true`, no hardware readings. Saved `requested` preferences do not satisfy confirmation; saved `denied` preferences block the fixture. Revocation invalidates old simulated sessions in the core API. This precursor does **not** implement any G2 device adapter, OS broker, active real-device grant or physical I/O. See [simulation contract](docs/SIMULATION.md). New Rust and CLI tests await execution.
 
 ## Repository navigation
 
@@ -96,6 +103,7 @@ The new `permissions` CLI records `unset`, `requested`, or `denied` intent in a 
 | [docs/G1_EXECUTION_PLAN.md](docs/G1_EXECUTION_PLAN.md) | Next G1 engineering slices and testable acceptance criteria |
 | [docs/STORAGE.md](docs/STORAGE.md) | Notes schema, limits, write locks and recovery rules |
 | [docs/PERMISSIONS.md](docs/PERMISSIONS.md) | External adapter preferences, storage and consent boundary |
+| [docs/SIMULATION.md](docs/SIMULATION.md) | Fixed virtual device fixtures, session revocation and mock-only outputs |
 | [docs/CI_TRIAGE.md](docs/CI_TRIAGE.md) | GitHub Actions startup investigation and local verification |
 | [docs/LITERATURE_MATRIX.md](docs/LITERATURE_MATRIX.md) | Evidence matrix connecting standards and studies to modules |
 | [docs/MODULE_CATALOG.md](docs/MODULE_CATALOG.md) | Planned modules, features, dependency gates and acceptance criteria |

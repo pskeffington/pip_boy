@@ -2,6 +2,14 @@
 
 Review date: October 24, 2026 (America/New_York). Environment: Linux x86_64 container. These are local results; they do not establish remote Actions success or macOS/Windows support.
 
+## G1-D simulated broker follow-on (authored, unexecuted)
+
+The development branch now includes `crates/pipboy-core/src/device_simulator.rs` and `pipboy simulate list|run ID [--confirm]`. It contains 11 fixed, virtual fixture IDs and no OS, RF, serial, BLE, location or network I/O backend. A simulation requires a fresh explicit `--confirm`; a stored requested preference never authorizes it, while a denied preference blocks it. A per-broker, generation-scoped lease is invalidated on explicit revoke, close or denied policy reload. Events use `simulated:true` and carry no fabricated device measurements. **This prototype is not the G2 hardware broker or active real-device authorization.**
+
+Eight new Rust tests verify inventory coverage, request-vs-confirmation, saved denials, truthful fixture JSON, lease revocation and replay protection, policy reload/fail-closed behavior and cross-broker identity. A new `tools/smoke_simulator.py` script covers CLI parsing, requested/denied preferences, no default filesystem writes, schema corruption and strict simulated JSON output; the stable workflow invokes it. The static offline catalog validator now also checks the simulator fixture roster against all 11 external capability keys.
+
+**Executable validation has not been performed** on these changes. This environment lacks Rust/Cargo, and GitHub Actions has been returning `startup_failure` before any jobs spawn. Run `cargo fmt --all -- --check`, `cargo check --workspace --all-targets --locked`, `cargo test --workspace --locked`, `cargo clippy --workspace --all-targets --locked -- -D warnings`, `cargo build -p pipboy --locked` followed by `python3 tools/smoke_simulator.py`, plus existing `smoke_permissions.py`, `smoke_notes.py` and `smoke_runtime.py`. Confirm stable and Rust 1.81, then native OS acceptance. The historical passing tests are not evidence for this commit. See [SIMULATION.md](SIMULATION.md).
+
 ## Current follow-on G1-D implementation: adapter preferences (unverified)
 
 The development branch now contains `crates/pipboy-core/src/permissions.rs`, exposed by `lib.rs`, and a CLI `pipboy permissions list|request|deny|clear`. This is a **preference-only** record for 11 named future adapter capabilities, not actual consent. It never calls `ModuleHost::grant`; stored `requested` does not permit a radio, mesh, location, BLE or network adapter to run. Preferences are in a bounded 16 KiB schema-1 `permissions.json` under `PIPBOY_HOME`, protected by a stable advisory lock and flushed same-directory replacement. Read/list creates no files, invalid or future schemas are preserved, and the explicit commands update or clear decisions.

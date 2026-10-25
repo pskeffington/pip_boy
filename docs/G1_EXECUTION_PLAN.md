@@ -15,7 +15,8 @@
 | Capability prechecks | capability.rs and runtime.rs | TUI pause/revoke locally tested; one-shot STATUS and scoped LIBRARY/NOTES routing authored, newer tests pending | Per-adapter active-session authorization and device broker |
 | Finite NDJSON export | sampling.rs | Locally tested, including writer failures | Signal cancellation and other OS clock checks |
 | Local notes | notes.rs | Locked staged writes, validated limits, search and explicit export/import; locally tested | Native Windows/macOS runtime and general schema migrations |
-| Adapter preferences | permissions.rs; CLI permissions | Versioned requested/denied preferences, bounded locked persistence and fail-closed parsing authored (tests pending) | Actual consent flow, device broker, native platforms and tamper resistance |
+| Adapter preferences | permissions.rs; CLI permissions | Versioned requested/denied preferences, bounded locked persistence and fail-closed parsing authored (tests pending) | Actual consent flow, OS broker, native platforms and tamper resistance |
+| Virtual broker prototype | device_simulator.rs; CLI simulate | 11 fixed fixtures, explicit confirmation, fail-closed denial, scoped lease and revocation authored (tests pending) | True OS device broker, trusted UX, physical adapters and hardware replay |
 | Console navigation | console.rs / tui.rs | Compact layout, scrolling, explicit note reload and Linux resize smoke checks | Native platforms, assistive-tech and contrast acceptance |
 | Research consistency | tools/validate_catalog.py | Passing locally | Keep catalog and Rust registry aligned |
 | Quality checks | rust.yml | Python + stable + Rust 1.81.0 matrix | Local quality checks pass; remote Actions still unverified |
@@ -56,7 +57,7 @@ G1 module-plan statuses remain **planned** until integration and acceptance test
 ### G1-D: Lifecycle and permission integration
 
 - State machine transitions must reject start-before-grant, denied modules, and planned-only modules.
-- GrantConfirmed must be supplied by a separately reviewed authorization service; persisted preferences do not provide it.
+- GrantConfirmed must be supplied by a separately reviewed authorization service; persisted preferences and the *simulator-only* `--confirm` do not provide it.
 - Combine the lifecycle, capability check and built-in ModuleHost in one orchestration flow.
 - Revoke access promptly, cancel resources and show degraded/unavailable state.
 
@@ -77,11 +78,11 @@ G1 module-plan statuses remain **planned** until integration and acceptance test
 | --- | --- | --- |
 | P0 | Investigate Actions startup failure and capture passing CI | Runner/entitlement investigation |
 | P0 | Run stable/MSRV and real CLI checks for STATUS, scoped LIBRARY/NOTES and preference commands | G1-A/G1-D |
-| P0 | Validate preference store and build explicit session authorization UI plus OS device broker; stored requests must never automatically grant access | G1-D/G2 |
+| P0 | Validate preference store and virtual broker fixtures; build trusted real-device authorization UI and OS handle broker | G1-D/G2 |
 | P0 | Extend tested notes portability to general collection migrations and backup identities | G1-E |
 | P1 | Build testable host telemetry timing and source-quality dashboard | G1-C |
 | P1 | Native platform, assistive-tech and contrast acceptance | G1-E |
-| P2 | Specify GPIO/device simulator fixtures; no hardware enablement yet | G1-D, G1-E |
+| P2 | Extend initial 11 virtual fixtures to deterministic timed event replay and mock transport APIs; no hardware enablement | G2 |
 
 ## Acceptance evidence format
 
