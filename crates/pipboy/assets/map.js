@@ -234,6 +234,19 @@
         ctx.lineWidth = style.width || (shape.kind === "polygon" ? 1 : 1.5);
         ctx.strokeStyle = style.stroke || (shape.kind === "polygon" ? "#6b9f6b" : "#b5db90");
         ctx.stroke();
+        // A few named roads are useful on the miniature field display.
+        if (shape.label && shape.kind === "line" && view.zoom >= 13.5 && labels < 12 &&
+            shape.paths[0] && shape.paths[0].length >= 2) {
+          const mid = shape.paths[0][Math.floor(shape.paths[0].length / 2)];
+          const p = screenPoint(view, mid[0], mid[1]);
+          if (p[0] > 5 && p[0] < view.width - 65 &&
+              p[1] > 16 && p[1] < view.height - 12) {
+            ctx.fillStyle = "#d6efbd";
+            ctx.font = "10px monospace";
+            ctx.fillText(shape.label, p[0] + 4, p[1] - 6);
+            labels++;
+          }
+        }
       }
     }
 
