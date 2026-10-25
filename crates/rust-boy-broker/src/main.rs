@@ -204,8 +204,16 @@ mod tests {
 
     #[test]
     fn reject_device_paths_traversal_and_unknown_identity() {
-        for device in ["", "sim:serial", "device:", "device:../../COM1", "device:/dev/tty0",
-            "device:COM1\\evil", "device:serial port", "device:á"] {
+        for device in [
+            "",
+            "sim:serial",
+            "device:",
+            "device:../../COM1",
+            "device:/dev/tty0",
+            "device:COM1\\evil",
+            "device:serial port",
+            "device:á",
+        ] {
             let mut req = request();
             req["device_id"] = json!(device);
             assert_eq!(reason(req), "invalid_request", "{device}");
@@ -220,7 +228,8 @@ mod tests {
             req["request_id"] = json!(id);
             assert_eq!(reason(req), "invalid_request");
         }
-        let encoded = serde_json::to_string(&deny_frame(&serde_json::to_vec(&request()).unwrap())).unwrap();
+        let encoded =
+            serde_json::to_string(&deny_frame(&serde_json::to_vec(&request()).unwrap())).unwrap();
         assert!(!encoded.contains("0123456789abcdef"));
         assert!(!encoded.contains("device:demo-serial"));
     }
@@ -245,7 +254,8 @@ mod tests {
             req["purpose"] = json!(purpose);
             assert_eq!(reason(req), "invalid_request");
         }
-        let encoded = serde_json::to_string(&deny_frame(&serde_json::to_vec(&request()).unwrap())).unwrap();
+        let encoded =
+            serde_json::to_string(&deny_frame(&serde_json::to_vec(&request()).unwrap())).unwrap();
         assert!(!encoded.contains("test only"));
     }
 
@@ -271,7 +281,8 @@ mod tests {
 
     #[test]
     fn response_has_no_session_handle_or_credential_fields() {
-        let response = serde_json::to_value(deny_frame(&serde_json::to_vec(&request()).unwrap())).unwrap();
+        let response =
+            serde_json::to_value(deny_frame(&serde_json::to_vec(&request()).unwrap())).unwrap();
         let keys = response.as_object().unwrap();
         assert_eq!(keys.len(), 5);
         for forbidden in ["token", "session", "handle", "path", "request_id"] {
