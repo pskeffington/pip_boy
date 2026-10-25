@@ -88,13 +88,13 @@ def validate():
         ROOT / "crates/rust-boy-broker/src/main.rs"
     ).read_text(encoding="utf-8")
     broker_match = re.search(
-        r"const CAPABILITY_OPERATIONS: &\\[\\(&str, &str\\)\\] = &\\[(.*?)\\];",
+        r"const CAPABILITY_OPERATIONS: &\[\(&str, &str\)\] = &\[(.*?)\];",
         broker_source,
         flags=re.DOTALL,
     )
     require(broker_match is not None, "missing deny-all broker protocol roster")
     broker_pairs = re.findall(
-        r'\\("([^"]+)",\\s*"([^"]+)"\\)',
+        r'\("([^"]+)",\s*"([^"]+)"\)',
         broker_match.group(1),
     )
     require(
