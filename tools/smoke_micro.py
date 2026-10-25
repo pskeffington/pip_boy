@@ -152,7 +152,26 @@ with tempfile.TemporaryDirectory() as work:
         code, _, response = api(port, "POST", "/api/profile", {
             "id": "reclamation-scout", "confirm": True
         })
-        assert code == 200 and response["active"]["slots"][0]["tool"] == "geo-lab"
+        assert code == 200 and [slot["tool"] for slot in response["active"]["slots"]][:2] == ["reclamation", "geo-lab"]
+        assert not (root / "reclamation.json").exists()
+        code, _, response = api(port, "GET", "/api/reclamation")
+        assert code == 200 and response["book"]["sites"] == []
+        code, _, response = api(port, "POST", "/api/reclamation/create", {
+            "name": "North Intake", "kind": "water", "condition": "degraded",
+            "priority": "high", "latitude": 42.0, "longitude": -70.75,
+            "accuracy_m": None, "notes": "Survey only"
+        })
+        assert code == 200 and response["site"]["revision"] == 1
+        code, _, response = api(port, "POST", "/api/reclamation/change", {
+            "id": 1, "revision": 1, "status": "needs_assistance"
+        })
+        assert code == 200 and response["site"]["revision"] == 2
+        code, _, response = api(port, "POST", "/api/reclamation/change", {
+            "id": 1, "revision": 1, "status": "completed"
+        })
+        assert code == 409
+        code, _, response = api(port, "GET", "/api/reclamation/geojson")
+        assert code == 200 and response["features"][0]["geometry"]["coordinates"] == [-70.75, 42.0]
         code, _, result = api(port, "POST", "/api/experiment", {
             "tool": "geo-lab", "mode": "waypoint",
             "name": "Camp One", "lat": "42.0", "lon": "-70.75"
