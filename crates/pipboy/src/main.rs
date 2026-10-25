@@ -3,8 +3,6 @@ use pipboy_core::metrics::Collector;
 use pipboy_core::notes::NoteStore;
 use pipboy_core::registry::MODULES;
 use std::error::Error;
-use std::io::{self, Write};
-
 mod tui;
 
 fn help() {
