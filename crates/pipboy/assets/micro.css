@@ -115,6 +115,8 @@ small { font-size:11px; }
 .form-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
 .form-grid .wide { grid-column:1/-1; }
 .form-actions { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+.micro-consent {display:flex;align-items:center;gap:8px;font:10px var(--rb-mono);color:var(--rb-text);letter-spacing:0;}
+.micro-consent input {width:17px;height:17px;margin:0;accent-color:var(--rb-accent);flex:none;}
 .muted { color:var(--rb-muted); }
 .warning { color:var(--rb-alert); }
 .error { color:#f5a599; }
