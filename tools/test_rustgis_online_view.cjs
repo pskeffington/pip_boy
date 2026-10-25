@@ -50,6 +50,7 @@ async function fetchMock(url,init){
 function loadFile(name,params){
   return fs.readFileSync(path.join(__dirname,"../crates/pipboy/assets/"+name),params||"utf8");
 }
+new Function("window",loadFile("map-import.js"))(window);
 new Function("window","fetch",loadFile("map-online.js"))(window,fetchMock);
 new Function("window","document","navigator","TextEncoder",loadFile("map.js"))(window,document,navigator,TextEncoder);
 
