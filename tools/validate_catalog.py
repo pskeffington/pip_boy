@@ -4,6 +4,7 @@
 Schema/graph checks do not prove Rust compilation, device safety, or licensing.
 """
 
+import ast
 import json
 import re
 import sys
@@ -102,6 +103,35 @@ def validate():
         and set(fixture_capabilities) == expected_adapters,
         "simulated device fixture roster disagrees with capability keys",
     )
+
+
+    # The G2 precursor must not quietly acquire live I/O dependencies.
+    # This lexical tripwire supplements (but cannot replace) OS isolation
+    # and a reviewed physical-device broker.
+    no_hardware_sources = (
+        "device_simulator.rs",
+        "simulator_replay.rs",
+        "virtual_transport.rs",
+        "mock_adapters.rs",
+    )
+    prohibited_api = (
+        "std::net::", "std::fs::", "std::os::", "std::process::Command",
+        "serialport::", "rppal::", "btleplug::", "tokio::net::",
+        "winapi::", "windows_sys::", "CreateFileW",
+    )
+    for name in no_hardware_sources:
+        source = (
+            ROOT / "crates/pipboy-core/src" / name
+        ).read_text(encoding="utf-8")
+        violations = [api for api in prohibited_api if api in source]
+        require(not violations, f"{name}: forbidden direct device/I-O API {violations}")
+
+    # Validate every first-party Python CI harness before selecting a platform.
+    for harness in sorted((ROOT / "tools").glob("*.py")):
+        try:
+            ast.parse(harness.read_text(encoding="utf-8"), filename=str(harness))
+        except SyntaxError as exc:
+            raise ValueError(f"{harness.name}: Python syntax error: {exc}") from exc
 
 
     for entry in literature:
