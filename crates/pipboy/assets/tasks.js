@@ -59,7 +59,7 @@
     open: tasks.filter((t) => !done(t)).length,
     due: tasks.filter(overdue).length,
     blocked: tasks.filter((t) => t.status === "blocked").length,
-    awaiting: tasks.filter((t) => t.sent_at && !t.acknowledged_at && !done(t)).length,
+    awaiting: tasks.filter((t) => t.delivery && !t.remote_progress?.acknowledged && !done(t)).length,
     done: tasks.filter(done).length
   });
   const statusText = (status) => ({
@@ -112,7 +112,7 @@
         panel.append(button(response.manager ? "OPEN TASK CONTROL" : "VIEW ASSIGNED DUTIES",
           options.onOpen, "solid"));
       }
-      if (response.manager) panel.append(infoText("Assignments are local until explicitly handed off."));
+      if (response.manager) panel.append(infoText("Assignments remain local until sent to a paired Rust-Boy."));
       root.replaceChildren(panel);
     }).catch((error) => {
       if (root.isConnected) root.replaceChildren(infoText("Task board unavailable: " + error.message));
@@ -121,8 +121,8 @@
 
   async function mount(root, options = {}) {
     const state = {
-      data: null, view: "board", filter: "open", selected: null,
-      handoff: null, editor: null, action: false, status: "", error: ""
+      data: null, peers: null, view: "board", filter: "open", selected: null,
+      editor: null, action: false, status: "", error: ""
     };
     let epochs = 0;
 
@@ -134,9 +134,6 @@
       state.status = "";
       try {
         await request();
-        // A task mutation invalidates any previously prepared outbound text.
-        // Never let a reassign/status update leave an old handoff copyable.
-        state.handoff = null;
         state.editor = null;
         state.status = success;
         await refresh();
@@ -154,6 +151,11 @@
         const result = await get("/api/tasks");
         if (epoch !== epochs || !root.isConnected) return;
         state.data = result;
+        if (result.manager) {
+          try { state.peers = await get("/api/peers"); }
+          catch { state.peers = null; }
+        }
+        if (epoch !== epochs || !root.isConnected) return;
         render();
       } catch (error) {
         if (epoch !== epochs || !root.isConnected) return;
@@ -191,9 +193,6 @@
       const due = label("due", "DUE DATE (OPTIONAL)", 10);
       due.querySelector("input").type = "date";
       top.append(due);
-      const contact = label("contact", "RECIPIENT EMAIL (OPTIONAL)", 120);
-      contact.querySelector("input").type = "email";
-      top.append(contact);
       form.append(top);
       const description = node("label", "task-field", "INSTRUCTIONS (OPTIONAL)");
       const textarea = node("textarea");
@@ -218,7 +217,6 @@
         if (state.action) return;
         const value = Object.fromEntries(new FormData(form).entries());
         value.due ||= null;
-        value.contact ||= null;
         await execute(() => get("/api/tasks/create", value), "Assignment saved locally.");
         if (!state.error) state.view = "board";
         render();
@@ -252,11 +250,8 @@
       cols.append(label("assignee", "NEW ASSIGNEE", 64, task.assignee));
       cols.append(fieldSelect("role", "JOB", (options.profiles || [])
         .map((profile) => [profile.id, profile.title]), task.role));
-      const recipient = label("contact", "EMAIL (OPTIONAL)", 120, task.contact || "");
-      recipient.querySelector("input").type = "email";
-      cols.append(recipient);
       form.append(cols);
-      form.append(infoText("Reassigning clears the manually recorded sent and acknowledgment flags."));
+      form.append(infoText("Reassigning clears the prior device-delivery link and receipt state. Resend explicitly."));
       const save = node("button", "task-button solid", "SAVE REASSIGNMENT");
       save.type = "submit";
       form.append(save);
@@ -265,54 +260,66 @@
         const values = Object.fromEntries(new FormData(form).entries());
         execute(() => get("/api/tasks/change", {
           id: task.id, revision: task.revision, operation: "reassign",
-          assignee: values.assignee, role: values.role, contact: values.contact || null
+          assignee: values.assignee, role: values.role, contact: null
         }), "Assignee changed; handoff reset.");
         state.editor = null;
       });
       return form;
     }
 
-    async function handoff(task) {
-      try {
-        const message = await get("/api/tasks/handoff", { id: task.id });
-        state.handoff = { id: task.id, text: message.text };
-        render();
-      } catch (error) {
-        showError(error.message);
+    function deviceDispatch(task) {
+      const card = node("section", "task-handoff");
+      card.append(node("strong", "", "SEND ASSIGNMENT / PEER DEVICE"));
+      const available = state.peers?.peers || [];
+      if (!available.length) {
+        card.append(infoText("No Rust-Boy peer is paired. Set up device identity, trusted SSH host key, and a destination with the peer CLI before sending."));
+        const hint = node("code", "task-packet",
+          "pipboy peer init overseer-a --confirm\n" +
+          "pipboy peer add scout-one pi@scout.local ABSOLUTE_SSH_KEY ABSOLUTE_KNOWN_HOSTS --confirm");
+        card.append(hint);
+        return card;
       }
+      const destination = fieldSelect("peer", "PAIRED RUST-BOY", available
+        .map((peer) => [peer.alias, peer.alias + " / " + peer.target]), available[0].alias);
+      card.append(destination);
+      card.append(infoText("Uses OpenSSH with a previously pinned host key. The receiver stores the task before a delivery receipt is recorded. No automatic polling or broadcast."));
+      card.append(button("SEND TO SELECTED DEVICE", () => {
+        const alias = destination.querySelector("select").value;
+        if (!window.confirm("Send " + shortId(task.id) + " to paired device " + alias +
+          " using OpenSSH? Remote storage is not a human acknowledgment.")) return;
+        execute(() => get("/api/peer/send", {
+          id: task.id, revision: task.revision, alias, confirm: true
+        }), "Receiving Rust-Boy confirmed durable task storage. Operator acknowledgment pending.");
+      }, "solid"));
+      return card;
     }
 
-    async function copyHandoff() {
-      if (!state.handoff) return;
-      if (!navigator.clipboard || !window.isSecureContext) {
-        showError("Clipboard unavailable; select and copy the handoff text below.");
-        return;
-      }
-      try {
-        await navigator.clipboard.writeText(state.handoff.text);
-        state.status = "Handoff copied. You must deliver it and confirm sending separately.";
-        render();
-      } catch {
-        showError("Clipboard denied; select the handoff text below instead.");
-      }
-    }
-
-    function emailDraft(task) {
-      if (!state.handoff) return;
-      const subject = encodeURIComponent("Rust-Boy assignment " + shortId(task.id) + ": " + task.title);
-      const body = encodeURIComponent(state.handoff.text);
-      const address = task.contact || "";
-      // Explicit user click; opens their chosen mail client. Never auto-sends.
-      window.location.href = "mailto:" + address + "?subject=" + subject + "&body=" + body;
-      state.status = "Email draft opened locally. Delivery is not verified.";
-      render();
+    function deliveredStatus(task) {
+      const card = node("section", "task-handoff");
+      const receipt = task.delivery;
+      card.append(node("strong", "", "DEVICE TRANSPORT / DELIVERY RECORDED"));
+      card.append(infoText("Stored at " + receipt.peer + " / remote task " +
+        shortId(receipt.remote_task_id) + ". Delivered over a trusted SSH session; human acknowledgment is separate."));
+      card.append(infoText(task.remote_progress
+        ? "Last received report: " + statusText(task.remote_progress.status) +
+          " / acknowledged: " + (task.remote_progress.acknowledged ? "YES" : "NO") +
+          " / checked " + relativeTime(task.remote_progress.observed_at)
+        : "No device progress receipt imported yet."));
+      card.append(button("REFRESH REMOTE STATUS", () => {
+        if (!window.confirm("Connect to paired device " + receipt.peer +
+          " to refresh task acknowledgment and progress?")) return;
+        execute(() => get("/api/peer/sync", {
+          alias: receipt.peer, confirm: true
+        }), "Peer progress synchronized explicitly. No background polling enabled.");
+      }, "solid"));
+      return card;
     }
 
     function detail(task) {
       const container = node("div", "task-detail");
       const top = node("div", "task-heading");
       top.append(
-        button("← BOARD", () => { state.selected = null; state.handoff = null; render(); }, "ghost"),
+        button("← BOARD", () => { state.selected = null; render(); }, "ghost"),
         badge(shortId(task.id))
       );
       container.append(top);
@@ -327,8 +334,13 @@
       const pairs = [
         ["ASSIGNEE", task.assignee],
         ["JOB", (options.profiles || []).find((p) => p.id === task.role)?.title || task.role],
-        ["HANDOFF", task.sent_at ? "MARKED SENT " + relativeTime(task.sent_at) : "NOT MARKED SENT"],
-        ["ACKNOWLEDGMENT", task.acknowledged_at ? "MANUALLY RECORDED" : "NOT RECORDED"],
+        ["DEVICE", task.delivery
+          ? "STORED AT " + task.delivery.peer
+          : task.origin ? "RECEIVED FROM " + task.origin.device : "NOT SENT"],
+        ["ACKNOWLEDGMENT", task.origin
+          ? (task.acknowledged_at ? "ACKNOWLEDGED LOCALLY" : "ACTION REQUIRED")
+          : task.remote_progress?.acknowledged ? "REPORTED BY REMOTE DEVICE"
+            : task.acknowledged_at ? "MANUAL LEGACY FLAG" : "NOT RECEIVED"],
         ["REVISION", task.revision]
       ];
       const specs = node("div", "task-specs");
@@ -341,45 +353,28 @@
       if (task.details) container.append(node("p", "task-instructions", task.details));
       container.append(statusControl(task));
       const actions = node("div", "task-actions");
-      if (state.data.manager) {
-        actions.append(button("PREPARE HANDOFF", () => handoff(task)));
-        if (!task.sent_at) {
-          actions.append(button("MARK SENT (MANUAL)", () => {
-            if (!window.confirm("Confirm that YOU sent this outside Rust-Boy? This does not verify delivery.")) return;
-            execute(() => get("/api/tasks/change", {
-              id: task.id, revision: task.revision, operation: "sent"
-            }), "Manual sent flag recorded; delivery remains unverified.");
+      if (state.data.manager && !task.origin) {
+        if (!task.delivery) {
+          actions.append(button("REASSIGN", () => {
+            state.editor = state.editor === task.id ? null : task.id;
+            render();
           }, "ghost"));
         }
-        actions.append(button("REASSIGN", () => {
-          state.editor = state.editor === task.id ? null : task.id;
-          render();
-        }, "ghost"));
       }
-      if (task.sent_at && !task.acknowledged_at) {
-        actions.append(button("RECORD ACKNOWLEDGMENT", () => {
-          if (!window.confirm("Record a manually verified acknowledgment? Rust-Boy has no remote receipt.")) return;
+      if (task.origin && task.sent_at && !task.acknowledged_at) {
+        actions.append(button("ACKNOWLEDGE RECEIPT", () => {
+          if (!window.confirm("Acknowledge receipt of this assignment on this Rust-Boy?")) return;
           execute(() => get("/api/tasks/change", {
             id: task.id, revision: task.revision, operation: "acknowledge"
-          }), "Manual acknowledgment recorded.");
-        }, "ghost"));
+          }), "Acknowledgment saved on this device. The sender must sync to retrieve it.");
+        }, "solid"));
       }
       container.append(actions);
-      if (state.editor === task.id && state.data.manager) {
+      if (state.editor === task.id && state.data.manager && !task.delivery && !task.origin) {
         container.append(reassignForm(task));
       }
-      if (state.handoff?.id === task.id) {
-        const hand = node("div", "task-handoff");
-        hand.append(node("strong", "", "MANUAL DISPATCH / NOT SENT BY RUST-BOY"));
-        const text = node("pre", "task-packet", state.handoff.text);
-        text.tabIndex = 0;
-        hand.append(text);
-        const tools = node("div", "task-actions");
-        tools.append(button("COPY ASSIGNMENT", copyHandoff, "solid"));
-        tools.append(button("OPEN EMAIL DRAFT", () => emailDraft(task)));
-        hand.append(tools);
-        hand.append(infoText("Opening an email draft does not send it. Mark sent only after delivery has been initiated in your external client."));
-        container.append(hand);
+      if (state.data.manager && !task.origin) {
+        container.append(task.delivery ? deliveredStatus(task) : deviceDispatch(task));
       }
       const history = node("details", "task-history");
       const heading = node("summary", "", "AUDIT HISTORY (" + task.events.length + ")");
@@ -396,7 +391,7 @@
     }
 
     function lineItem(task) {
-      const row = button("", () => { state.selected = task.id; state.handoff = null; render(); }, "task-row");
+      const row = button("", () => { state.selected = task.id; render(); }, "task-row");
       const header = node("div", "task-row-head");
       header.append(node("strong", "", shortId(task.id) + "  " + task.title),
         badge(task.priority.toUpperCase(), task.priority === "critical" ? "warn" : ""));
@@ -482,7 +477,7 @@
         filtered.forEach((task) => list.append(lineItem(task)));
       }
       wrap.append(list);
-      wrap.append(infoText("Task state is stored locally. Cross-device delivery/receipts are not active; use explicit manual handoff."));
+      wrap.append(infoText("Device-to-device dispatch uses paired OpenSSH peers only. All sending and remote-status checks require explicit operator action."));
       root.append(wrap);
     }
     await refresh();
