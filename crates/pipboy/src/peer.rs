@@ -274,7 +274,7 @@ pub fn sync_peer(alias: &str) -> io::Result<usize> {
     sync_from_store(&tasks, &peers, alias)
 }
 
-fn receive() -> io::Result<()> {
+fn receive(expected_sender: Option<&str>) -> io::Result<()> {
     let (config, _, tasks) = setup()?;
     let local = own_device(&config)?;
     let mut data = Vec::new();
@@ -284,7 +284,10 @@ fn receive() -> io::Result<()> {
     }
     let input: RemoteAssignment =
         serde_json::from_slice(&data).map_err(|_| invalid("Invalid assignment frame"))?;
-    if input.from_device == local || !config.trusted_senders.contains(&input.from_device) {
+    if input.from_device == local
+        || expected_sender.is_some_and(|source| source != input.from_device)
+        || !config.trusted_senders.contains(&input.from_device)
+    {
         return Err(io::Error::new(
             io::ErrorKind::PermissionDenied,
             "Sender device label is not trusted on this device",
@@ -337,6 +340,27 @@ fn receipts(device: &str) -> io::Result<()> {
     Ok(())
 }
 
+/// Intended for an OpenSSH authorized_keys forced command:
+/// command="/absolute/path/pipboy peer bridge overseer-a",restrict ssh-ed25519 ...
+/// Each dedicated SSH key is bound to one source label. Arbitrary SSH commands
+/// and cross-sender spoofing are denied here without interpreting a shell.
+fn bridge(source: &str) -> io::Result<()> {
+    if !valid_device_id(source) {
+        return Err(invalid("Invalid restricted SSH source identity"));
+    }
+    let original = std::env::var("SSH_ORIGINAL_COMMAND")
+        .map_err(|_| io::Error::new(io::ErrorKind::PermissionDenied,
+            "Restricted SSH bridge requires SSH_ORIGINAL_COMMAND"))?;
+    if original == "pipboy peer receive" {
+        receive(Some(source))
+    } else if original == format!("pipboy peer receipts {source}") {
+        receipts(source)
+    } else {
+        Err(io::Error::new(io::ErrorKind::PermissionDenied,
+            "OpenSSH restricted key permits receive and source-specific receipts only"))
+    }
+}
+
 pub fn run(args: Vec<String>) -> Result<(), Box<dyn Error>> {
     let use_text = "usage: pipboy peer <init DEVICE --confirm|trust SENDER --confirm|add ALIAS USER@HOST ABSOLUTE_KEY ABSOLUTE_KNOWN_HOSTS --confirm|list [--json]|send TASK_ID ALIAS --confirm|sync ALIAS --confirm>";
     let (config, peers, _) = setup()?;
@@ -386,7 +410,8 @@ pub fn run(args: Vec<String>) -> Result<(), Box<dyn Error>> {
             let count = sync_peer(alias)?;
             println!("{count} locally stored tasks updated with peer-reported progress");
         }
-        [command] if command == "receive" => receive()?,
+        [command] if command == "receive" => receive(None)?,
+        [command, source] if command == "bridge" => bridge(source)?,
         [command, device] if command == "receipts" => receipts(device)?,
         _ => return Err(use_text.into()),
     }
@@ -397,6 +422,14 @@ pub fn run(args: Vec<String>) -> Result<(), Box<dyn Error>> {
 mod tests {
     use super::*;
     use pipboy_core::peers::Peer;
+
+    #[test]
+    fn forced_bridge_rejects_missing_ssh_original_command() {
+        // Never interpret a remote command as shell syntax.
+        // CI covers the positive restricted bridge in tools/smoke_peer.py.
+        assert!(!valid_device_id("bad source; exit"));
+        assert!(valid_device_id("overseer-a"));
+    }
 
     #[test]
     fn ssh_invocation_is_fixed_and_does_not_skip_host_validation() {
