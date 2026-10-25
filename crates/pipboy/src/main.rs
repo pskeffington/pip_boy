@@ -17,6 +17,7 @@ use std::error::Error;
 mod console;
 mod dashboard;
 mod diagnostics;
+mod network;
 mod game;
 mod game_discovery;
 mod game_view;
@@ -29,7 +30,7 @@ mod workbench;
 
 fn help() {
     println!("{PRODUCT_NAME} | {PRODUCT_DESCRIPTOR}");
-    println!("usage: {CLI_COMMAND} [dashboard [--port PORT] [--open] [--micro]|peer <init|trust|add|list|send|sync>|scout geo <waypoint|distance|inspect>|workbench <list|profiles|use|palette|add|remove|rename|clear|bytes|net>|game (--discover-ps4 --confirm [--json] | (--connect IP:PORT | --playstation IP | --ps4 IP) --confirm [--snapshot|--diagnose|--observe-seconds N])|tui|status [--details] [--json]|sample [--count N --interval-ms MS --details]|sources [query]|modules|plan [G0..G4]|evidence [query]|doctor|diag <host [--json]|ingest FILE --asset ID --confirm-authorized [--json]>|permissions <list|request KEY|deny KEY|clear KEY>|simulate <list|run ID [--confirm]|replay ID SCENARIO [--confirm]|transport ID --count N --capacity N [--confirm]|adapter <input|display|serial> [--confirm]>|notes <list|add TEXT|search QUERY|export|import FILE>|help]");
+    println!("usage: {CLI_COMMAND} [dashboard [--port PORT] [--open] [--micro]|peer <init|trust|add|list|send|sync>|scout geo <waypoint|distance|inspect>|workbench <list|profiles|use|palette|add|remove|rename|clear|bytes|net>|game (--discover-ps4 --confirm [--json] | (--connect IP:PORT | --playstation IP | --ps4 IP) --confirm [--snapshot|--diagnose|--observe-seconds N])|tui|status [--details] [--json]|sample [--count N --interval-ms MS --details]|sources [query]|modules|plan [G0..G4]|evidence [query]|doctor|net <scan|watch> <local|PRIVATE_CIDR> --confirm [--json]|diag <host [--json]|ingest FILE --asset ID --confirm-authorized [--json]>|permissions <list|request KEY|deny KEY|clear KEY>|simulate <list|run ID [--confirm]|replay ID SCENARIO [--confirm]|transport ID --count N --capacity N [--confirm]|adapter <input|display|serial> [--confirm]>|notes <list|add TEXT|search QUERY|export|import FILE>|help]");
 }
 
 fn main() {
@@ -89,6 +90,7 @@ fn run() -> Result<(), Box<dyn Error>> {
         }
         Some("game") => game::run(args.collect()),
         Some("diag") => diagnostics::run(args.collect()),
+        Some("net") => network::run(args.collect()),
         Some("peer") => peer::run(args.collect()),
         Some("scout") => scout::run(args.collect()),
         Some("dashboard") => dashboard::run(args.collect()),
