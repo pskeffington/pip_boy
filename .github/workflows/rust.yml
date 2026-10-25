@@ -1,0 +1,103 @@
+name: Rust-Boy quality gates
+
+on:
+  push:
+    branches: [main, "feat/**"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  catalog:
+    name: Validate source and module manifests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Offline manifest validation
+        run: python3 tools/validate_catalog.py
+
+  rust:
+    name: Rust ${{ matrix.toolchain }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        toolchain: ["stable", "1.81.0"]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install matrix Rust toolchain
+        run: |
+          rustup toolchain install "${{ matrix.toolchain }}" --profile minimal --component rustfmt --component clippy
+          rustup default "${{ matrix.toolchain }}"
+          rustc --version
+          cargo --version
+      - name: Formatting
+        if: matrix.toolchain == 'stable'
+        run: cargo fmt --all -- --check
+      - name: Compile all targets
+        run: cargo check --workspace --all-targets --locked
+      - name: Unit tests
+        run: cargo test --workspace --locked
+      - name: Clippy
+        if: matrix.toolchain == 'stable'
+        run: cargo clippy --workspace --all-targets --locked -- -D warnings
+      - name: Runtime CLI and terminal smoke checks
+        if: matrix.toolchain == 'stable'
+        run: |
+          cargo build --workspace --locked
+          python3 tools/smoke_runtime.py
+          python3 tools/smoke_notes.py
+          python3 tools/smoke_permissions.py
+          python3 tools/smoke_simulator.py
+          python3 tools/smoke_replay.py
+          python3 tools/smoke_transport.py
+          python3 tools/smoke_mock_adapters.py
+          python3 tools/smoke_native_cli.py
+          python3 tools/smoke_broker.py
+
+  native:
+    name: Native ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            python: python3
+          - os: windows-latest
+            python: python
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install native Rust toolchain
+        shell: bash
+        run: |
+          rustup toolchain install stable --profile minimal
+          rustup default stable
+          rustc --version
+          cargo --version
+      - name: Compile, unit test and build
+        shell: bash
+        run: |
+          cargo check --workspace --all-targets --locked
+          cargo test --workspace --locked
+          cargo build --workspace --locked
+      - name: Offline preferences and virtual-device smoke
+        shell: bash
+        run: |
+          ${{ matrix.python }} tools/smoke_permissions.py
+          ${{ matrix.python }} tools/smoke_simulator.py
+          ${{ matrix.python }} tools/smoke_replay.py
+          ${{ matrix.python }} tools/smoke_transport.py
+          ${{ matrix.python }} tools/smoke_mock_adapters.py
+          ${{ matrix.python }} tools/smoke_native_cli.py
+          ${{ matrix.python }} tools/smoke_broker.py
+      - name: Native macOS terminal PTY journey
+        if: matrix.os == 'macos-latest'
+        shell: bash
+        run: python3 tools/smoke_runtime.py
+      - name: Native Windows ConPTY terminal journey
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: python tools/smoke_windows_conpty.py

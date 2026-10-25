@@ -1,0 +1,690 @@
+[
+  {
+    "id": "L01",
+    "title": "The Rust Programming Language: Object-Oriented Programming Features",
+    "year": 2026,
+    "type": "official_docs",
+    "url": "https://doc.rust-lang.org/stable/book/ch18-00-oop.html",
+    "doi": null,
+    "modules": [
+      "plugins",
+      "telemetry",
+      "devices"
+    ],
+    "design": "Favor traits and composition instead of inherited class hierarchies.",
+    "limitation": "Conceptual guidance; not evidence of runtime correctness.",
+    "acceptance": "Prove two heterogeneous modules implement one object-safe interface.",
+    "reviewed_on": "2026-10-24",
+    "contributors": "Rust Project contributors",
+    "publisher": "Rust Project"
+  },
+  {
+    "id": "L02",
+    "title": "The Rust Reference: Dyn Compatibility",
+    "year": 2026,
+    "type": "language_spec",
+    "url": "https://doc.rust-lang.org/stable/reference/items/traits.html",
+    "doi": null,
+    "modules": [
+      "plugins",
+      "telemetry",
+      "devices"
+    ],
+    "design": "Keep runtime module interface dyn-compatible (no generic methods or associated constants).",
+    "limitation": "Runtime dispatch does not enforce operating-system permissions.",
+    "acceptance": "Compile polymorphic test implementations as Box<dyn RuntimeModule>.",
+    "reviewed_on": "2026-10-24",
+    "contributors": "Rust Project contributors",
+    "publisher": "Rust Project"
+  },
+  {
+    "id": "L03",
+    "title": "RustBelt: Securing the Foundations of the Rust Programming Language",
+    "year": 2018,
+    "type": "peer_reviewed",
+    "url": "https://doi.org/10.1145/3158154",
+    "doi": "10.1145/3158154",
+    "modules": [
+      "telemetry",
+      "devices",
+      "release"
+    ],
+    "design": "Keep unsafe and foreign-function boundaries outside core domain types.",
+    "limitation": "Formal result does not prove each third-party dependency or device driver safe.",
+    "acceptance": "Review unsafe dependencies and keep device I/O isolated.",
+    "reviewed_on": "2026-10-24",
+    "contributors": "Ralf Jung; Jacques-Henri Jourdan; Robbert Krebbers; Derek Dreyer",
+    "publisher": "ACM / POPL 2018"
+  },
+  {
+    "id": "L04",
+    "title": "Local-first software: You own your data, in spite of the cloud",
+    "year": 2019,
+    "type": "peer_reviewed",
+    "url": "https://doi.org/10.1145/3359591.3359737",
+    "doi": "10.1145/3359591.3359737",
+    "modules": [
+      "storage",
+      "notes",
+      "mesh",
+      "feeds"
+    ],
+    "design": "Prioritize local data ownership and offline functionality before optional synchronization.",
+    "limitation": "Discusses CRDTs as potential tools; does not mandate sync or CRDT usage now.",
+    "acceptance": "Offline create/read/export work with network disabled.",
+    "reviewed_on": "2026-10-24",
+    "contributors": "Martin Kleppmann; Adam Wiggins; Peter van Hardenberg; Mark McGranaghan",
+    "publisher": "ACM / Onward! 2019"
+  },
+  {
+    "id": "L05",
+    "title": "Ratatui TestBackend",
+    "year": 2026,
+    "type": "official_docs",
+    "url": "https://docs.rs/ratatui/latest/ratatui/backend/struct.TestBackend.html",
+    "doi": null,
+    "modules": [
+      "accessibility",
+      "display",
+      "simulator"
+    ],
+    "design": "Use memory-backed terminal frames and keyboard event replay for deterministic UI tests.",
+    "limitation": "Current reference may describe a newer Ratatui version than this workspace's 0.29 dependency.",
+    "acceptance": "Pin dependency; verify API and capture small-terminal snapshots.",
+    "reviewed_on": "2026-10-24",
+    "contributors": "Ratatui maintainers",
+    "publisher": "Ratatui project"
+  },
+  {
+    "id": "L06",
+    "title": "embedded-hal 1.0.0",
+    "year": 2024,
+    "type": "official_docs",
+    "url": "https://docs.rs/embedded-hal/latest/embedded_hal/",
+    "doi": null,
+    "modules": [
+      "gpio",
+      "devices",
+      "sensors"
+    ],
+    "design": "Use hardware abstraction traits where peripheral protocols fit; keep Linux-specific GPIO separate.",
+    "limitation": "Embedded HAL traits do not replace Linux userspace GPIO drivers or cover SDR.",
+    "acceptance": "Build fake GPIO inputs before hardware tests.",
+    "reviewed_on": "2026-10-24",
+    "contributors": "Rust Embedded HAL maintainers",
+    "publisher": "Rust Embedded HAL project"
+  },
+  {
+    "id": "L07",
+    "title": "Linux GPIO character device v2 userspace API",
+    "year": 2026,
+    "type": "platform_spec",
+    "url": "https://cdn.kernel.org/doc/html/latest/userspace-api/gpio/chardev.html",
+    "doi": null,
+    "modules": [
+      "gpio",
+      "devices"
+    ],
+    "design": "Use kernel-supported GPIO requests instead of sysfs and ad-hoc bit banging.",
+    "limitation": "Linux-specific and dependent on kernel + device capabilities.",
+    "acceptance": "Require permission-denied, disconnect, and debounce tests.",
+    "reviewed_on": "2026-10-24",
+    "contributors": "Linux kernel GPIO maintainers",
+    "publisher": "Linux kernel documentation"
+  },
+  {
+    "id": "L08",
+    "title": "gpsd JSON protocol: TPV and SKY",
+    "year": 2026,
+    "type": "official_docs",
+    "url": "https://gpsd.io/gpsd_json.html",
+    "doi": null,
+    "modules": [
+      "gnss",
+      "map"
+    ],
+    "design": "Model optional GNSS measurements, explicit fix quality, and sample freshness.",
+    "limitation": "Receiver and gpsd presence are not guaranteed; TPV can omit location fields.",
+    "acceptance": "Replay no-fix, stale-fix and malformed payload fixtures.",
+    "reviewed_on": "2026-10-24",
+    "contributors": "gpsd maintainers",
+    "publisher": "gpsd project"
+  },
+  {
+    "id": "L09",
+    "title": "RFC 7946: The GeoJSON Format",
+    "year": 2016,
+    "type": "standard",
+    "url": "https://www.rfc-editor.org/info/rfc7946",
+    "doi": "10.17487/RFC7946",
+    "modules": [
+      "map",
+      "gnss",
+      "storage"
+    ],
+    "design": "Use standards-based GeoJSON import/export with WGS84 coordinates.",
+    "limitation": "Format specification is not a routing engine or a tile licensing grant.",
+    "acceptance": "Reject invalid coordinates and preserve geometry types.",
+    "reviewed_on": "2026-10-24",
+    "contributors": "H. Butler; M. Daly; A. Doyle; S. Gillies; S. Hagen; T. Schaub",
+    "publisher": "IETF"
+  },
+  {
+    "id": "L10",
+    "title": "OpenStreetMap copyright and ODbL license",
+    "year": 2026,
+    "type": "license_policy",
+    "url": "https://www.openstreetmap.org/copyright/en",
+    "doi": null,
+    "modules": [
+      "map",
+      "library"
+    ],
+    "design": "Track map-data provenance and attribution requirements in offline bundles.",
+    "limitation": "ODbL applies to data; tiles and styles can have different terms.",
+    "acceptance": "Every imported map bundle records source/license/attribution.",
+    "reviewed_on": "2026-10-24",
+    "contributors": "OpenStreetMap Foundation",
+    "publisher": "OpenStreetMap Foundation"
+  },
+  {
+    "id": "L11",
+    "title": "OpenStreetMap Foundation tile usage policy",
+    "year": 2026,
+    "type": "license_policy",
+    "url": "https://operations.osmfoundation.org/policies/tiles/",
+    "doi": null,
+    "modules": [
+      "map",
+      "feeds"
+    ],
+    "design": "Never bulk-prefetch official OSM raster tiles for Rust-Boy offline maps.",
+    "limitation": "Provider policy is distinct from OSM database license and can change.",
+    "acceptance": "Offline map test uses user-supplied, permitted tile bundles only.",
+    "reviewed_on": "2026-10-24",
+    "contributors": "OpenStreetMap Foundation Operations Working Group",
+    "publisher": "OpenStreetMap Foundation"
+  },
+  {
+    "id": "L12",
+    "title": "Bluetooth Core Specification 6.2",
+    "year": 2025,
+    "type": "standard",
+    "url": "https://www.bluetooth.com/specifications/specs/core-specification-6-2/",
+    "doi": null,
+    "modules": [
+      "ble",
+      "mesh",
+      "devices"
+    ],
+    "design": "Use explicit pairing, connection security and known peripheral capabilities.",
+    "limitation": "Bluetooth pairing alone does not equal application-layer peer trust.",
+    "acceptance": "Manual pairing and peer identity tests; no automatic discovery.",
+    "reviewed_on": "2026-10-24",
+    "contributors": "Bluetooth Core Specification Working Group",
+    "publisher": "Bluetooth SIG"
+  },
+  {
+    "id": "L13",
+    "title": "btleplug Rust BLE Central library",
+    "year": 2026,
+    "type": "official_docs",
+    "url": "https://docs.rs/btleplug/latest/btleplug/",
+    "doi": null,
+    "modules": [
+      "ble",
+      "devices"
+    ],
+    "design": "Consider platform-specific BLE adapter behind a host-only trait.",
+    "limitation": "Library and backend support vary; no implementation approval yet.",
+    "acceptance": "Mock BLE central callbacks and verify cancellation.",
+    "reviewed_on": "2026-10-24",
+    "contributors": "btleplug maintainers",
+    "publisher": "btleplug project"
+  },
+  {
+    "id": "L14",
+    "title": "serialport-rs cross-platform API",
+    "year": 2026,
+    "type": "official_docs",
+    "url": "https://docs.rs/serialport/latest/serialport/",
+    "doi": null,
+    "modules": [
+      "serial",
+      "devices",
+      "gpio"
+    ],
+    "design": "Abstract serial enumeration and read-only device sessions.",
+    "limitation": "Some platform backends and native libraries may require extra dependencies.",
+    "acceptance": "Test manual port selection, unplug, timeout and cancellation.",
+    "reviewed_on": "2026-10-24",
+    "contributors": "serialport-rs maintainers",
+    "publisher": "serialport-rs project"
+  },
+  {
+    "id": "L15",
+    "title": "RFC 9180: Hybrid Public Key Encryption",
+    "year": 2022,
+    "type": "standard",
+    "url": "https://www.rfc-editor.org/info/rfc9180",
+    "doi": "10.17487/RFC9180",
+    "modules": [
+      "mesh",
+      "plugins"
+    ],
+    "design": "Evaluate standard cryptographic envelopes for future trusted local communications.",
+    "limitation": "HPKE alone does not provide a complete authenticated messaging protocol or key lifecycle.",
+    "acceptance": "Threat model and independent protocol review before sending messages.",
+    "reviewed_on": "2026-10-24",
+    "contributors": "R. Barnes; K. Bhargavan; B. Lipp; C. Wood",
+    "publisher": "IETF / IRTF CFRG"
+  },
+  {
+    "id": "L16",
+    "title": "NIST SP 800-218 Secure Software Development Framework",
+    "year": 2022,
+    "type": "standard",
+    "url": "https://csrc.nist.gov/pubs/sp/800/218/final",
+    "doi": "10.6028/NIST.SP.800-218",
+    "modules": [
+      "release",
+      "plugins",
+      "devices"
+    ],
+    "design": "Apply threat modeling, dependency hygiene, testing and change provenance.",
+    "limitation": "A practice framework, not proof of security certification.",
+    "acceptance": "Document dependency audit, reviewed risks and release approvals.",
+    "reviewed_on": "2026-10-24",
+    "contributors": "Murugiah Souppaya; Karen Scarfone; Donna Dodson",
+    "publisher": "NIST"
+  },
+  {
+    "id": "L17",
+    "title": "SLSA specification v1.2",
+    "year": 2026,
+    "type": "standard",
+    "url": "https://slsa.dev/spec/v1.2/",
+    "doi": null,
+    "modules": [
+      "release",
+      "plugins"
+    ],
+    "design": "Record build provenance and improve artifact integrity incrementally.",
+    "limitation": "Do not claim a SLSA level merely by producing a GitHub workflow.",
+    "acceptance": "Validate release provenance with known source and builder identities.",
+    "reviewed_on": "2026-10-24",
+    "contributors": "SLSA contributors",
+    "publisher": "OpenSSF / SLSA project"
+  },
+  {
+    "id": "L18",
+    "title": "W3C WCAG 2.2 Recommendation",
+    "year": 2024,
+    "type": "standard",
+    "url": "https://www.w3.org/TR/WCAG22/",
+    "doi": null,
+    "modules": [
+      "accessibility",
+      "display"
+    ],
+    "design": "Borrow keyboard access, contrast and reduced-motion accessibility criteria.",
+    "limitation": "Primarily a web content standard; terminal-specific usability needs separate testing.",
+    "acceptance": "Keyboard-only journeys, screen-size tests and readable status without color alone.",
+    "reviewed_on": "2026-10-24",
+    "contributors": "Accessibility Guidelines Working Group",
+    "publisher": "W3C"
+  },
+  {
+    "id": "L19",
+    "title": "RFC 8259 JSON interchange",
+    "year": 2017,
+    "type": "standard",
+    "url": "https://www.rfc-editor.org/info/rfc8259",
+    "doi": "10.17487/RFC8259",
+    "modules": [
+      "telemetry",
+      "storage",
+      "library",
+      "notes"
+    ],
+    "design": "Use versioned JSON data interchange and strictly validate inputs.",
+    "limitation": "JSON alone provides neither schema governance nor data authenticity.",
+    "acceptance": "Reject malformed data and incompatible schema versions.",
+    "reviewed_on": "2026-10-24",
+    "contributors": "Tim Bray (editor)",
+    "publisher": "IETF"
+  },
+  {
+    "id": "L20",
+    "title": "NIST SP 800-82 Rev 3: Guide to OT Security",
+    "year": 2023,
+    "type": "standard",
+    "url": "https://csrc.nist.gov/pubs/sp/800/82/r3/final",
+    "doi": "10.6028/NIST.SP.800-82r3",
+    "modules": [
+      "radio",
+      "sensors",
+      "network"
+    ],
+    "design": "Maintain read-only field instrumentation and separate control from observation.",
+    "limitation": "Relevant to OT-adjacent environments; not permission to operate infrastructure.",
+    "acceptance": "Ensure sensor/radio modules cannot actuate external systems by default.",
+    "reviewed_on": "2026-10-24",
+    "contributors": "Keith Stouffer et al.",
+    "publisher": "NIST"
+  },
+  {
+    "id": "L21",
+    "title": "LoRaWAN L2 1.0.4 Specification",
+    "year": 2020,
+    "type": "standard",
+    "url": "https://lora-alliance.org/resource_hub/ts001-1-0-4-lorawan-l2-1-0-4-specification/",
+    "doi": null,
+    "modules": [
+      "mesh",
+      "devices"
+    ],
+    "design": "Compare licensed LoRaWAN device constraints during transport selection.",
+    "limitation": "LoRaWAN is not interchangeable with Meshtastic point-to-point mesh; do not assume interoperability.",
+    "acceptance": "Choose and document a specific transport before protocol code.",
+    "reviewed_on": "2026-10-24",
+    "contributors": "LoRa Alliance technical contributors",
+    "publisher": "LoRa Alliance"
+  },
+  {
+    "id": "L22",
+    "title": "NIST SP 800-207: Zero Trust Architecture",
+    "year": 2020,
+    "type": "standard",
+    "url": "https://csrc.nist.gov/pubs/sp/800/207/final",
+    "doi": "10.6028/NIST.SP.800-207",
+    "modules": [
+      "mesh",
+      "ble",
+      "plugins"
+    ],
+    "design": "Require explicit peer authorization rather than trusting proximity.",
+    "limitation": "Enterprise design guidance; adapt proportionally to a personal field device.",
+    "acceptance": "Deny untrusted peer messages and show consent state.",
+    "reviewed_on": "2026-10-24",
+    "contributors": "Scott Rose; Oliver Borchert; Stu Mitchell; Sean Connelly",
+    "publisher": "NIST"
+  },
+  {
+    "id": "L23",
+    "title": "FAA ADS-B installation overview",
+    "year": 2026,
+    "type": "official_docs",
+    "url": "https://www.faa.gov/air_traffic/technology/equipadsb/installation",
+    "doi": null,
+    "modules": [
+      "adsb",
+      "radio"
+    ],
+    "design": "Distinguish 1090ES and 978 MHz UAT in receiver/decoder capability planning.",
+    "limitation": "Airborne equipage guidance is not a decoder implementation or authorization to transmit.",
+    "acceptance": "Receive-only data fixtures distinguish source channel and uncertainty.",
+    "reviewed_on": "2026-10-24",
+    "contributors": "Federal Aviation Administration",
+    "publisher": "FAA"
+  },
+  {
+    "id": "L24",
+    "title": "SoapySDR Rust bindings documentation",
+    "year": 2026,
+    "type": "official_docs",
+    "url": "https://docs.rs/soapysdr/latest/soapysdr/",
+    "doi": null,
+    "modules": [
+      "radio",
+      "adsb",
+      "devices"
+    ],
+    "design": "Consider a receiver-only abstraction over supported SDR hardware.",
+    "limitation": "FFI and native drivers require per-platform auditing; TX APIs must not be enabled by default.",
+    "acceptance": "Mock IQ source; document library and driver prerequisites.",
+    "reviewed_on": "2026-10-24",
+    "contributors": "rust-soapysdr maintainers",
+    "publisher": "rust-soapysdr project"
+  },
+  {
+    "id": "L25",
+    "title": "The Rust Programming Language: trait objects",
+    "year": 2026,
+    "type": "official_docs",
+    "url": "https://doc.rust-lang.org/book/ch18-02-trait-objects.html",
+    "doi": null,
+    "modules": [
+      "telemetry",
+      "plugins",
+      "simulator"
+    ],
+    "design": "Use Box<dyn Trait> for heterogeneous internal modules; generics for homogeneous hot paths.",
+    "limitation": "Trait objects are runtime polymorphism, not a stable cross-language plugin ABI.",
+    "acceptance": "Test two module types under a shared host without dynamic library loading.",
+    "reviewed_on": "2026-10-24",
+    "contributors": "Rust Project contributors",
+    "publisher": "Rust Project"
+  },
+  {
+    "id": "L26",
+    "title": "QuickCheck: A lightweight tool for random testing of Haskell programs",
+    "contributors": "Koen Claessen; John Hughes",
+    "publisher": "ACM / ICFP 2000",
+    "year": 2000,
+    "type": "peer_reviewed",
+    "url": "https://doi.org/10.1145/351240.351266",
+    "doi": "10.1145/351240.351266",
+    "modules": [
+      "simulator",
+      "diagnostics",
+      "storage"
+    ],
+    "design": "Use property-based generators and invariants to stress schema, event and permission contracts beyond handpicked fixtures.",
+    "limitation": "Published for Haskell, not a guarantee that a specific Rust test generator or harness is correctly applied.",
+    "acceptance": "Introduce generator-based tests for event ordering, corrupted payloads and round-trip storage.",
+    "reviewed_on": "2026-10-24"
+  },
+  {
+    "id": "L27",
+    "title": "Energy Efficiency across Programming Languages: How do Energy, Time, and Memory Relate?",
+    "contributors": "Rui Pereira; Marco Couto; Francisco Ribeiro; Rui Rua; Jácome Cunha; João Paulo Fernandes; João Saraiva",
+    "publisher": "ACM / SLE 2017",
+    "year": 2017,
+    "type": "peer_reviewed",
+    "url": "https://doi.org/10.1145/3136014.3136031",
+    "doi": "10.1145/3136014.3136031",
+    "modules": [
+      "power",
+      "telemetry",
+      "release"
+    ],
+    "design": "Measure latency, peak memory and power on actual wearable hardware; do not optimize from language choice alone.",
+    "limitation": "Benchmark tasks and language-level comparisons do not predict Rust-Boy battery life or SDR load.",
+    "acceptance": "Record idle/active power and CPU baselines on selected Raspberry Pi, with reproducible workloads.",
+    "reviewed_on": "2026-10-24"
+  },
+  {
+    "id": "L28",
+    "title": "Bluetooth Low Energy Mesh Networks: Survey of Communication and Security Protocols",
+    "contributors": "Muhammad Rizwan Ghori; Tat-Chee Wan; Gian Chand Sodhy",
+    "publisher": "Sensors 20(12), 3590",
+    "year": 2020,
+    "type": "peer_reviewed",
+    "url": "https://doi.org/10.3390/s20123590",
+    "doi": "10.3390/s20123590",
+    "modules": [
+      "mesh",
+      "ble"
+    ],
+    "design": "Evaluate topology, broadcast behavior, cryptographic trust and provisioning before choosing a BLE mesh implementation.",
+    "limitation": "Survey literature does not imply interoperation with a specific BLE central crate or Meshtastic device.",
+    "acceptance": "Compare two selected candidate transports using threat model, throughput and energy criteria.",
+    "reviewed_on": "2026-10-24"
+  },
+  {
+    "id": "L29",
+    "title": "Bluetooth Low Energy Mesh: Applications, Considerations and Current State-of-the-Art",
+    "contributors": "Iynkaran Natgunanathan; Niroshinie Fernando; Seng W. Loke; Charitha Weerasuriya",
+    "publisher": "Sensors 23(4), 1826",
+    "year": 2023,
+    "type": "peer_reviewed",
+    "url": "https://doi.org/10.3390/s23041826",
+    "doi": "10.3390/s23041826",
+    "modules": [
+      "mesh",
+      "sensors",
+      "power"
+    ],
+    "design": "Treat wearables and IoT meshes as constrained systems with range, energy and operational trade-offs.",
+    "limitation": "Review across use cases does not validate Rust-Boy hardware or specific link budget.",
+    "acceptance": "Set peer density, battery budget, range and reconnection fixtures before selecting radio hardware.",
+    "reviewed_on": "2026-10-24"
+  },
+  {
+    "id": "L30",
+    "title": "Bringing Up OpenSky: A Large-scale ADS-B Sensor Network for Research",
+    "contributors": "Matthias Schäfer; Martin Strohmeier; Vincent Lenders; Ivan Martinovic; Matthias Wilhelm",
+    "publisher": "ACM/IEEE IPSN 2014",
+    "year": 2014,
+    "type": "peer_reviewed",
+    "url": "https://opensky-network.org/about/publications",
+    "doi": null,
+    "modules": [
+      "adsb",
+      "radio",
+      "telemetry"
+    ],
+    "design": "Model aircraft observations as received sensor measurements with coverage, receiver source and timestamp, not authoritative global tracks.",
+    "limitation": "Research network deployment does not establish GNSS accuracy or validate a local dongle decoder.",
+    "acceptance": "Compare recorded receive-only ADS-B fixtures with known decoder outputs and explicit coverage gaps.",
+    "reviewed_on": "2026-10-24"
+  },
+  {
+    "id": "L31",
+    "title": "sysinfo 0.33.1: System API and CPU refresh behavior",
+    "contributors": "sysinfo maintainers",
+    "publisher": "docs.rs / sysinfo",
+    "year": 2026,
+    "type": "official_docs",
+    "url": "https://docs.rs/sysinfo/0.33.1/sysinfo/struct.System.html",
+    "doi": null,
+    "modules": [
+      "stat",
+      "telemetry"
+    ],
+    "design": "Refresh CPU counters over an appropriate platform-dependent interval and distinguish host values from fabricated device readings.",
+    "limitation": "API docs do not prove measured CPU accuracy on a specific OS or application sampling schedule.",
+    "acceptance": "Measure CPU refresh cadence against sysinfo MINIMUM_CPU_UPDATE_INTERVAL and cross-platform fixtures.",
+    "reviewed_on": "2026-10-24"
+  },
+  {
+    "id": "L32",
+    "title": "Rust std::time::Instant API",
+    "contributors": "Rust Project contributors",
+    "publisher": "Rust standard library",
+    "year": 2026,
+    "type": "official_docs",
+    "url": "https://doc.rust-lang.org/stable/std/time/struct.Instant.html",
+    "doi": null,
+    "modules": [
+      "telemetry",
+      "diagnostics"
+    ],
+    "design": "Use monotonic in-process elapsed duration for expiry; keep separately sourced wall timestamps for display and serialization.",
+    "limitation": "Instant values are opaque and not meaningfully serialized or compared between runs; clock behavior may differ on suspension.",
+    "acceptance": "Test stale transitions with fixture elapsed times and never compare process-specific timestamps across sessions.",
+    "reviewed_on": "2026-10-24"
+  },
+  {
+    "id": "L33",
+    "title": "Rust std::collections::VecDeque API",
+    "contributors": "Rust Project contributors",
+    "publisher": "Rust standard library",
+    "year": 2026,
+    "type": "official_docs",
+    "url": "https://doc.rust-lang.org/stable/std/collections/struct.VecDeque.html",
+    "doi": null,
+    "modules": [
+      "telemetry",
+      "storage"
+    ],
+    "design": "Bound in-memory sample history and account for dropped items when older observations are evicted.",
+    "limitation": "VecDeque is not itself a retention policy, stream backpressure strategy, or persistent storage guarantee.",
+    "acceptance": "Prove a queue of capacity N never retains more than N records and tracks drop count.",
+    "reviewed_on": "2026-10-24"
+  },
+  {
+    "id": "L34",
+    "title": "GitHub Actions: Using workflow run logs",
+    "contributors": "GitHub Docs contributors",
+    "publisher": "GitHub",
+    "year": 2026,
+    "type": "official_docs",
+    "url": "https://docs.github.com/en/actions/how-tos/monitor-workflows/use-workflow-run-logs",
+    "doi": null,
+    "modules": [
+      "diagnostics",
+      "release"
+    ],
+    "design": "Distinguish run-level startup failures from job-level compilation or test failures; require a link to executed checks before claiming CI success.",
+    "limitation": "General troubleshooting guidance does not identify the cause of this repository's zero-job startup_failure.",
+    "acceptance": "Capture GitHub run and job metadata and successful test/formatter logs for G0 promotion.",
+    "reviewed_on": "2026-10-24"
+  },
+  {
+    "id": "L35",
+    "title": "tempfile 3.27.0: NamedTempFile staged persistence",
+    "contributors": "tempfile maintainers",
+    "publisher": "docs.rs / tempfile",
+    "year": 2026,
+    "type": "official_docs",
+    "url": "https://docs.rs/tempfile/3.27.0/tempfile/struct.NamedTempFile.html",
+    "doi": null,
+    "modules": [
+      "notes",
+      "storage"
+    ],
+    "design": "Create staging files beside notes.json, flush their contents, and persist by replacement without first unlinking the current document.",
+    "limitation": "Persist does not itself sync file contents or the parent directory. Abrupt process termination may leave staging files; native filesystem and power-loss behavior require separate acceptance.",
+    "acceptance": "Inject partial staging and replacement errors; preserve original notes and clean up ordinary failure paths; never promote abandoned staging automatically.",
+    "reviewed_on": "2026-10-24"
+  },
+  {
+    "id": "L36",
+    "title": "fs2 0.4.3: cross-platform advisory file locks",
+    "contributors": "fs2 maintainers",
+    "publisher": "docs.rs / fs2",
+    "year": 2026,
+    "type": "official_docs",
+    "url": "https://docs.rs/fs2/0.4.3/src/fs2/lib.rs.html",
+    "doi": null,
+    "modules": [
+      "notes",
+      "storage"
+    ],
+    "design": "Hold one exclusive OS lock across read, modify and replacement; fail promptly on contention and retain a stable lock filename.",
+    "limitation": "Locks coordinate cooperating writers only; external editors and filesystem-specific behavior remain outside the guarantee. Do not unlink the lock file while writers may be running.",
+    "acceptance": "Verify contention fails before writes, handle drop releases the lock, and concurrent CLI writers preserve every successful append with unique IDs.",
+    "reviewed_on": "2026-10-24"
+  },
+  {
+    "id": "L37",
+    "title": "Ratatui 0.29.0 Paragraph wrapping and rendered line information",
+    "contributors": "Ratatui maintainers",
+    "publisher": "Ratatui / docs.rs",
+    "year": 2026,
+    "type": "official_docs",
+    "url": "https://docs.rs/ratatui/0.29.0/ratatui/widgets/struct.Paragraph.html",
+    "doi": null,
+    "modules": [
+      "accessibility",
+      "library",
+      "notes"
+    ],
+    "design": "Measure wrapped detail text with the same Paragraph implementation used to render it; clamp scroll offsets after resizing and separate collection selection from text scrolling.",
+    "limitation": "line_count uses the unstable-rendered-line-info feature in Ratatui 0.29; upgrades require retesting. API documentation does not certify screen-reader compatibility or terminal accessibility.",
+    "acceptance": "Test compact and undersized frames, empty and long lists, Unicode wrapped text tails, item selection bounds and scroll clamping after resize.",
+    "reviewed_on": "2026-10-24"
+  }
+]

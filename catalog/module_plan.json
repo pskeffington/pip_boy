@@ -1,0 +1,831 @@
+[
+  {
+    "id": "stat",
+    "name": "Host status",
+    "gate": "G0",
+    "priority": "P0",
+    "domain": "core",
+    "status": "implemented_unverified",
+    "depends_on": [],
+    "capabilities": [
+      "host.read"
+    ],
+    "evidence": [
+      "L03",
+      "L19",
+      "L31"
+    ],
+    "features": [
+      "CPU/memory/OS/uptime snapshot",
+      "Human-readable and JSON output",
+      "One-shot status CLI uses lazy ModuleHost lifecycle and host-read precheck (new tests defined; execution pending)"
+    ],
+    "acceptance": [
+      "Status runs without network or devices",
+      "No fabricated hardware values",
+      "Denied host.read never constructs a collector; status --json retains legacy Snapshot fields"
+    ]
+  },
+  {
+    "id": "library",
+    "name": "Reference library",
+    "gate": "G0",
+    "priority": "P0",
+    "domain": "core",
+    "status": "implemented_unverified",
+    "depends_on": [],
+    "capabilities": [
+      "files.read"
+    ],
+    "evidence": [
+      "L10",
+      "L19",
+      "L37"
+    ],
+    "features": [
+      "Bundled GitHub source catalog",
+      "License and reuse classification",
+      "Keyboard selection and scrollable reference details, without opening links"
+    ],
+    "acceptance": [
+      "Catalog validates unique IDs",
+      "No third-party source vendoring"
+    ]
+  },
+  {
+    "id": "notes",
+    "name": "Offline field notes",
+    "gate": "G0",
+    "priority": "P0",
+    "domain": "core",
+    "status": "implemented_unverified",
+    "depends_on": [],
+    "capabilities": [
+      "files.write"
+    ],
+    "evidence": [
+      "L04",
+      "L19",
+      "L35",
+      "L36",
+      "L37"
+    ],
+    "features": [
+      "User-directed create/list notes",
+      "Local JSON persistence",
+      "Bounded validated schema-1 notes, locked write transactions and flushed staged replacement (locally tested)",
+      "Read-only case-insensitive text search",
+      "All notes selectable in TUI, newest first; explicit R reload and scrollable full text",
+      "Explicit schema-1 JSON export and locked import merge with reassigned local IDs and repeat-safe matching (locally tested)"
+    ],
+    "acceptance": [
+      "No write without explicit user action",
+      "Malformed notes rejected",
+      "Concurrent successful appends have unique IDs and no lost entries; invalid/future documents are preserved",
+      "Export/import round-trip, repeated backup import, record multiplicity and combined size/count/ID failures preserve existing data"
+    ]
+  },
+  {
+    "id": "telemetry",
+    "name": "Telemetry event stream",
+    "gate": "G1",
+    "priority": "P0",
+    "domain": "core",
+    "status": "planned",
+    "depends_on": [
+      "stat"
+    ],
+    "capabilities": [
+      "host.read",
+      "files.write"
+    ],
+    "evidence": [
+      "L01",
+      "L02",
+      "L03",
+      "L19",
+      "L25",
+      "L27",
+      "L30",
+      "L31",
+      "L32",
+      "L33"
+    ],
+    "features": [
+      "Provenance-tagged samples",
+      "NDJSON export and interval controls",
+      "Bounded in-memory buffers",
+      "TUI/finite NDJSON use a lazy lifecycle-host telemetry adapter with bounded history and freshness (locally tested)"
+    ],
+    "acceptance": [
+      "Tests cover source, clock and sample freshness",
+      "No background uploads or implicit files"
+    ]
+  },
+  {
+    "id": "storage",
+    "name": "Storage and schema service",
+    "gate": "G1",
+    "priority": "P0",
+    "domain": "core",
+    "status": "planned",
+    "depends_on": [
+      "notes"
+    ],
+    "capabilities": [
+      "files.read",
+      "files.write"
+    ],
+    "evidence": [
+      "L04",
+      "L09",
+      "L19",
+      "L26",
+      "L33",
+      "L35",
+      "L36"
+    ],
+    "features": [
+      "Versioned local collections",
+      "Import/export and backup",
+      "Atomic write validation",
+      "Bounded validated schema-1 notes, locked write transactions and flushed staged replacement (locally tested)",
+      "Explicit schema-1 JSON export and locked import merge with reassigned local IDs and repeat-safe matching (locally tested)"
+    ],
+    "acceptance": [
+      "Old schemas migrate with fixtures",
+      "Interrupted write never silently destroys existing notes",
+      "Concurrent successful appends have unique IDs and no lost entries; invalid/future documents are preserved",
+      "Export/import round-trip, repeated backup import, record multiplicity and combined size/count/ID failures preserve existing data"
+    ]
+  },
+  {
+    "id": "power",
+    "name": "Power and resources",
+    "gate": "G1",
+    "priority": "P1",
+    "domain": "core",
+    "status": "planned",
+    "depends_on": [
+      "stat"
+    ],
+    "capabilities": [
+      "host.read"
+    ],
+    "evidence": [
+      "L03",
+      "L27",
+      "L29"
+    ],
+    "features": [
+      "Battery state if OS provides it",
+      "Disk and thermal indicators",
+      "Low-power refresh profiles"
+    ],
+    "acceptance": [
+      "Unsupported sensors read unknown not zero",
+      "Idle profiles measured on supported OS"
+    ]
+  },
+  {
+    "id": "network",
+    "name": "Local network link status",
+    "gate": "G1",
+    "priority": "P1",
+    "domain": "core",
+    "status": "planned",
+    "depends_on": [
+      "stat"
+    ],
+    "capabilities": [
+      "host.read"
+    ],
+    "evidence": [
+      "L20"
+    ],
+    "features": [
+      "Read-only interface and link diagnostics",
+      "No active scanning",
+      "Offline health indicators"
+    ],
+    "acceptance": [
+      "Default makes no outbound requests",
+      "Network data reports source and freshness"
+    ]
+  },
+  {
+    "id": "settings",
+    "name": "Settings and permission UI",
+    "gate": "G1",
+    "priority": "P0",
+    "domain": "core",
+    "status": "planned",
+    "depends_on": [
+      "storage"
+    ],
+    "capabilities": [
+      "files.read",
+      "files.write"
+    ],
+    "evidence": [
+      "L16",
+      "L22"
+    ],
+    "features": [
+      "Explicit per-adapter permission choices",
+      "Reversible configuration",
+      "Disabled-by-default external I/O",
+      "Session-only local host-read pause/resume implemented; persistent per-adapter consent remains planned",
+      "Version-1 bounded persistent adapter request/deny/clear preferences and CLI (not authorization; tests authored and pending)",
+      "Simulation-only one-shot CLI confirmation and in-process deny-first broker prototype (unverified; real-device consent still planned)"
+    ],
+    "acceptance": [
+      "Permissions tested before adapter callback",
+      "Settings migration and revocation tests",
+      "Read/list creates no data files; unsupported/future/duplicate/oversized preferences are preserved and rejected",
+      "Stored requested preference never grants hardware/network access; trusted real-device authorization remains unimplemented"
+    ]
+  },
+  {
+    "id": "accessibility",
+    "name": "Accessible console",
+    "gate": "G1",
+    "priority": "P0",
+    "domain": "presentation",
+    "status": "planned",
+    "depends_on": [
+      "stat",
+      "settings"
+    ],
+    "capabilities": [],
+    "evidence": [
+      "L05",
+      "L18",
+      "L37"
+    ],
+    "features": [
+      "Keyboard-only navigation",
+      "Contrast and color-independent status labels",
+      "Reduced-motion / low-bandwidth mode",
+      "Keyboard-selectable collection/detail views, compact 40x12 layout and smaller-screen fallback (locally tested)"
+    ],
+    "acceptance": [
+      "80x24 and smaller terminal fixtures",
+      "No status relies on color alone",
+      "All panels render at tiny/compact/normal sizes; older entries and wrapped text tails remain reachable after resizing"
+    ]
+  },
+  {
+    "id": "diagnostics",
+    "name": "Diagnostics and evidence audit",
+    "gate": "G1",
+    "priority": "P0",
+    "domain": "core",
+    "status": "planned",
+    "depends_on": [
+      "library",
+      "settings"
+    ],
+    "capabilities": [
+      "files.read"
+    ],
+    "evidence": [
+      "L16",
+      "L17",
+      "L26",
+      "L32",
+      "L34"
+    ],
+    "features": [
+      "Schema checks and adapter readiness",
+      "Human-readable diagnostics",
+      "Feature readiness truth table"
+    ],
+    "acceptance": [
+      "No device probing without consent",
+      "Every check reports pass/fail/not-run"
+    ]
+  },
+  {
+    "id": "gpio",
+    "name": "Physical controls",
+    "gate": "G2",
+    "priority": "P1",
+    "domain": "hardware",
+    "status": "planned",
+    "depends_on": [
+      "settings"
+    ],
+    "capabilities": [
+      "gpio.read"
+    ],
+    "evidence": [
+      "L06",
+      "L07"
+    ],
+    "features": [
+      "Rotary encoder/button event inputs",
+      "Debounce and long-press handling",
+      "Keyboard-equivalent action mapping",
+      "Typed InputSource + MockInputSource emits no-measurement virtual events (new CI pending)"
+    ],
+    "acceptance": [
+      "Replay fixture on non-Pi host",
+      "Recover cleanly from device unavailability",
+      "Missing explicit mock confirmation or saved denial blocks input fixture; no fabricated pin state"
+    ]
+  },
+  {
+    "id": "devices",
+    "name": "Device broker",
+    "gate": "G2",
+    "priority": "P0",
+    "domain": "hardware",
+    "status": "planned",
+    "depends_on": [
+      "settings",
+      "diagnostics"
+    ],
+    "capabilities": [
+      "device.enumerate"
+    ],
+    "evidence": [
+      "L02",
+      "L03",
+      "L07",
+      "L14"
+    ],
+    "features": [
+      "Explicit device selection",
+      "Capabilities and permission broker",
+      "Safe disconnect and timeouts",
+      "G1 precursor: in-memory SimulatedBroker uses private broker-scoped leases; real OS handle broker not implemented",
+      "G1 source-only virtual disconnect and reconnect invalidate old broker leases; real device enumeration remains planned",
+      "G1 precursor: virtual cancel/timeout API only, no real device watchdog"
+    ],
+    "acceptance": [
+      "Unknown/unapproved device stays closed",
+      "Revoke permission blocks adapter invocation",
+      "Do not interpret virtual device confirmation as authorization to open a real device",
+      "Virtual reconnection never resurrects a previous lease, and disconnected fixtures return a distinct unavailable error",
+      "Virtual deadlines must never be misrepresented as real OS device timeout support",
+      "Passing mock transport/CI tests cannot authorize any physical device or live network interface"
+    ]
+  },
+  {
+    "id": "display",
+    "name": "Wearable display layer",
+    "gate": "G2",
+    "priority": "P1",
+    "domain": "presentation",
+    "status": "planned",
+    "depends_on": [
+      "accessibility",
+      "gpio"
+    ],
+    "capabilities": [
+      "display.write"
+    ],
+    "evidence": [
+      "L05",
+      "L18"
+    ],
+    "features": [
+      "480x320 and 720x720 layout profiles",
+      "No-flicker refresh",
+      "Frame snapshots",
+      "Typed DisplayBackend + MockDisplayBackend accepts 1–80 printable ASCII mock frames without actual rendering (new CI pending)"
+    ],
+    "acceptance": [
+      "Layout fixtures at each profile",
+      "Accessible fallback without visual effects",
+      "Display receipt must say rendered_to_hardware=false and reject escape/control sequences"
+    ]
+  },
+  {
+    "id": "serial",
+    "name": "Serial transport",
+    "gate": "G2",
+    "priority": "P1",
+    "domain": "hardware",
+    "status": "planned",
+    "depends_on": [
+      "devices"
+    ],
+    "capabilities": [
+      "serial.read"
+    ],
+    "evidence": [
+      "L14"
+    ],
+    "features": [
+      "Selected-port read-only session",
+      "Framed input with size limits",
+      "Device disconnect recovery",
+      "VirtualTransport prototype demonstrates fixture-only FIFO; real serial enumeration/read remains planned",
+      "Typed SerialReader + MockSerialReader returns 1–32 explicit injected bytes only (new CI pending)"
+    ],
+    "acceptance": [
+      "No implicit port enumeration or open",
+      "Malformed frames and unplug tested",
+      "Serial fixtures never open OS ports, and missing confirmation/saved denial fail closed"
+    ]
+  },
+  {
+    "id": "simulator",
+    "name": "Hardware event simulator",
+    "gate": "G2",
+    "priority": "P0",
+    "domain": "testing",
+    "status": "planned",
+    "depends_on": [
+      "gpio",
+      "display"
+    ],
+    "capabilities": [],
+    "evidence": [
+      "L05",
+      "L25",
+      "L26"
+    ],
+    "features": [
+      "Deterministic event playback",
+      "Mock GPIO/serial/display adapters",
+      "Recorded golden traces",
+      "G1 precursor: 11 fixed in-memory virtual fixtures, explicit per-session confirmation and bounded truthful event envelope (Ubuntu CI verified at f445814)",
+      "G1 source-only fixed nominal/disconnect-recover/revoke replay with synthetic 0–700 ms times and truthful JSON trace (Ubuntu CI verified at f445814)",
+      "G1 precursor: cancellation and injected logical TTL scenarios, with bounded 1–60000 ms timeout (Ubuntu CI verified at f445814)",
+      "G2 prototype: bounded 1–64 mock-event FIFO, pump up to 128, dropped count and revocation-safe reads (new tests pending)",
+      "G2 typed mock adapter fixture suite exposes GPIO/display/serial interfaces and JSON provenance (new tests pending)"
+    ],
+    "acceptance": [
+      "CI runs without hardware",
+      "Replay gives same state transitions",
+      "Saved requested preference does not start a virtual device; Denied blocks even confirmed simulation",
+      "Revocation, close, policy reload and cross-broker replay cannot reuse stale leases",
+      "Same replay scenario produces byte-identical traces across repeated runs; all rejected stale/revoked operations remain explicit",
+      "Source-fixed replay has at most eight steps, no wall-clock timing, and no auto-regrant",
+      "Cancel and deadline boundary permanently invalidate old virtual lease; no implicit restart",
+      "Backward logical clock tick fails closed; zero/out-of-range TTL and overflow never open the broker",
+      "Mock queue drops oldest events deterministically and never releases buffered events after cancellation, denial, disconnect or expiration",
+      "All three typed adapters remain truthful synthetic-only; no actual device grant"
+    ]
+  },
+  {
+    "id": "gnss",
+    "name": "GNSS navigation input",
+    "gate": "G3",
+    "priority": "P1",
+    "domain": "field",
+    "status": "planned",
+    "depends_on": [
+      "devices",
+      "storage"
+    ],
+    "capabilities": [
+      "gnss.read"
+    ],
+    "evidence": [
+      "L08",
+      "L09"
+    ],
+    "features": [
+      "gpsd and NMEA adapters where allowed",
+      "Fix quality and staleness",
+      "Opt-in coordinate history"
+    ],
+    "acceptance": [
+      "No-fix and stale-fix shown explicitly",
+      "Location history disabled by default"
+    ]
+  },
+  {
+    "id": "map",
+    "name": "Offline cartography",
+    "gate": "G3",
+    "priority": "P1",
+    "domain": "field",
+    "status": "planned",
+    "depends_on": [
+      "storage",
+      "gnss",
+      "display"
+    ],
+    "capabilities": [
+      "files.read"
+    ],
+    "evidence": [
+      "L09",
+      "L10",
+      "L11"
+    ],
+    "features": [
+      "GPX/GeoJSON import",
+      "User-supplied licensed offline tiles",
+      "Track overlays and source badges"
+    ],
+    "acceptance": [
+      "Attribution persisted with map bundle",
+      "No OSM public raster tile scraping or prefetch"
+    ]
+  },
+  {
+    "id": "radio",
+    "name": "Receive-only SDR",
+    "gate": "G3",
+    "priority": "P2",
+    "domain": "field",
+    "status": "planned",
+    "depends_on": [
+      "devices",
+      "telemetry"
+    ],
+    "capabilities": [
+      "sdr.receive"
+    ],
+    "evidence": [
+      "L20",
+      "L24",
+      "L30"
+    ],
+    "features": [
+      "Explicit selected receive-only device",
+      "Read-only signal status and sample metadata",
+      "Replay data fixtures"
+    ],
+    "acceptance": [
+      "No transmit API in default build",
+      "Disconnect/timeout and resource limits tested"
+    ]
+  },
+  {
+    "id": "adsb",
+    "name": "ADS-B receiver overlay",
+    "gate": "G3",
+    "priority": "P2",
+    "domain": "field",
+    "status": "planned",
+    "depends_on": [
+      "radio",
+      "map"
+    ],
+    "capabilities": [
+      "sdr.receive"
+    ],
+    "evidence": [
+      "L23",
+      "L24",
+      "L30"
+    ],
+    "features": [
+      "Receive-only 1090ES / optional 978 UAT decoders",
+      "Aircraft records with timestamp and validity",
+      "Local-only track rendering"
+    ],
+    "acceptance": [
+      "Malformed frames rejected",
+      "No surveillance claims beyond received, unverified data"
+    ]
+  },
+  {
+    "id": "ble",
+    "name": "Nearby BLE adapter",
+    "gate": "G3",
+    "priority": "P2",
+    "domain": "field",
+    "status": "planned",
+    "depends_on": [
+      "devices",
+      "settings"
+    ],
+    "capabilities": [
+      "ble.discover"
+    ],
+    "evidence": [
+      "L12",
+      "L13",
+      "L22",
+      "L28"
+    ],
+    "features": [
+      "User-initiated discovery",
+      "Manual peer and peripheral selection",
+      "Pairing/connection indicators"
+    ],
+    "acceptance": [
+      "Zero scanning on startup",
+      "Consent revoked shuts down adapter"
+    ]
+  },
+  {
+    "id": "mesh",
+    "name": "Authenticated local messaging",
+    "gate": "G3",
+    "priority": "P2",
+    "domain": "communications",
+    "status": "planned",
+    "depends_on": [
+      "ble",
+      "serial",
+      "settings"
+    ],
+    "capabilities": [
+      "mesh.transmit"
+    ],
+    "evidence": [
+      "L04",
+      "L12",
+      "L15",
+      "L21",
+      "L22",
+      "L28",
+      "L29"
+    ],
+    "features": [
+      "Manually selected peers and transport",
+      "Replay-protected message envelopes",
+      "Explicit send confirmation"
+    ],
+    "acceptance": [
+      "Threat model and cryptographic review before TX",
+      "No automatic broadcast or trust by proximity"
+    ]
+  },
+  {
+    "id": "sensors",
+    "name": "Environmental sensor adapters",
+    "gate": "G3",
+    "priority": "P2",
+    "domain": "field",
+    "status": "planned",
+    "depends_on": [
+      "devices",
+      "telemetry"
+    ],
+    "capabilities": [
+      "sensor.read"
+    ],
+    "evidence": [
+      "L06",
+      "L20",
+      "L29"
+    ],
+    "features": [
+      "Temperature/pressure/air quality on approved hardware",
+      "Units/calibration and provenance",
+      "Stale-data alarms"
+    ],
+    "acceptance": [
+      "Missing calibration flagged",
+      "Read-only hardware paths verified"
+    ]
+  },
+  {
+    "id": "weather",
+    "name": "Local weather panel",
+    "gate": "G3",
+    "priority": "P2",
+    "domain": "field",
+    "status": "planned",
+    "depends_on": [
+      "sensors"
+    ],
+    "capabilities": [
+      "files.read"
+    ],
+    "evidence": [
+      "L04",
+      "L19"
+    ],
+    "features": [
+      "Local sensor summary",
+      "Optional manually imported forecasts",
+      "Freshness, timestamp and units"
+    ],
+    "acceptance": [
+      "Forecasts never shown as live measurement",
+      "Works with zero network connectivity"
+    ]
+  },
+  {
+    "id": "audio",
+    "name": "Field audio outputs",
+    "gate": "G3",
+    "priority": "P2",
+    "domain": "presentation",
+    "status": "planned",
+    "depends_on": [
+      "settings"
+    ],
+    "capabilities": [
+      "audio.play"
+    ],
+    "evidence": [
+      "L18"
+    ],
+    "features": [
+      "Local media and accessibility cues",
+      "User-supplied licensed files",
+      "Mute and quiet-mode controls"
+    ],
+    "acceptance": [
+      "No bundled copyrighted Fallout audio",
+      "Readable non-audio equivalents"
+    ]
+  },
+  {
+    "id": "plugins",
+    "name": "Versioned module API",
+    "gate": "G4",
+    "priority": "P1",
+    "domain": "platform",
+    "status": "planned",
+    "depends_on": [
+      "devices",
+      "simulator",
+      "diagnostics"
+    ],
+    "capabilities": [
+      "files.read"
+    ],
+    "evidence": [
+      "L01",
+      "L02",
+      "L15",
+      "L16",
+      "L17",
+      "L25"
+    ],
+    "features": [
+      "Signed declarative manifests",
+      "Versioned typed adapter contracts",
+      "Static registration first, no arbitrary dlopen"
+    ],
+    "acceptance": [
+      "Unknown or unsigned modules rejected",
+      "Never grant raw OS privileges via metadata alone"
+    ]
+  },
+  {
+    "id": "feeds",
+    "name": "Opt-in external data connectors",
+    "gate": "G4",
+    "priority": "P2",
+    "domain": "platform",
+    "status": "planned",
+    "depends_on": [
+      "settings",
+      "storage",
+      "network"
+    ],
+    "capabilities": [
+      "network.fetch"
+    ],
+    "evidence": [
+      "L04",
+      "L11",
+      "L19"
+    ],
+    "features": [
+      "User-configured endpoints",
+      "Request size/rate/time limits",
+      "Offline caches with provenance"
+    ],
+    "acceptance": [
+      "No automatic network requests in default config",
+      "Source failures do not block local console"
+    ]
+  },
+  {
+    "id": "release",
+    "name": "Reproducible release pipeline",
+    "gate": "G4",
+    "priority": "P0",
+    "domain": "platform",
+    "status": "planned",
+    "depends_on": [
+      "plugins",
+      "accessibility",
+      "simulator"
+    ],
+    "capabilities": [
+      "files.read"
+    ],
+    "evidence": [
+      "L03",
+      "L16",
+      "L17",
+      "L27",
+      "L34"
+    ],
+    "features": [
+      "Signed multi-platform builds",
+      "SBOM and supply chain attestations",
+      "Hardware and accessibility smoke matrix"
+    ],
+    "acceptance": [
+      "Release requires green jobs and human acceptance",
+      "No SLSA compliance claim without evidence"
+    ]
+  }
+]
