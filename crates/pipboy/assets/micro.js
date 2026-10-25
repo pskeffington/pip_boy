@@ -100,6 +100,7 @@ let toastTimer = null;
 let reducedEffects = false;
 let activeTaskUI = null;
 let activeNetworkUI = null;
+let activeMessengerUI = null;
 const viewPage = { gear: 0, data: 0, conf: 0 };
 let paletteOpen = false;
 let rolePage = 0;
@@ -182,7 +183,8 @@ function renderHeading() {
   ui.roleShort.textContent = labelForProfile(activeProfile());
   const index = pages.indexOf(tab);
   ui.code.textContent = String(index + 1).padStart(2, "0");
-  const label = openedTool === "assigned-duties" ? "ASSIGNED DUTIES"
+  const label = openedTool === "secure-messenger" ? "MESSENGER"
+    : openedTool === "assigned-duties" ? "ASSIGNED DUTIES"
     : openedTool ? toolInfo(openedTool)?.name : pageTitles[tab];
   ui.title.textContent = label || pageTitles[tab];
   ui.mode.textContent = "LOCAL";
@@ -366,6 +368,10 @@ function cameraTile(number, focus = false) {
 function showLink() {
   const root = panel();
   if (snapshot.active.profile === "security-chief") {
+    root.append(button("MESSENGER / SSH", () => {
+      openedTool = "secure-messenger";
+      render();
+    }, "micro-button solid"));
     root.append(sectionTop("CAMERAS", "0 / 4 LIVE"));
     if (focusedCamera !== null) {
       root.append(cameraTile(focusedCamera, true));
@@ -380,19 +386,14 @@ function showLink() {
     }
     return root;
   }
-  root.append(sectionTop("CONNECTIONS", "OFFLINE"));
-  const grid = make("div", "signal-grid");
-  for (const [type, state] of [
-    ["TAK", "OFF"],
-    ["GNSS", "OFF"],
-    ["CAMERAS", "OFF"],
-    ["PLAYSTATION", "OPT-IN"]
-  ]) {
-    const cell = make("div", "signal-cell");
-    cell.append(make("span", "", type), make("strong", "", state));
-    grid.append(cell);
+  root.append(sectionTop("MESSENGER", "LOCAL / SSH"));
+  const host = make("div", "rb-msg-root");
+  root.append(host);
+  if (window.RustBoyMessenger) {
+    activeMessengerUI = window.RustBoyMessenger.mount(host, {compact:true});
+  } else {
+    host.append(make("div", "block-box", "MESSENGER MODULE UNAVAILABLE"));
   }
-  root.append(grid);
   if (hasTool("game")) root.append(button("GAME LINK", () => openTool("game"), "micro-button"));
   return root;
 }
@@ -539,6 +540,13 @@ function inputForm(root, id) {
 
 function showTool() {
   const root = panel();
+  if (openedTool === "secure-messenger") {
+    const host = make("div", "rb-msg-root");
+    root.append(host);
+    if (window.RustBoyMessenger)
+      activeMessengerUI = window.RustBoyMessenger.mount(host, {compact:true});
+    return root;
+  }
   if (openedTool === "assigned-duties" || openedTool === "mission-board") {
     const container = make("div", "task-manager-viewport");
     root.append(container);
@@ -598,6 +606,8 @@ function render() {
   if (!snapshot) return;
   if (activeNetworkUI) activeNetworkUI.destroy();
   activeNetworkUI = null;
+  if (activeMessengerUI) activeMessengerUI.destroy();
+  activeMessengerUI = null;
   if (window.RustBoyMap) window.RustBoyMap.unmount();
   renderHeading();
   ui.screen.dataset.depth = ["assigned-duties", "mission-board"].includes(openedTool)
