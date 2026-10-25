@@ -514,6 +514,8 @@ function inputForm(root, id) {
   run.type = "submit";
   row.append(run);
   form.append(row);
+  const netSummary = id === "net-lab" ? make("div", "net-summary", "NO NETWORK SWEEP") : null;
+  if (netSummary) form.append(netSummary);
   const output = make("pre", "mono-output", "Awaiting explicit operator action.");
   output.setAttribute("aria-live", "polite");
   form.append(output);
@@ -536,6 +538,11 @@ function inputForm(root, id) {
         : await api("/api/experiment", id === "net-lab"
           ? { tool: id, input: payload.input } : payload);
       if (openedTool === id) output.textContent = result.output;
+      if (scanning && netSummary && result.report) {
+        const rep = result.report;
+        netSummary.textContent = rep.responding_devices + " RESPONDING / " +
+          rep.cached_only_devices + " CACHE / " + rep.scanned_hosts + " SCANNED";
+      }
       ui.foot.textContent = scanning ? "LAN / DETECTED, NOT TOTAL" :
         result.kind === "computed" ? "RESULT / LOCAL ONLY" : "INFORMATION / NO CONNECTION";
       if (scanning && payload.monitor === "yes") {
