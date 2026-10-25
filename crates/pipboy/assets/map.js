@@ -339,6 +339,7 @@
 
   function showLocalSites(view) {
     if (!view.siteAccess || active !== view) return;
+    if (view.countyEnabled) disableCounty(view);
     if (view.webEnabled) webOff(view, false);
     view.sitesVisible = true;
     view.sitePanel.hidden = false;
