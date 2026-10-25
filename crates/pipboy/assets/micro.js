@@ -37,7 +37,7 @@ const pageTitles = {
 const glyphs = {
   "mission-board": "▣", "host": "⌁", "notes": "≡", "library": "▤", "game": "▣",
   "diag": "!", "net-lab": "⌘", "byte-lab": "0x", "simulator": "◈",
-  "geo-lab": "⌖"
+  "geo-lab": "⌖", "reclamation": "▧"
 };
 const roleStations = Object.freeze({
   "overseer": {
@@ -67,8 +67,8 @@ const roleStations = Object.freeze({
   },
   "reclamation-scout": {
     heading: "SCOUT",
-    purpose: "MAP / WAYPOINTS",
-    quick: "GIS", tool: "geo-lab", page: "map"
+    purpose: "SITES / SURVEYS",
+    quick: "SITES", tool: "reclamation", page: "map"
   },
   "records-custodian": {
     heading: "RECORDS",
@@ -339,7 +339,7 @@ function showMap() {
 function showData() {
   const root = panel();
   const tools = allPinned().filter((id) =>
-    ["notes", "library", "byte-lab", "simulator", "geo-lab", "net-lab", "diag"].includes(id));
+    ["notes", "library", "byte-lab", "simulator", "geo-lab", "reclamation", "net-lab", "diag"].includes(id));
   root.append(sectionTop("DATA", String(tools.length) + " TOOLS"));
   if (snapshot.active.profile !== "overseer") {
     root.append(button("MY DUTIES", openDuties, "micro-button solid"));
@@ -564,7 +564,11 @@ function showTool() {
   // The module title is already in the page heading; keep advanced help on
   // the dedicated tool screen rather than repeating long descriptions.
   const supported = ["geo-lab", "net-lab", "byte-lab", "host", "diag", "notes", "library", "simulator", "game"];
-  if (openedTool === "net-lab" && window.RustBoyNetwork) {
+  if (openedTool === "reclamation" && window.RustBoyReclamation) {
+    const host = make("div");
+    root.append(host);
+    window.RustBoyReclamation.mount(host, { compact: true });
+  } else if (openedTool === "net-lab" && window.RustBoyNetwork) {
     const container = make("div");
     root.append(container);
     activeNetworkUI = window.RustBoyNetwork.mount(container, {
