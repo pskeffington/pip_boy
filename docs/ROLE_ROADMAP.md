@@ -19,7 +19,7 @@ Reviewed: **2026-10-25**. Repository: `pip_boy`; product: **Rust-Boy**. This is 
 | **OS_BROKER** | Truly enforced OS scoped network/camera/serial/GNSS resource grants, isolated handles, revocation | Deny-by-default, explicit consent, saved-denial precedence, spoof/corrupt-input tests, revoke and hot-unplug negative tests |
 | **PLUGIN_SECURITY** | Typed, versioned and trusted extension contract | Unsigned/invalid module cannot run; no network/FS/device rights derived from a preset or config file |
 
-**Release order:** repair current branch CI first; finish honest R0 role-activation and desktop panel acceptance; implement R1 self-contained workflows; add R2 explicit live integrations; only then consider R3 field-readiness claims. Prioritize Security Chief's 2×2 camera UI at R1 because it is a specific user requirement. Do not mistake roadmap dependencies for delivery dates.
+**Release order:** verify exact Rust 1.90/compiler selection in CI first; finish honest R0 role-activation and desktop panel acceptance; implement R1 self-contained workflows; add R2 explicit live integrations; only then consider R3 field-readiness claims. Prioritize Security Chief's 2×2 camera UI at R1 because it is a specific user requirement. Do not mistake roadmap dependencies for delivery dates. Historical 1.81-named matrix jobs used stable because of a toolchain-file override; new 1.90 checks enforce the compiler identity.
 
 ## At-a-glance roster
 

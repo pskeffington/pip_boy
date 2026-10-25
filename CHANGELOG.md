@@ -7,7 +7,7 @@ This file records notable changes to Rust-Boy. This repository is in **developme
 - Raise the workspace minimum supported Rust compiler from **1.81** to **1.90** across all three inheriting crates; CI tests Rust **1.90.0** and current stable, plus native macOS/Windows.
 - Retain Rust edition **2021**, workspace resolver **2**, current Cargo.lock and the `stable` development toolchain. Edition 2024 dependencies are supported without migrating this application; no dependency/lockfile re-resolution is introduced by this policy change.
 - Remove the earlier RustGIS MSRV blocker. Direct RustGIS source, a native ARM64 renderer and TAK interoperability are still separate, unshipped milestones.
-- Add version-policy validation to prevent metadata, CI and install documentation drift.
+- Add version-policy validation to prevent metadata, CI and install documentation drift. Fix the CI override so the 1.90.0 job actually runs that toolchain (older 1.81-labeled jobs inadvertently ran stable), and explicitly assert the compiler version.
 
 ## Unreleased — Reclamation Scout GIS / Pi-TAK foundation (2026-10-25)
 
