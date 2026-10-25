@@ -31,8 +31,8 @@ const ui = {
 };
 const pages = ["stat", "gear", "map", "data", "link", "conf"];
 const pageTitles = {
-  stat: "HOME", gear: "TOOLS", map: "MAP",
-  data: "DATA", link: "LINK", conf: "SETTINGS"
+  stat: "STAT", gear: "GEAR", map: "MAP",
+  data: "DATA", link: "LINK", conf: "SETUP"
 };
 const glyphs = {
   "mission-board": "▣", "host": "⌁", "notes": "≡", "library": "▤", "game": "▣",
