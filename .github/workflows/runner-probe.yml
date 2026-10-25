@@ -1,0 +1,18 @@
+name: Rust-Boy runner admission probe
+
+on:
+  push:
+    branches:
+      - feat/rust-native-foundation
+    paths:
+      - .github/workflows/runner-probe.yml
+
+permissions:
+  contents: read
+
+jobs:
+  admission:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify runner job can start
+        run: echo "Rust-Boy runner probe started"
