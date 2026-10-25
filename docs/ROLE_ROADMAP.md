@@ -32,7 +32,7 @@ Reviewed: **2026-10-25**. Repository: `pip_boy`; product: **Rust-Boy**. This is 
 | `university-researcher` | University Research Station | role inspired | `byte-lab`, `library`, `notes`, `simulator`, `net-lab` | `data-lab`, `experiment-log`, `graph-view` |
 | `reclamation-scout` | Reclamation Field Kit | role inspired | `game`, `net-lab`, `notes`, `host` | `map`, `coordinate-lab`, `gnss`, `track-log` |
 | `records-custodian` | Records Custodian Station | role inspired | `library`, `notes`, `byte-lab` | `document-index`, `sha256`, `artifact-bundle` |
-| `custom` | Custom Workbench | rust boy original | None (empty by design | `layout-editor`, `module-sdk`, `sandbox-runtime` |
+| `custom` | Custom Workbench | rust boy original | None (empty by design) | `layout-editor`, `module-sdk`, `sandbox-runtime` |
 
 ## Detailed role plans
 

@@ -8,7 +8,7 @@ A small, approximately 4-inch handheld has **four independently live feeds** dis
 
 - **Grid:** 1/2/3/4 selects a feed directly; arrows move focus; Enter (or button/tap) opens it; Esc/Back returns to the grid; Q exits the tool. Selected pane is identified by border and label, not color only.
 - **Focused feed:** Full main content area, camera name, timestamp/freshness, error badge, Return/Back hint. Do not silently start audio, PTZ or recording.
-- **Bad feeds:** An offline/error tile remains visible and cannot impersonate a current live picture. Retain last frame only when explicitly marked \`STALE\` with age; default to a clear placeholder on connection failure.
+- **Bad feeds:** An offline/error tile remains visible and cannot impersonate a current live picture. Retain last frame only when explicitly marked `STALE` with age; default to a clear placeholder on connection failure.
 - **Permissions:** Four manually supplied sources, independently authorized. No implicit subnet scan, SSDP, ONVIF discovery, port probing, default password attempts or network access on role selection. Optional ONVIF discovery needs separate operator confirmation and a trusted LAN scope.
 - **Credentials:** macOS Keychain or equivalent secure OS credential store; never embed credentials in saved camera URLs, workbench JSON, logs, crash dumps or exports. Validate TLS certificates; do not silently downgrade HTTPS. Keep camera network access inside a reviewed, revocable connector boundary.
 - **Privacy:** No background recording, microphone/audio, cloud analytics or uploads by default. Evidence capture/export, PTZ, and any storage retention need distinct UI controls and audit notices.

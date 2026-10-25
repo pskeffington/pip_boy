@@ -25,14 +25,14 @@ Rust-Boy is an independent, Rust-native, role-configurable developer workbench f
 | Records Custodian | Archive provenance, search, SHA-256 integrity and export | Notes/library exist; secure hashing/index planned |
 | Custom | Truly empty expert workspace with user-selected modules | Tool pinning code present; plugin sandbox planned |
 
-\`\`\`bash
+```bash
 # On the feat/rust-boy-workbench development branch:
 cargo run --locked -p pipboy -- workbench profiles
 cargo run --locked -p pipboy -- workbench list
 cargo run --locked -p pipboy -- workbench use security-chief --replace
 cargo run --locked -p pipboy -- workbench use custom --replace
 cargo run --locked -p pipboy -- workbench net cidr 192.168.1.50/24
-\`\`\`
+```
 
 Inside the desktop TUI, navigate to WORKBENCH and press **P** to choose a complete role (Enter, then Y to replace), or **A** to browse individual tools. Role replacement modifies pinned layout only, not notes or saved permission rules.
 
