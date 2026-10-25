@@ -19,7 +19,7 @@ cargo run --locked -p pipboy -- net scan local --confirm
 cargo run --locked -p pipboy -- net watch 192.168.1.0/24 --confirm --interval-sec 60 --count 5
 ```
 
-Scans do not prove how many devices are connected: sleeping clients, separate VLANs and filtered probes can be missed. Authenticated UniFi inventory is a separate future adapter. See [NET ENGINEER scope and evidence guide](docs/NETWORK_ENGINEERING.md).
+Scans do not prove how many devices are connected: sleeping clients, separate VLANs and filtered probes can be missed. A read-only UniFi Network Integration API adapter is available on this development branch; it can enumerate controller-connected clients and compare them with active probes. Controller configuration and TLS trust must be provided explicitly. See [NET ENGINEER scope and evidence guide](docs/NETWORK_ENGINEERING.md).
 
 ## Compact handheld HUD — no scrolling on primary screens
 
