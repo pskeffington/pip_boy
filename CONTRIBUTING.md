@@ -15,6 +15,10 @@ cargo run --locked -p pipboy -- doctor
 
 Core layout: `crates/pipboy` (CLI/TUI), `crates/pipboy-core` (local core and mock adapters), `crates/rust-boy-broker` (separate **deny-only** process), `catalog/` (evidence and planned modules), `tools/` (validation), and `docs/` (technical contracts).
 
+## Network Engineering Suite changes
+
+Network operation specifications and offline functions live in `pipboy-core::network_suite`, not in separately hardcoded JS arrays. The only active networking implementation is a single-purpose, confirmed TCP check in `pipboy/src/network_probe.rs`. Do not add a shell executor, port sweep, unattended listener or DNS lookup without a bounded resolver and explicit review of permissions, timeout and output. Preserve the legacy `workbench net cidr` call and `POST /api/experiment` CIDR request. After code changes run `python3 tools/smoke_network.py`, Rust tests, Clippy and the handheld JavaScript syntax gate. [Network Suite guide](docs/NETWORK_ENGINEERING.md).
+
 ## Peer transport and trusted remote commands
 
 The optional SSH bridge is implemented in `crates/pipboy/src/peer.rs` with validated configuration in `pipboy-core::peers`; typed durable receive/report storage belongs to `pipboy-core::tasks`. Do not add an unauthenticated listener, TOFU host-key enrollment, a shell-based arbitrary remote command or implicit task send on role load. Preserve the restricted `peer bridge SOURCE` command allowlist, idempotent receiver storage, and the distinction between a stored-delivery receipt and manual acknowledgment. Run `python3 tools/smoke_peer.py` and review [peer security](docs/PEER_TASK_TRANSPORT.md). The CI SSH substitute is not a cryptographic verification test.

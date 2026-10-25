@@ -12,6 +12,12 @@ Rust-Boy is an **experimental local field console**, not a safety-of-life, secur
 
 The `ModuleHost` capability checks and mock leases are cooperative **in-process** controls; they are **not** an OS sandbox for untrusted native code. A separate deny-only process is likewise **not** a working OS permission broker.
 
+## Network Engineering Suite and explicit diagnostics
+
+NET SUITE separates nine deterministic, fully offline address/route/L2 calculators from a tenth single-endpoint TCP connect test. The latter runs only when an operator explicitly enters a **literal unicast IP** and valid TCP port and confirms. The local dashboard checks its existing loopback Host/Origin policy and requires a separate JSON `confirm:true` flag; the CLI requires `--confirm`. The TCP socket uses a fixed connect timeout (900 ms), sends no application payload, does not resolve DNS, fan out to a range or schedule scans. An attempted handshake **does send network packets**; it may generate remote logs and must only target systems the operator is authorized to test. `confirm:true` is not OS-enforced or user identity authorization. Never expose the local dashboard on the LAN.
+
+Offline calculations do not inspect OS interfaces, routes, MAC addresses or confidential traffic. A displayed MAC/EUI-64 or route candidate is based strictly on **typed input**. No interface configuration, ARP/NDP probing, DNS lookups, traceroute, packet capture or broad-scope security assessment is implemented. See [Network Engineering contract](docs/NETWORK_ENGINEERING.md) and its RFC references.
+
 ## Device-to-device task trust and persistent local data
 
 The current Task Control UI uses explicitly paired OpenSSH peers, **not email**. The sender verifies a previously approved host key, uses a chosen private SSH key, disables password and SSH-agent fallback, limits execution time/output, and passes only a validated JSON assignment to a fixed remote Rust-Boy command. The recommended receiver uses a dedicated OS account and a key-specific \`authorized_keys\` **\`restrict,command="/absolute/pipboy peer bridge SOURCE"\`** rule: the Rust-Boy forced bridge allows only typed receive and matching status-receipt requests, not an arbitrary shell, port forwarding or other processes. Host key fingerprints must be verified out-of-band; \`ssh-keyscan\` output alone is untrusted.

@@ -2,6 +2,10 @@
 
 Rust-Boy is the public name of the modular console. The repository, executable, crate names, and data paths retain their existing `pip_boy`/`pipboy` identifiers for compatibility; see [BRANDING.md](../BRANDING.md).
 
+## Network suite execution boundary
+
+The ten network operations have one source of truth in `pipboy-core::network_suite::OPERATIONS`. Nine modes implement bounded deterministic computation only; the CLI and same-origin `POST /api/experiment` each dispatch to the same functions. The tenth `tcp` mode is implemented outside the offline core in `pipboy/src/network_probe.rs`, requires explicit confirmation, validates a literal unicast destination and one port, and makes only one timed TCP connect attempt. No network action occurs during `GET /api/state` or loading a profile. The micro NET SUITE menu and desktop mode picker consume the same Rust catalog, without system-shell execution. See [network contract](NETWORK_ENGINEERING.md).
+
 ## Engineering navigation
 
 - [Object model](OBJECT_MODEL.md): traits, runtime registry, permission policy, typed data proposals and lifecycle.

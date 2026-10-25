@@ -24,6 +24,10 @@ cargo run --locked -p pipboy -- dashboard --port 8790 --open
 
 On Linux or an appropriately configured Raspberry Pi, omit `--open` and browse to the printed local address **on that same device**. The server intentionally cannot be reached from other LAN computers; the browser and Rust process must run on the same host. `--port 0` selects an ephemeral loopback port, primarily for automated tests.
 
+## Head Engineer network tools
+
+The NET SUITE desktop module has a Rust-provided operation picker and per-mode fields. Nine calculations stay offline. **TCP CHECK** requires a separate operator confirmation before invoking one bounded IP:port connection; it never enumerates ports or contacts hostnames. Tool details and output are presented in the same existing workbench pane. See [Network Engineering guide](NETWORK_ENGINEERING.md).
+
 ## Peer task dispatch
 
 The desktop and micro Task Control components share the same local peer roster and task APIs. Device send/sync operations require both a configured SSH peer and a separate operator confirmation; no job selection makes a connection. The receiving Rust-Boy persists incoming assignments and reports their statuses only on explicit SSH synchronization. No email draft, automatic notifications or browser-initiated arbitrary network targets are present. See [peer security and setup](PEER_TASK_TRANSPORT.md).

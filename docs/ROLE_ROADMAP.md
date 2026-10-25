@@ -73,11 +73,12 @@ The [graphical dashboard implementation](DASHBOARD_UI.md) provides a shared UI f
 
 **Purpose:** Troubleshoot embedded systems, networks and hardware using reproducible diagnostics.  
 **Lore:** canonical job · `VT-01`, `RB-01`  
-**Preloaded now:** `host`, `net-lab`, `byte-lab`, `simulator`, `notes`  
+**Preloaded now:** `net-lab` (**NET SUITE**, first), `host`, `byte-lab`, `simulator`, `notes`  
 **New modules:** `serial-console`, `sensor-console`, `device-graph`
 
 **Operational needs**
 
+- **must — NET SUITE:** working offline IPv4/IPv6 CIDR, split/aggregate/overlap, longest-prefix route matching, MAC/EUI-64, VLAN, MTU/MSS and one confirmed TCP endpoint check. [Guide](NETWORK_ENGINEERING.md). Cross-platform acceptance pending.
 - **must — Hex dumps, checksums, IPv4/CIDR math, host diagnostics and fixture runs** (`code_present_ci_pending`).
 - **must — Device inventory and repeatable diagnostic recipes** (`planned`).
 - **should — Read-only USB/serial log console with explicit scope** (`planned`).
@@ -85,7 +86,7 @@ The [graphical dashboard implementation](DASHBOARD_UI.md) provides a shared UI f
 
 | Gate | Deliverable | Acceptance test | State |
 | --- | --- | --- | --- |
-| **R0** Ready engineering desk | Pinned host/NET/BYTE/SIM/NOTES palette; Offline CIDR, byte dump and CRC32 commands | Golden CIDR /24 /31 /32 and CRC32 vectors pass; All tools remain inactive until invoked | code present ci pending |
+| **R0** Ready engineering desk | NET SUITE first, then HOST/BYTE/SIM/NOTES; nine offline network tools and explicit single-port TCP | RFC /31 and IPv6 math, exact aggregates and strict TCP consent pass cross-platform suite tests; no implicit network access | code present ci pending |
 | **R1** Real offline engineering lab | Bounded hex/file-header inspector and developer test recipes; Diagnostic session reports with reproducible parameters | Input limits and invalid file/hex handling tested; Fixture replay produces the same output on repeat | planned |
 | **R2** OS-authorized device diagnostics | Separately reviewed read-only serial gateway; Device identity, per-device consent, expiry and hot-unplug | USB device cannot open without OS permission and explicit session grant; Unplug/revoke closes handles and clears buffers | planned |
 | **R3** Embedded hardware integration | Sensor modules and typed adapter SDK; Battery/runtime budgets and device-specific compatibility matrix | Physical device tested on macOS and chosen handheld prototype; No transmission capability is implied by receiver diagnostics | planned |

@@ -7,6 +7,12 @@ Rust-Boy is the public product name. The existing `pip_boy` repository, `pipboy`
 
 > **Verified integration baseline:** [Five-job Linux/macOS/Windows CI](https://github.com/pskeffington/pip_boy/actions/runs/40164915215) passed at `e7d1090`, including macOS PTY, Windows ConPTY, and the strict deny-all broker suite. **This does not complete a packaged release or enable physical devices.** The catalog's `implemented_unverified` status denotes a pending module acceptance review, not an absence of CI execution.
 
+## G1 Network Engineer suite — functional local tools
+
+The Head Engineer now has **NET SUITE** as its first preloaded module, with nine deterministic IPv4/IPv6 and Layer-2 planning modes and one operator-confirmed single-endpoint TCP check. This retains a strict separation between pure offline arithmetic and the executable's 900 ms bounded connection attempt. Desktop and micro interfaces use one Rust operation catalog. See [Network Engineering contract](NETWORK_ENGINEERING.md).
+
+**Acceptance outstanding:** exact-commit Linux, macOS, Windows and Rust 1.90 CI; real 480×320 and 800×480 browser tests; authorized Mac/Raspberry Pi network check. **Next gate:** read-only interface status, trustworthy DNS timeout behavior, route/interface inventory and separately permissioned ICMP/TLS diagnostics. No bulk scanning or automatic discovery.
+
 ## G1 compact micro HUD — four-inch acceptance
 
 The handheld primary dashboard, role selection and tool lists now use concise, paginated screens rather than scrollable long-form panels. Task Control has staged entry, two-task pages, and separate detail actions. Local lab input/results are distinct. Peer send/sync remain explicitly confirmed actions; camera and RustGIS renderers remain disconnected placeholders. [Micro UI guide](MICRO_UI.md).

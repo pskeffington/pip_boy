@@ -10,6 +10,19 @@ Rust-Boy is an independent, Rust-native developer workbench with separate local 
 
 **Current stage:** development preview. The terminal console and offline workflows are implemented and tested on Linux, macOS and Windows. Physical GPIO, serial, SDR, Bluetooth, mesh, GNSS, live maps and physical device integrations are **not enabled**. Offline WGS84 GeoJSON Point tools are provided for the Reclamation Scout. An explicitly requested Fallout 4 TCP companion browser is available for validation. No packaged production release is claimed.
 
+## Head Engineer — Network Suite
+
+The Head Engineer's first preloaded tool is **NET SUITE**: nine working offline network-engineering calculators (IPv4/IPv6 CIDR, subnet split, longest-prefix routes, exact CIDR merging, overlaps, MAC/EUI-64, 802.1Q VLAN and MTU/MSS) plus a **single-endpoint TCP reachability check** requiring explicit confirmation. The compact four-inch HUD presents six operations per page; desktop has a mode picker, and the CLI offers repeatable commands. The browser **never scans, resolves DNS, connects or changes networking merely by opening a page**.
+
+```bash
+git fetch origin
+git switch --track origin/feat/network-engineering-suite
+./scripts/launch-micro.command
+# Select Head Engineer -> NET SUITE
+```
+
+[Full tool guide and examples](docs/NETWORK_ENGINEERING.md) · [Security boundaries](SECURITY.md).
+
 ## Compact handheld HUD — no scrolling on primary screens
 
 The new micro view is built around a **480×320** screen: short labels, one-action focus, live task counts and a fixed six-tab rail. GEAR/DATA paginate six tools at a time; Custom's palette and the role selector paginate four at a time. Overseer TASKS uses two-task pages, a two-step assignment form, and INFO/STATUS/DEVICE/LOG (plus optional ASSIGN) screens. Input and result views are separate for offline labs.

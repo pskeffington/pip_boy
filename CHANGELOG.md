@@ -2,6 +2,14 @@
 
 This file records notable changes to Rust-Boy. This repository is in **development preview**; the Rust workspace version `0.1.0` is not a published production release. Dates are in UTC unless otherwise stated.
 
+## Unreleased — Head Engineer network suite (2026-10-25)
+
+- Preload NET SUITE as the first Head Engineer module, with nine bounded offline tools: IPv4/IPv6 CIDR, subnet split, longest-prefix route match, exact CIDR merge, overlap, MAC/EUI-64, 802.1Q VLAN and MTU/MSS.
+- Add a single-target literal-IP TCP connect diagnostic behind explicit operator confirmation; no DNS resolution, scanning, background probes, packet payload, arbitrary shell or OS network configuration.
+- Expose a common Rust descriptor catalog to a six-at-a-time micro tool menu and a desktop operation picker. Preserve the legacy IPv4 `workbench net cidr` CLI/HTTP API.
+- Add native CLI, loopback dashboard and cross-platform smoke cases, bounded/edge-case unit tests, and [Network Engineering guide](docs/NETWORK_ENGINEERING.md).
+- Hardware Pi screen, authorized LAN endpoints and browser zoom/manual acceptance remain gated.
+
 ## Unreleased — minimalist micro HUD (2026-10-25)
 
 - Reduce the handheld STAT page to one short role heading, action buttons and live task counters; remove redundant descriptions and decorative instrument blocks.
