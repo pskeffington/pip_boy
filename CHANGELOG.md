@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-10-25 — Reclamation map-marker integration (validation pending)
+
+- Add opt-in **MAP → SITES** overlay and focus from site records on micro and desktop without basemap requirement.
+- Introduce minimal, gated local marker endpoint (omits private notes), manual-only provenance and six-item accessible lists.
+- Protect saved-site coordinates from OSM extent requests by disabling/blocking WEB on site views; clear marker memory on map unmount.
+- Extend API smoke and browser map journeys; repair stale Scout profile assertion and apply Rust formatting.
+
+
 ## Unreleased — micro workflow continuity
 
 - Back/Escape moves from local results to preserved inputs and from network results/authorization to inputs, then tools.
