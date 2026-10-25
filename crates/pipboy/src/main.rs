@@ -4,11 +4,12 @@ use pipboy_core::blueprint::{literature, plans, validate_blueprint};
 use pipboy_core::metrics::Collector;
 use pipboy_core::notes::NoteStore;
 use std::error::Error;
+mod sampling;
 mod tui;
 
 fn help() {
     println!("{PRODUCT_NAME} | {PRODUCT_DESCRIPTOR}");
-    println!("usage: {CLI_COMMAND} [tui|status [--json]|sources [query]|modules|plan [G0..G4]|evidence [query]|doctor|notes <list|add TEXT>|help]");
+    println!("usage: {CLI_COMMAND} [tui|status [--json]|sample [--count N --interval-ms MS]|sources [query]|modules|plan [G0..G4]|evidence [query]|doctor|notes <list|add TEXT>|help]");
 }
 
 fn main() {
@@ -44,6 +45,7 @@ fn run() -> Result<(), Box<dyn Error>> {
             }
             Ok(())
         }
+        Some("sample") => sampling::run(args.collect()),
         Some("sources") => {
             let query = args.next().unwrap_or_default();
             if args.next().is_some() {

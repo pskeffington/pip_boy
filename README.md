@@ -51,6 +51,7 @@ git clone https://github.com/pskeffington/pip_boy.git
 cd pip_boy
 cargo run -p pipboy -- tui
 cargo run -p pipboy -- status --json
+cargo run -p pipboy -- sample --count 3 --interval-ms 1000
 cargo run -p pipboy -- sources
 cargo run -p pipboy -- sources rust
 cargo run -p pipboy -- modules

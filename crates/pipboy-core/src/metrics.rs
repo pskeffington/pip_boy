@@ -33,6 +33,11 @@ impl Collector {
         }
     }
 
+    /// OS-dependent minimum interval for reliable CPU usage deltas.
+    pub fn minimum_cpu_interval() -> std::time::Duration {
+        MINIMUM_CPU_UPDATE_INTERVAL
+    }
+
     /// CPU usage requires two samples separated by a minimum interval.
     pub fn prime(&mut self) {
         self.system.refresh_cpu_usage();
