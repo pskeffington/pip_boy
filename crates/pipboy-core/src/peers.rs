@@ -49,14 +49,12 @@ fn valid_path(value: &str) -> bool {
     !value.is_empty()
         && value.len() <= 512
         && !value.contains('\0')
-        && value
-            .bytes()
-            .all(|ch| {
-                ch.is_ascii_graphic()
+        && value.bytes().all(|ch| {
+            ch.is_ascii_graphic()
                     && !matches!(ch, b'%' | b'"' | b'\'' | b';')
                     // Windows native absolute paths contain backslashes.
                     && (cfg!(windows) || ch != b'\\')
-            })
+        })
         && Path::new(value).is_absolute()
 }
 
