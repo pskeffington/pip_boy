@@ -1046,7 +1046,7 @@
       width: 0, height: 0, dpr: 1,
       center: mapMemory ? { ...mapMemory.center } :
         boston ? { ...boston.center } : { lat: 0, lon: 0 },
-      zoom: mapMemory ? mapMemory.zoom : boston ? 11.65 : 2,
+      zoom: mapMemory ? mapMemory.zoom : boston ? 12 : 2,
       boston, bostonError,
       baseVisible: Boolean(boston && (!mapMemory || mapMemory.baseVisible !== false)),
       shapes: mapMemory ? mapMemory.shapes : [],
