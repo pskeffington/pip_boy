@@ -42,6 +42,7 @@ pub fn sources() -> Value {
         "schema": 1,
         "provider": "U.S. Census Bureau TIGER/Line",
         "vintage": VINTAGE,
+        "source_crs": "GCS_NAD83",
         "county_boundaries": "TIGERweb / ACS 2025 (separate county lookup)",
         "sources": [
             {"id":"tiger-roads","layer":"roads","kind":"line","origin":"www2.census.gov",
