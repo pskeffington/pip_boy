@@ -48,6 +48,9 @@ const requests = [];
 let pendingResponse = null;
 async function fetchMock(url, init) {
   requests.push({url,init});
+  if (url === "/api/reclamation") return {
+    ok:true, status:200, json:async() => ({book:{sites:fixture.sites}})
+  };
   assert.equal(url, "/api/reclamation/map", "map marker flow only reads local endpoint");
   assert.equal(init.credentials, "omit");
   assert.equal(init.cache, "no-store");
@@ -132,6 +135,22 @@ async function main() {
   assert.equal(ordinary.siteButton.hidden, true, "non-Reclamation map stays isolated");
   assert.equal(ordinary.sites.length, 0);
   window.RustBoyMap.unmount();
-  console.log("Reclamation map: explicit local fetch, marker focus, dateline, privacy, cleanup PASS");
+
+  // The register exposes MAP per saved site, with the chosen stable ID.
+  const registerCode = fs.readFileSync(
+    path.join(__dirname, "../crates/pipboy/assets/reclamation.js"), "utf8");
+  new Function("window", "document", "fetch", registerCode)(window, document, fetchMock);
+  const register = new Element("div");
+  let selectedFromKit = null;
+  window.RustBoyReclamation.mount(register, {onMap:(site) => { selectedFromKit = site.id; }});
+  await until(() => register.children[4] && register.children[4].children.length === 2);
+  const firstCard = register.children[4].children[0];
+  const controls = firstCard.children.find((child) => child.className === "rb-rec-actions");
+  const mapControl = controls.children.find((child) => child.textContent === "MAP");
+  assert.ok(mapControl, "each site offers a map action");
+  mapControl.listeners.click[0]();
+  assert.equal(selectedFromKit, 1);
+  assert.equal(requests.at(-1).url, "/api/reclamation");
+  console.log("Reclamation: explicit local markers, kit-to-map focus, privacy and cleanup PASS");
 }
 main().catch((err) => {console.error(err); process.exitCode = 1;});
