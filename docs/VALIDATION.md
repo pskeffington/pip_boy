@@ -1,12 +1,12 @@
 # Rust-Boy | Local validation evidence
 
-Review date: October 24, 2026 (America/New_York). Environment: Linux x86_64 container. These are local results; they do not establish remote Actions success or macOS/Windows support.
+Updated October 25, 2026 (America/New_York). This record includes GitHub-hosted Ubuntu Linux CI evidence; older sections retain historical development-state notes. macOS/Windows and real-device acceptance remain open.
 
 ## Verified Ubuntu baseline and follow-on tests
 
 [Actions run 40160220866](https://github.com/pskeffington/pip_boy/actions/runs/40160220866) passed the complete Linux quality matrix at `e36fd59`: catalog validation, formatting, stable Clippy and compile, 13 CLI + 79 core unit tests on stable and Rust 1.81.0 (**92 each**), and five CLI/TUI smoke suites. GitHub Actions were enabled throughout; the earlier zero-job failure reproduced when an external Rust setup action was used, and resolved when setup/cache used runner-native `rustup`. The account-level action policy was not directly inspected.
 
-The follow-on adds a cancel-safe lease and a bounded, manually injected logical timeout (1–60,000 ms), rejects clock rewinds and counter overflows, and defines `cancel` and `timeout` golden replay scenarios. These new tests need their own passing run; neither virtual deadline nor mock cancellation is an OS-enforced watchdog or real device behavior. MacOS/Windows and physical hardware acceptance remain outstanding.
+**Latest verified delta:** [push run 40160762403](https://github.com/pskeffington/pip_boy/actions/runs/40160762403) and [PR run 40160765839](https://github.com/pskeffington/pip_boy/actions/runs/40160765839) both passed at `f445814`. Both toolchains completed **13 CLI + 84 core = 97 unit tests** with zero failures. Stable Rust 1.99.1 passed formatting, compile, Clippy with `-D warnings`, binary build and all five black-box scripts (`smoke_runtime`, `smoke_notes`, `smoke_permissions`, `smoke_simulator`, `smoke_replay`). Rust 1.81.0 passed workspace compile and unit tests; the offline catalog job passed. New behaviors: cancel-safe mock leases, 1–60,000 ms manually injected virtual TTL, exact-deadline expiry, fail-closed backward clock, and two new deterministic replay scenarios. This is simulated, in-process policy—not a real-time OS watchdog, network interface, or physical device capability. macOS/Windows and selected real-hardware acceptance remain outstanding.
 
 ## Historical initial deterministic replay work (before verified CI)
 

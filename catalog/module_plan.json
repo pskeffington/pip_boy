@@ -444,9 +444,9 @@
       "Deterministic event playback",
       "Mock GPIO/serial/display adapters",
       "Recorded golden traces",
-      "G1 precursor: 11 fixed in-memory virtual fixtures, explicit per-session confirmation and bounded truthful event envelope (new tests pending)",
-      "G1 source-only fixed nominal/disconnect-recover/revoke replay with synthetic 0–700 ms times and truthful JSON trace (new tests pending)",
-      "G1 precursor: cancellation and injected logical TTL scenarios, with bounded 1–60000 ms timeout (new CI pending)"
+      "G1 precursor: 11 fixed in-memory virtual fixtures, explicit per-session confirmation and bounded truthful event envelope (Ubuntu CI verified at f445814)",
+      "G1 source-only fixed nominal/disconnect-recover/revoke replay with synthetic 0–700 ms times and truthful JSON trace (Ubuntu CI verified at f445814)",
+      "G1 precursor: cancellation and injected logical TTL scenarios, with bounded 1–60000 ms timeout (Ubuntu CI verified at f445814)"
     ],
     "acceptance": [
       "CI runs without hardware",

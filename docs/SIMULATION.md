@@ -1,7 +1,7 @@
 # Rust-Boy | Deterministic device-broker simulator
 
 **Gate:** G1-D prototype leading to G2 device broker and simulator.  
-**Status:** source implemented, new tests not executed. G2 hardware adapters remain planned.
+**Status:** fixed virtual broker, five replay scenarios, mock cancel and injected deadline behavior passed the GitHub-hosted [Ubuntu quality matrix](https://github.com/pskeffington/pip_boy/actions/runs/40160762403) at `f445814`; G2 real hardware adapters remain planned.
 
 ## Why this exists
 
@@ -63,7 +63,7 @@ An emitted event is explicitly typed:
 
 There are no synthetic CPU, environmental, coordinates, RF signal levels or other numeric measurements.
 
-## Deterministic logical-time replay (new, unverified)
+## Deterministic logical-time replay (Ubuntu CI verified)
 
 Five **fixed source-defined scenarios** are provided by `simulator_replay.rs`. Replay does not load arbitrary user scripts, files or real device data, and never sleeps or reads a wall clock:
 
@@ -91,7 +91,7 @@ New `SimulatedBroker::disconnect/reconnect` methods only toggle virtual availabi
 
 ## Cancellation and virtual time boundaries
 
-`SimulatedBroker` now exposes `cancel(&lease)`, `open_with_timeout(..., ttl_ms)` and `advance_to(logical_ms)`. The TTL must be 1–60,000 injected logical milliseconds; invalid bounds fail before opening a lease. An exact deadline expires the mock session. Clock rewinds fail closed by clearing the session; overflow is rejected. This is a deterministic test clock, **not** a wall-clock watchdog, physical device timeout, OS broker, or automatically scheduled task. No receiver/network/device APIs are opened. Newly authored cancellation/timeout tests require CI verification on their current commit.
+`SimulatedBroker` now exposes `cancel(&lease)`, `open_with_timeout(..., ttl_ms)` and `advance_to(logical_ms)`. The TTL must be 1–60,000 injected logical milliseconds; invalid bounds fail before opening a lease. An exact deadline expires the mock session. Clock rewinds fail closed by clearing the session; overflow is rejected. This is a deterministic test clock, **not** a wall-clock watchdog, physical device timeout, OS broker, or automatically scheduled task. No receiver/network/device APIs are opened. Cancellation and timeout tests passed on Ubuntu stable and Rust 1.81.0 at the linked CI run; native platform and actual-device watchdog verification remain open.
 
 ## Lease and preference invariants
 

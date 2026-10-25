@@ -16,12 +16,12 @@
 | Finite NDJSON export | sampling.rs | Locally tested, including writer failures | Signal cancellation and other OS clock checks |
 | Local notes | notes.rs | Locked staged writes, validated limits, search and explicit export/import; locally tested | Native Windows/macOS runtime and general schema migrations |
 | Adapter preferences | permissions.rs; CLI permissions | Versioned requested/denied preferences, bounded locked persistence and fail-closed parsing authored (tests pending) | Actual consent flow, OS broker, native platforms and tamper resistance |
-| Virtual broker prototype | device_simulator.rs, simulator_replay.rs; CLI simulate | 11 fixed fixtures, explicit confirmation, fail-closed denial, scoped leases, disconnect/recovery and 3 deterministic logical-time traces authored (tests pending) | True OS broker, trusted UX, physical adapters and real event replay |
+| Virtual broker prototype | device_simulator.rs, simulator_replay.rs; CLI simulate | 11 virtual fixtures, five deterministic replay scenarios, cancel and bounded injected timeouts passed Ubuntu stable/1.81.0 CI | Real OS broker, trusted UX, physical adapters and wall-clock watchdogs |
 | Console navigation | console.rs / tui.rs | Compact layout, scrolling, explicit note reload and Linux resize smoke checks | Native platforms, assistive-tech and contrast acceptance |
 | Research consistency | tools/validate_catalog.py | Passing locally | Keep catalog and Rust registry aligned |
-| Quality checks | rust.yml | Prior feature-branch Ubuntu run 40160220866 passed Python catalog, stable/1.81.0 (92 tests each), fmt, Clippy and five smoke suites | New mock cancellation/timeout tests and native macOS/Windows verification |
+| Quality checks | rust.yml | Ubuntu push/PR CI green at `f445814`: Python catalog, stable/1.81.0 (97 tests each), fmt, Clippy, five smoke suites | Native macOS/Windows, hardware and accessibility acceptance |
 
-See [VALIDATION.md](VALIDATION.md) for executed Linux checks. TUI and NDJSON use `ModuleHost` with a lazy telemetry adapter; the status CLI has now been routed through the same host (new tests not yet executed). TUI P controls local host-read grant/revocation. Preference persistence is authored but is not an active grant; session authorization, general adapter consent and OS brokering remain planned.
+See [VALIDATION.md](VALIDATION.md) for executed Linux checks. TUI and NDJSON use `ModuleHost` with a lazy telemetry adapter; the status CLI has now been routed through the same host (validated in Ubuntu CI at `f445814`). TUI P controls local host-read grant/revocation. Preference persistence is authored but is not an active grant; session authorization, general adapter consent and OS brokering remain planned.
 
 G1 module-plan statuses remain **planned** until integration and acceptance tests are verified. File presence is not proof of a functioning runtime.
 

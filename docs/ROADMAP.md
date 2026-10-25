@@ -26,8 +26,8 @@ The build is a directed acyclic dependency plan, **not** a schedule. All module 
 - [x] Curated public GitHub reference catalog with license status.
 - [x] Rust-Boy product identity and documented independent-project IP boundaries.
 - [x] Rust workspace, Ratatui interface, system status, local notes and CLI.
-- [x] CI quality workflow and local Python catalog validator authored; baseline unit tests defined (**unverified**).
-- [x] Add manual workflow trigger and stable/1.81.0 compatibility matrix (**not yet executed**).
+- [x] CI quality workflow and offline catalog validator authored, compiled and executed on Ubuntu feature-branch runners.
+- [x] Add workflow triggers and stable/1.81.0 compatibility matrix, executed successfully on feature branch at `f445814` (97 tests each).
 - [x] GitHub Actions admitted jobs and [passed the full Ubuntu Rust quality matrix](https://github.com/pskeffington/pip_boy/actions/runs/40160220866) after replacing unsupported third-party setup/cache actions with runner-native `rustup`.
 - [x] Validate dependency lockfile and pinned toolchain compatibility. **Local Linux: passed; lockfile committed.**
 - [ ] Smoke test launch, navigation, exit, and data persistence on Linux, macOS and Windows.
@@ -66,7 +66,7 @@ The build is a directed acyclic dependency plan, **not** a schedule. All module 
 - [ ] Make native dependencies optional by compile-time feature / target gating.
 - [ ] Add cross-build for arm64 Linux and hardware-in-loop acceptance tests.
 
-**G2 precursor (G1-D source authored, unverified):** an in-memory `SimulatedBroker` now has 11 fixed virtual fixtures, explicit simulation confirmation, preference denial, generation-based lease revocation and truthful fake-only events. The G1 precursor now also has fixed `nominal`, `disconnect-recover`, and `revoke` logical-time trace scripts (tests authored, unexecuted). Two additional source-defined `cancel` and `timeout` scenarios now exercise virtual session invalidation with injected logical clock bounds (new tests pending CI). This is not the full G2 hardware simulator, OS broker, driver event replay system or physical adapter.
+**G2 precursor (G1-D source authored, unverified):** an in-memory `SimulatedBroker` now has 11 fixed virtual fixtures, explicit simulation confirmation, preference denial, generation-based lease revocation and truthful fake-only events. The G1 precursor now also has fixed `nominal`, `disconnect-recover`, and `revoke` logical-time trace scripts (tests authored, unexecuted). Two additional source-defined `cancel` and `timeout` scenarios exercise virtual session invalidation with injected logical clock bounds (**Ubuntu CI verified at `f445814`**). This is not the full G2 hardware simulator, OS broker, driver event replay system or physical adapter.
 
 **G2 exit:** clean simulator replay on CI and verified physical input on selected hardware; no automatic port opening, scanning, or unsafe fallback.
 
