@@ -160,11 +160,14 @@ class ConPty:
             "InitializeProcThreadAttributeList",
         )
         self.attr_initialized = True
-        pc_handle = wintypes.HANDLE(self.pseudoconsole.value)
+        # PROC_THREAD_ATTRIBUTE_PSEUDOCONSOLE takes the HPCON value as
+        # lpValue (an opaque pointer), not the address of a HANDLE variable.
+        # Passing byref(HPCON) creates a different invalid pointer and leaves
+        # the child disconnected even when process creation reports success.
         check(
             api.UpdateProcThreadAttribute(
                 self.attr_ptr, 0, ATTRIBUTE_PSEUDOCONSOLE,
-                ctypes.byref(pc_handle), ctypes.sizeof(pc_handle), None, None,
+                self.pseudoconsole, ctypes.sizeof(wintypes.HANDLE), None, None,
             ),
             "UpdateProcThreadAttribute pseudoconsole",
         )
