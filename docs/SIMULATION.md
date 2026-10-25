@@ -29,7 +29,7 @@ pipboy simulate run sim:sdr --confirm
 # denied: saved explicit denial takes precedence
 ```
 
-`--confirm` applies **only to this one simulation invocation**. It is not persisted, does not update `ModuleHost` grants, and cannot be used to authorize a real device. `sim:* ` identifiers are hard-coded virtual fixtures, not discovered hardware or addresses.
+`--confirm` applies **only to this one simulation invocation**. It is not persisted, does not update `ModuleHost` grants, and cannot be used to authorize a real device. `sim:*` identifiers are hard-coded virtual fixtures, not discovered hardware or addresses.
 
 ## Fixed fixture inventory
 
@@ -69,7 +69,7 @@ There are no synthetic CPU, environmental, coordinates, RF signal levels or othe
 2. `Preference::Requested` **does not** authorize anything. `SessionConfirmation::Confirmed` is required for every `open`; `Denied` always blocks that capability.
 3. A lease has private fields, a broker-instance identity and a monotonically increasing generation. It cannot be serialized as a reusable grant or applied to another broker instance.
 4. At most one fixture lease can be active in one broker; explicit `revoke`, `close`, or a policy reload to `Denied` invalidates the lease before the next `sample`.
-5. An invalid policy replacement clears the active lease, instead of retaining its prior permissions. Reversing a denial never restarts a previously revoked session.
+5. An invalid policy replacement clears the active lease and locks the broker against new sessions until a valid policy snapshot is loaded. Reversing a denial never restarts a previously revoked session.
 6. Each successful call emits only a clearly labeled fixture event. `SimulatedBroker` owns no OS handle or background tasks, and the CLI closes its short-lived lease after one event.
 
 A separate application or UI must notice and reload preference changes; this prototype does **not** watch filesystem events, automatically receive a write-time revocation, or supply an OS-enforced authorization service. `SessionConfirmation` is a cooperative Rust API: code linked into the same process could construct `Confirmed`. Never reuse it as the security boundary for real drivers.
