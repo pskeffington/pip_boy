@@ -10,7 +10,7 @@ use pipboy_core::lifecycle::State;
 use pipboy_core::metrics::{Collector, Snapshot};
 use pipboy_core::notes::NoteStore;
 use pipboy_core::observation::Observation;
-use pipboy_core::runtime::{Capability, ModuleHost, PermissionSet, PollOutcome};
+use pipboy_core::runtime::{Capability, LocalOperation, ModuleHost, PermissionSet, PollOutcome};
 use ratatui::prelude::*;
 use std::error::Error;
 use std::io;
@@ -52,7 +52,7 @@ pub fn run() -> Result<(), Box<dyn Error>> {
     host.start("stat")?;
     let (initial, mut history_info) = read_stat(&mut host)?;
     let mut latest = Some(initial);
-    let library = sources()?;
+    let library = host.run_local(LocalOperation::LibraryRead, sources)?;
     let store = NoteStore::from_environment()?;
     let mut navigation = Navigation::default();
     let mut notes = Vec::new();
@@ -91,7 +91,7 @@ pub fn run() -> Result<(), Box<dyn Error>> {
                         };
                         navigation.apply(action, 0);
                         if navigation.panel == 2 {
-                            notes = store.list()?;
+                            notes = host.run_local(LocalOperation::NotesRead, || store.list())?;
                         }
                     }
                     KeyCode::Up
@@ -116,7 +116,7 @@ pub fn run() -> Result<(), Box<dyn Error>> {
                         navigation.apply(action, count);
                     }
                     KeyCode::Char('r') | KeyCode::Char('R') if navigation.panel == 2 => {
-                        notes = store.list()?
+                        notes = host.run_local(LocalOperation::NotesRead, || store.list())?
                     }
                     KeyCode::Char('p') | KeyCode::Char('P') => {
                         if host.permissions().allows(Capability::HostRead) {
