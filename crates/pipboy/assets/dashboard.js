@@ -318,6 +318,7 @@ const forms = Object.freeze({
     field("input", "IPV4 / CIDR", "192.168.1.50/24", 'autocomplete="off" spellcheck="false"'),
   "byte-lab":
     field("input", "HEX BYTES (UP TO 4096)", "48656c6c6f", 'autocomplete="off" spellcheck="false"'),
+  "diag": '<p class="workspace-subtitle">Check the local host using read-only CPU/RAM evidence. For scoped JSONL imports use pipboy diag ingest on the CLI.</p>',
   "host": '<p class="workspace-subtitle">Sample local host status on demand. No continuous background collection.</p>',
   "game": '<p class="workspace-subtitle">Manual connection only. The browser does not contact a PlayStation.</p>',
   "library": '<p class="workspace-subtitle">Shows the offline reference handoff. No network fetch.</p>',
