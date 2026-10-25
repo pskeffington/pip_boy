@@ -95,7 +95,7 @@ The build is a directed acyclic dependency plan, **not** a schedule. All module 
 
 **G0:** remote Actions previously reported startup_failure with zero executed jobs; local Linux stable/MSRV compilation, 63 tests, fmt, Clippy and CLI/TUI smoke checks now pass; remote CI and remaining platform acceptance are still open.
 
-**G1:** typed observation, bounded sample buffer, lifecycle transitions, finite NDJSON command and offline catalog validator have initial source implementations with telemetry now shared by TUI and finite NDJSON through a bounded session. The lazy host telemetry adapter now connects ModuleHost, lifecycle, capabilities and both frontends. Per-adapter persistent consent and device brokering remain planned. See [validation evidence](VALIDATION.md).
+**G1:** typed observation, bounded sample buffer, lifecycle transitions, finite NDJSON command and offline catalog validator have initial source implementations with telemetry now shared by TUI and finite NDJSON through a bounded session. The lazy host telemetry adapter now connects ModuleHost, lifecycle and capabilities to the TUI and finite sampling command; the one-shot status CLI has also been wired through it (new tests awaiting execution). Per-adapter persistent consent and device brokering remain planned. See [validation evidence](VALIDATION.md).
 
 **G2–G4:** still planned, with no external hardware, location, scanning or transmission enabled.
 

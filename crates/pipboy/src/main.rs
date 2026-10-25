@@ -1,11 +1,11 @@
 use pipboy_core::blueprint::{literature, plans, validate_blueprint};
 use pipboy_core::branding::{CLI_COMMAND, PRODUCT_DESCRIPTOR, PRODUCT_NAME};
 use pipboy_core::catalog::{sources, validate_sources};
-use pipboy_core::metrics::Collector;
 use pipboy_core::notes::NoteStore;
 use std::error::Error;
 mod console;
 mod sampling;
+mod status;
 mod tui;
 
 fn help() {
@@ -33,9 +33,7 @@ fn run() -> Result<(), Box<dyn Error>> {
             if option.as_deref().is_some_and(|value| value != "--json") || args.next().is_some() {
                 return Err(format!("usage: {CLI_COMMAND} status [--json]").into());
             }
-            let mut collector = Collector::new();
-            collector.prime();
-            let snapshot = collector.sample();
+            let snapshot = status::collect()?;
             if option.as_deref() == Some("--json") {
                 println!("{}", serde_json::to_string_pretty(&snapshot)?);
             } else {

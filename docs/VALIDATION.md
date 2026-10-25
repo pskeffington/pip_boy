@@ -8,6 +8,12 @@ G1-B/G1-C/G1-D/G1-E: shared `TelemetrySession<SnapshotSource>` for TUI and finit
 
 Module IDs: `stat`, `telemetry`. Existing evidence IDs: L03, L19, L31, L32, L33. TUI and finite NDJSON now use a lazy HostTelemetryModule through the lifecycle host. TUI P revokes/resumes local host-read permission. No external capability grants or device adapters were introduced; persistent per-adapter consent and OS brokering remain planned.
 
+## New follow-on change: status lifecycle integration (not yet executed)
+
+On the development branch, `pipboy status` and `status --json` now call a lazy `HostTelemetryModule` through `ModuleHost` instead of directly creating the collector in `main.rs`. Running this command still explicitly requests read-only local host metrics; it does not grant device enumeration, location, network or radio access. The raw eight-field Snapshot JSON contract and human-readable status output are retained.
+
+Three additional deterministic tests have been authored for deny-before-factory activity, one successful sample with the legacy JSON shape, and collector-start failure without fabricated measurements. These tests and the following checks **have not been run for the new commit**: `cargo fmt --all -- --check`, `cargo check --workspace --all-targets --locked`, `cargo test --workspace --locked`, `cargo clippy --workspace --all-targets --locked -- -D warnings`, and `python3 tools/smoke_runtime.py`. The 63-test evidence below belongs to the preceding development head, not this follow-on change. GitHub Actions must execute for the new commit before claiming G0/G1 acceptance.
+
 ## Executed quality checks
 
 | Command | Observed result |

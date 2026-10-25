@@ -12,14 +12,14 @@
 | Typed observation | observation.rs | Integrated with TUI and finite NDJSON; locally tested | Schema migration and field-level units |
 | Bounded sample buffer | buffer.rs | Integrated with TUI and finite NDJSON; locally tested | Runtime integration for other adapters |
 | Lifecycle state | lifecycle.rs | Integrated into ModuleHost; locally tested | External authorization/device broker |
-| Capability prechecks | capability.rs and runtime.rs | Explicit start/revoke/cleanup; TUI P control tested | Persistent per-adapter consent and device broker |
+| Capability prechecks | capability.rs and runtime.rs | Explicit start/revoke/cleanup; TUI P control locally tested; one-shot status CLI host route coded, new tests pending | Persistent per-adapter consent and device broker |
 | Finite NDJSON export | sampling.rs | Locally tested, including writer failures | Signal cancellation and other OS clock checks |
 | Local notes | notes.rs | Locked staged writes, validated limits, search and explicit export/import; locally tested | Native Windows/macOS runtime and general schema migrations |
 | Console navigation | console.rs / tui.rs | Compact layout, scrolling, explicit note reload and Linux resize smoke checks | Native platforms, assistive-tech and contrast acceptance |
 | Research consistency | tools/validate_catalog.py | Passing locally | Keep catalog and Rust registry aligned |
 | Quality checks | rust.yml | Python + stable + Rust 1.81.0 matrix | Local quality checks pass; remote Actions still unverified |
 
-See [VALIDATION.md](VALIDATION.md) for executed Linux checks. Both TUI and NDJSON now use `ModuleHost` with a lazy telemetry adapter. TUI P controls local host-read grant/revocation. Persistent settings, general adapter consent, and OS brokering remain planned.
+See [VALIDATION.md](VALIDATION.md) for executed Linux checks. TUI and NDJSON use `ModuleHost` with a lazy telemetry adapter; the status CLI has now been routed through the same host (new tests not yet executed). TUI P controls local host-read grant/revocation. Persistent settings, general adapter consent, and OS brokering remain planned.
 
 G1 module-plan statuses remain **planned** until integration and acceptance tests are verified. File presence is not proof of a functioning runtime.
 
@@ -75,7 +75,7 @@ G1 module-plan statuses remain **planned** until integration and acceptance test
 | Priority | Work item | Blocking dependency |
 | --- | --- | --- |
 | P0 | Investigate Actions startup failure and capture passing CI | Runner/entitlement investigation |
-| P0 | Extend lifecycle host integration to other built-ins | G1-D |
+| P0 | Integrate LIBRARY/NOTES with scoped lifecycle checks; status CLI route now coded but unverified | G1-D |
 | P0 | Build persistent per-adapter consent UI and OS device broker | G1-D/G2 |
 | P0 | Extend tested notes portability to general collection migrations and backup identities | G1-E |
 | P1 | Build testable host telemetry timing and source-quality dashboard | G1-C |

@@ -17,11 +17,13 @@
     ],
     "features": [
       "CPU/memory/OS/uptime snapshot",
-      "Human-readable and JSON output"
+      "Human-readable and JSON output",
+      "One-shot status CLI uses lazy ModuleHost lifecycle and host-read precheck (new tests defined; execution pending)"
     ],
     "acceptance": [
       "Status runs without network or devices",
-      "No fabricated hardware values"
+      "No fabricated hardware values",
+      "Denied host.read never constructs a collector; status --json retains legacy Snapshot fields"
     ]
   },
   {

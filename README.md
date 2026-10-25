@@ -4,7 +4,7 @@
 
 Rust-Boy is an independent, modular toolkit for desktop terminals and future wearable field computers. It combines local host diagnostics, a curated research library, and a user-controlled offline journal under one minimal native interface. Planned adapters extend it to Raspberry Pi hardware, maps, receive-only radios, and authenticated local communications.
 
-> **Project status — local Linux quality checks pass; G0 platform/CI acceptance remains open.** STAT, LIBRARY, and NOTES have initial implementations. The TUI and finite NDJSON sampling command now share versioned observations and bounded in-memory telemetry. Local tests pass on stable and Rust 1.81.0; see [validation evidence](docs/VALIDATION.md). Host telemetry now uses lifecycle/capability orchestration, with P to pause/resume in the TUI. Persistent per-adapter consent, cross-platform smoke tests, and external hardware remain unfinished.
+> **Project status — local Linux quality checks pass; G0 platform/CI acceptance remains open.** STAT, LIBRARY, and NOTES have initial implementations. The TUI and finite NDJSON sampling command share versioned observations and bounded in-memory telemetry. The one-shot status CLI is now wired through the same lazy permission/lifecycle host, with new regression tests awaiting execution. Local tests pass on stable and Rust 1.81.0; see [validation evidence](docs/VALIDATION.md). Host telemetry now uses lifecycle/capability orchestration, with P to pause/resume in the TUI. Persistent per-adapter consent, cross-platform smoke tests, and external hardware remain unfinished.
 
 ## Rust-Boy identity
 
