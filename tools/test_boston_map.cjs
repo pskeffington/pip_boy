@@ -63,7 +63,7 @@ async function main(){
   assert.equal(view.baseVisible,true,"Boston real road geometry loads by default");
   assert.equal(view.center.lat,42.356);
   assert.equal(view.center.lon,-71.065);
-  assert.equal(view.zoom,11.65);
+  assert.equal(view.zoom,12);
   assert.equal(view.baseAttribution.hidden,false);
   assert.match(view.sourceLines.textContent,/City of Boston \/ SAM/);
   assert.match(view.status.textContent,/BOSTON \/ REAL STREETS/);
