@@ -11,7 +11,7 @@ use pipboy_core::lifecycle::State;
 use pipboy_core::metrics::Collector;
 use pipboy_core::notes::NoteStore;
 use pipboy_core::observation::Observation;
-use pipboy_core::workbench::{WorkbenchStore, PALETTE};
+use pipboy_core::workbench::{WorkbenchStore, PALETTE, PRESETS};
 use pipboy_core::runtime::{Capability, LocalOperation, ModuleHost, PermissionSet, PollOutcome};
 use ratatui::prelude::*;
 use std::error::Error;
@@ -86,6 +86,37 @@ pub fn run() -> Result<(), Box<dyn Error>> {
                 if key.kind != KeyEventKind::Press {
                     continue;
                 }
+                if navigation.panel == 3 && navigation.profiles_open {
+                    match key.code {
+                        KeyCode::Esc | KeyCode::Char('n' | 'N') => {
+                            navigation.profile_confirm = false;
+                            navigation.profiles_open = false;
+                        }
+                        KeyCode::Enter => navigation.profile_confirm = true,
+                        KeyCode::Char('y' | 'Y') if navigation.profile_confirm => {
+                            if let Some(entry) = PRESETS.get(navigation.profile_selected) {
+                                bench_store.apply_preset(entry.id)?;
+                                workbench = bench_store.load()?;
+                                navigation.focus_last_bench_slot(&workbench);
+                                navigation.profile_confirm = false;
+                                navigation.profiles_open = false;
+                            }
+                        }
+                        KeyCode::Up => navigation.profile_move(Action::Up),
+                        KeyCode::Down => navigation.profile_move(Action::Down),
+                        KeyCode::PageUp => navigation.profile_move(Action::PageUp),
+                        KeyCode::PageDown => navigation.profile_move(Action::PageDown),
+                        KeyCode::Home => navigation.profile_move(Action::Home),
+                        KeyCode::End => navigation.profile_move(Action::End),
+                        KeyCode::Tab | KeyCode::Right => navigation.apply(Action::Next, 0),
+                        KeyCode::BackTab | KeyCode::Left => {
+                            navigation.apply(Action::Previous, 0);
+                        }
+                        _ if exit_requested(key) => break,
+                        _ => {}
+                    }
+                    continue;
+                }
                 if navigation.panel == 3 && navigation.palette_open {
                     match key.code {
                         KeyCode::Esc => navigation.palette_open = false,
@@ -120,6 +151,14 @@ pub fn run() -> Result<(), Box<dyn Error>> {
                     break;
                 }
                 match key.code {
+                    KeyCode::Char('p' | 'P') if navigation.panel == 3 => {
+                        navigation.profiles_open = true;
+                        navigation.profile_confirm = false;
+                        navigation.profile_selected = PRESETS
+                            .iter()
+                            .position(|entry| entry.id == workbench.profile)
+                            .unwrap_or(0);
+                    }
                     KeyCode::Char('a' | 'A') if navigation.panel == 3 => {
                         navigation.palette_open = true;
                     }

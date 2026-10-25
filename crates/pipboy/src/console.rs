@@ -4,7 +4,7 @@ use pipboy_core::branding::PRODUCT_NAME;
 use pipboy_core::catalog::CatalogSource;
 use pipboy_core::notes::Note;
 use pipboy_core::registry::{Readiness, MODULES};
-use pipboy_core::workbench::{tool, Workbench, PALETTE};
+use pipboy_core::workbench::{tool, Workbench, PALETTE, PRESETS};
 use ratatui::prelude::*;
 use ratatui::widgets::{Block, Borders, List, ListItem, ListState, Paragraph, Tabs, Wrap};
 
@@ -31,6 +31,9 @@ pub struct Navigation {
     page_rows: [u16; 7],
     pub palette_open: bool,
     pub palette_selected: usize,
+    pub profiles_open: bool,
+    pub profile_selected: usize,
+    pub profile_confirm: bool,
 }
 
 impl Navigation {
@@ -44,10 +47,14 @@ impl Navigation {
             Action::Next => {
                 self.panel = (panel + 1) % PANELS.len();
                 self.palette_open = false;
+                self.profiles_open = false;
+                self.profile_confirm = false;
             }
             Action::Previous => {
                 self.panel = (panel + PANELS.len() - 1) % PANELS.len();
                 self.palette_open = false;
+                self.profiles_open = false;
+                self.profile_confirm = false;
             }
             Action::Up if collection => self.selected[panel] = previous.saturating_sub(1),
             Action::Down if collection => {
@@ -81,6 +88,21 @@ impl Navigation {
 
     pub fn focus_last_bench_slot(&mut self, board: &Workbench) {
         self.selected[3] = board.slots.len().saturating_sub(1);
+        self.scroll[3] = 0;
+    }
+
+    pub fn profile_move(&mut self, action: Action) {
+        let last = PRESETS.len().saturating_sub(1);
+        self.profile_selected = match action {
+            Action::Up => self.profile_selected.saturating_sub(1),
+            Action::Down => self.profile_selected.saturating_add(1).min(last),
+            Action::PageUp => self.profile_selected.saturating_sub(5),
+            Action::PageDown => self.profile_selected.saturating_add(5).min(last),
+            Action::Home => 0,
+            Action::End => last,
+            Action::Next | Action::Previous => self.profile_selected,
+        };
+        self.profile_confirm = false;
         self.scroll[3] = 0;
     }
 
@@ -203,7 +225,40 @@ pub fn render(frame: &mut Frame, navigation: &mut Navigation, view: View<'_>) {
             (labels, detail)
         }
         3 => {
-            if navigation.palette_open {
+            if navigation.profiles_open {
+                navigation.profile_selected =
+                    navigation.profile_selected.min(PRESETS.len().saturating_sub(1));
+                let selected = navigation.profile_selected;
+                let labels = PRESETS
+                    .iter()
+                    .map(|entry| format!("{} / {}", entry.title, entry.role_fidelity))
+                    .collect();
+                let entry = &PRESETS[selected];
+                let enabled: Vec<_> = entry
+                    .tools
+                    .iter()
+                    .filter_map(|id| tool(id).map(|tool| tool.name))
+                    .collect();
+                let detail = format!(
+                    "VAULT PROFILE / {}\n\n{}\n\nLORE: {} / {}\n\nREADY TOOLS ({}):\n{}\n\n{}",
+                    entry.title,
+                    entry.description,
+                    entry.lore_evidence,
+                    entry.role_fidelity,
+                    entry.tools.len(),
+                    if enabled.is_empty() {
+                        "Empty by design (advanced Custom mode)".to_owned()
+                    } else {
+                        enabled.join(", ")
+                    },
+                    if navigation.profile_confirm {
+                        "REPLACE CURRENT PINS?\nY: replace entire workbench | N/Esc: cancel"
+                    } else {
+                        "Enter: choose this complete profile | Esc: cancel\nNo tool is executed by selecting a profile"
+                    }
+                );
+                (labels, detail)
+            } else if navigation.palette_open {
                 navigation.palette_selected = navigation.palette_selected.min(PALETTE.len() - 1);
                 let selected = navigation.palette_selected;
                 let labels = PALETTE
@@ -244,7 +299,7 @@ pub fn render(frame: &mut Frame, navigation: &mut Navigation, view: View<'_>) {
                     .and_then(|slot| tool(&slot.tool).map(|entry| (slot, entry)))
                     .map(|(slot, entry)| {
                         format!(
-                            "{} / SLOT #{}\nSTATUS: {}\n\n{}\n\nCOMMAND: {}\n\nPinning is not execution. Commands still require their own permissions and flags.\n\nA: palette | X: unpin | R: reload",
+                            "{} / SLOT #{}\nSTATUS: {}\n\n{}\n\nCOMMAND: {}\n\nPinning is not execution. Commands still require their own permissions and flags.\n\nP: role | A: palette | X: unpin | R: reload",
                             entry.name,
                             slot.id,
                             entry.availability.label(),
@@ -254,7 +309,7 @@ pub fn render(frame: &mut Frame, navigation: &mut Navigation, view: View<'_>) {
                     })
                     .unwrap_or_else(|| {
                         format!(
-                            "{}\nEMPTY / ZERO SLOTS\n\nPress A to open the tool palette.\nAdd only the tools you want; nothing runs automatically.\n\nCLI: pipboy workbench palette\nCLI: pipboy workbench add byte-lab\n\nNo network scanning, physical device access or telemetry upload.",
+                            "{}\nEMPTY / ZERO SLOTS\n\nPress P to select a complete role, or A to open the tool palette.\nAdd only the tools you want; nothing runs automatically.\n\nCLI: pipboy workbench palette\nCLI: pipboy workbench add byte-lab\n\nNo network scanning, physical device access or telemetry upload.",
                             view.workbench.title
                         )
                     });
@@ -283,7 +338,9 @@ pub fn render(frame: &mut Frame, navigation: &mut Navigation, view: View<'_>) {
             Constraint::Min(3),
         ])
         .split(sections[1]);
-        let selected = if navigation.panel == 3 && navigation.palette_open {
+        let selected = if navigation.panel == 3 && navigation.profiles_open {
+            navigation.profile_selected
+        } else if navigation.panel == 3 && navigation.palette_open {
             navigation.palette_selected
         } else {
             navigation.selected[navigation.panel]
@@ -334,10 +391,13 @@ pub fn render(frame: &mut Frame, navigation: &mut Navigation, view: View<'_>) {
             .style(Style::default().fg(Color::Green)),
         detail_area,
     );
-    let footer = if navigation.panel == 3 && navigation.palette_open {
+    let footer = if navigation.panel == 3 && navigation.profiles_open {
+        "PROFILES | Up/Down: role | Enter: select | Y: confirm
+N/Esc: cancel | Tab: next panel | Q: quit"
+    } else if navigation.panel == 3 && navigation.palette_open {
         "PALETTE | Up/Down: select | Enter: pin | Esc: cancel\nTab: next panel | Q/Ctrl+C: quit"
     } else if navigation.panel == 3 {
-        "WORKBENCH | A: tool palette | X: unpin | R: reload\nUp/Down: slots | PgUp/PgDn: detail | Q: quit"
+        "WORKBENCH | P: role | A: palette | X: unpin | R: reload\nUp/Down: slots | PgUp/PgDn: detail | Q: quit"
     } else {
         "Tab: panel | Up/Down: item or text\nPgUp/PgDn: text | Home/End: first/last\nP: pause/resume | R: notes | Q: quit"
     };
@@ -492,4 +552,33 @@ mod tests {
             assert!(screen(80, 24, &mut navigation, view).contains("PLANNED / NOT CONNECTED"));
         }
     }
+    #[test]
+    fn role_picker_renders_complete_profiles_and_custom_without_side_effects() {
+        let mut navigation = Navigation {
+            panel: 3,
+            profiles_open: true,
+            ..Navigation::default()
+        };
+        let board = Workbench::default();
+        let view = View {
+            stat: "unused",
+            library: &[],
+            notes: &[],
+            workbench: &board,
+        };
+        let text = screen(100, 28, &mut navigation, view);
+        assert!(text.contains("Overseer Operations"));
+        assert!(text.contains("VAULT PROFILE"));
+        assert!(text.contains("READY TOOLS"));
+        navigation.profile_move(Action::End);
+        let text = screen(100, 28, &mut navigation, view);
+        assert!(text.contains("Custom Workbench"));
+        assert!(text.contains("Empty by design"));
+        navigation.profile_confirm = true;
+        assert!(screen(100, 28, &mut navigation, view).contains("REPLACE CURRENT PINS"));
+        navigation.apply(Action::Next, 0);
+        assert!(!navigation.profiles_open);
+        assert!(!navigation.profile_confirm);
+    }
+
 }
