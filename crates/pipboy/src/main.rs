@@ -2,6 +2,10 @@ use pipboy_core::blueprint::{literature, plans, validate_blueprint};
 use pipboy_core::branding::{CLI_COMMAND, PRODUCT_DESCRIPTOR, PRODUCT_NAME};
 use pipboy_core::catalog::{sources, validate_sources};
 use pipboy_core::device_simulator::{SessionConfirmation, SimulatedBroker};
+use pipboy_core::mock_adapters::{
+    DisplayBackend, InputSource, MockDisplayBackend, MockInputSource, MockSerialReader,
+    SerialReader,
+};
 use pipboy_core::notes::NoteStore;
 use pipboy_core::permissions::{
     adapter_capability, Preference, PreferenceStore, ADAPTER_CAPABILITIES,
@@ -17,7 +21,7 @@ mod tui;
 
 fn help() {
     println!("{PRODUCT_NAME} | {PRODUCT_DESCRIPTOR}");
-    println!("usage: {CLI_COMMAND} [tui|status [--json]|sample [--count N --interval-ms MS]|sources [query]|modules|plan [G0..G4]|evidence [query]|doctor|permissions <list|request KEY|deny KEY|clear KEY>|simulate <list|run ID [--confirm]|replay ID SCENARIO [--confirm]|transport ID --count N --capacity N [--confirm]>|notes <list|add TEXT|search QUERY|export|import FILE>|help]");
+    println!("usage: {CLI_COMMAND} [tui|status [--json]|sample [--count N --interval-ms MS]|sources [query]|modules|plan [G0..G4]|evidence [query]|doctor|permissions <list|request KEY|deny KEY|clear KEY>|simulate <list|run ID [--confirm]|replay ID SCENARIO [--confirm]|transport ID --count N --capacity N [--confirm]|adapter <input|display|serial> [--confirm]>|notes <list|add TEXT|search QUERY|export|import FILE>|help]");
 }
 
 fn main() {
@@ -264,6 +268,39 @@ fn run() -> Result<(), Box<dyn Error>> {
                 println!("{}", serde_json::to_string_pretty(&report)?);
                 Ok(())
             }
+            Some("adapter") => {
+                let usage = "usage: pipboy simulate adapter <input|display|serial> [--confirm]";
+                let kind = args.next().ok_or(usage)?;
+                if !matches!(kind.as_str(), "input" | "display" | "serial") {
+                    return Err(usage.into());
+                }
+                let confirmation = match args.next().as_deref() {
+                    Some("--confirm") if args.next().is_none() => SessionConfirmation::Confirmed,
+                    None => SessionConfirmation::Absent,
+                    _ => return Err(usage.into()),
+                };
+                let preferences = PreferenceStore::from_environment()?.list()?;
+                match kind.as_str() {
+                    "input" => {
+                        let mut input = MockInputSource::open(&preferences, confirmation)?;
+                        let sample = input.poll_input()?;
+                        println!("{}", serde_json::to_string_pretty(&sample)?);
+                    }
+                    "display" => {
+                        let mut display = MockDisplayBackend::open(&preferences, confirmation)?;
+                        let receipt = display.submit_frame("RUST-BOY")?;
+                        println!("{}", serde_json::to_string_pretty(&receipt)?);
+                    }
+                    "serial" => {
+                        let mut serial =
+                            MockSerialReader::open(&preferences, confirmation, b"RB")?;
+                        let frame = serial.read_frame()?;
+                        println!("{}", serde_json::to_string_pretty(&frame)?);
+                    }
+                    _ => unreachable!("validated adapter name"),
+                }
+                Ok(())
+            }
             Some("replay") => {
                 let id = args
                     .next()
@@ -285,7 +322,7 @@ fn run() -> Result<(), Box<dyn Error>> {
                 Ok(())
             }
             _ => Err(
-                "usage: pipboy simulate <list|run ID [--confirm]|replay ID SCENARIO [--confirm]|transport ID --count N --capacity N [--confirm]>"
+                "usage: pipboy simulate <list|run ID [--confirm]|replay ID SCENARIO [--confirm]|transport ID --count N --capacity N [--confirm]|adapter <input|display|serial> [--confirm]>"
                     .into(),
             ),
         },

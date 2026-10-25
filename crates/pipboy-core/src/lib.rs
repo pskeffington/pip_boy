@@ -11,6 +11,7 @@ pub mod catalog;
 pub mod device_simulator;
 pub mod lifecycle;
 pub mod metrics;
+pub mod mock_adapters;
 pub mod notes;
 pub mod observation;
 pub mod permissions;
