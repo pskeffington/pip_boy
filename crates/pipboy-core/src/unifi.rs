@@ -187,7 +187,7 @@ where
         }
         let page: Page<T> = serde_json::from_str(&body)
             .map_err(|_| "invalid UniFi paginated JSON response")?;
-        if page.offset != offset || page.limit == 0 || page.limit > requested
+        if page.offset != offset || (page.limit == 0 && page.total_count != 0) || page.limit > requested
             || page.count != page.data.len() || page.count > page.limit
             || page.total_count > maximum
             || offset.saturating_add(page.count) > page.total_count
@@ -392,9 +392,7 @@ mod tests {
             calls += 1;
             if calls == 1 {
                 assert!(path.contains("offset=0&limit=200"));
-                Ok(format!(
-                    r#"{{"data":[{{"id":"00000000-0000-0000-0000-000000000101","name":"Laptop","type":"WIRELESS","ipAddress":"192.168.1.10"}}],"count":1,"offset":0,"limit":200,"totalCount":2}}"#
-                ))
+                Ok(r#"{"data":[{"id":"00000000-0000-0000-0000-000000000101","name":"Laptop","type":"WIRELESS","ipAddress":"192.168.1.10"}],"count":1,"offset":0,"limit":200,"totalCount":2}"#.into())
             } else {
                 assert!(path.contains("offset=1&limit=200"));
                 Ok(r#"{"data":[{"id":"00000000-0000-0000-0000-000000000102","name":"Printer","type":"WIRED"}],"count":1,"offset":1,"limit":200,"totalCount":2}"#.into())
