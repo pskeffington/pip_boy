@@ -6,7 +6,7 @@ Back/Escape returns from a result to its inputs before leaving a tool. Network i
 
 ## Micro readability pass
 
-HOME, TOOLS and SETUP replace abbreviated rail labels. The heading has one consistent Back control, including return from non-home tabs; Escape follows the same route. Head Engineer opens NETWORK, which presents the available operations rather than implying a scan has already started. Local tools show results separately with EDIT INPUTS preserving the entered values. Root pages retain overflow access at accessibility zoom.
+**STAT, GEAR, MAP, DATA, LINK, SETUP** are the lore-aligned six-tab micro labels. Internal route identifiers are unchanged. The heading has one consistent Back control, including return from non-home tabs; Escape follows the same route. Head Engineer opens NETWORK, which presents the available operations rather than implying a scan has already started. Local tools show results separately with EDIT INPUTS preserving the entered values. Root pages retain overflow access at accessibility zoom.
 
 ## Unified Network Engineer
 
@@ -41,7 +41,7 @@ No physical screen, Raspberry Pi graphics stack, battery sensor or refresh-rate 
 
 ## Minimal screen contract
 
-**STAT:** one role label, quick action and real Open/Late/Blocked counts. No repeated job name or empty sensor graphic. **GEAR/DATA:** up to six tools per page. **CONF:** change role, switch CRT effects, reload; Custom's palette has four modules per page. **Role picker:** four options per page, Custom last. **TASK CONTROL:** two assignments per page, two-step creation, Info/Text (when present)/Status/Device/Log tabs and an Assign tab when allowed. **MAP:** native RustGIS vector map, opt-in GPS and independently labeled WEB ON OSM reference layer. **LINK:** disconnected Security camera screens still show NO SIGNAL; no fabricated feeds. **Local labs:** input and result on separate screens. The primary frame normally does not vertically scroll at 480×320; the renderer restores scrolling if browser zoom, larger fonts, or unexpected content would clip controls. Deep results can also scroll.
+**STAT:** one role label, quick action and real Open/Late/Blocked counts. No repeated job name or empty sensor graphic. **GEAR/DATA:** up to six tools per page. **CONF:** change role, switch CRT effects, reload; Custom's palette has four modules per page. **Role picker:** four options per page, Custom last. **TASK CONTROL:** two assignments per page, two-step creation, Info/Text (when present)/Status/Device/Log tabs and an Assign tab when allowed. **MAP:** default real central-Boston SAM street geometry shown offline in original phosphor styling, plus imported RustGIS vectors, Reclamation markers, opt-in GPS and separately labeled WEB ON OSM reference. **LINK:** disconnected Security camera screens still show NO SIGNAL; no fabricated feeds. **Local labs:** input and result on separate screens. The primary frame normally does not vertically scroll at 480×320; the renderer restores scrolling if browser zoom, larger fonts, or unexpected content would clip controls. Deep results can also scroll.
 
 ## Direct device task delivery
 
@@ -63,7 +63,7 @@ See [Task Control and manual dispatch](TASK_CONTROL.md). Neither the task HUD no
 
 **Active local tools:** NET ENGINEER performs real, explicitly authorized private-LAN ICMP/TCP sweeps (with detected-device counts, RTT and optional 60-second refresh while open). It never scans just because the user opens a role or tab. The same tool supports controller-connected client counts, UniFi site IDs and probe-versus-controller comparison when the server is explicitly configured with local TLS credentials. Other labs remain offline. See [network diagnostics](NETWORK_ENGINEERING.md).
 
-**Active offline labs:** For a profile containing the relevant tool, tap **GEAR** → **SCOUT GIS**, **NET LAB**, **BYTE LAB** or **HOST STAT**. The result is computed locally when **RUN** is pressed, using the existing Rust `/api/experiment` endpoint. The browser never auto-fetches host telemetry. Notes/library/simulator/game display safe manual handoffs, not arbitrary command execution. Scout's MAP page can open **WAYPOINT** or **DISTANCE** directly.
+**Active offline labs:** For a profile containing the relevant tool, tap **GEAR** → **SURVEY GIS**, **NET ENGINEER**, **BYTE LAB** or **SYSTEM STAT**. The result is computed locally when **RUN** is pressed, using the existing Rust `/api/experiment` endpoint. The browser never auto-fetches host telemetry. Notes/library/simulator/game display safe manual handoffs, not arbitrary command execution. Scout's MAP page can open **WAYPOINT** or **DISTANCE** directly.
 
 **Security Chief fixture:** LINK displays four clearly disconnected camera tiles. Tap a tile to focus; tap it again, press BACK or Escape to return to the 2×2 wall. No stream URLs, snapshots, IP probing, video decoding, recording or camera sessions are present.
 
@@ -87,6 +87,6 @@ The new smoke script starts an actual Rust loopback server with `--micro --port 
 
 **Next:** verify RustGIS vector import, GPS consent and online OSM reference at handheld size; native RustGIS raster rendering, hardware GNSS and TAK/camera transport remain separately gated.
 
-## GPS map preview (feature branch)
+## Offline Boston base, RustGIS import and GPS map
 
-MAP mounts the shared [RustGIS-native map and GPS viewer](SCOUT_GPS_MAP.md): explicit browser GPS permission, native RustGIS JSON/map/mobile-package and GeoJSON imports, source manifest, follow, accuracy, and pan/zoom. On the online-reference feature branch it sends an infrequent coordinate-free reachability ping when MAP opens; tapping **WEB ON** explicitly permits bounded Overpass queries for OSM roads, waterways, buildings, parks and landmarks. This is **community reference geography**, not a substitute for imported authoritative layers. It does not embed native RustGIS, supply basemap tiles or open USB serial GNSS.
+MAP mounts the shared [RustGIS-native map and GPS viewer](SCOUT_GPS_MAP.md): explicit browser GPS permission, native RustGIS JSON/map/mobile-package and GeoJSON imports, source manifest, follow, accuracy, and pan/zoom. With the built-in Boston base active, MAP opens without an outbound ping. Tapping **WEB ON** separately permits bounded Overpass area queries; saved-site views continue to block them. These are real-source city road records, not the official Fallout map. This is **community reference geography**, not a substitute for imported authoritative layers. It does not embed native RustGIS, supply remote raster tiles or open USB serial GNSS. [Boston data provenance](BOSTON_BASEMAP.md) · [Lore naming](LORE_NAMING.md).
