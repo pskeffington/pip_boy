@@ -849,7 +849,7 @@ mod tests {
         assert!(!store.path().exists());
         assert!(store.apply_preset("head-engineer").unwrap());
         assert!(!store.apply_preset("head-engineer").unwrap());
-        assert_eq!(store.load().unwrap().slots.len(), 5);
+        assert_eq!(store.load().unwrap().slots.len(), 6);
         assert_eq!(store.load().unwrap().profile, "head-engineer");
         assert!(store.apply_preset("custom").unwrap());
         assert!(store.load().unwrap().slots.is_empty());
