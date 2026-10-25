@@ -221,3 +221,107 @@ small { font-size:11px; }
   :root { --rb-text:#f1ffe8; --rb-muted:#cfedc1; --rb-dim:#bde1b3; --rb-line:#a5d89d; --rb-line-soft:#6d9b70; }
   .micro-device::after { opacity:0; }
 }
+
+
+/* G1 compact HUD: the six primary pages fit the viewport without scrolling.
+   Deep task editors and long local command output retain scroll access; no
+   controls are clipped just to meet an arbitrary screen-height target. */
+.micro-device[data-depth="root"] .micro-viewport { overflow:hidden; }
+.micro-device[data-depth="detail"] .micro-viewport {
+  overflow-y:auto;
+  overscroll-behavior:contain;
+}
+.micro-content { padding:8px 12px; }
+.micro-panel > * + * { margin-top:7px; }
+.micro-home { display:flex; flex-direction:column; gap:8px; }
+.micro-home > * + * { margin-top:0; }
+.micro-home .section-top { min-height:20px; }
+.micro-home .section-top .flag { font-size:10px; }
+.micro-home-actions { flex-wrap:nowrap; gap:6px; }
+.micro-home-actions .micro-button { min-width:0; flex:1; }
+.micro-pager, .role-pager {
+  display:flex; align-items:center; justify-content:center; gap:12px;
+}
+.micro-pager .micro-button,.role-pager .micro-button {
+  min-width:44px; min-height:34px; padding:4px 8px;
+}
+.tile-grid { gap:6px; }
+.tile { min-height:53px; padding:7px 8px; }
+.tile-copy small { font-size:9px; }
+.tool-palette { gap:5px; }
+.tool-pick { min-height:42px; }
+.offline-grid { min-height:90px; }
+.camera-tile { min-height:73px; }
+.camera-focus { min-height:104px; }
+.dialog-copy, .dialog-warning { font-size:10px; }
+.dialog-warning { letter-spacing:.035em; }
+.dialog-summary { flex-direction:row; justify-content:space-between; align-items:center; min-height:28px; }
+.dialog-summary span { white-space:nowrap; }
+.profile-row { min-height:36px; }
+.profile-row .num { font-size:11px; }
+.profile-row strong { font-size:12px; }
+.role-pager { flex:0 0 auto; justify-content:space-between; }
+.role-pager .micro-button { flex:0 0 48px; }
+
+@media (max-width:960px) {
+  .micro-device {
+    min-height:0;
+    grid-template-rows:35px 32px minmax(0,1fr) 48px;
+  }
+  .micro-bottom { display:none; }
+  .micro-content { padding:7px 10px; }
+  .view-heading { padding:3px 10px; }
+  .view-heading h1 { font-size:16px; margin-top:0; }
+  .micro-label { font-size:9px; }
+  .micro-device .mode-indicator { font-size:9px; padding:3px 5px; }
+  .dialog-wrap { gap:5px; padding:9px; }
+}
+@media (max-width:520px) {
+  .micro-device { grid-template-rows:33px 30px minmax(0,1fr) 47px; }
+  .micro-content { padding:5px 8px; }
+  .micro-panel > * + * { margin-top:5px; }
+  .micro-home { gap:7px; }
+  .micro-home .section-top { min-height:17px; }
+  .micro-button { min-height:38px; }
+  .tile { min-height:44px; padding:5px 7px; }
+  .tile-copy strong { font-size:11px; }
+  .tile-copy small { margin-top:1px; }
+  .tile-icon { font-size:15px; width:19px; }
+  .tool-pick { min-height:37px; padding:5px; }
+  .tool-pick small { display:none; }
+  .micro-pager .micro-button { min-height:34px; }
+  .offline-grid { min-height:86px; }
+  .camera-tile { min-height:65px; }
+  .camera-focus { min-height:100px; }
+  .signal-cell { padding:6px; }
+  .signal-cell strong { font-size:11px; margin-top:2px; }
+  .tab { min-height:46px; }
+  .view-heading h1 { font-size:15px; }
+  .role-switch { height:31px; }
+  .roles-dialog { width:min(390px,calc(100vw - 12px)); }
+  .dialog-wrap { gap:4px; padding:7px; }
+  .dialog-wrap h2 { font-size:14px; }
+  .dialog-copy { display:none; }
+  .profile-row { min-height:33px; padding:4px 7px; }
+  .roles-list { flex:0 1 auto; }
+  .dialog-actions .micro-button { min-height:35px; }
+  .dialog-summary { min-height:24px; padding:4px; }
+}
+@media (max-width:480px) {
+  .micro-home-actions .micro-button { white-space:nowrap; padding:5px 7px; }
+  .tile-grid { gap:5px; }
+  .topbar { gap:4px; }
+}
+@media (max-height:360px) {
+  .micro-device { grid-template-rows:32px 28px minmax(0,1fr) 45px; }
+  .micro-content { padding:5px 8px; }
+  .micro-home { gap:5px; }
+  .micro-home-actions .micro-button { min-height:36px; }
+  .section-top { min-height:15px; }
+  .tile { min-height:42px; }
+  .tool-pick { min-height:35px; }
+  .offline-grid { min-height:83px; }
+  .camera-tile { min-height:61px; }
+  .role-pager .micro-button { min-height:29px; }
+  .dialog-warning { font-size:9px; }
+}

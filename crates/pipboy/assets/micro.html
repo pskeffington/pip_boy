@@ -13,7 +13,7 @@
 </head>
 <body class="micro-phosphor">
   <div class="hardware-wrap">
-    <div class="hardware-label" aria-hidden="true"><span>RB // MICRO TERMINAL</span><span>MODEL 01 - FIELD PROTOTYPE</span></div>
+    <div class="hardware-label" aria-hidden="true"><span>RB / FIELD</span><span>MICRO</span></div>
     <div class="micro-device" id="micro-device">
       <header class="topbar">
         <button id="role-switch" type="button" class="role-switch" aria-label="Select occupational profile" aria-haspopup="dialog">
@@ -30,15 +30,15 @@
 
       <div class="view-heading">
         <div class="heading-left">
-          <span id="page-code" class="micro-label">01 / STAT</span>
-          <h1 id="page-title">SYSTEM STATUS</h1>
+          <span id="page-code" class="micro-label">01</span>
+          <h1 id="page-title">STATUS</h1>
         </div>
         <span class="mode-indicator" id="mode-indicator">OFFLINE</span>
       </div>
 
       <main id="micro-viewport" class="micro-viewport" tabindex="-1" aria-label="Handheld active screen">
         <section id="micro-content" class="micro-content" aria-live="off">
-          <div class="boot-message">RUST-BOY / INITIALIZING LOCAL WORKBENCH</div>
+          <div class="boot-message">LOADING…</div>
         </section>
       </main>
 
@@ -52,31 +52,36 @@
       </nav>
 
       <footer class="micro-bottom">
-        <span id="micro-foot-message">LOCAL / NO DEVICE CONNECTION</span>
-        <span class="keys-help">1-6 PAGES · ESC BACK</span>
+        <span id="micro-foot-message">LOCAL</span>
+        <span class="keys-help">1–6 · ESC</span>
       </footer>
     </div>
-    <div class="hardware-footer" aria-hidden="true"><span>ORIGINAL RUST-BOY INTERFACE</span><span>NO GAME ASSETS / NO NETWORK SCAN</span></div>
+    <div class="hardware-footer" aria-hidden="true"><span>RUST-BOY</span><span>LOCAL</span></div>
   </div>
 
   <dialog id="roles-dialog" class="roles-dialog" aria-labelledby="roles-heading">
     <div class="dialog-wrap">
       <div class="dialog-head">
-        <span class="micro-label">SELECT / OCCUPATION</span>
+        <span class="micro-label">JOB / ROLE</span>
         <button id="close-roles" type="button" class="tiny-button" aria-label="Close profile selector">✕</button>
       </div>
-      <h2 id="roles-heading">STATION TEMPLATES</h2>
-      <p class="dialog-copy">Seven ready-made stations. Custom is the last, empty workspace. Selecting a row previews only.</p>
+      <h2 id="roles-heading">LOAD ROLE</h2>
+      <p class="dialog-copy">Select a role. Custom starts empty.</p>
       <div id="roles-list" class="roles-list" role="group" aria-label="Available profiles"></div>
+      <div class="role-pager" aria-label="Role pages">
+        <button id="role-prev" type="button" class="micro-button compact" aria-label="Previous roles">◀</button>
+        <span id="role-page" class="micro-label">1 / 2</span>
+        <button id="role-next" type="button" class="micro-button compact" aria-label="Next roles">▶</button>
+      </div>
       <div class="dialog-summary">
         <strong id="chosen-role-name">OVERSEER</strong>
-        <span id="chosen-role-detail">Select a station.</span>
+        <span id="chosen-role-detail">ROLE</span>
       </div>
       <div class="dialog-actions">
         <button id="cancel-roles" type="button" class="micro-button ghost">CANCEL</button>
-        <button id="apply-role" type="button" class="micro-button solid">CONFIRM REPLACE</button>
+        <button id="apply-role" type="button" class="micro-button solid">LOAD ROLE</button>
       </div>
-      <p class="dialog-warning">Replaces pinned tiles only. Notes and permission settings remain untouched; no tool is executed.</p>
+      <p class="dialog-warning">PINS ONLY · DOES NOT RUN TOOLS</p>
     </div>
   </dialog>
 
