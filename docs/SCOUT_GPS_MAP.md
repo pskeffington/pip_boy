@@ -24,6 +24,21 @@ Open **MAP** and press **RUSTGIS** to select `.rgismap`, `.rgis`, `.rgislyr`, `.
 
 Expand **DATA SOURCES** under the map to see visible imported layers, per-layer feature counts, original source references and unavailable-layer warnings. WGS84 geometry, GPS and accuracy circle share the same screen projection. No files, coordinates or photos are uploaded by Rust-Boy. Switching away from MAP **stops the GPS watch and discards the fix**, while retaining the imported vector geography only in volatile browser page memory for fast return to MAP. The **CLEAR MAP** control inside DATA SOURCES erases that copy; reloading/closing the browser page also clears it.
 
+
+## Online roads and basic features (new: RustGIS-aligned connector)
+
+RustGIS already supports **osm.download** presets through the Overpass API. Rust-Boy's web reference overlay uses the **same provider and basic categories**, without embedding RustGIS's full query/relations engine: roads/paths (`highway`), waterways, water bodies, buildings, public parks, amenity and tourism landmarks. This is **OpenStreetMap community reference data, not an official or government-validated road inventory**; native RustGIS files and the source's own authority remain primary.
+
+**On entering MAP,** Rust-Boy checks `navigator.onLine`. When it indicates a connection, Rust-Boy sends a **single small GET to `https://overpass-api.de/api/status`** (reused for up to ten minutes in the same browser page). That reachability ping sends **no map coordinates, GPS fix, map features, or stored notes**, but does reveal the device's IP address and basic connection metadata to the service. If the provider is unavailable, offline navigation is unaffected.
+
+**To retrieve roads**, tap **WEB ON**. This separate opt-in sends the coordinates of the *currently displayed map area* to `https://overpass-api.de/api/interpreter`; the area may reveal the device's approximate location if the map is following its GPS fix. The service combines the categories into a single bounded Overpass QL request (same preset taxonomy as RustGIS). At zoom below 12.5 it requests that the operator first zoom in or activate GPS. The OSM reference features render **under** imported RustGIS geometry; the local layer is never replaced by an OSM copy. Tap **SYNC** to check the area again; **WEB OFF** stops new requests but keeps the previously fetched shapes as a temporary offline reference.
+
+Network protection: at most one small area per request (roughly 0.044° wide and 0.038° tall), 1,800 returned elements, up to 50,000 geometry vertices and 4 MiB response payload; at most eight data requests per page lifetime, a two-minute minimum interval, and longer backoff for server-busy or rate-limit responses. No rapid-fire requests during pan or zoom, no blind retry loop, and no hidden GPS broadcasts. A new GPS fix that moves outside the cached reference area may request a refresh **only while WEB ON** and subject to those limits. The provider is public shared infrastructure and may refuse or throttle requests.
+
+The visible map attribution **© OpenStreetMap contributors · ODbL** links to [OpenStreetMap copyright](https://www.openstreetmap.org/copyright). The collapsible DATA SOURCES manifest distinguishes the online OSM reference from local source names, lists the source area, fetch timestamp, categories and warnings. Raster imagery, route planning, OSM multipolygon relations and a full RustGIS `osm.download` geometry/attribute parser remain out of scope. For production-scale usage, prefer a self-hosted/licensed data service or bundled regional extracts to avoid burdening shared Overpass servers.
+
+**Disconnect and cleanup:** Failed pings or data retrievals never erase the last good map or native layers. The last successful online map geometry is held in **browser memory only**, including across MAP tab switches. Browser page reload, closing the page, or the **CLEAR MAP** action removes it. WEB ON consent and live GPS watches do not persist across tab switches. No network secrets or user position are written to Rust-Boy's Rust workbench store.
+
 ## Supported data and safety limits
 
 - Native `.rgis`, `.rgismap`, `.rgislyr`: JSON up to **12 MiB**; 128 layers, 8,000 features and 120,000 vertices. Active map from a project is selected. GeoJSON retains its stricter **2 MiB** input cap.
@@ -39,6 +54,9 @@ Expand **DATA SOURCES** under the map to see visible imported layers, per-layer 
 ```bash
 node --check crates/pipboy/assets/map-import.js
 node --check crates/pipboy/assets/map.js
+node --check crates/pipboy/assets/map-online.js
+node tools/test_rustgis_online.cjs
+node tools/test_rustgis_online_view.cjs
 node tools/test_rustgis_map_import.cjs
 node tools/test_rustgis_map_view.cjs
 cargo fmt --all -- --check
