@@ -148,7 +148,7 @@
     const state = {
       data: null, peers: null, view: "board", filter: "open", selected: null,
       editor: null, action: false, status: "", error: "",
-      page: 0, part: "info", createStep: 0, draft: {}, logPage: 0
+      page: 0, part: "info", createStep: 0, draft: {}, logPage: 0, notePage: 0
     };
     let epochs = 0;
 
@@ -277,7 +277,8 @@
       cols.append(fieldSelect("role", "JOB", (options.profiles || [])
         .map((profile) => [profile.id, profile.title]), task.role));
       form.append(cols);
-      form.append(infoText("Reassigning clears the prior device-delivery link and receipt state. Resend explicitly."));
+      form.append(infoText(options.compact ? "DEVICE LINK RESET ON REASSIGN" :
+        "Reassigning clears the prior device-delivery link and receipt state. Resend explicitly."));
       const save = node("button", "task-button solid", "SAVE REASSIGNMENT");
       save.type = "submit";
       form.append(save);
@@ -527,6 +528,7 @@
         ["info", "INFO"], ["status", "STATUS"],
         ["device", "DEVICE"], ["log", "LOG"]
       ];
+      if (task.details) tabs.splice(1, 0, ["text", "TEXT"]);
       if (state.data.manager && !task.origin && !task.delivery) {
         tabs.push(["move", "ASSIGN"]);
       }
@@ -535,6 +537,7 @@
         const item = button(name, () => {
           state.part = key;
           state.logPage = 0;
+          state.notePage = 0;
           render();
         }, state.part === key ? "selected" : "ghost");
         item.setAttribute("aria-pressed", String(state.part === key));
@@ -559,6 +562,22 @@
         body.append(node("div", "task-compact-line",
           task.origin ? "FROM  " + task.origin.device
             : task.delivery ? "AT  " + task.delivery.peer : "LOCAL / NOT SENT"));
+      } else if (state.part === "text") {
+        const chars = Array.from(task.details);
+        const size = 140;
+        const total = Math.max(1, Math.ceil(chars.length / size));
+        state.notePage = Math.min(state.notePage, total - 1);
+        body.append(node("p", "task-compact-text",
+          chars.slice(state.notePage * size, (state.notePage + 1) * size).join("")));
+        if (total > 1) {
+          const pager = node("div", "task-mini-pager");
+          const prev = button("◀", () => { state.notePage--; render(); }, "ghost");
+          const next = button("▶", () => { state.notePage++; render(); }, "ghost");
+          prev.disabled = state.notePage === 0;
+          next.disabled = state.notePage === total - 1;
+          pager.append(prev, node("span", "", (state.notePage + 1) + "/" + total), next);
+          body.append(pager);
+        }
       } else if (state.part === "status") {
         body.append(statusControl(task));
         if (task.origin && !task.acknowledged_at && task.sent_at) {

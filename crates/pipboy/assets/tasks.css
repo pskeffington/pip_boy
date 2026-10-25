@@ -170,3 +170,13 @@
   /* Prefer reaching every control over clipping at inaccessible sizes. */
   .micro-device[data-depth="tasks"] .micro-viewport { overflow-y:auto; }
 }
+
+
+.task-compact-text {
+  font:11px/1.4 var(--rb-mono,var(--mono)); margin:0;
+  color:var(--rb-text,var(--text)); overflow-wrap:anywhere; white-space:pre-wrap;
+  max-height:118px; overflow:hidden;
+}
+@media (max-height:360px) {
+  .task-compact-text { max-height:105px; line-height:1.3; }
+}
