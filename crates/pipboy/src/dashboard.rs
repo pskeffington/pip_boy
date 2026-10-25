@@ -26,6 +26,7 @@ const MICRO_CSS: &str = include_str!("../assets/micro.css");
 const MICRO_JS: &str = include_str!("../assets/micro.js");
 const MAP_JS: &str = include_str!("../assets/map.js");
 const MAP_IMPORT_JS: &str = include_str!("../assets/map-import.js");
+const MAP_ONLINE_JS: &str = include_str!("../assets/map-online.js");
 const MAP_CSS: &str = include_str!("../assets/map.css");
 const TASKS_JS: &str = include_str!("../assets/tasks.js");
 const TASKS_CSS: &str = include_str!("../assets/tasks.css");
@@ -91,7 +92,7 @@ impl Response {
         let head = format!(
             "HTTP/1.1 {} {}\r\nContent-Type: {}\r\nContent-Length: {}\r\n\
              Cache-Control: no-store, max-age=0\r\n\
-             Content-Security-Policy: default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'\r\n\
+             Content-Security-Policy: default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self' https://overpass-api.de; frame-ancestors 'none'; base-uri 'none'; form-action 'none'\r\n\
              X-Content-Type-Options: nosniff\r\n\
              X-Frame-Options: DENY\r\n\
              Referrer-Policy: no-referrer\r\n\
@@ -630,6 +631,9 @@ fn dispatch(req: &Request, store: &WorkbenchStore, port: u16) -> Response {
         ("GET", "/assets/map-import.js") => {
             Response::new(200, "text/javascript; charset=utf-8", MAP_IMPORT_JS.as_bytes())
         }
+        ("GET", "/assets/map-online.js") => {
+            Response::new(200, "text/javascript; charset=utf-8", MAP_ONLINE_JS.as_bytes())
+        }
         ("GET", "/assets/map.js") => {
             Response::new(200, "text/javascript; charset=utf-8", MAP_JS.as_bytes())
         }
@@ -857,6 +861,7 @@ mod tests {
             "/assets/micro.js",
             "/assets/map.js",
             "/assets/map-import.js",
+            "/assets/map-online.js",
             "/assets/map.css",
         ] {
             let r = dispatch(&request("GET", endpoint, Value::Null), &store, 8765);
@@ -1164,6 +1169,9 @@ mod tests {
         assert!(!JS.contains("eval("));
         assert!(MICRO_HTML.contains("/assets/map.js"));
         assert!(HTML.contains("/assets/map.js"));
+        assert!(MAP_ONLINE_JS.contains("https://overpass-api.de/api/interpreter"));
+        assert!(MICRO_HTML.contains("/assets/map-online.js"));
+        assert!(HTML.contains("/assets/map-online.js"));
         assert!(MAP_IMPORT_JS.contains("parseRustGIS"));
         assert!(MAP_IMPORT_JS.contains("readPackage"));
         assert!(MICRO_HTML.contains("/assets/map-import.js"));
