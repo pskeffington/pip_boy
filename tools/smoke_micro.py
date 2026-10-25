@@ -124,6 +124,10 @@ with tempfile.TemporaryDirectory() as work:
         assert state["engine"]["rustgis"] == "not_integrated"
         assert not root.exists(), "GET must not initialize workbench or touch notes"
 
+        denied, _, _ = api(port, "GET", "/api/reclamation/map")
+        assert denied == 403, "unselected roles cannot read saved site coordinates"
+        assert not root.exists(), "unauthorized map reads must not create files"
+
         # Mutations require an explicit same-origin JSON POST to the local Rust API.
         for method, path, data, opts, code in [
             ("POST", "/api/profile", {"id": "custom", "confirm": True},
