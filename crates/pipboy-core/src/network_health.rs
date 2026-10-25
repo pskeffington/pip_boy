@@ -102,6 +102,14 @@ impl HealthReport {
         fn number(value: Option<f64>) -> String {
             value.map(|v| format!("{v:.2} ms")).unwrap_or_else(|| "N/A".to_owned())
         }
+        if self.method == "icmp_echo" {
+            return format!(
+                "NETWORK HEALTH / ICMP ECHO\nTarget: {}\nSent: {} | Replies: {} | Lost: {}\n                 ICMP packet loss: {:.2}%\n                 RTT min: {} | Mean: {} | Median: {}\nRTT p95: {} | Max: {}\n                 Jitter proxy (mean |delta RTT| across successive replies): {}\n                 Native OS ping; explicit request only. No background monitoring.",
+                self.target, self.attempts, self.connected, self.failed, self.failure_percent,
+                number(self.min_ms), number(self.mean_ms), number(self.median_ms),
+                number(self.p95_ms), number(self.max_ms), number(self.variation_ms)
+            );
+        }
         format!(
             "NETWORK HEALTH / TCP CONNECT\nTarget: {}\nAttempts: {} | Connected: {} | Failed: {}\n\
              Connect failure rate: {:.2}% (NOT packet loss)\n\
@@ -115,6 +123,22 @@ impl HealthReport {
             number(self.variation_ms)
         )
     }
+}
+
+/// Returns an ICMP report from the OS ping summary and successful RTT values.
+/// Missing responses are represented as losses only after a complete ping
+/// summary confirms transmitted and received counts.
+pub fn icmp_report(target: &str, sent: u8, times_ms: &[f64]) -> io::Result<HealthReport> {
+    if !(MIN_SAMPLES..=MAX_SAMPLES).contains(&sent) || times_ms.len() > sent as usize {
+        return Err(io::Error::new(io::ErrorKind::InvalidInput, "Invalid ICMP summary"));
+    }
+    let mut observations: Vec<Option<f64>> = times_ms.iter().copied().map(Some).collect();
+    observations.resize(sent as usize, None);
+    let mut data = report(target, &observations)?;
+    data.method = "icmp_echo";
+    data.interpretation =
+        "OS ping RTT and ICMP response loss; variation is mean absolute successive-reply RTT delta (not RFC 3550 jitter).";
+    Ok(data)
 }
 
 #[cfg(test)]
@@ -156,4 +180,16 @@ mod tests {
         assert!(report("x", &[Some(-1.0), Some(0.0), Some(1.0)]).is_err());
         assert!(report("x", &[Some(f64::NAN), None, None]).is_err());
     }
+
+    #[test]
+    fn icmp_from_real_summary_is_not_tcp_failure_rate() {
+        let r = icmp_report("192.168.1.1", 5, &[1.0, 2.0, 1.5, 2.5]).unwrap();
+        assert_eq!(r.method, "icmp_echo");
+        assert_eq!(r.failed, 1);
+        assert_eq!(r.failure_percent, 20.0);
+        assert_eq!(r.variation_ms, Some(0.83));
+        assert!(r.console().contains("ICMP packet loss: 20.00%"));
+        assert!(icmp_report("target", 3, &[1.0, 1.0, 1.0, 1.0]).is_err());
+    }
+
 }
