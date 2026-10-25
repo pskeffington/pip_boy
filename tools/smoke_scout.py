@@ -86,7 +86,7 @@ with tempfile.TemporaryDirectory() as temporary:
     profile = json.loads(call(env, "workbench", "list", "--json").stdout)
     assert profile["profile"] == "reclamation-scout"
     assert [x["tool"] for x in profile["slots"]] == [
-        "geo-lab", "game", "net-lab", "notes", "host"
+        "reclamation", "geo-lab", "game", "net-lab", "notes", "host"
     ]
     assert not (home / "notes.json").exists()
     assert not (home / "permissions.json").exists()
