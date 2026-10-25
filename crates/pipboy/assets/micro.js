@@ -316,22 +316,18 @@ function showGear() {
 
 function showMap() {
   const root = panel();
-  root.append(sectionTop("SCOUT / MAP", hasTool("geo-lab") ? "GIS READY" : "UNAVAILABLE"));
-  const map = make("div", "offline-grid");
-  map.setAttribute("role", "img");
-  map.setAttribute("aria-label", "Decorative geospatial reference grid, not a working map");
-  map.append(make("span", "grid-label", "NO MAP / NO GPS"));
-  root.append(map);
-  const actions = make("div", "quick-row");
-  if (hasTool("geo-lab")) {
-    actions.append(
-      button("WAYPOINT", () => openTool("geo-lab", "waypoint"), "micro-button solid"),
-      button("DISTANCE", () => openTool("geo-lab", "distance"))
-    );
+  root.classList.add("rb-map-micro-host");
+  const holder = make("div", "rb-map-mount");
+  root.append(holder);
+  if (window.RustBoyMap) {
+    requestAnimationFrame(() => {
+      if (holder.isConnected) window.RustBoyMap.mount(holder, {
+        onTools: hasTool("geo-lab") ? () => openTool("geo-lab", "waypoint") : null
+      });
+    });
   } else {
-    actions.append(button("SCOUT ROLE", openRoles, "micro-button solid"));
+    holder.textContent = "LOCAL MAP MODULE UNAVAILABLE";
   }
-  root.append(actions);
   return root;
 }
 
@@ -559,6 +555,7 @@ function showTool() {
 
 function render() {
   if (!snapshot) return;
+  if (window.RustBoyMap) window.RustBoyMap.unmount();
   renderHeading();
   ui.screen.dataset.depth = ["assigned-duties", "mission-board"].includes(openedTool)
     ? "tasks" : openedTool ? "detail" : "root";
