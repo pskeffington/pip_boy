@@ -49,7 +49,7 @@ impl Navigation {
         let panel = self.panel;
         let last = item_count.saturating_sub(1);
         let step = self.page_rows[panel].saturating_sub(1).max(1);
-        let collection = matches!(panel, 1 | 2 | 3);
+        let collection = matches!(panel, 1..=3);
         let previous = self.selected[panel];
         match action {
             Action::Next => {
@@ -343,7 +343,7 @@ pub fn render(frame: &mut Frame, navigation: &mut Navigation, view: View<'_>) {
             (Vec::new(), detail)
         }
     };
-    let detail_area = if matches!(navigation.panel, 1 | 2 | 3) {
+    let detail_area = if matches!(navigation.panel, 1..=3) {
         let regions = Layout::vertical([
             Constraint::Length(((sections[1].height as u32 * 2 / 5) as u16).max(3)),
             Constraint::Min(3),
