@@ -33,6 +33,7 @@ window.RustBoyNetwork = (() => {
     let watch = false;
     let refreshes = 0;
     let status = null;
+    let screen = "menu";
     const candidates = Array.isArray(operations) ? operations : [];
 
     function stop() {
@@ -63,6 +64,7 @@ window.RustBoyNetwork = (() => {
     }
 
     function menu() {
+      screen = "menu";
       stop();
       root.replaceChildren();
       root.append(node("div", "net-caption", "NETWORK ENGINEER / SELECT TOOL"));
@@ -103,6 +105,7 @@ window.RustBoyNetwork = (() => {
     }
 
     function configure() {
+      screen = "inputs";
       stop();
       root.replaceChildren();
       header("TOOLS", menu, operation.name);
@@ -137,6 +140,7 @@ window.RustBoyNetwork = (() => {
     }
 
     function consent() {
+      screen = "consent";
       root.replaceChildren();
       header("EDIT", configure, operation.name);
       root.append(node("p", "net-target", values.input || "Configured local UniFi controller"));
@@ -178,6 +182,7 @@ window.RustBoyNetwork = (() => {
     }
 
     function result() {
+      screen = "result";
       root.replaceChildren();
       header("EDIT", configure, operation.name);
       const data = lastResult;
@@ -239,6 +244,7 @@ window.RustBoyNetwork = (() => {
       if (destroyed) return;
       if (timer !== null) window.clearTimeout(timer);
       timer = null;
+      screen = "running";
       const runId = ++generation;
       controller = new AbortController();
       root.replaceChildren();
@@ -267,6 +273,7 @@ window.RustBoyNetwork = (() => {
       } catch (error) {
         if (destroyed || runId !== generation) return;
         stop();
+        screen = "error";
         root.replaceChildren();
         header("EDIT", configure, operation.name);
         const failure = node("p", "net-error", error.message);
@@ -288,6 +295,12 @@ window.RustBoyNetwork = (() => {
     window.addEventListener("pagehide", pagehide);
     menu();
     return {
+      back() {
+        if (destroyed || screen === "menu") return false;
+        if (screen === "inputs") menu();
+        else configure();
+        return true;
+      },
       destroy() {
         if (destroyed) return;
         destroyed = true;

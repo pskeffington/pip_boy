@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased — micro workflow continuity
+
+- Back/Escape moves from local results to preserved inputs and from network results/authorization to inputs, then tools.
+- Preserve local lab drafts in memory per role/tool/GIS mode; focus Edit after completion and the input on return. Ignore detached local responses and errors. Drafts clear on reload.
+
 ## Unreleased — clear micro navigation
 
 - Use plain HOME / TOOLS / SETUP labels, a header Back control, quieter phosphor styling and larger readable tool labels.
