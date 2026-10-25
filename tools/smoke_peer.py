@@ -131,7 +131,8 @@ assert "pi@scout.local" in args
 assert "-T" in args
 assert any(x.startswith("UserKnownHostsFile=") for x in args)
 remote = args[-1]
-assert remote == "pipboy peer receive" or remote == "pipboy peer receipts overseer-a"
+assert remote in {"pipboy peer receive", "pipboy peer receipts overseer-a",
+                  "pipboy peer message-receive"}
 command = ["peer", "bridge", "overseer-a"]
 payload = sys.stdin.buffer.read(8193)
 assert len(payload) <= 8192
@@ -161,6 +162,70 @@ sys.exit(result.returncode)
         assert code == 200 and peers["ready"] is True
         assert peers["peers"][0]["alias"] == "scout-one"
         assert not (manager / "tasks.json").exists()
+        # Messenger: no auto-connections, no unapproved peer, no false read receipt.
+        code, initial = api(port, "GET", "/api/messages")
+        assert code == 200 and initial["messages"] == []
+        assert initial["e2ee"] is False
+        assert initial["storage"] == "plaintext_local_only"
+        assert initial["peers"] == ["scout-one"]
+        assert not (manager / "messages.json").exists()
+
+        code, _ = api(port, "POST", "/api/messages/send", {
+            "alias": "scout-one", "body": "Check station A"
+        })
+        assert code == 422
+        assert not (manager / "messages.json").exists()
+        code, _ = api(port, "POST", "/api/messages/send", {
+            "alias": "unpaired", "body": "This should never queue", "confirm": True
+        })
+        assert code == 409
+        assert not (manager / "messages.json").exists()
+
+        code, result = api(port, "POST", "/api/messages/send", {
+            "alias": "scout-one", "body": "Check north intake", "confirm": True
+        })
+        assert code == 200, result
+        assert result["stored_on_receiver"] is True
+        assert result["read_by_human"] is False
+        assert result["message"]["delivery"] == "stored"
+        assert result["message"]["remote_stored_id"] == 1
+        assert json.loads((scout / "messages.json").read_text())["messages"][0]["body"] == "Check north intake"
+        code, retry = api(port, "POST", "/api/messages/retry", {
+            "id": 1, "confirm": True
+        })
+        assert code == 409, retry
+        assert len(json.loads((scout / "messages.json").read_text())["messages"]) == 1
+
+        # A forced command must bind its SSH key's source identity to the
+        # claimed from_device; no arbitrary new mailbox contents are accepted.
+        forged = {
+            "schema_version": 1, "from_device": "different-device",
+            "to_device": "scout-one", "origin_id": 3,
+            "body": "spoofed", "sent_at": 1
+        }
+        invoke(scout, "peer", "bridge", "overseer-a", ok=False,
+               input_text=json.dumps(forged), env_extra={
+                   "SSH_ORIGINAL_COMMAND": "pipboy peer message-receive"
+               })
+        assert len(json.loads((scout / "messages.json").read_text())["messages"]) == 1
+        actual = {
+            "schema_version": 1, "from_device": "overseer-a",
+            "to_device": "scout-one", "origin_id": 1,
+            "body": "Check north intake", "sent_at": result["message"]["created_at"]
+        }
+        again = json.loads(invoke(scout, "peer", "bridge", "overseer-a",
+                                  input_text=json.dumps(actual),env_extra={
+                                      "SSH_ORIGINAL_COMMAND": "pipboy peer message-receive"
+                                  }).stdout)
+        assert again["remote_id"] == 1
+        assert len(json.loads((scout / "messages.json").read_text())["messages"]) == 1
+        actual["body"] = "edited after sending"
+        invoke(scout, "peer", "bridge", "overseer-a", ok=False,
+               input_text=json.dumps(actual),env_extra={
+                   "SSH_ORIGINAL_COMMAND": "pipboy peer message-receive"
+               })
+        assert len(json.loads((scout / "messages.json").read_text())["messages"]) == 1
+
         code, created = api(port, "POST", "/api/tasks/create", {
             "title": "Survey west intake", "details": "Return site condition and water sample notes",
             "assignee": "Scout", "role": "reclamation-scout",
@@ -219,6 +284,10 @@ sys.exit(result.returncode)
 
         invoke(scout, "workbench", "use", "reclamation-scout", "--replace")
         remote_service, remote_port = launch(scout)
+        code, receiver_chat = api(remote_port, "GET", "/api/messages")
+        assert code == 200 and len(receiver_chat["messages"]) == 1
+        assert receiver_chat["messages"][0]["direction"] == "incoming"
+        assert receiver_chat["messages"][0]["peer"] == "overseer-a"
         code, scoped = api(remote_port, "GET", "/api/tasks")
         assert code == 200 and scoped["manager"] is False
         assert len(scoped["board"]["tasks"]) == 1
@@ -252,7 +321,8 @@ sys.exit(result.returncode)
         assert code == 200 and sync["updated"] == 0
         assert not (manager / "notes.json").exists()
         assert not (manager / "permissions.json").exists()
-        print("PASS: two distinct Rust-Boy stores, explicit SSH dispatch, durable receiver ID, "
+        print("PASS: encrypted-transport Messenger protocol, forced peer identity and replay checks; "
+               "two distinct Rust-Boy stores, explicit SSH dispatch, durable receiver ID, "
               "duplicate safety, role inbox, human acknowledgment and on-demand progress "
               "sync without automatic connections")
     finally:
