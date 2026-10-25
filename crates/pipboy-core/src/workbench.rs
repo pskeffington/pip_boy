@@ -569,7 +569,7 @@ fn parse_hex(input: &str) -> io::Result<Vec<u8>> {
                 "enter paired hex bytes, optionally separated by spaces or prefixed 0x",
             ));
         }
-        for pair in part.as_bytes().chunks_exact(2) {
+        for pair in part.as_bytes().as_chunks::<2>().0 {
             if data.len() >= 4096 {
                 return Err(io::Error::new(
                     io::ErrorKind::InvalidInput,
