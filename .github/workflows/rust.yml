@@ -61,6 +61,8 @@ jobs:
       - name: Dashboard JavaScript and native RustGIS map tests
         if: matrix.toolchain == 'stable'
         run: |
+          node --check crates/pipboy/assets/network.js
+          node tools/test_network_ui.cjs
           node --check crates/pipboy/assets/dashboard.js
           node --check crates/pipboy/assets/micro.js
           node --check crates/pipboy/assets/tasks.js
@@ -94,6 +96,7 @@ jobs:
           python3 tools/smoke_game.py
           python3 tools/smoke_workbench.py
           python3 tools/smoke_network.py
+          python3 tools/smoke_network_health.py
           python3 tools/smoke_scout.py
           python3 tools/smoke_dashboard.py
           python3 tools/smoke_micro.py
@@ -139,6 +142,7 @@ jobs:
           ${{ matrix.python }} tools/smoke_game.py
           ${{ matrix.python }} tools/smoke_workbench.py
           ${{ matrix.python }} tools/smoke_network.py
+          ${{ matrix.python }} tools/smoke_network_health.py
           ${{ matrix.python }} tools/smoke_scout.py
           ${{ matrix.python }} tools/smoke_dashboard.py
           ${{ matrix.python }} tools/smoke_micro.py

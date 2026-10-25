@@ -1,5 +1,11 @@
 # Rust-Boy | Architecture
 
+## Current Network Engineer integration
+
+`pipboy_core::network_suite` provides the shared 16-operation catalog and nine deterministic offline tools. `network_health` computes statistics without I/O. The binary's `endpoint_probe` performs finite ICMP/TCP tests; the existing core `network_probe` and `unifi` adapters provide private-LAN evidence and controller-connected clients.
+
+Both browser shells mount `assets/network.js` with the catalog from `/api/state`. The component owns its request generation, AbortController, pagination and single 60-second refresh timer. Destroy/hidden/error paths clear refresh and suppress stale replies; requests already executing on the Rust server retain their own bounds. Original `/api/net/scan` and `/api/net/unifi` contracts remain intact; `/api/experiment` adds typed network modes, extra input, samples and explicit confirmation. See [health/UniFi setup](NETWORK_HEALTH_UNIFI.md).
+
 Rust-Boy is the public name of the modular console. The repository, executable, crate names, and data paths retain their existing `pip_boy`/`pipboy` identifiers for compatibility; see [BRANDING.md](../BRANDING.md).
 
 ## Engineering navigation

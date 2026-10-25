@@ -1,5 +1,11 @@
 # Security and privacy
 
+## Unified Network Engineer session ownership
+
+The desktop and micro tool catalogs are metadata; mounting the component starts no request. Active operations use explicit same-origin POSTs after a separate operator assertion. Input edits, role/tool navigation, hidden documents, STOP REFRESH and request failures cancel the view's timer and browser fetch. Refresh is capped at 60 runs with 60 seconds between completed runs. A cancelled fetch cannot terminate a server operation already accepted; its existing sweep, process, timeout and request-worker bounds still apply.
+
+The nine offline operations do not inspect the host network. Single-endpoint TCP/ICMP tests accept literal IPs, bounded samples and explicit confirmation; TCP connection failures are not represented as packet loss. Controller client names are rendered as text, never HTML. No scan result, API key or new authorization preference is persisted by this UI.
+
 Rust-Boy is an **experimental local field console**, not a safety-of-life, security-monitoring or production hardware-control system. The public code is MIT-licensed; that does not imply a warranty or security certification.
 
 ## What the current version does

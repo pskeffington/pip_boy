@@ -1,5 +1,11 @@
 # Contributing to Rust-Boy
 
+## Mainline module integration
+
+Keep `main` as the current development preview. Build each module on a focused branch, update the README, documentation index, changelog and affected operator contracts, then merge after all applicable quality jobs pass at the proposed head. Software integration does not assert physical controller, radio, touchscreen or game acceptance; record those field gates explicitly instead of leaving verified software permanently on stacked branches.
+
+The shared Network Engineer view uses Rust `network_suite::OPERATIONS`. Keep controller inventory on the existing `pipboy_core::unifi` adapter and endpoint measurements on `endpoint_probe`; do not add another incompatible credential/configuration path. Run `node tools/test_network_ui.cjs`, `python3 tools/smoke_network.py` and `python3 tools/smoke_network_health.py` alongside the workspace checks.
+
 Rust-Boy is an open-source, offline-first Rust console. Contributions are welcome when they preserve clear provenance, stable commands and the boundary between **tested local features**, **simulators** and **future physical devices**.
 
 ## Set up

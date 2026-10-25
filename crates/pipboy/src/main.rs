@@ -17,6 +17,7 @@ use std::error::Error;
 mod console;
 mod dashboard;
 mod diagnostics;
+mod endpoint_probe;
 mod game;
 mod game_discovery;
 mod game_view;

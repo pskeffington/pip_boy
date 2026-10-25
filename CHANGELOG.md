@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased — unified Network Engineer and mainline polish (2026-10-25)
+
+- Merge LAN discovery, read-only UniFi client inventory/reconciliation and DIAG ingestion to `main` through PR #15 after all five quality jobs passed at `badabc5`.
+- Consolidate nine offline network calculators, one TCP check, bounded ICMP/TCP health and four LAN/UniFi actions into a 16-operation Rust catalog. Preserve `workbench net cidr` and existing scan/controller CLI routes.
+- Share the desktop/micro Network Engineer component. Split handheld inputs, authorization and results; page inventories without truncating the structured result. Place NET ENGINEER first in the Head Engineer template.
+- Own one refresh timer per mounted view: 60 seconds, maximum 60 runs, immediate cancellation on edit/navigation/hidden tabs/errors, and stale-response suppression. Cancelling a fetch does not revoke an already accepted bounded server operation.
+- Replace obsolete README branch-switch instructions with a single `main` setup and current capability table. Keep physical/controller/game acceptance separate from merged preview software.
+- Add controlled loopback CLI/API health checks and dependency-free UI journeys for authorization, paging, timer ownership, visibility and safe labels. No dependency or credential changes.
+
 This file records notable changes to Rust-Boy. This repository is in **development preview**; the Rust workspace version `0.1.0` is not a published production release. Dates are in UTC unless otherwise stated.
 
 ## Unreleased — UniFi read-only controller reconciliation (2026-10-25)

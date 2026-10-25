@@ -1,0 +1,39 @@
+.net-workspace { display:flex; flex-direction:column; gap:9px; color:inherit; font:12px ui-monospace,monospace; }
+.net-workspace * { box-sizing:border-box; }
+.net-caption { font-size:10px; opacity:.8; overflow-wrap:anywhere; }
+.net-actions { display:flex; align-items:center; gap:8px; min-width:0; }
+.net-heading { font-size:12px; overflow-wrap:anywhere; }
+.net-button { border:1px solid #51864c; border-radius:3px; background:#122c18; color:#c1f4a8; cursor:pointer; min-height:34px; padding:6px 10px; font:11px ui-monospace,monospace; }
+.net-button:disabled { opacity:.4; cursor:default; }
+.net-button:focus-visible, .net-field input:focus-visible, .net-details summary:focus-visible { outline:2px solid #c1f4a8; outline-offset:2px; }
+.net-primary { background:#b7e99b; color:#122516; font-weight:bold; }
+.net-menu { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:6px; }
+.net-tile { min-width:0; min-height:55px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:5px; overflow-wrap:anywhere; }
+.net-tile small { font-size:8px; opacity:.75; }
+.net-form { display:flex; flex-direction:column; gap:9px; }
+.net-fields { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
+.net-field { display:flex; flex-direction:column; gap:4px; font-size:10px; min-width:0; }
+.net-field:first-child { grid-column:1/-1; }
+.net-field input { min-width:0; width:100%; min-height:34px; background:#09170e; color:#d1efbe; border:1px solid #51864c; padding:6px; border-radius:2px; font:12px ui-monospace,monospace; }
+.net-field:only-child { grid-column:1/-1; }
+.net-check { display:flex; align-items:center; gap:7px; font-size:10px; min-height:26px; }
+.net-check input { width:17px; height:17px; flex-shrink:0; accent-color:#b7e99b; }
+.net-target { margin:0; font-size:11px; overflow-wrap:anywhere; }
+.net-workspace .net-summary { border:1px solid #51864c; padding:6px; color:#c1f4a8; font-size:11px; }
+.net-results { margin:0; }
+.net-result-row { display:flex; flex-direction:column; gap:2px; padding:5px 0; border-bottom:1px solid #355638; }
+.net-result-row dt { font-size:11px; overflow-wrap:anywhere; }
+.net-result-row dd { margin:0; font-size:10px; opacity:.8; overflow-wrap:anywhere; }
+.net-output { white-space:pre-wrap; overflow-wrap:anywhere; margin:0; max-height:300px; overflow:auto; font:11px/1.5 ui-monospace,monospace; }
+.net-details summary { font-size:10px; cursor:pointer; }
+.net-details .net-output { margin-top:8px; }
+.net-pager { justify-content:space-between; }
+.net-error { color:#f6b2a6; overflow-wrap:anywhere; }
+.net-compact { gap:5px; }
+.net-compact .net-menu { gap:4px; }
+.net-compact .net-tile { min-height:39px; padding:4px; font-size:10px; gap:3px; }
+.net-compact .net-button { min-height:27px; padding:4px 7px; }
+.net-compact .net-field input { min-height:28px; padding:4px; }
+.net-compact .net-form { gap:5px; }
+.net-compact .net-result-row { padding:3px 0; }
+@media (max-width:340px) { .net-menu { grid-template-columns:repeat(2,minmax(0,1fr)); } }

@@ -1,5 +1,9 @@
 # Rust-Boy | Local graphical dashboard
 
+## Unified Network Engineer
+
+`main` includes the shared desktop/micro Network Engineer. Its 16-operation catalog arrives from Rust, with offline calculators, bounded ICMP/TCP health, private-LAN evidence and controller-connected-client inventory. The inspector mounts `assets/network.js`; tool navigation itself performs no I/O. Active tools have a separate authorization step. Inventories have pages; refresh stops on navigation, edits, hidden tabs, errors or STOP and never resumes automatically. [Operator setup and measurement definitions](NETWORK_HEALTH_UNIFI.md).
+
 **Status:** developer-preview shell running entirely from Rust-Boy on **127.0.0.1**, with a responsive original HTML/CSS/JavaScript frontend embedded in the Rust executable. This is a real working local web UI, **not** a public website, a packaged desktop binary, a RustGIS map renderer, an ATAK client or a released handheld OS.
 
 ## Dedicated handheld micro route

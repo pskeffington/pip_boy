@@ -2,12 +2,13 @@
 
 Technical contracts, architecture decisions, research provenance and validation evidence for the [Rust-Boy](../README.md) offline-first field console.
 
-**Current scope:** Rust 1.90+ desktop CLI/TUI, a separate micro-handheld shell and a loopback-only graphical dashboard, bundled reference library, notes and synthetic-only device workflows. NET ENGINEER performs an explicitly authorized, bounded LAN scan; OS-enforced peripheral permissions and physical device permissions remain separate; a TLS-only, explicitly configured UniFi read adapter is in development.
+**Current scope:** Rust 1.90+ desktop CLI/TUI, a separate micro-handheld shell and a loopback-only graphical dashboard, bundled reference library, notes and synthetic-only device workflows. NET ENGINEER performs an explicitly authorized, bounded LAN scan; OS-enforced peripheral permissions and physical device permissions remain separate; a TLS-only, explicitly configured UniFi connected-client reader is implemented. Physical controller acceptance remains open.
 
 ## Start here
 
 | Guide | Focus |
 | --- | --- |
+| [Network health and UniFi setup](NETWORK_HEALTH_UNIFI.md) | Unified 16-tool catalog, bounded ICMP/TCP tests, controller configuration and view-owned refresh |
 | [NET ENGINEER LAN diagnostics](NETWORK_ENGINEERING.md) | Explicit private-subnet scan, ICMP/TCP RTT, bounded monitor and device-count limitations |
 | [DIAG offline ingestion](DIAGNOSTICS.md) | Scoped fault-evidence JSONL intake and local host heuristics |
 | [Peer task transport](PEER_TASK_TRANSPORT.md) | Explicit OpenSSH Mac/Pi enrollment, restricted bridge, delivery and receipt sync |
