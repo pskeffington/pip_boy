@@ -85,3 +85,16 @@
 @media (max-height:360px) {
   .rb-map-base-credit { font-size:8px; padding:1px 3px; }
 }
+
+/* Shown only after a location failure: no map space spent while GPS is working. */
+.rb-map-gps-help { flex:none; min-width:0; border:1px solid #796440;
+  border-radius:3px; color:#f0d79e; background:#231d12;
+  font:10px ui-monospace, Consolas, monospace; }
+.rb-map-gps-help[hidden] { display:none; }
+.rb-map-gps-help summary { padding:4px 6px; cursor:pointer; font-weight:700; }
+.rb-map-gps-help-text { padding:4px 7px 7px; line-height:1.35;
+  overflow-wrap:anywhere; }
+@media (max-height:360px) {
+  .rb-map-gps-help summary { padding:2px 5px; }
+  .rb-map-gps-help-text { max-height:68px; overflow-y:auto; }
+}

@@ -110,6 +110,8 @@ Switch profiles through the UI or `pipboy workbench use head-engineer --replace`
 
 **Reclamation:** load Reclamation Scout and select **SITES** on micro. Add site observations with manual WGS84 coordinates, condition, priority, notes and position uncertainty; update status and export RFC 7946 GeoJSON. Records persist at `PIPBOY_HOME/reclamation.json` (default `~/.pipboy/reclamation.json`). **MAP → SITES** loads saved markers explicitly; selecting **MAP** on a site opens its location on the grid. WEB is blocked while saved sites are displayed, so site coordinates are not sent to Overpass. No background GNSS or uploads. [Field kit guide](docs/RECLAMATION.md).
 
+**GPS troubleshooting:** a browser geolocation refusal now shows **GPS HELP** with site permission status and OS/browser guidance, while **CENTER** remains a manual fallback. [GPS troubleshooting](docs/SCOUT_GPS_MAP.md#gps-denied-despite-system-location-services-being-on).
+
 **County MAP:** select GPS ON or manual CENTER, then COUNTY. The map resolves the containing Census county GEOID and pulls approved TIGER 2025 county-wide roads, areal water and streams with bounded downloads. A prior county package restores from the local cache without remote requests. [County source guide](docs/COUNTY_SOURCES.md).
 
 **Scout MAP:** defaults to an **offline real-geometry central Boston street basemap** (10,634 source-derived segments, no fictional roads or landmarks), rendered in Rust-Boy's original phosphor style. **BOS OFF / BOS ON** hides or restores the reference; the source manifest identifies its dated municipal data. Coverage is partial, not live. [Boston basemap provenance](docs/BOSTON_BASEMAP.md) · [Lore naming](docs/LORE_NAMING.md).

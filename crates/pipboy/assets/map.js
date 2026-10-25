@@ -606,7 +606,28 @@
         view.countyShapes.length ? "TIGER COUNTY " + view.countyPackage.geoid :
         view.baseVisible ? "BOSTON / REAL STREETS" : "LOAD RUSTGIS MAP")) +
       "  |  CENTER " + center;
-    view.locate.textContent = view.watchId === null ? "GPS ON" : "GPS OFF";
+    view.locate.textContent = view.watchId === null && !view.gpsPending ? "GPS ON" : "GPS OFF";
+    view.gpsHelp.hidden = !view.gpsIssue;
+    if (view.gpsIssue) {
+      const permission = view.gpsPermission.toUpperCase();
+      view.gpsHelpSummary.textContent = "GPS HELP / " +
+        (view.gpsIssue === "denied" ? "PERMISSION DENIED" :
+         view.gpsIssue === "timeout" ? "LOCATION TIMED OUT" :
+         view.gpsIssue === "policy" ? "PAGE POLICY" :
+         view.gpsIssue === "insecure" ? "SECURE CONTEXT" : "PROVIDER");
+      const problem = view.gpsIssue === "policy" ?
+        "Page policy blocks geolocation; use the top-level Rust-Boy local dashboard." :
+        view.gpsIssue === "insecure" ?
+          "Use the local http://127.0.0.1 page or HTTPS, not an insecure remote address." :
+        view.gpsIssue === "denied" ?
+          (view.gpsPermission === "granted" ?
+            "Browser says allowed; check OS Location Services for the browser and its location provider." :
+            "Allow location for this exact site in the browser address-bar permissions; check OS Location Services for the browser.") :
+          "Check that this browser/device has a working location provider; try GPS ON again.";
+      view.gpsHelpText.textContent = "BROWSER PERMISSION: " + permission + " / " +
+        problem + " GPS ON retries only when you press it. CENTER works without GPS.";
+    }
+
     view.followButton.disabled = !view.fix;
     view.followButton.textContent = view.follow ? "FOLLOW" : "RECENTER";
     view.webButton.textContent = view.webEnabled ? "WEB OFF" : "WEB ON";
@@ -1026,37 +1047,90 @@
     view.follow = false;
   }
 
-  function stopGps(view, status) {
-    if (view.watchId !== null && navigator.geolocation) {
-      navigator.geolocation.clearWatch(view.watchId);
+  function gpsPolicyAllowed() {
+    const policy = document.permissionsPolicy || document.featurePolicy;
+    if (!policy || typeof policy.allowsFeature !== "function") return true;
+    try { return policy.allowsFeature("geolocation"); } catch (_) { return true; }
+  }
+
+  // Read-only permission check; never invokes geolocation or opens a prompt.
+  // Browser permissions are separate from OS/app Location Services.
+  async function gpsPermissionState(view, attempt) {
+    let state = "unknown";
+    try {
+      if (navigator.permissions && typeof navigator.permissions.query === "function") {
+        const result = await navigator.permissions.query({name:"geolocation"});
+        if (["granted", "prompt", "denied"].includes(result?.state)) {
+          state = result.state;
+        }
+      }
+    } catch (_) {
+      // Some browsers and device shells do not support permission introspection.
     }
+    if (active === view && view.gpsAttempt === attempt) {
+      view.gpsPermission = state;
+      refresh(view);
+    }
+  }
+
+  function stopGps(view, status, issue = null) {
+    // Invalidate any late callbacks from a cancelled watch or previous map.
+    view.gpsAttempt++;
+    const id = view.watchId;
     view.watchId = null;
+    view.gpsPending = false;
+    if (id !== null && navigator.geolocation) {
+      try { navigator.geolocation.clearWatch(id); } catch (_) { /* Already stopped. */ }
+    }
     view.fix = null;
     view.gpsState = status || "GPS OFF";
+    view.gpsIssue = issue;
+    if (!issue) view.gpsHelp.open = false;
     refresh(view);
+    if (issue) void gpsPermissionState(view, view.gpsAttempt);
   }
 
   function startGps(view) {
-    if (!window.isSecureContext || !navigator.geolocation) {
-      view.gpsState = "BROWSER LOCATION UNAVAILABLE";
-      refresh(view);
+    if (active !== view) return;
+    // Clear the prior error only on an explicit GPS ON user action.
+    view.gpsIssue = null;
+    view.gpsPermission = "checking";
+    view.gpsHelp.open = false;
+    if (!window.isSecureContext) {
+      stopGps(view, "GPS REQUIRES SECURE LOCAL PAGE", "insecure");
       return;
     }
+    if (!navigator.geolocation) {
+      stopGps(view, "BROWSER HAS NO LOCATION PROVIDER", "unsupported");
+      return;
+    }
+    if (!gpsPolicyAllowed()) {
+      stopGps(view, "GPS BLOCKED BY PAGE POLICY", "policy");
+      return;
+    }
+    const attempt = ++view.gpsAttempt;
+    view.gpsPending = true;
     view.follow = true;
-    view.gpsState = "WAITING FOR LOCATION";
+    view.gpsState = "WAITING FOR BROWSER LOCATION";
+    refresh(view);
+    // The geolocation call occurs directly in the button event, so any
+    // browser permission prompt retains the original user gesture.
     try {
-      view.watchId = navigator.geolocation.watchPosition((position) => {
-        if (active !== view) return;
-        const c = position.coords;
-        const timestamp = position.timestamp;
+      const id = navigator.geolocation.watchPosition((position) => {
+        if (active !== view || view.gpsAttempt !== attempt) return;
+        const c = position?.coords;
+        const timestamp = position?.timestamp;
         if (!c || !Number.isFinite(c.latitude) || !Number.isFinite(c.longitude) ||
             Math.abs(c.latitude) > 90 || Math.abs(c.longitude) > 180 ||
             !Number.isFinite(timestamp) || Date.now() - timestamp > 60000 ||
             (view.fix && timestamp < view.fix.timestamp)) {
-          view.gpsState = "INVALID OR STALE FIX";
+          view.gpsState = "INVALID OR STALE LOCATION FIX";
           refresh(view);
           return;
         }
+        view.gpsPending = false;
+        view.gpsIssue = null;
+        view.gpsHelp.open = false;
         view.fix = {
           lat: c.latitude, lon: c.longitude, accuracy:
             Number.isFinite(c.accuracy) && c.accuracy >= 0 ? c.accuracy : 0,
@@ -1074,14 +1148,28 @@
           void webFetch(view);
         }
       }, (error) => {
-        if (active !== view) return;
-        const message = error && error.code === 1 ? "LOCATION DENIED" :
-          error && error.code === 3 ? "LOCATION TIMEOUT" : "LOCATION UNAVAILABLE";
-        stopGps(view, message);
-      }, { enableHighAccuracy: true, maximumAge: 0, timeout: 12000 });
+        if (active !== view || view.gpsAttempt !== attempt) return;
+        const code = error?.code;
+        if (code === 1) {
+          stopGps(view, "GPS DENIED / SEE GPS HELP", "denied");
+        } else if (code === 3) {
+          stopGps(view, "GPS TIMEOUT / SEE GPS HELP", "timeout");
+        } else {
+          stopGps(view, "GPS POSITION UNAVAILABLE / SEE GPS HELP", "unavailable");
+        }
+      }, {enableHighAccuracy:false, maximumAge:0, timeout:20000});
+      if (active === view && view.gpsAttempt === attempt) {
+        view.watchId = id;
+      } else {
+        // Defend against synchronous callback/error implementations.
+        try { navigator.geolocation.clearWatch(id); } catch (_) { /* No watch. */ }
+      }
       refresh(view);
+      void gpsPermissionState(view, attempt);
     } catch (_) {
-      stopGps(view, "LOCATION UNAVAILABLE");
+      if (active === view && view.gpsAttempt === attempt) {
+        stopGps(view, "GPS PROVIDER FAILED / SEE GPS HELP", "unavailable");
+      }
     }
   }
 
@@ -1115,7 +1203,8 @@
   function unmount() {
     if (!active) return;
     const view = active;
-    if (view.watchId !== null && navigator.geolocation) navigator.geolocation.clearWatch(view.watchId);
+    // Cancels the GPS watch, clears the live fix, and invalidates late callbacks.
+    stopGps(view);
     if (view.observer) view.observer.disconnect();
     if (view.windowResize) window.removeEventListener("resize", view.windowResize);
     if (view.webReconnect) window.removeEventListener("online", view.webReconnect);
@@ -1187,6 +1276,12 @@
     stage.append(countyAttribution);
     const webStatusNode = make("div", "rb-map-web-state", "WEB OFF");
     const countyNode = make("div", "rb-map-web-state", "COUNTY OFF / GPS OR CENTER REQUIRED");
+    const gpsHelp = make("details", "rb-map-gps-help");
+    gpsHelp.hidden = true;
+    const gpsHelpSummary = make("summary", "", "GPS HELP");
+    const gpsHelpText = make("div", "rb-map-gps-help-text", "");
+    gpsHelp.append(gpsHelpSummary, gpsHelpText);
+
     webStatusNode.setAttribute("role", "status");
     const sourceBox = make("details", "rb-map-sources");
     sourceBox.hidden = true;
@@ -1276,6 +1371,8 @@
       webButton: null, webRefresh: null,
       baseButton: null,
       fix: null, watchId: null, gpsState: "GPS OFF",
+      gpsPending:false, gpsAttempt:0, gpsIssue:null, gpsPermission:"unknown",
+      gpsHelp, gpsHelpSummary, gpsHelpText,
       follow: !mapMemory, observer: null, windowResize: null, drag: null,
       locate: null, followButton: null,
       siteAccess: Boolean(options && options.reclamation),
@@ -1287,7 +1384,7 @@
     };
     active = view;
     view.locate = control("GPS ON", () => {
-      if (view.watchId === null) startGps(view);
+      if (view.watchId === null && !view.gpsPending) startGps(view);
       else stopGps(view);
     }, "Enable or stop browser location with permission");
     view.followButton = control("FOLLOW", () => {
@@ -1337,7 +1434,8 @@
     if (options && typeof options.onTools === "function") {
       toolbar.append(control("GIS", options.onTools, "Open Scout GIS tools"));
     }
-    root.append(toolbar, stage, webStatusNode, countyNode, status, sitePanel, sourceBox, manual, file);
+    root.append(toolbar, stage, webStatusNode, countyNode, status, gpsHelp,
+      sitePanel, sourceBox, manual, file);
     host.replaceChildren(root);
 
     manual.addEventListener("submit", (event) => {

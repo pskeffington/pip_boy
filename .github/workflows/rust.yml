@@ -79,6 +79,7 @@ jobs:
           node --check crates/pipboy/assets/map-county.js
           node tools/test_rustgis_map_import.cjs
           node tools/test_rustgis_map_view.cjs
+          node tools/test_map_gps_permissions.cjs
           node tools/test_boston_map.cjs
           node tools/test_reclamation_map.cjs
           node tools/test_county_map.cjs
