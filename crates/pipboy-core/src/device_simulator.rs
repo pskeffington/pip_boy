@@ -7,7 +7,7 @@
 use crate::capability::Capability;
 use crate::permissions::{adapter_capability, Preference, PreferenceEntry, ADAPTER_CAPABILITIES};
 use serde::Serialize;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::error::Error;
 use std::fmt;
 use std::sync::Arc;
@@ -92,6 +92,7 @@ pub enum BrokerError {
     UnknownDevice,
     ConfirmationRequired,
     DeniedPreference,
+    Unavailable,
     Busy,
     InvalidLease,
     InvalidPreference,
@@ -104,6 +105,7 @@ impl fmt::Display for BrokerError {
             Self::UnknownDevice => "unknown simulated device",
             Self::ConfirmationRequired => "explicit simulation confirmation required",
             Self::DeniedPreference => "saved adapter preference denies this capability",
+            Self::Unavailable => "simulated device is disconnected",
             Self::Busy => "simulated broker already has an active session",
             Self::InvalidLease => "simulated session is absent, revoked, or belongs to another broker",
             Self::InvalidPreference => "invalid or duplicate adapter preference; no session authorized",
@@ -114,6 +116,22 @@ impl fmt::Display for BrokerError {
 }
 
 impl Error for BrokerError {}
+
+impl BrokerError {
+    /// Stable machine-readable error identifier for deterministic fixture traces.
+    pub fn code(self) -> &'static str {
+        match self {
+            Self::UnknownDevice => "unknown_device",
+            Self::ConfirmationRequired => "confirmation_required",
+            Self::DeniedPreference => "denied_preference",
+            Self::Unavailable => "unavailable",
+            Self::Busy => "busy",
+            Self::InvalidLease => "invalid_lease",
+            Self::InvalidPreference => "invalid_preference",
+            Self::CounterExhausted => "counter_exhausted",
+        }
+    }
+}
 
 /// A non-serializable, non-clonable token tied to exactly one broker instance.
 /// Its private fields cannot be created from a stored preference or CLI input.
@@ -149,6 +167,7 @@ pub struct SimulatedBroker {
     preferences: HashMap<Capability, Preference>,
     policy_valid: bool,
     active: Option<ActiveSession>,
+    disconnected: HashSet<&'static str>,
     generation: u64,
     sequence: u64,
 }
@@ -160,6 +179,7 @@ impl SimulatedBroker {
             preferences: Self::validated_preferences(entries)?,
             policy_valid: true,
             active: None,
+            disconnected: HashSet::new(),
             generation: 0,
             sequence: 0,
         })
@@ -211,6 +231,9 @@ impl SimulatedBroker {
         if self.preferences.get(&device.capability) == Some(&Preference::Denied) {
             return Err(BrokerError::DeniedPreference);
         }
+        if self.disconnected.contains(device.id) {
+            return Err(BrokerError::Unavailable);
+        }
         if self.active.is_some() {
             return Err(BrokerError::Busy);
         }
@@ -239,6 +262,33 @@ impl SimulatedBroker {
             return Err(BrokerError::DeniedPreference);
         }
         Ok(active)
+    }
+
+    /// Simulate loss of one fixed fixture. Any active session for that device
+    /// is invalidated before returning. No physical device is ever contacted.
+    /// Returns true only when the virtual device changes to disconnected.
+    pub fn disconnect(&mut self, id: &str) -> Result<bool, BrokerError> {
+        let device = SIMULATED_DEVICES
+            .iter()
+            .find(|device| device.id == id)
+            .ok_or(BrokerError::UnknownDevice)?;
+        if self
+            .active
+            .is_some_and(|session| session.device.id == device.id)
+        {
+            self.active = None;
+        }
+        Ok(self.disconnected.insert(device.id))
+    }
+
+    /// Simulate recovery of a fixture. Does NOT reactivate a stale session;
+    /// a subsequent open still requires explicit confirmation.
+    pub fn reconnect(&mut self, id: &str) -> Result<bool, BrokerError> {
+        let device = SIMULATED_DEVICES
+            .iter()
+            .find(|device| device.id == id)
+            .ok_or(BrokerError::UnknownDevice)?;
+        Ok(self.disconnected.remove(device.id))
     }
 
     /// Emit a labeled fixture event; never touch hardware or invent readings.
@@ -456,6 +506,42 @@ mod tests {
                 .unwrap(),
             BrokerError::InvalidPreference
         );
+    }
+
+    #[test]
+    fn simulated_disconnect_requires_new_session_after_reconnect() {
+        let mut broker = SimulatedBroker::new(&[]).unwrap();
+        let old = broker.open("sim:serial", SessionConfirmation::Confirmed).unwrap();
+        assert_eq!(broker.sample(&old).unwrap().sequence, 1);
+        assert!(broker.disconnect("sim:serial").unwrap());
+        assert!(!broker.disconnect("sim:serial").unwrap());
+        assert_eq!(broker.active_device(), None);
+        assert_eq!(broker.sample(&old).unwrap_err(), BrokerError::InvalidLease);
+        assert_eq!(
+            broker
+                .open("sim:serial", SessionConfirmation::Confirmed)
+                .unwrap_err(),
+            BrokerError::Unavailable
+        );
+        assert!(broker.reconnect("sim:serial").unwrap());
+        assert!(!broker.reconnect("sim:serial").unwrap());
+        assert_eq!(broker.sample(&old).unwrap_err(), BrokerError::InvalidLease);
+        assert_eq!(
+            broker.open("sim:serial", SessionConfirmation::Absent).unwrap_err(),
+            BrokerError::ConfirmationRequired
+        );
+        let fresh = broker.open("sim:serial", SessionConfirmation::Confirmed).unwrap();
+        assert_eq!(broker.sample(&fresh).unwrap().sequence, 2);
+        assert_eq!(broker.sample(&old).unwrap_err(), BrokerError::InvalidLease);
+    }
+
+    #[test]
+    fn disconnect_and_reconnect_reject_unknown_devices() {
+        let mut broker = SimulatedBroker::new(&[]).unwrap();
+        assert_eq!(broker.disconnect("real:sdr").unwrap_err(), BrokerError::UnknownDevice);
+        assert_eq!(broker.reconnect("real:sdr").unwrap_err(), BrokerError::UnknownDevice);
+        assert_eq!(broker.active_device(), None);
+        assert_eq!(BrokerError::Unavailable.code(), "unavailable");
     }
 
     #[test]
