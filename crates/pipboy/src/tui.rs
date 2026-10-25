@@ -17,10 +17,10 @@ use std::error::Error;
 use std::io;
 use std::time::{Duration, Instant};
 
-struct TerminalGuard;
+pub(crate) struct TerminalGuard;
 
 impl TerminalGuard {
-    fn enter() -> Result<Self, Box<dyn Error>> {
+    pub(crate) fn enter() -> Result<Self, Box<dyn Error>> {
         enable_raw_mode()?;
         if let Err(error) = execute!(io::stdout(), EnterAlternateScreen) {
             disable_raw_mode()?;

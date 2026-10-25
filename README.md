@@ -8,7 +8,7 @@
 
 Rust-Boy is an independent, Rust-native field systems console for desktop terminals, with a modular foundation for future wearable and hardware applications. It brings local host diagnostics, a curated research library and user-controlled field notes together in a keyboard-driven interface.
 
-**Current stage:** development preview. The terminal console and offline workflows are implemented and tested on Linux, macOS and Windows. Physical GPIO, serial, SDR, Bluetooth, mesh, GNSS, mapping and live network/device integrations are **not enabled**. No packaged production release is claimed.
+**Current stage:** development preview. The terminal console and offline workflows are implemented and tested on Linux, macOS and Windows. Physical GPIO, serial, SDR, Bluetooth, mesh, GNSS, mapping and physical device integrations are **not enabled**. An explicitly requested Fallout 4 TCP companion browser is available for validation. No packaged production release is claimed.
 
 ## Quick start
 
@@ -39,10 +39,19 @@ The `sample` command emits a finite stream of NDJSON to standard output; it does
 
 Use `status --details` or `sample --details` for per-field units, quality, missing-value reasons and poll timing. The console shows these same quality labels, including CPU warm-up and stale readings. Raw CPU JSON can be null when unavailable. See the [host telemetry contract](docs/HOST_TELEMETRY.md).
 
+## Fallout 4 game mode
+
+```bash
+cargo run --locked -p pipboy -- game --connect 127.0.0.1:27000 --confirm
+```
+
+Enable the game's Pip-Boy App setting and load a save first. Use the host LAN IP when running Rust-Boy on another computer. Game mode browses live game objects and updates with keyboard navigation; it is currently read-only. **Actual game-build compatibility remains unverified.** See [setup, controls and limits](docs/GAME_MODE.md).
+
 ## Current capabilities
 
 | Area | Status | What it does |
 | --- | --- | --- |
+| **Fallout 4 companion** | Implemented; live game acceptance pending | Opt-in TCP game-data browser, heartbeat, incremental state and snapshot diagnostics |
 | **STAT** | Available | Local CPU, memory, OS, architecture, uptime, field quality and bounded telemetry |
 | **LIBRARY** | Available | Browse bundled, license-aware research/source references without contacting GitHub |
 | **NOTES** | Available | Create, search, list, export and import offline field notes |

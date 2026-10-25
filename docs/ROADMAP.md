@@ -141,3 +141,7 @@ The next engineering handoff is [G1_EXECUTION_PLAN.md](G1_EXECUTION_PLAN.md). Do
 6. **Object-model drift:** runtime module registry must agree with the roadmap manifest; automated cross-validation is required.
 
 **Explicit non-goals:** proprietary game assets; unauthorized scans, surveillance, jamming or infrastructure control; silent device access; arbitrary native plugin loading; unsupported claims of live GNSS/radio/mesh capabilities.
+
+## Fallout 4 companion acceptance (requested: all versions)
+
+An opt-in read-only direct TCP browser and incremental decoder are implemented. See [game mode and edition matrix](GAME_MODE.md). Separate gates remain: actual legacy/Anniversary PC service tests; AE game-side bridge/enabler validation; console-build service availability; gameplay command validation; local-map image rendering; and a recorded real-game end-to-end session for each supported build. Protocol mocks cannot complete these gates. No all-version compatibility claim is approved.

@@ -350,3 +350,7 @@ Partial implementation: pure renderer/navigation, 40x12 compact layout, fallback
 ## Traceability
 
 For every implementation PR, link a module ID, an evidence ID, an acceptance test, and permission/capability review. The `pipboy plan` and `pipboy evidence` CLI commands will report these manifests once the core loader is integrated.
+
+### `game` — Fallout 4 companion
+
+G3 acceptance remains planned; a read-only native TCP browser/decoder precursor is implemented. Required permission: explicitly confirmed `network.fetch` for a literal endpoint. Evidence: L38. See [edition matrix, setup, limits and outstanding live acceptance](GAME_MODE.md).

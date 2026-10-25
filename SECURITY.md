@@ -34,3 +34,7 @@ Please include the affected revision, platform, reproduction steps and security 
 ## Third-party code and assets
 
 A research-catalog link is not a license grant. Review source licenses, dependency provenance, hardware rights and media restrictions before importing material. Do not add copyrighted game artwork, unlicensed firmware, live geolocation traces or secrets to this repository.
+
+## Explicit game companion connection
+
+`pipboy game --connect IP:PORT --confirm` authorizes one direct plaintext TCP connection to the specified Fallout 4 host. It transmits heartbeat responses only; game actions are not implemented. No discovery, DNS, automatic retry or saved state is used. Treat the endpoint as untrusted and use a trusted local network. See [game protocol bounds](docs/GAME_MODE.md). This opt-in path does not enable physical device adapters.
