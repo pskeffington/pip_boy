@@ -7,6 +7,12 @@ Rust-Boy is the public product name. The existing `pip_boy` repository, `pipboy`
 
 > **Verified integration baseline:** [Five-job Linux/macOS/Windows CI](https://github.com/pskeffington/pip_boy/actions/runs/40164915215) passed at `e7d1090`, including macOS PTY, Windows ConPTY, and the strict deny-all broker suite. **This does not complete a packaged release or enable physical devices.** The catalog's `implemented_unverified` status denotes a pending module acceptance review, not an absence of CI execution.
 
+## G1 compact micro HUD — four-inch acceptance
+
+The handheld primary dashboard, role selection and tool lists now use concise, paginated screens rather than scrollable long-form panels. Task Control has staged entry, two-task pages, and separate detail actions. Local lab input/results are distinct. Peer send/sync remain explicitly confirmed actions; camera and RustGIS renderers remain disconnected placeholders. [Micro UI guide](MICRO_UI.md).
+
+**Pending acceptance:** manually verify Safari/Firefox at 480×320 and 800×480, including text truncation, touch targets, keyboard/ESC behavior, modal paging, focus at zoom and 4-inch Pi hardware. At extreme sizes, allow detail scrolling rather than clipping required controls.
+
 ## G1 explicit Rust-Boy device-to-device task link
 
 The new [peer task transport](PEER_TASK_TRANSPORT.md) introduces enrolled device labels, validated peer destinations and **explicit** host-key-pinned OpenSSH task delivery between two Rust-Boy installations. A receiver durably imports the job in its own task file; on-demand SSH reports convey operator acknowledgment and progress back without silently overwriting the manager's status. The task UI replaces the old email draft with a peer-device picker. No auto-connect, native mesh/radio, background sync or PS4 integration is implied.

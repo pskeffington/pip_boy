@@ -10,7 +10,7 @@ Technical contracts, architecture decisions, research provenance and validation 
 | --- | --- |
 | [Peer task transport](PEER_TASK_TRANSPORT.md) | Explicit OpenSSH Mac/Pi enrollment, restricted bridge, delivery and receipt sync |
 | [Overseer Task Control](TASK_CONTROL.md) | Persistent assignments, status, manual handoff and role queues |
-| [Micro handheld shell](MICRO_UI.md) | Six-tab phosphor UI, Mac launcher, 480×320 and 800×480 viewport plan |
+| [Micro handheld shell](MICRO_UI.md) | Minimalist paged six-tab HUD, 480×320 test and compact Task Control |
 | [Graphical dashboard](DASHBOARD_UI.md) | Run local browser UI on Mac, load role templates, test offline tools and Custom |
 | [Quick start](../README.md#quick-start) | Clone, build, run the terminal UI and inspect local status |
 | [Console controls](CONSOLE.md) | Keyboard navigation, resize behavior and terminal restoration |
