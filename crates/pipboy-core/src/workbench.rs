@@ -91,6 +91,13 @@ pub const PALETTE: &[Tool] = &[
         command: "pipboy game --ps4 IP --confirm",
     },
     Tool {
+        id: "net-lab",
+        name: "NET LAB",
+        description: "Offline IPv4/CIDR planner for LAN setup; no probing or sockets.",
+        availability: Availability::Ready,
+        command: "pipboy workbench net cidr 192.168.1.50/24",
+    },
+    Tool {
         id: "gpio",
         name: "GPIO",
         description: "Physical pin access requires a future OS-enforced broker.",
@@ -131,6 +138,95 @@ pub fn tool(id: &str) -> Option<&'static Tool> {
     PALETTE.iter().find(|entry| entry.id == id)
 }
 
+/// A role is a complete, ready-to-use board composed only of implemented tools.
+/// Lore anchors are traceable in docs/VAULT_TEC_LORE_MATRIX.md; workflow mapping
+/// is our own modern interpretation, not a claim about game mechanics.
+#[derive(Clone, Copy, Debug, Serialize)]
+pub struct Preset {
+    pub id: &'static str,
+    pub title: &'static str,
+    pub description: &'static str,
+    pub lore_evidence: &'static str,
+    pub role_fidelity: &'static str,
+    pub tools: &'static [&'static str],
+}
+
+pub const PRESETS: &[Preset] = &[
+    Preset {
+        id: "overseer",
+        title: "Overseer Operations",
+        description: "Vault oversight: host condition, mission notes, reference library and optional game link.",
+        lore_evidence: "VT-01",
+        role_fidelity: "canonical_job",
+        tools: &["host", "notes", "library", "game"],
+    },
+    Preset {
+        id: "head-engineer",
+        title: "Head Engineer Station",
+        description: "Systems engineering: health telemetry, subnet calculations, byte analysis and synthetic rigs.",
+        lore_evidence: "VT-01",
+        role_fidelity: "canonical_job",
+        tools: &["host", "net-lab", "byte-lab", "simulator", "notes"],
+    },
+    Preset {
+        id: "security-chief",
+        title: "Security Chief Station",
+        description: "Defensive triage: local status, offline network planning, packet bytes and incident notes.",
+        lore_evidence: "VT-01",
+        role_fidelity: "canonical_job",
+        tools: &["host", "net-lab", "byte-lab", "notes"],
+    },
+    Preset {
+        id: "vault-doctor",
+        title: "Vault Doctor Station",
+        description: "Scientific reference, research notes and workstation condition; not medical diagnosis.",
+        lore_evidence: "VT-01",
+        role_fidelity: "canonical_job",
+        tools: &["library", "notes", "host"],
+    },
+    Preset {
+        id: "university-researcher",
+        title: "University Research Station",
+        description: "Reproducible experimentation: bytes, references, notes, fixtures and network mathematics.",
+        lore_evidence: "VT-01",
+        role_fidelity: "role_inspired",
+        tools: &["byte-lab", "library", "notes", "simulator", "net-lab"],
+    },
+    Preset {
+        id: "reclamation-scout",
+        title: "Reclamation Field Kit",
+        description: "Offline field records, network setup, computer condition and explicit game companion.",
+        lore_evidence: "VT-02",
+        role_fidelity: "role_inspired",
+        tools: &["game", "net-lab", "notes", "host"],
+    },
+    Preset {
+        id: "records-custodian",
+        title: "Records Custodian Station",
+        description: "Research archives, local writing, and noncryptographic byte verification.",
+        lore_evidence: "VT-03",
+        role_fidelity: "role_inspired",
+        tools: &["library", "notes", "byte-lab"],
+    },
+    Preset {
+        id: "custom",
+        title: "Custom Workbench",
+        description: "Advanced builder: start empty, then choose every tool yourself.",
+        lore_evidence: "RB-01",
+        role_fidelity: "rust_boy_original",
+        tools: &[],
+    },
+];
+
+pub fn preset(id: &str) -> Option<&'static Preset> {
+    PRESETS.iter().find(|profile| profile.id == id)
+}
+
+fn legacy_profile() -> String {
+    // Existing v1 workbench files predate profiles. Preserve their pins as custom.
+    "custom".to_owned()
+}
+
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(deny_unknown_fields)]
 pub struct Slot {
@@ -143,15 +239,32 @@ pub struct Slot {
 pub struct Workbench {
     pub schema_version: u32,
     pub title: String,
+    #[serde(default = "legacy_profile")]
+    pub profile: String,
     pub slots: Vec<Slot>,
 }
 
 impl Default for Workbench {
     fn default() -> Self {
+        Self::from_preset(&PRESETS[0])
+    }
+}
+
+impl Workbench {
+    pub fn from_preset(selected: &Preset) -> Self {
         Self {
             schema_version: SCHEMA_VERSION,
-            title: "My Rust-Boy Workbench".to_string(),
-            slots: Vec::new(),
+            title: selected.title.to_owned(),
+            profile: selected.id.to_owned(),
+            slots: selected
+                .tools
+                .iter()
+                .enumerate()
+                .map(|(index, name)| Slot {
+                    id: index as u64 + 1,
+                    tool: (*name).to_owned(),
+                })
+                .collect(),
         }
     }
 }
@@ -171,7 +284,7 @@ impl Workbench {
                 "unsupported workbench schema; original file preserved",
             ));
         }
-        if !valid_title(&self.title) || self.slots.len() > MAX_SLOTS {
+        if preset(&self.profile).is_none() || !valid_title(&self.title) || self.slots.len() > MAX_SLOTS {
             return Err(io::Error::new(
                 io::ErrorKind::InvalidData,
                 "invalid title or too many workbench slots; original file preserved",
@@ -327,6 +440,7 @@ impl WorkbenchStore {
             tool: id.to_owned(),
         };
         board.slots.push(slot.clone());
+        board.profile = "custom".into();
         self.save(&board)?;
         Ok(slot)
     }
@@ -342,6 +456,7 @@ impl WorkbenchStore {
         if board.slots.len() == before {
             return Ok(false);
         }
+        board.profile = "custom".into();
         self.save(&board)?;
         Ok(true)
     }
@@ -362,6 +477,7 @@ impl WorkbenchStore {
             return Ok(false);
         }
         board.title = title.to_string();
+        board.profile = "custom".into();
         self.save(&board)?;
         Ok(true)
     }
@@ -376,7 +492,26 @@ impl WorkbenchStore {
             return Ok(false);
         }
         board.slots.clear();
+        board.profile = "custom".into();
         self.save(&board)?;
+        Ok(true)
+    }
+
+    /// Apply an entire role configuration. Callers must independently confirm
+    /// destructive replacement; installation never executes tools.
+    pub fn apply_preset(&self, key: &str) -> io::Result<bool> {
+        let chosen = preset(key).ok_or_else(|| {
+            io::Error::new(io::ErrorKind::InvalidInput, "unknown workbench profile")
+        })?;
+        let next = Workbench::from_preset(chosen);
+        if self.load()? == next {
+            return Ok(false);
+        }
+        let _lock = self.writer_lock()?;
+        if self.load()? == next {
+            return Ok(false);
+        }
+        self.save(&next)?;
         Ok(true)
     }
 
@@ -395,7 +530,7 @@ impl WorkbenchStore {
 }
 
 /// A bounded, printable-only hex dump suitable for terminal inspection.
-pub fn inspect_hex(input: &str) -> io::Result<String> {
+fn parse_hex(input: &str) -> io::Result<Vec<u8>> {
     let mut data = Vec::new();
     for token in input.split_whitespace() {
         let part = token
@@ -419,7 +554,16 @@ pub fn inspect_hex(input: &str) -> io::Result<String> {
     if data.is_empty() {
         return Err(io::Error::new(io::ErrorKind::InvalidInput, "hex input cannot be empty"));
     }
-    let mut output = format!("BYTE LAB | {} bytes\nOFFSET    HEX                                              ASCII\n", data.len());
+    Ok(data)
+}
+
+/// A bounded, printable-only hex dump suitable for terminal inspection.
+pub fn inspect_hex(input: &str) -> io::Result<String> {
+    let data = parse_hex(input)?;
+    let mut output = format!(
+        "BYTE LAB | {} bytes\nOFFSET    HEX                                              ASCII\n",
+        data.len()
+    );
     for (index, chunk) in data.chunks(16).enumerate() {
         let _ = write!(&mut output, "{:08x}  ", index * 16);
         for byte in chunk {
@@ -545,4 +689,65 @@ mod tests {
         assert!(encode_hex(&"x".repeat(4097)).is_err());
         assert!(!dump.contains('\u{1b}'));
     }
+    #[test]
+    fn canonical_profiles_are_full_ready_boards_and_custom_is_opt_in() {
+        let board = Workbench::default();
+        assert_eq!(board.profile, "overseer");
+        assert_eq!(board.slots.len(), 4);
+        for profile in PRESETS {
+            let board = Workbench::from_preset(profile);
+            board.validate().unwrap();
+            assert_eq!(board.profile, profile.id);
+            assert_eq!(board.slots.len(), profile.tools.len());
+            for slot in &board.slots {
+                assert!(tool(&slot.tool).unwrap().availability.can_pin());
+            }
+        }
+        assert!(Workbench::from_preset(preset("custom").unwrap()).slots.is_empty());
+        assert!(PRESETS.iter().all(|entry| entry.lore_evidence.len() == 5));
+    }
+
+    #[test]
+    fn applying_complete_profiles_does_not_run_tools_and_preserves_legacy_v1() {
+        let temporary = tempfile::tempdir().unwrap();
+        let store = WorkbenchStore::new(temporary.path().join("profiles"));
+        assert_eq!(store.load().unwrap().profile, "overseer");
+        assert!(!store.path().exists());
+        assert!(store.apply_preset("head-engineer").unwrap());
+        assert!(!store.apply_preset("head-engineer").unwrap());
+        assert_eq!(store.load().unwrap().slots.len(), 5);
+        assert_eq!(store.load().unwrap().profile, "head-engineer");
+        assert!(store.apply_preset("custom").unwrap());
+        assert!(store.load().unwrap().slots.is_empty());
+        assert!(!store.apply_preset("custom").unwrap());
+        assert!(store.add("byte-lab").is_ok());
+        assert_eq!(store.load().unwrap().profile, "custom");
+        let existing = fs::read(store.path()).unwrap();
+        assert!(store.apply_preset("invalid").is_err());
+        assert_eq!(fs::read(store.path()).unwrap(), existing);
+
+        // Existing version-1 boards lacked a profile and must remain readable.
+        fs::write(store.path(), r#"{"schema_version":1,"title":"Legacy","slots":[{"id":1,"tool":"notes"}]}"#).unwrap();
+        let legacy = store.load().unwrap();
+        assert_eq!(legacy.profile, "custom");
+        assert_eq!(legacy.slots[0].tool, "notes");
+    }
+
+    #[test]
+    fn network_math_and_crc32_are_real_bounded_offline_tools() {
+        let result = ipv4_cidr("192.168.1.50/24").unwrap();
+        assert!(result.contains("192.168.1.0/24"));
+        assert!(result.contains("192.168.1.255"));
+        assert!(result.contains("192.168.1.1 - 192.168.1.254"));
+        assert!(ipv4_cidr("10.0.0.4/31").unwrap().contains("Usable addresses: 2"));
+        assert!(ipv4_cidr("10.0.0.4/32").unwrap().contains("Usable addresses: 1"));
+        assert!(ipv4_cidr("0.0.0.0/0").unwrap().contains("0.0.0.0/0"));
+        for bad in ["", "host/24", "192.168.1.5/33", "192.168.1.5/a", "1.2.3.4", "1.2.3.4/-1"] {
+            assert!(ipv4_cidr(bad).is_err(), "{bad}");
+        }
+        assert!(crc32_hex("313233343536373839").unwrap().contains("cbf43926"));
+        assert!(crc32_hex("gg").is_err());
+        assert!(crc32_hex(&"01".repeat(4097)).is_err());
+    }
+
 }
