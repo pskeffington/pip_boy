@@ -55,6 +55,10 @@ Future feature-gated adapters attach beneath core capability interfaces:
 
 `device_simulator.rs` contains an in-memory-only broker with 11 hard-coded `sim:*` fixture device IDs. It reads validated `PreferenceEntry` values supplied by a caller but never converts `requested` into an active grant. Each virtual session needs a new explicit `SessionConfirmation::Confirmed`, and `denied` blocks it. A lease uses per-broker identity and generation to prevent cross-instance replay and is invalidated on close, revocation and a denied policy reload. Events carry `simulated: true` and **no fabricated measurements**. The CLI `simulate list|run ID --confirm` only creates virtual events; no OS device interface is reachable. See [simulation contract](SIMULATION.md). This is not an OS device broker or user consent service for real adapters, and the G2 milestones remain planned.
 
+## Deterministic virtual replay (new tests pending)
+
+`simulator_replay.rs` creates fixed `nominal`, `disconnect-recover`, and `revoke` traces with synthetic logical timestamps (0–700 ms), independent of real clocks, hardware and background sampling. The broker's virtual disconnect immediately invalidates leases; reconnect does not restart anything. Every rejection is explicitly labeled, and source-defined replay cannot authorize real adapters. See [simulation](SIMULATION.md). Both the compiler and CLI acceptance suites remain pending.
+
 ## User data
 
 PIPBOY_HOME overrides the data directory. Otherwise, use $HOME/.pipboy on Unix and %USERPROFILE%/.pipboy on Windows. Notes use a stable advisory writer lock, a flushed staging file in the data directory, and replacement of notes.json without deleting it first. Unix also syncs the containing directory; native Windows/macOS durability acceptance remains open. Reads/search/export create no files. Explicit notes import validates its named input, locks the merge transaction, assigns fresh local IDs and commits only a complete bounded result. No background synchronization. See [storage contract](STORAGE.md). Delete the folder to remove locally stored notes. Content is not encrypted.

@@ -63,6 +63,28 @@ An emitted event is explicitly typed:
 
 There are no synthetic CPU, environmental, coordinates, RF signal levels or other numeric measurements.
 
+## Deterministic logical-time replay (new, unverified)
+
+Three **fixed source-defined scenarios** are provided by `simulator_replay.rs`. Replay does not load arbitrary user scripts, files or real device data, and never sleeps or reads a wall clock:
+
+```bash
+pipboy simulate replay sim:gpio nominal --confirm
+pipboy simulate replay sim:serial disconnect-recover --confirm
+pipboy simulate replay sim:sdr revoke --confirm
+```
+
+| Scenario | Synthetic logical times (ms) | State-transition assertions |
+| --- | --- | --- |
+| `nominal` | 0, 100, 200 | Confirm/open, one fixture event, close |
+| `disconnect-recover` | 0, 100, 200, 300, 400, 500, 600, 700 | Initial fixture event; virtual disconnect invalidates lease; stale reads and opens while disconnected reject; reconnect leaves the fixture inactive; missing renewed confirmation rejects |
+| `revoke` | 0, 100, 200, 300, 400 | Initial fixture event; capability revoke invalidates lease; stale read and unconfirmed new open reject |
+
+Output is a version-1 `ReplayTrace` object carrying `simulated: true`, `source: "rust-boy/deterministic-simulator"`, `clock: "synthetic_logical_ms"`, scenario, fixture ID/capability and at most eight ordered steps. Each step provides `logical_ms`, `action`, `state`, `outcome` and, where applicable, an explicit error code or the original labeled `SimulationEvent`. Replays do **not** fabricate readings or GPS coordinates. The same scenario is designed to serialize identically across repeated invocations.
+
+A single `--confirm` authorizes the **mock scenario as a whole**. The replay intentionally **does not automatically reopen** a fixture after disconnect, reconnect or revoke; any later CLI simulation requires its own explicit `--confirm`. These scenario scripts demonstrate expected policy behavior but are not fresh individual user approvals, hardware tests, or proof of OS-level isolation.
+
+New `SimulatedBroker::disconnect/reconnect` methods only toggle virtual availability. Disconnection invalidates an active lease immediately; reconnection alone cannot restore it. The `Unavailable` error is distinct from `InvalidLease` and `ConfirmationRequired`, and all are represented by stable machine-readable replay error codes.
+
 ## Lease and preference invariants
 
 1. `PreferenceStore` validates and loads preferences before a simulated session begins. Unknown/future/corrupt schema prevents the CLI from running a simulation; reading never creates data files.
@@ -86,6 +108,7 @@ cargo test --workspace --locked
 cargo clippy --workspace --all-targets --locked -- -D warnings
 cargo build -p pipboy --locked
 python3 tools/smoke_simulator.py
+python3 tools/smoke_replay.py
 python3 tools/smoke_permissions.py
 python3 tools/smoke_notes.py
 python3 tools/smoke_runtime.py

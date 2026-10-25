@@ -31,6 +31,7 @@ flowchart TD
 | `LocalOperation` | Read/write capability precheck for trusted one-shot LIBRARY/NOTES actions | Short-lived caller policy |
 | `PreferenceStore` | Bounded versioned requested/denied intent for future external adapters, never active grants | Local `permissions.json` file |
 | `SimulatedBroker` / `SimulationLease` | Fixed virtual fixtures, explicit per-session confirmation, deny/revoke checks and non-replayable in-process lease | Process-local memory only; no OS handle |
+| `ReplayScenario` / `ReplayTrace` | Bounded logical-time, fixed-fixture disconnect/recovery and authorization-state trace | No live clock, OS handle or recorded device stream |
 | `ModulePoll` | Explicit `Sample`, `Denied`, `Inactive`, `Failed` status plus lifecycle state for observability | Return value, no hidden success |
 | `Observation<T>` (implemented typed envelope) | Source, time, unit, validity and provenance of measurements | One sample; enforce data constraints |
 | `DeviceBroker` (G2 planned) | Authorized OS I/O handles for selected hardware | Controlled platform adapter |
@@ -80,6 +81,8 @@ Registered modules now remain Disabled until `start(id)` succeeds. Replace the p
 ### Simulated-broker precursor
 
 `SimulatedBroker` accepts a validated preference snapshot and requires explicit `SessionConfirmation::Confirmed` for each virtual fixture. It never reads devices or uses network APIs, and its lease cannot be serialized or reused across broker instances. Saved `requested` preference is insufficient; `denied` wins. The CLI demonstrates this contract with `simulate list|run ID --confirm`. Policy reload and explicit revoke invalidate an active lease before its next sample; nothing monitors the preferences file in the background. These new tests await execution and this API cannot authorize future real drivers. See [SIMULATION.md](SIMULATION.md).
+
+Deterministic `ReplayScenario` fixtures now layer on top of the mock broker: the fixed `nominal`, `disconnect-recover`, and `revoke` journeys output explicit acceptance/rejection steps with synthetic logical time, no sensor values, and no automatic restart. They are G1-D source artifacts, not an implemented G2 physical simulator. See [SIMULATION.md](SIMULATION.md).
 
 ## Proposed crate evolution
 

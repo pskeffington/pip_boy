@@ -357,12 +357,14 @@
       "Explicit device selection",
       "Capabilities and permission broker",
       "Safe disconnect and timeouts",
-      "G1 precursor: in-memory SimulatedBroker uses private broker-scoped leases; real OS handle broker not implemented"
+      "G1 precursor: in-memory SimulatedBroker uses private broker-scoped leases; real OS handle broker not implemented",
+      "G1 source-only virtual disconnect and reconnect invalidate old broker leases; real device enumeration remains planned"
     ],
     "acceptance": [
       "Unknown/unapproved device stays closed",
       "Revoke permission blocks adapter invocation",
-      "Do not interpret virtual device confirmation as authorization to open a real device"
+      "Do not interpret virtual device confirmation as authorization to open a real device",
+      "Virtual reconnection never resurrects a previous lease, and disconnected fixtures return a distinct unavailable error"
     ]
   },
   {
@@ -440,13 +442,16 @@
       "Deterministic event playback",
       "Mock GPIO/serial/display adapters",
       "Recorded golden traces",
-      "G1 precursor: 11 fixed in-memory virtual fixtures, explicit per-session confirmation and bounded truthful event envelope (new tests pending)"
+      "G1 precursor: 11 fixed in-memory virtual fixtures, explicit per-session confirmation and bounded truthful event envelope (new tests pending)",
+      "G1 source-only fixed nominal/disconnect-recover/revoke replay with synthetic 0–700 ms times and truthful JSON trace (new tests pending)"
     ],
     "acceptance": [
       "CI runs without hardware",
       "Replay gives same state transitions",
       "Saved requested preference does not start a virtual device; Denied blocks even confirmed simulation",
-      "Revocation, close, policy reload and cross-broker replay cannot reuse stale leases"
+      "Revocation, close, policy reload and cross-broker replay cannot reuse stale leases",
+      "Same replay scenario produces byte-identical traces across repeated runs; all rejected stale/revoked operations remain explicit",
+      "Source-fixed replay has at most eight steps, no wall-clock timing, and no auto-regrant"
     ]
   },
   {

@@ -16,7 +16,7 @@
 | Finite NDJSON export | sampling.rs | Locally tested, including writer failures | Signal cancellation and other OS clock checks |
 | Local notes | notes.rs | Locked staged writes, validated limits, search and explicit export/import; locally tested | Native Windows/macOS runtime and general schema migrations |
 | Adapter preferences | permissions.rs; CLI permissions | Versioned requested/denied preferences, bounded locked persistence and fail-closed parsing authored (tests pending) | Actual consent flow, OS broker, native platforms and tamper resistance |
-| Virtual broker prototype | device_simulator.rs; CLI simulate | 11 fixed fixtures, explicit confirmation, fail-closed denial, scoped lease and revocation authored (tests pending) | True OS device broker, trusted UX, physical adapters and hardware replay |
+| Virtual broker prototype | device_simulator.rs, simulator_replay.rs; CLI simulate | 11 fixed fixtures, explicit confirmation, fail-closed denial, scoped leases, disconnect/recovery and 3 deterministic logical-time traces authored (tests pending) | True OS broker, trusted UX, physical adapters and real event replay |
 | Console navigation | console.rs / tui.rs | Compact layout, scrolling, explicit note reload and Linux resize smoke checks | Native platforms, assistive-tech and contrast acceptance |
 | Research consistency | tools/validate_catalog.py | Passing locally | Keep catalog and Rust registry aligned |
 | Quality checks | rust.yml | Python + stable + Rust 1.81.0 matrix | Local quality checks pass; remote Actions still unverified |
@@ -82,7 +82,7 @@ G1 module-plan statuses remain **planned** until integration and acceptance test
 | P0 | Extend tested notes portability to general collection migrations and backup identities | G1-E |
 | P1 | Build testable host telemetry timing and source-quality dashboard | G1-C |
 | P1 | Native platform, assistive-tech and contrast acceptance | G1-E |
-| P2 | Extend initial 11 virtual fixtures to deterministic timed event replay and mock transport APIs; no hardware enablement | G2 |
+| P2 | Extend three authored fixed-trace scenarios into simulated transport contracts with injected clocks, cancellation/disconnect fixtures and golden traces; no hardware enablement | G2 |
 
 ## Acceptance evidence format
 

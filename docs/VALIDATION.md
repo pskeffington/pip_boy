@@ -2,6 +2,14 @@
 
 Review date: October 24, 2026 (America/New_York). Environment: Linux x86_64 container. These are local results; they do not establish remote Actions success or macOS/Windows support.
 
+## Current G1-D follow-on: deterministic virtual replay (not yet executed)
+
+New `device_simulator.rs` behavior models virtual disconnect/reconnect without reviving a stale broker lease. An explicit `Unavailable` error distinguishes a disconnected device from a revoked token. The new `simulator_replay.rs` implements bounded, fixed `nominal`, `disconnect-recover`, and `revoke` logical-time traces; the CLI exposes `pipboy simulate replay ID SCENARIO [--confirm]`. Each trace is labeled `simulated: true`, uses `synthetic_logical_ms` (never wall time), emits one mock-only event before simulated failures, records subsequent rejection reasons, and does not automatically restart a lease. A requested preference is insufficient, while a saved denial remains blocking.
+
+The new source contains eight replay unit fixtures and two disconnect/reconnect broker fixtures. A separate `tools/smoke_replay.py` is wired into the stable Actions workflow; it defines golden action/time/state sequences, checks byte-identical output for repeated runs, enforces deny-before-success and malformed-schema preservation, and verifies no data directory is created by default. Real device access and OS brokering remain absent. These source and test changes are **not compiled or executed**; static source consistency cannot substitute for Rustfmt, Clippy, cargo tests, or native platform checks.
+
+Acceptance commands include `cargo fmt --all -- --check`, `cargo check --workspace --all-targets --locked`, `cargo test --workspace --locked`, `cargo clippy --workspace --all-targets --locked -- -D warnings`, `cargo build -p pipboy --locked`, and `python3 tools/smoke_replay.py` plus the three prior smoke scripts. Both stable and Rust 1.81.0 must pass. GitHub Actions has previously produced zero-job `startup_failure`; new run-level status must be checked separately. See [SIMULATION.md](SIMULATION.md).
+
 ## G1-D simulated broker follow-on (authored, unexecuted)
 
 The latest inspected [Actions run 40159278156](https://github.com/pskeffington/pip_boy/actions/runs/40159278156) reports `startup_failure` and zero jobs at head `ecbb861b`. A static review confirms 11 distinct `sim:*` fixtures, their one-to-one mapping to the 11 external capability enums, explicit confirmation/denial checks, broker-identity lease validation, no `std::fs`, `std::net`, or sysinfo backend in the simulator source, and CI smoke-script wiring. **Static checks are not compiler or functional test results.**

@@ -66,7 +66,7 @@ The build is a directed acyclic dependency plan, **not** a schedule. All module 
 - [ ] Make native dependencies optional by compile-time feature / target gating.
 - [ ] Add cross-build for arm64 Linux and hardware-in-loop acceptance tests.
 
-**G2 precursor (G1-D source authored, unverified):** an in-memory `SimulatedBroker` now has 11 fixed virtual fixtures, explicit simulation confirmation, preference denial, generation-based lease revocation and truthful fake-only events. This is not the G2 hardware simulator, OS broker, event playback suite or physical adapter.
+**G2 precursor (G1-D source authored, unverified):** an in-memory `SimulatedBroker` now has 11 fixed virtual fixtures, explicit simulation confirmation, preference denial, generation-based lease revocation and truthful fake-only events. The G1 precursor now also has fixed `nominal`, `disconnect-recover`, and `revoke` logical-time trace scripts (tests authored, unexecuted). It is not the full G2 hardware simulator, OS broker, driver event replay system or physical adapter.
 
 **G2 exit:** clean simulator replay on CI and verified physical input on selected hardware; no automatic port opening, scanning, or unsafe fallback.
 
