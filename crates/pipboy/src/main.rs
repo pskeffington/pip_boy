@@ -2,6 +2,7 @@ use pipboy_core::blueprint::{literature, plans, validate_blueprint};
 use pipboy_core::branding::{CLI_COMMAND, PRODUCT_DESCRIPTOR, PRODUCT_NAME};
 use pipboy_core::catalog::{sources, validate_sources};
 use pipboy_core::notes::NoteStore;
+use pipboy_core::runtime::{Capability, LocalOperation, ModuleHost, PermissionSet};
 use std::error::Error;
 mod console;
 mod sampling;
@@ -56,7 +57,8 @@ fn run() -> Result<(), Box<dyn Error>> {
             if args.next().is_some() {
                 return Err(format!("usage: {CLI_COMMAND} sources [query]").into());
             }
-            let entries = sources()?;
+            let host = ModuleHost::new(PermissionSet::offline_read_only());
+            let entries = host.run_local(LocalOperation::LibraryRead, sources)?;
             validate_sources(&entries)?;
             for entry in entries.iter().filter(|entry| entry.matches(&query)) {
                 println!(
@@ -160,10 +162,10 @@ fn run() -> Result<(), Box<dyn Error>> {
             Ok(())
         }
         Some("notes") => {
-            let store = NoteStore::from_environment()?;
+            let mut host = ModuleHost::new(PermissionSet::offline_read_only());
             match args.next().as_deref() {
                 Some("list") if args.next().is_none() => {
-                    for note in store.list()? {
+                    for note in host.run_local(LocalOperation::NotesRead, || NoteStore::from_environment()?.list())? {
                         println!("#{} [{}] {}", note.id, note.created_unix_s, note.text);
                     }
                     Ok(())
@@ -173,7 +175,7 @@ fn run() -> Result<(), Box<dyn Error>> {
                     if args.next().is_some() {
                         return Err("usage: pipboy notes search QUERY".into());
                     }
-                    for note in store.search(&query)? {
+                    for note in host.run_local(LocalOperation::NotesRead, || NoteStore::from_environment()?.search(&query))? {
                         println!("#{} [{}] {}", note.id, note.created_unix_s, note.text);
                     }
                     Ok(())
@@ -182,7 +184,7 @@ fn run() -> Result<(), Box<dyn Error>> {
                     if args.next().is_some() {
                         return Err("usage: pipboy notes export".into());
                     }
-                    store.export_to(std::io::stdout().lock())?;
+                    host.run_local(LocalOperation::NotesRead, || NoteStore::from_environment()?.export_to(std::io::stdout().lock()))?;
                     Ok(())
                 }
                 Some("import") => {
@@ -190,7 +192,8 @@ fn run() -> Result<(), Box<dyn Error>> {
                     if args.next().is_some() {
                         return Err("usage: pipboy notes import FILE".into());
                     }
-                    let report = store.import_from(std::fs::File::open(path)?)?;
+                    host.grant(Capability::FilesWrite);
+                    let report = host.run_local(LocalOperation::NotesWrite, || NoteStore::from_environment()?.import_from(std::fs::File::open(path)?))?;
                     println!(
                         "Imported {} notes; skipped {} matching records; {} total",
                         report.imported, report.skipped, report.total
@@ -199,7 +202,8 @@ fn run() -> Result<(), Box<dyn Error>> {
                 }
                 Some("add") => {
                     let text = args.collect::<Vec<_>>().join(" ");
-                    let note = store.add(&text)?;
+                    host.grant(Capability::FilesWrite);
+                    let note = host.run_local(LocalOperation::NotesWrite, || NoteStore::from_environment()?.add(&text))?;
                     println!("Saved local note #{}", note.id);
                     Ok(())
                 }
