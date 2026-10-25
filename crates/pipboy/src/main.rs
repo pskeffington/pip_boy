@@ -20,6 +20,7 @@ mod game;
 mod game_discovery;
 mod game_view;
 mod network_probe;
+mod unifi;
 mod peer;
 mod sampling;
 mod scout;
