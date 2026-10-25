@@ -380,7 +380,7 @@ fn dispatch(req: &Request, store: &WorkbenchStore, port: u16) -> Response {
         }
         ("GET", "/assets/micro.js") => {
             Response::new(200, "text/javascript; charset=utf-8", MICRO_JS.as_bytes())
-        },
+        }
         ("GET", "/assets/dashboard.css") => {
             Response::new(200, "text/css; charset=utf-8", CSS.as_bytes())
         }

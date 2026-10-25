@@ -186,6 +186,13 @@ small { font-size:11px; }
   .tab-symbol { font-size:17px; }
   .micro-bottom { padding:0 7px; font-size:8px; }
 }
+/* Explicit small-screen acceptance target: 480 by 320 landscape. */
+@media (max-width:480px) {
+  .mode-indicator { padding:4px 5px; font-size:9px; }
+  .topbar { gap:4px; }
+  .role-switch { flex:1; max-width:60%; }
+  .tile-grid { gap:6px; }
+}
 @media (max-width:370px) {
   .keys-help { display:none; }
   .role-switch { max-width:58%; }
