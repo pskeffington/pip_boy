@@ -865,6 +865,13 @@ fn messages_read(store: &WorkbenchStore) -> Result<Response, Response> {
         .load()
         .map_err(|_| Response::error(409, "Messenger journal unavailable; original preserved"))?;
     let aliases: Vec<&str> = peers.peers.iter().map(|peer| peer.alias.as_str()).collect();
+    let mut conversations: Vec<String> = aliases.iter().map(|id| (*id).to_owned()).collect();
+    for message in &book.messages {
+        if !conversations.contains(&message.peer) {
+            conversations.push(message.peer.clone());
+        }
+    }
+    conversations.sort();
     Ok(Response::json(
         200,
         &json!({
@@ -872,6 +879,7 @@ fn messages_read(store: &WorkbenchStore) -> Result<Response, Response> {
             "device_id": peers.device_id,
             "ready": peers.device_id.is_some() && !aliases.is_empty(),
             "peers": aliases,
+            "conversations": conversations,
             "messages": book.messages,
             "transport": "pinned_openssh_explicit",
             "storage": "plaintext_local_only",
