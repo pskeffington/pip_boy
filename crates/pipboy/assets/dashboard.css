@@ -238,3 +238,19 @@ dialog::backdrop { background:#000c; backdrop-filter:blur(4px); }
   .job-station-summary { padding:8px; }
   .job-command-panel .task-specs { grid-template-columns:1fr; }
 }
+
+
+/* Network Suite desktop: modes are Rust-provided descriptors, not presets of
+   arbitrary commands. Changing modes never opens a socket. */
+.net-mode-picker,.net-mode-fields label {
+  display:block; min-width:0; font:10px var(--mono); color:var(--sub);
+}
+.net-mode-picker select, .net-mode-fields input {
+  display:block; width:100%; margin-top:6px; min-height:36px; min-width:0;
+  background:#0c1710; color:var(--text); border:1px solid var(--border-lit);
+  border-radius:6px; padding:7px 9px; font:12px var(--mono);
+}
+.net-mode-fields { display:flex; flex-direction:column; gap:12px; margin-top:12px; }
+.net-mode-notice {
+  color:var(--muted); font:10px/1.5 var(--mono); margin:0;
+}

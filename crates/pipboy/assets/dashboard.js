@@ -49,6 +49,7 @@ let selectedTool = null;
 let selectedCamera = null;
 let working = false;
 let lastOutput = "";
+let netMode = "cidr4";
 let toastTimer = null;
 
 const el = (tag, className, text) => {
@@ -318,8 +319,6 @@ const forms = Object.freeze({
     field("lon2", "END LONGITUDE", "-70.76", 'inputmode="decimal"') +
     '</div><div id="waypoint-fields" hidden>' +
     field("name", "WAYPOINT LABEL", "Camp Alpha") + "</div>",
-  "net-lab":
-    field("input", "IPV4 / CIDR", "192.168.1.50/24", 'autocomplete="off" spellcheck="false"'),
   "byte-lab":
     field("input", "HEX BYTES (UP TO 4096)", "48656c6c6f", 'autocomplete="off" spellcheck="false"'),
   "host": '<p class="workspace-subtitle">Sample local host status on demand. No continuous background collection.</p>',
@@ -328,6 +327,66 @@ const forms = Object.freeze({
   "notes": '<p class="workspace-subtitle">Shows the local notes command. Your note contents stay private.</p>',
   "simulator": '<p class="workspace-subtitle">Use deterministic fixtures. No physical interface is enabled.</p>'
 });
+
+function renderNetworkForm() {
+  const operations = snapshot?.net_operations || [];
+  if (!operations.length) {
+    ui.handoff.hidden = false;
+    ui.manual.textContent = "Network operations unavailable from Rust backend";
+    return;
+  }
+  ui.testbench.hidden = false;
+  const picker = el("label", "net-mode-picker", "NETWORK OPERATION");
+  const select = el("select");
+  select.id = "net-operation";
+  select.name = "mode";
+  for (const op of operations) {
+    const item = el("option", "", op.name + (op.active ? " · ACTIVE" : " · OFFLINE"));
+    item.value = op.id;
+    select.append(item);
+  }
+  if (!operations.some((op) => op.id === netMode)) netMode = operations[0].id;
+  select.value = netMode;
+  picker.append(select);
+  const inputs = el("div", "net-mode-fields");
+  ui.fields.replaceChildren(picker, inputs);
+  const renderInputs = () => {
+    const op = operations.find((item) => item.id === select.value);
+    if (!op) return;
+    netMode = op.id;
+    inputs.replaceChildren();
+    const makeField = (name, caption, value, max) => {
+      const wrapper = el("label", "", caption);
+      const field = el("input");
+      field.name = name;
+      field.id = "net-" + name;
+      field.value = value;
+      field.maxLength = max;
+      field.required = true;
+      field.autocomplete = "off";
+      field.spellcheck = false;
+      wrapper.append(field);
+      return wrapper;
+    };
+    inputs.append(makeField("input", op.input_label, op.example, 256));
+    if (op.extra_label && op.extra_example) {
+      inputs.append(makeField("extra", op.extra_label, op.extra_example,
+        op.id === "route" ? 1024 : 256));
+    }
+    inputs.append(el("p", "net-mode-notice", op.active
+      ? "ONE TCP CONNECTION · LITERAL IP · CONFIRMATION REQUIRED"
+      : "OFFLINE CALCULATION · NO PACKETS SENT"));
+    ui.run.textContent = op.active ? "Connect once" : "Calculate";
+    ui.kind.textContent = op.active ? "ACTIVE / CONFIRM" : "OFFLINE";
+    ui.output.textContent = "Ready / " + op.name;
+    ui.outputKind.textContent = "IDLE";
+    ui.copy.disabled = true;
+    lastOutput = "";
+  };
+  select.addEventListener("change", renderInputs);
+  renderInputs();
+  ui.run.disabled = working;
+}
 
 function renderDetail() {
   ui.detailsTitle.textContent = "Select a module";
@@ -375,6 +434,10 @@ function renderDetail() {
   if (selectedTool === "mission-board") {
     ui.handoff.hidden = false;
     ui.manual.textContent = "Task Control is open in the Module Viewport. Tasks remain local until explicitly handed off.";
+    return;
+  }
+  if (selectedTool === "net-lab") {
+    renderNetworkForm();
     return;
   }
   if (Object.hasOwn(forms, selectedTool)) {
@@ -516,9 +579,15 @@ async function runLab(event) {
   if (!selectedTool || !selectedAvailable() || working) return;
   const tool = selectedTool;
   const input = Object.fromEntries(new FormData(ui.form).entries());
+  if (tool === "net-lab" && input.mode === "tcp") {
+    if (!window.confirm("Attempt one TCP connection to " + input.input + ":" +
+        input.extra + "? Only test endpoints you administer.")) return;
+    input.confirm = true;
+  }
   working = true;
   ui.run.disabled = true;
-  ui.run.textContent = "Processing locally…";
+  ui.run.textContent = tool === "net-lab" && input.mode === "tcp"
+    ? "Connecting…" : "Calculating…";
   ui.outputKind.textContent = "RUNNING";
   ui.output.textContent = "Executing the selected allowlisted local tool.";
   try {
@@ -528,9 +597,11 @@ async function runLab(event) {
     ui.output.textContent = lastOutput;
     ui.outputKind.textContent = result.kind.toUpperCase();
     ui.copy.disabled = false;
-    ui.footer.textContent = result.kind === "computed"
-      ? "Local result computed; no external data uploaded"
-      : "Information only; no connection established";
+    ui.footer.textContent = result.kind === "probe"
+      ? "One explicitly requested TCP connect attempt completed"
+      : result.kind === "computed"
+        ? "Local result computed; no external data uploaded"
+        : "Information only; no connection established";
   } catch (error) {
     if (selectedTool !== tool || !selectedAvailable()) return;
     lastOutput = "";
@@ -543,7 +614,9 @@ async function runLab(event) {
     if (selectedTool === tool && selectedAvailable()) {
       ui.run.disabled = false;
       const info = toolInfo(tool);
-      ui.run.textContent = info?.availability === "ready" ? "Run local test" : "Show safe handoff";
+      ui.run.textContent = tool === "net-lab"
+        ? netMode === "tcp" ? "Connect once" : "Calculate"
+        : info?.availability === "ready" ? "Run local test" : "Show safe handoff";
     }
   }
 }
