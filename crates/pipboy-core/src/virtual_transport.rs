@@ -91,7 +91,11 @@ impl VirtualTransport {
         Ok(())
     }
 
-    pub fn open(&mut self, id: &str, confirmation: SessionConfirmation) -> Result<(), TransportError> {
+    pub fn open(
+        &mut self,
+        id: &str,
+        confirmation: SessionConfirmation,
+    ) -> Result<(), TransportError> {
         let lease = self.broker.open(id, confirmation)?;
         self.queue.clear();
         self.lease = Some(lease);
@@ -231,10 +235,8 @@ mod tests {
 
     #[test]
     fn missing_confirmation_and_denial_prevent_collection() {
-        let mut t = VirtualTransport::new(
-            &[preference("mesh.transmit", Preference::Requested)],
-            2,
-        ).unwrap();
+        let mut t = VirtualTransport::new(&[preference("mesh.transmit", Preference::Requested)], 2)
+            .unwrap();
         assert_eq!(
             t.open("sim:mesh", SessionConfirmation::Absent),
             Err(TransportError::Broker(BrokerError::ConfirmationRequired))
@@ -275,7 +277,8 @@ mod tests {
     #[test]
     fn disconnect_and_reconnect_do_not_restore_buffered_data() {
         let mut t = VirtualTransport::new(&[], 2).unwrap();
-        t.open("sim:serial", SessionConfirmation::Confirmed).unwrap();
+        t.open("sim:serial", SessionConfirmation::Confirmed)
+            .unwrap();
         t.pump(2).unwrap();
         assert!(t.disconnect("sim:serial").unwrap());
         assert_eq!(t.retained(), 0);
@@ -288,7 +291,8 @@ mod tests {
             t.open("sim:serial", SessionConfirmation::Absent),
             Err(TransportError::Broker(BrokerError::ConfirmationRequired))
         );
-        t.open("sim:serial", SessionConfirmation::Confirmed).unwrap();
+        t.open("sim:serial", SessionConfirmation::Confirmed)
+            .unwrap();
         assert_eq!(t.retained(), 0);
     }
 
@@ -312,7 +316,8 @@ mod tests {
     #[test]
     fn failed_preference_reload_clears_queue_and_blocks_reopen() {
         let mut t = VirtualTransport::new(&[], 2).unwrap();
-        t.open("sim:network", SessionConfirmation::Confirmed).unwrap();
+        t.open("sim:network", SessionConfirmation::Confirmed)
+            .unwrap();
         t.pump(2).unwrap();
         let bad = [
             preference("network.fetch", Preference::Denied),

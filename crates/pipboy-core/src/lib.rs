@@ -17,7 +17,7 @@ pub mod permissions;
 pub mod registry;
 pub mod runtime;
 pub mod simulator_replay;
-pub mod virtual_transport;
 pub mod telemetry;
+pub mod virtual_transport;
 
 pub mod host_telemetry;
