@@ -1,10 +1,10 @@
 # Rust-Boy | Reclamation Scout GIS and TAK-on-Pi design
 
-**Implementation status:** The Scout branch implements offline WGS84 GeoJSON **Point** export, point-file inspection and spherical distance estimates. This is an **interoperability bridge**, not a full RustGIS port. No built-in live map renderer, position sensor, TAK transport, TAK Server or ATAK application is included.
+**Implementation status:** Rust-Boy retains offline WGS84 Point GeoJSON tools and adds an independent browser map viewer on `feat/scout-gps-rustgis-map`. It can import RustGIS native map/project/layer data and zipped mobile packages and align browser geolocation on real embedded vector features. It is **not** an embedded upstream RustGIS renderer, physical GNSS receiver, TAK transport or certified navigation device. See [native map/GPS import](SCOUT_GPS_MAP.md).
 
 ## Dashboard viewport before navigation
 
-The [local dashboard](DASHBOARD_UI.md) now reserves a dedicated **Scout navigation viewport** and loads the Scout job template and its real offline WGS84 tools from Rust. The viewport is an **empty reference grid**, with `RUSTGIS NOT ATTACHED` plainly visible. No map controls, RustGIS application binary, live location, GNSS, offline tiles or TAK transport are embedded in this UI pass. The eventual goal is to **launch/embed the actual RustGIS mapping app or reviewed map renderer** behind this viewport, so field operators can navigate from real layers and positions—not from a simulated picture. Support process/IPC or native renderer contracts only after actual RustGIS ARM64 and macOS interoperability tests.
+The [local dashboard](DASHBOARD_UI.md) now reserves a dedicated **Scout navigation viewport** and loads the Scout job template and its real offline WGS84 tools from Rust. The original Scout viewport was an empty reference grid. The newer [native RustGIS map/GPS branch](SCOUT_GPS_MAP.md) now draws imported vector geometry under the user's explicitly approved browser GPS fix. No RustGIS application binary, raster tile renderer, physical GNSS or TAK transport is embedded in this pass. The eventual goal is to **launch/embed the actual RustGIS mapping app or reviewed map renderer** behind this viewport, so field operators can navigate from real layers and positions—not from a simulated picture. Support process/IPC or native renderer contracts only after actual RustGIS ARM64 and macOS interoperability tests.
 
 ## Why this architecture
 
