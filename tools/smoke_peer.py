@@ -100,6 +100,10 @@ with tempfile.TemporaryDirectory() as temp:
     invoke(scout, "peer", "trust", "overseer-a", "--confirm")
     # A trust label does not grant OS SSH access; actual SSH keys are mandatory.
     assert json.loads(invoke(scout, "peer", "list", "--json").stdout)["peers"] == []
+    # A forced key cannot request any shell command outside typed Rust-Boy verbs.
+    invoke(scout, "peer", "bridge", "overseer-a", ok=False,
+           env_extra={"SSH_ORIGINAL_COMMAND": "id; touch /tmp/escape"})
+
     invoke(manager, "peer", "add", "scout-one", "pi@scout.local",
            str(key), str(known), "--confirm")
     assert "scout-one" in invoke(manager, "peer", "list").stdout
@@ -128,10 +132,11 @@ assert "-T" in args
 assert any(x.startswith("UserKnownHostsFile=") for x in args)
 remote = args[-1]
 assert remote == "pipboy peer receive" or remote == "pipboy peer receipts overseer-a"
-command = ["peer", "receive"] if remote.endswith("receive") else ["peer", "receipts", "overseer-a"]
+command = ["peer", "bridge", "overseer-a"]
 payload = sys.stdin.buffer.read(8193)
 assert len(payload) <= 8192
-child_env = dict(os.environ, PIPBOY_HOME=os.environ["FAKE_RB_RECEIVER_HOME"])
+child_env = dict(os.environ, PIPBOY_HOME=os.environ["FAKE_RB_RECEIVER_HOME"],
+                 SSH_ORIGINAL_COMMAND=remote)
 result = subprocess.run(
     [os.environ["FAKE_RB_BINARY"], *command],
     input=payload, capture_output=True, env=child_env, timeout=12
