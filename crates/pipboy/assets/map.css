@@ -33,3 +33,16 @@
 .rb-map-sources summary { cursor:pointer; padding:2px; font-weight:bold; }
 .rb-map-source-text { margin:2px 0; max-height:98px; overflow:auto; white-space:pre-wrap;
   overflow-wrap:anywhere; font:10px ui-monospace, Consolas, monospace; }
+
+/* Readable, low-height OSM status and attribution on 480x320 micro displays. */
+.rb-map-web-state { flex:none; color:#b7df97; font:9px ui-monospace, Consolas, monospace;
+  line-height:1.1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.rb-map-attribution { position:absolute; bottom:2px; right:3px; z-index:1;
+  border-radius:2px; padding:2px 3px; color:#e1ffe1; background:rgba(5,27,17,.85);
+  font:9px ui-monospace, Consolas, monospace; text-decoration:underline; }
+.rb-map-attribution[hidden], .rb-map-button[hidden] { display:none; }
+@media (max-height:360px) {
+  .rb-map-toolbar { flex-wrap:wrap; max-height:58px; overflow-y:auto; }
+  .rb-map-button { min-height:23px; }
+  .rb-map-attribution { font-size:8px; }
+}
