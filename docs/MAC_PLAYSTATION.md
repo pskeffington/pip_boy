@@ -48,6 +48,8 @@ On macOS versions with Local Network privacy controls, review System Settings â†
 
 The browser labels incomplete game data explicitly. The initial-root timeout applies to startup only: a later incremental update may introduce references in separate packets without terminating an established session. Live stat changes and terminal restoration after a game disconnect are exercised against a controlled peer; the actual PlayStation acceptance gate below remains open.
 
+The terminal browser keeps a long inventory's selection visible beside its data, or above it in a compact window. Enter/Right opens an object; Backspace/Left returns with your position preserved. R returns to the game root. Page Up/Down and Home/End scroll the selected value within its actual bounds. The browser displays resize guidance below 40Ã—12 and recovers the previous selection after enlargement. Opened objects follow live replacement references; removal returns to a surviving parent.
+
 ## PS4 and PS5 scope
 
 Bethesda's original announcement explicitly lists PS4 companion support. That historical statement does not certify today's patched PS4 edition, PS4 software running on PS5, or native PS5 software. Record which edition is actually launched, not just the console model. PC F4SE/Anniversary enablers are not a PlayStation solution. If the installed build exposes no companion service, changing the Mac launcher cannot create it. No unsupported PS5 settings-transfer workaround is claimed.

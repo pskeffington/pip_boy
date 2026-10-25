@@ -149,3 +149,5 @@ An opt-in read-only direct TCP browser and incremental decoder are implemented. 
 **Priority change:** Mac → PlayStation launch/setup/diagnostics now leads game-mode work. PC/AE and other console expansion are deferred; see [Mac/PlayStation acceptance](MAC_PLAYSTATION.md).
 
 The source launcher has a verified native macOS CI baseline. Follow-on readiness checks and prompted-launcher regressions remain controlled-peer evidence; a real Mac/PS4 or Mac/PS5 session and supported gameplay commands are still required before full compatibility can be claimed.
+
+The game browser now has separate navigation/value panes, long-list selection visibility, parent-context restoration, bounded text scrolling and recovery from resize or replaced/removed object references. These are native-client usability improvements; they do not substitute for the live console or gameplay-command gates.

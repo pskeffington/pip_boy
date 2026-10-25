@@ -16,6 +16,7 @@ use pipboy_core::virtual_transport::VirtualTransport;
 use std::error::Error;
 mod console;
 mod game;
+mod game_view;
 mod sampling;
 mod status;
 mod tui;

@@ -1,11 +1,9 @@
 //! Explicit direct LAN connection; no discovery, background service or saved game data.
+use crate::game_view::{Action, Browser};
 use crossterm::event::{self, Event, KeyCode, KeyEventKind, KeyModifiers};
 use pipboy_core::game::{Database, Frames};
 use pipboy_core::permissions::{Preference, PreferenceStore};
-use ratatui::{
-    prelude::*,
-    widgets::{Block, Borders, Paragraph, Wrap},
-};
+use ratatui::prelude::*;
 use std::{
     error::Error,
     io::{self, Read, Write},
@@ -108,9 +106,7 @@ pub fn run(args: Vec<String>) -> Result<(), Box<dyn Error>> {
     let mut received = Instant::now();
     let mut handshake = None;
     let mut received_root = false;
-    let mut path = vec![("Fallout 4".to_owned(), 0_u32)];
-    let mut selected = 0usize;
-    let mut scroll = 0u16;
+    let mut browser = Browser::default();
     let _guard = if snapshot {
         None
     } else {
@@ -194,20 +190,12 @@ pub fn run(args: Vec<String>) -> Result<(), Box<dyn Error>> {
         if snapshot {
             continue;
         }
-        let id = path.last().unwrap().1;
-        let children = db.children(id);
-        selected = selected.min(children.len().saturating_sub(1));
-        let title = path
-            .iter()
-            .map(|x| x.0.as_str())
-            .collect::<Vec<_>>()
-            .join(" / ");
         let version = handshake
             .as_ref()
             .map(ToString::to_string)
             .unwrap_or_else(|| "awaiting game handshake".to_owned());
-        let mut body = format!(
-            "GAME MODE / Fallout 4 / {target} / {address}\n{version}\n{} | update age {} s | read-only\n\n",
+        let header = format!(
+            "Rust-Boy GAME / Fallout 4 / {target} / {address}\n{} | update age {} s | read-only\n{version}",
             if ready {
                 "CONNECTED"
             } else if handshake.is_none() {
@@ -217,25 +205,10 @@ pub fn run(args: Vec<String>) -> Result<(), Box<dyn Error>> {
             },
             last_data.elapsed().as_secs()
         );
-        for (index, (name, child)) in children.iter().enumerate() {
-            body.push_str(&format!(
-                "{} {} (object {})\n",
-                if index == selected { ">" } else { " " },
-                name,
-                child
-            ));
-        }
-        body.push_str("\nSELECTED VIEW\n");
-        body.push_str(&serde_json::to_string_pretty(
-            &db.view(children.get(selected).map(|x| x.1).unwrap_or(id)),
-        )?);
-        // Never interpret terminal control bytes received from the game.
-        let body: String = body
-            .chars()
-            .filter(|c| !c.is_control() || *c == '\n')
-            .take(262144)
-            .collect();
-        terminal.as_mut().unwrap().draw(|frame| {let area=frame.area();frame.render_widget(Paragraph::new(body.as_str()).wrap(Wrap{trim:false}).scroll((scroll,0)).block(Block::default().borders(Borders::ALL).title(title.chars().filter(|c|!c.is_control()).take(160).collect::<String>()).title_bottom("↑↓ select | Enter open | Backspace back | PgUp/PgDn scroll | Q/Ctrl+C exit")),area);})?;
+        terminal
+            .as_mut()
+            .unwrap()
+            .draw(|frame| browser.render(frame, &db, &header))?;
         if event::poll(Duration::from_millis(20))? {
             if let Event::Key(key) = event::read()? {
                 if key.kind != KeyEventKind::Press {
@@ -246,33 +219,15 @@ pub fn run(args: Vec<String>) -> Result<(), Box<dyn Error>> {
                     KeyCode::Char('c' | 'C') if key.modifiers.contains(KeyModifiers::CONTROL) => {
                         return Ok(())
                     }
-                    KeyCode::Down => {
-                        selected = (selected + 1).min(children.len().saturating_sub(1));
-                        scroll = 0;
-                    }
-                    KeyCode::Up => {
-                        selected = selected.saturating_sub(1);
-                        scroll = 0;
-                    }
-                    KeyCode::Enter => {
-                        if let Some(child) = children.get(selected) {
-                            if path.len() < 32 {
-                                path.push(child.clone());
-                                selected = 0;
-                                scroll = 0;
-                            }
-                        }
-                    }
-                    KeyCode::Backspace => {
-                        if path.len() > 1 {
-                            path.pop();
-                            selected = 0;
-                            scroll = 0;
-                        }
-                    }
-                    KeyCode::PageDown => scroll = scroll.saturating_add(10),
-                    KeyCode::PageUp => scroll = scroll.saturating_sub(10),
-                    KeyCode::Home => scroll = 0,
+                    KeyCode::Down => browser.apply(Action::Down, &db),
+                    KeyCode::Up => browser.apply(Action::Up, &db),
+                    KeyCode::Enter | KeyCode::Right => browser.apply(Action::Open, &db),
+                    KeyCode::Backspace | KeyCode::Left => browser.apply(Action::Back, &db),
+                    KeyCode::Char('r' | 'R') => browser.apply(Action::Root, &db),
+                    KeyCode::PageDown => browser.apply(Action::PageDown, &db),
+                    KeyCode::PageUp => browser.apply(Action::PageUp, &db),
+                    KeyCode::Home => browser.apply(Action::Home, &db),
+                    KeyCode::End => browser.apply(Action::End, &db),
                     _ => {}
                 }
             }

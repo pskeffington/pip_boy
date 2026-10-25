@@ -2,6 +2,12 @@
 
 Updated October 25, 2026 (America/New_York). **Verified published baseline:** [PR CI 40168791127](https://github.com/pskeffington/pip_boy/actions/runs/40168791127) passed all five jobs at `176516e`: catalog, Linux stable and Rust 1.81.0, native macOS PTY and the actual source launcher, native Windows ConPTY and deny-all physical-broker checks. This is not live PlayStation, physical-hardware, packaging or accessibility certification. **Sections farther below preserve historical development snapshots**; any older “pending”, “unexecuted” or “startup failure” wording describes the state *at the cited historical revision*, not the current status.
 
+## Game browser navigation follow-on
+
+The pure `game_view.rs` renderer separates object navigation from selected JSON, keeps the selected row visible, preserves parent context, clamps text scrolling to actual wrapping, adapts between side-by-side/stacked panes, and shows resize guidance below 40×12. Named selection survives dictionary insertions. An opened path follows replacement references or returns to a surviving parent after removal. Left/Right, R and End supplement existing navigation; the 32-level bound remains.
+
+Six new deterministic memory-render/state tests exercise a 40-item inventory, parent restoration, reordered/removed/replaced game references, Unicode text tails and resize clamping, eight viewport sizes including zero dimensions, empty objects, terminal controls and cycles/depth. Local Linux stable and Rust 1.81.0 each passed **24 CLI + 111 core + 12 broker = 147 tests**. The expanded actual-client PTY peer journey opens inventory, selects item 26, opens/returns, shrinks/restores the terminal and exits; it passed locally. Current-head hosted macOS/Windows execution remains to be verified.
+
 ## Game readiness and prompted Mac launcher follow-on
 
 Diagnostic/snapshot readiness now requires a bounded language/version announcement as well as a complete reachable root. Malformed announcement fields are rejected and unknown fields retained. The browser distinguishes waiting for an announcement from waiting for complete data. A later split-reference update no longer incorrectly triggers the initial-root timeout after an established connection.
@@ -10,7 +16,9 @@ The Mac source launcher accepts `--diagnose` before/after an address or without 
 
 The expanded controlled-peer suite checks delayed/missing/invalid/oversized announcements, live HP updates, a split reference after the ten-second startup deadline, and disconnect/error terminal restoration in PTY/ConPTY. Local Linux stable and Rust 1.81.0 each passed **18 CLI + 111 core + 12 broker = 141 tests**. Stable formatting, Clippy with warnings denied, workspace build, catalog validation, native CLI, runtime PTY and the expanded game peer/PTY smoke suite passed. Bash syntax validation passed. The three actual-launcher journeys and refusal cases also passed on Linux with a controlled `uname` shim substituting only the launcher platform gate, using the actual compiled client and loopback peer; this is shell/CLI contract evidence, not native macOS acceptance. Actual Mac launcher execution still requires native CI at this follow-on's published head.
 
-No actual PlayStation session is available; this pass does not complete live game or gameplay-control acceptance. Hosted verification for this follow-on must be checked at its published head.
+Published at `6979a66`: [CI 40169394680](https://github.com/pskeffington/pip_boy/actions/runs/40169394680) passed catalog, both Linux toolchains and native macOS, including the actual prompted source launcher. Windows compiled and passed its 140 unit tests, then the mock peer failed because it treated WSAECONNABORTED after successful client exit as an active-stream failure. The follow-on accepts EOF/reset/aborted only at the final close boundary; heartbeat and active-stream failures remain errors. This fix and the browser follow-on require fresh native verification.
+
+No actual PlayStation session is available; this pass does not complete live game or gameplay-control acceptance.
 
 ## Mac → PlayStation launch pass
 

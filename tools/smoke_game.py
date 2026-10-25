@@ -25,6 +25,22 @@ def scalar(value, identifier=1):
     return bytes([4]) + struct.pack('<II', identifier, value)
 
 
+def object_update(identifier, fields):
+    data = bytes([8]) + struct.pack('<IH', identifier, len(fields))
+    for name, child in fields:
+        data += struct.pack('<I', child) + name.encode() + b'\0'
+    return data + b'\0\0'
+
+
+def browser_fixture():
+    data = object_update(0, [('Inventory', 1), ('Stats', 2)])
+    data += object_update(1, [(f'ITEM_{index:02}', 100 + index) for index in range(40)])
+    data += scalar(80, identifier=2)
+    for index in range(40):
+        data += scalar(987654321 if index == 25 else 1000 + index, identifier=100 + index)
+    return data
+
+
 def receive_exact(client, size):
     result = b''
     while len(result) < size:
@@ -34,17 +50,44 @@ def receive_exact(client, size):
     return result
 
 
-def interactive(command, env, prompt_address=None, expected_code=0):
+def expect_close(client):
+    # Windows may report WSAECONNABORTED rather than EOF after a clean child exit.
+    # Accept this only at the final-close boundary, never during heartbeat/data work.
+    try:
+        assert client.recv(1) == b'', 'read-only client sent a gameplay command'
+    except (ConnectionResetError, ConnectionAbortedError):
+        pass
+
+
+def interactive(command, env, prompt_address=None, expected_code=0, browser_mode=False):
     """Exercise the real browser, including a live HP change before exit."""
     if os.name == 'nt':
         from smoke_windows_conpty import ConPty, configure_windows_api
         host = ConPty(configure_windows_api(), Path(env['PIPBOY_HOME']), argv=command)
         try:
             host.start()
-            host.wait_for(b'90', timeout=20)
-            host.wait_for(b'playstation')
-            if expected_code == 0:
-                host.send(b'\x1b[B\r\x08\x03')
+            if browser_mode:
+                host.wait_for(b'CONNECTED')
+                steps = [
+                    (b'\r' + b'\x1b[B' * 25, b'987654321'),
+                    (b'\r', b'objects;'),
+                    (b'\x08', b'ITEM_25'),
+                    ((20, 5), b'40x12'),
+                    ((100, 24), b'ITEM_25'),
+                ]
+                for action, marker in steps:
+                    offset = len(host.output)
+                    if isinstance(action, tuple):
+                        host.resize(*action)
+                    else:
+                        host.send(action)
+                    host.wait_for(marker, since=offset)
+                host.send(b'r\x03')
+            else:
+                host.wait_for(b'90', timeout=20)
+                host.wait_for(b'playstation')
+                if expected_code == 0:
+                    host.send(b'\x1b[B\r\x08\x03')
             host.finish(expected_code=expected_code)
             if expected_code != 0:
                 assert b'Fallout 4 disconnected' in host.output, host.output
@@ -61,7 +104,19 @@ def interactive(command, env, prompt_address=None, expected_code=0):
     original = termios.tcgetattr(slave)
     process = subprocess.Popen(command, stdin=slave, stdout=slave, stderr=slave, env=env, cwd=Path(env['PIPBOY_HOME']).parent)
     output = b''
-    sent = False
+    if browser_mode:
+        steps = [
+            (b'CONNECTED', b'\r' + b'\x1b[B' * 25),
+            (b'987654321', b'\r'),
+            (b'objects;', b'\x7f'),
+            (b'ITEM_25', (20, 5)),
+            (b'40x12', (100, 24)),
+            (b'ITEM_25', b'r\x03'),
+        ]
+    else:
+        steps = [(b'90', b'\x1b[B\r\x7f\x03' if expected_code == 0 else None)]
+    stage = 0
+    offset = 0
     prompted = prompt_address is None
     deadline = time.monotonic() + 30
     try:
@@ -74,14 +129,19 @@ def interactive(command, env, prompt_address=None, expected_code=0):
             if not prompted and b'PlayStation IP:' in output:
                 os.write(master, (prompt_address + '\n').encode())
                 prompted = True
-            if b'90' in output and b'playstation' in output and not sent:
-                if expected_code == 0:
-                    os.write(master, b'\x1b[B\r\x7f\x03')
-                sent = True
+            if stage < len(steps) and steps[stage][0] in output[offset:]:
+                action = steps[stage][1]
+                offset = len(output)
+                if isinstance(action, tuple):
+                    width, height = action
+                    fcntl.ioctl(slave, termios.TIOCSWINSZ, struct.pack('HHHH', height, width, 0, 0))
+                elif action is not None:
+                    os.write(master, action)
+                stage += 1
         process.wait(timeout=2)
         while select.select([master], [], [], 0)[0]:
             output += os.read(master, 65536)
-        assert prompted and sent and process.returncode == expected_code, output
+        assert prompted and stage == len(steps) and process.returncode == expected_code, (stage, output[-5000:])
         if expected_code != 0:
             assert b'Fallout 4 disconnected' in output, output
         assert b'\x1b[?1049l' in output, output
@@ -96,7 +156,7 @@ def interactive(command, env, prompt_address=None, expected_code=0):
 
 def exercise(mode):
     errors = []
-    interactive_mode = mode in ('interactive', 'late-reference', 'disconnect', 'mac-launcher-interactive')
+    interactive_mode = mode in ('interactive', 'browser', 'late-reference', 'disconnect', 'mac-launcher-interactive')
     launcher_mode = mode.startswith('mac-launcher')
     with socket.socket() as server, tempfile.TemporaryDirectory() as temporary:
         temp = Path(temporary)
@@ -118,7 +178,7 @@ def exercise(mode):
                     if mode not in ('late-handshake', 'missing-handshake'):
                         client.sendall(frame(1, hello))
                     if mode in ('invalid-handshake', 'oversize-handshake'):
-                        assert client.recv(1) == b''
+                        expect_close(client)
                         return
                     client.sendall(frame(0))
                     assert receive_exact(client, 5) == b'\0' * 5
@@ -127,6 +187,11 @@ def exercise(mode):
                         return
                     if mode == 'oversize':
                         client.sendall(struct.pack('<IB', 9000000, 3))
+                        return
+                    if mode == 'browser':
+                        client.settimeout(20)
+                        client.sendall(frame(3, browser_fixture()))
+                        expect_close(client)
                         return
                     # Root arrives before its referenced scalar, in another frame.
                     client.sendall(frame(3, ROOT_UPDATE))
@@ -157,10 +222,7 @@ def exercise(mode):
                         # Wait until the actual view has had time to render the update.
                         time.sleep(.5)
                         return
-                    assert client.recv(1) == b''  # No gameplay commands.
-            except ConnectionResetError:
-                # A one-shot client may close while additional peer data is queued.
-                pass
+                    expect_close(client)
             except Exception as error:
                 errors.append(error)
 
@@ -173,7 +235,7 @@ def exercise(mode):
             command = [str(project / 'scripts' / 'launch-playstation.command')]
         try:
             if interactive_mode:
-                interactive(command, env, prompt_address=address if launcher_mode else None, expected_code=1 if mode == 'disconnect' else 0)
+                interactive(command, env, prompt_address=address if launcher_mode else None, expected_code=1 if mode == 'disconnect' else 0, browser_mode=mode == 'browser')
             else:
                 if launcher_mode:
                     # --diagnose without an address must prompt; stdout stays JSON.
@@ -210,7 +272,7 @@ def exercise(mode):
                 assert 'handshake' in result.stderr
 
 
-for mode in ('normal', 'interactive', 'late-reference', 'disconnect', 'playstation', 'late-handshake', 'missing-handshake', 'invalid-handshake', 'oversize-handshake', 'busy', 'oversize'):
+for mode in ('normal', 'interactive', 'browser', 'late-reference', 'disconnect', 'playstation', 'late-handshake', 'missing-handshake', 'invalid-handshake', 'oversize-handshake', 'busy', 'oversize'):
     exercise(mode)
 if sys.platform == 'darwin':
     for mode in ('mac-launcher', 'mac-launcher-prompt', 'mac-launcher-interactive'):
@@ -246,6 +308,6 @@ with tempfile.TemporaryDirectory() as temporary:
         assert result.returncode != 0 and 'cannot reach' not in result.stderr
         assert policy.read_text() == '{invalid'
 
-print('PASS: game framing, handshake readiness/failures, heartbeat, live updates, disconnect/terminal restoration, PlayStation diagnostics, strict consent, no gameplay commands or saved data')
+print('PASS: game framing, handshake readiness/failures, heartbeat, live updates, large inventory navigation, parent/resize recovery, disconnect/terminal restoration, PlayStation diagnostics, strict consent, no gameplay commands or saved data')
 if sys.platform == 'darwin':
     print('PASS: actual Mac launcher, path with spaces, prompted/explicit IP, clean diagnostic JSON, interactive launch/exit, invalid arguments, literal address handling and saved denial')
