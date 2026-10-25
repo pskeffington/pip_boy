@@ -10,6 +10,17 @@ Rust-Boy is an independent, Rust-native field systems console for desktop termin
 
 **Current stage:** development preview. The terminal console and offline workflows are implemented and tested on Linux, macOS and Windows. Physical GPIO, serial, SDR, Bluetooth, mesh, GNSS, mapping and physical device integrations are **not enabled**. An explicitly requested Fallout 4 TCP companion browser is available for validation. No packaged production release is claimed.
 
+## Local PS4 testing on a Mac
+
+The [Mac → PS4 field guide](docs/MAC_PLAYSTATION.md) describes a direct local-network connection, opt-in discovery, and a finite observation report. The client does not modify PlayStation firmware or perform gameplay actions. Actual PS4 acceptance remains pending.
+
+```bash
+./scripts/launch-playstation.command --discover-ps4
+./scripts/launch-playstation.command 192.168.1.50 --diagnose
+./scripts/launch-playstation.command 192.168.1.50 --observe-seconds 30
+./scripts/launch-playstation.command 192.168.1.50
+```
+
 ## Quick start
 
 Requires [Rust and Cargo](https://www.rust-lang.org/tools/install) (Rust 1.81 or newer), Git and a supported terminal.

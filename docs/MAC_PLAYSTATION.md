@@ -2,6 +2,22 @@
 
 **Current development priority:** launch natively from macOS and connect to a PlayStation's exposed Fallout 4 companion service. PC/Anniversary/other-platform expansion is deferred. The native client and mock-peer launcher tests do not certify an actual PS4/PS5 game build. Game mode is read-only.
 
+## PS4 local field acceptance (new)
+Use the PS4's actual IP from Settings > Network > View Connection Status, or run an explicit, one-shot discovery broadcast. A discovery response is **not** authenticated proof of console identity.
+
+```bash
+./scripts/launch-playstation.command --discover-ps4
+./scripts/launch-playstation.command 192.168.1.50 --diagnose
+./scripts/launch-playstation.command 192.168.1.50 --observe-seconds 30
+./scripts/launch-playstation.command 192.168.1.50
+```
+
+Discovery sends the legacy `{"cmd":"autodiscover"}` UDP request to broadcast port 28000 **only when expressly requested**; listens for bounded PS4 advertisements for approximately 1.3 seconds; never automatically connects. If discovery is blocked, entering the PS4 IP directly is preferred. No internet service or console modification is needed, but the installed Fallout 4 edition **must** expose its companion service. Diagnostic success requires handshake plus a complete reachable root; it is not proof of a specific PS4 build.
+
+The opt-in observation mode collects **counts only in memory** for up to 120 seconds after the complete root becomes ready: heartbeat replies, update frames, and changed bounded views. During the observation, open your inventory and change a stat or equipped item in Fallout 4. Expect some observed change if the game and service expose that change. The JSON report is printed once on completion and not written to disk by Rust-Boy. A zero count does not by itself prove failure. A dropped connection returns an error, not a false success. Only heartbeat responses are sent; no equip/use/drop/map or game command is transmitted.
+
+**Acceptance record for an actual PS4:** Mac model and macOS version; PS4 model/system version; installed Fallout 4 edition/version and companion setting; connection and diagnostic results; observed live changes; idle heartbeat behavior; competing-app busy behavior; disconnect/recovery and terminal restoration. Record any console-side connection rejection rather than labeling a mock fixture as real-world acceptance.
+
 ## Launch from Finder
 
 1. Keep the entire repository folder together. Install Rust/Cargo first if not already available; the launcher builds Rust-Boy for the Mac running it. This is a source launcher, not a notarized `.app` or universal prebuilt binary.
