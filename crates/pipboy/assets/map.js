@@ -453,7 +453,8 @@
     let labels = 0;
     // Real Boston snapshot sits under opt-in OSM reference and imported RustGIS.
     const baseShapes = view.baseVisible && view.boston ? view.boston.shapes : [];
-    for (const shape of [...baseShapes, ...view.onlineShapes, ...view.shapes]) {
+    for (const shape of [...baseShapes, ...view.onlineShapes, ...view.shapes,
+      ...(view.county ? [view.county.shape] : [])]) {
       if (!bostonVisible(shape, view)) continue;
       const style = shape.style || {};
       ctx.globalAlpha = Number.isFinite(style.opacity) ? style.opacity : 1;
@@ -600,17 +601,24 @@
     view.siteSummary.textContent = "RECLAMATION / " + view.sites.length + " LOCAL SITES";
     view.webRefresh.hidden = !view.webEnabled;
     view.webStatusNode.textContent = view.webStatus;
+    view.countyButton.textContent = view.countyEnabled ? "COUNTY OFF" : "COUNTY";
+    view.countyNode.textContent = view.countyStatus;
     view.attribution.hidden = !view.onlineShapes.length;
-    view.sourceBox.hidden = !view.layers.length && !view.webMeta &&
+    view.sourceBox.hidden = !view.county && !view.layers.length && !view.webMeta &&
       !view.baseVisible && !(view.sitesVisible && view.sites.length);
-    if (view.baseVisible || view.layers.length || view.webMeta ||
+    if (view.county || view.baseVisible || view.layers.length || view.webMeta ||
         (view.sitesVisible && view.sites.length)) {
       view.sourceSummary.textContent = "DATA SOURCES / " + view.layers.length + " IMPORTED LAYERS" +
         (view.baseVisible ? " / BOSTON SAM" : "") +
+        (view.county ? " / CENSUS COUNTY" : "") +
         (view.sitesVisible ? " / " + view.sites.length + " LOCAL SITES" : "") +
         (view.webMeta ? " / OSM WEB" : "") +
         (view.warnings.length ? " / " + view.warnings.length + " LIMITATIONS" : "");
-      view.sourceLines.textContent = (view.baseVisible ?
+      view.sourceLines.textContent = (view.county ?
+        "COUNTY: " + view.county.name + " / GEOID " + view.county.id + "\n" +
+        "Source: " + view.county.source + "\n" +
+        "Boundary ≠ surveyed shoreline; OSM roads are viewport-limited.\n" : "") +
+        (view.baseVisible ?
         "BOSTON STREET CENTERLINES / " + view.boston.featureCount + " ACTUAL CITY SEGMENTS\n" +
         "City of Boston / SAM (via pinned Olin College mirror)\n" +
         "Extract: central Boston; data is a dated snapshot, not live\n" +
@@ -809,6 +817,64 @@
     }
   }
 
+
+  function disableCounty(view) {
+    view.countyEnabled=false;
+    view.countyRequest++;
+    if(view.countyAbort)view.countyAbort.abort();
+    view.countyAbort=null;
+    view.county=null;
+    view.countyStatus="COUNTY OFF";
+    refresh(view);
+  }
+  async function loadCounty(view, location) {
+    if(active!==view || !view.countyEnabled || !window.RustBoyOnline) return;
+    if (view.sitesVisible || view.siteCentered) {
+      view.countyStatus="CLOSE SITES BEFORE COUNTY LOOKUP";
+      refresh(view); return;
+    }
+    if (navigator.onLine===false) {
+      view.countyStatus="OFFLINE / IMPORT LOCAL COUNTY GEOJSON";
+      refresh(view); return;
+    }
+    const version=++view.countyRequest;
+    if(view.countyAbort)view.countyAbort.abort();
+    const controller=new AbortController();
+    view.countyAbort=controller;
+    view.countyStatus="CENSUS COUNTY LOOKUP / LOCATION SENT";
+    refresh(view);
+    try {
+      const county=await window.RustBoyOnline.countyAt(location.lon,location.lat,controller.signal);
+      if(active!==view || !view.countyEnabled || version!==view.countyRequest) return;
+      view.county=county;
+      view.countyStatus=county.name.toUpperCase()+" COUNTY / VERIFIED BOUNDARY";
+      view.center={lat:location.lat,lon:location.lon};
+      view.follow=false;
+      view.zoom=Math.max(view.zoom,10);
+      refresh(view);
+      // Road + major-feature coverage is bounded to the map viewport. Do not
+      // label this as a complete county road inventory.
+      if (!view.webEnabled && view.zoom>=12.5) {
+        view.webEnabled=true;
+        view.countyStatus += " / OSM VIEWPORT REFERENCE";
+        void webFetch(view);
+      } else if(view.webEnabled) {
+        void webFetch(view);
+      } else {
+        view.countyStatus += " / ZOOM 13+ FOR ROAD REFERENCE";
+        refresh(view);
+      }
+    } catch(error) {
+      if(active===view && view.countyEnabled && version===view.countyRequest &&
+         !controller.signal.aborted){
+        view.countyStatus="COUNTY UNAVAILABLE / "+
+          (error instanceof Error?error.message:"LOOKUP FAILED").slice(0,90);
+        refresh(view);
+      }
+    } finally {
+      if(view.countyAbort===controller)view.countyAbort=null;
+    }
+  }
   function fitLayer(view) {
     const points = view.shapes.flatMap((shape) => shape.paths.flat());
     const anchor = points[0][0];
@@ -874,6 +940,7 @@
           view.zoom = Math.max(view.zoom, 14);
         }
         refresh(view);
+        if (view.countyEnabled) void loadCounty(view,{lat:c.latitude,lon:c.longitude});
         if (view.webEnabled && (!view.webMeta ||
             !centerInside(view.webMeta.bounds, view.center))) {
           void webFetch(view);
@@ -927,6 +994,8 @@
     if (view.webDisconnect) window.removeEventListener("offline", view.webDisconnect);
     if (view.webAbort) view.webAbort.abort();
     if (view.webProbeAbort) view.webProbeAbort.abort();
+    view.countyRequest++;
+    if (view.countyAbort) view.countyAbort.abort();
     view.siteVersion++;
     if (view.siteAbort) view.siteAbort.abort();
     mapMemory = (view.shapes.length || view.onlineShapes.length || view.boston) ? {
@@ -980,6 +1049,7 @@
     baseAttribution.hidden = true;
     stage.append(baseAttribution);
     const webStatusNode = make("div", "rb-map-web-state", "WEB OFF");
+    const countyNode = make("div", "rb-map-web-state", "COUNTY OFF / GPS OR CENTER REQUIRED");
     webStatusNode.setAttribute("role", "status");
     const sourceBox = make("details", "rb-map-sources");
     sourceBox.hidden = true;
@@ -1057,6 +1127,8 @@
       mapFormat: mapMemory ? mapMemory.mapFormat : "",
       onlineShapes: mapMemory ? mapMemory.onlineShapes || [] : [],
       webMeta: mapMemory ? mapMemory.webMeta || null : null,
+      county: null, countyEnabled: false, countyAbort: null, countyRequest: 0,
+      countyStatus:"COUNTY OFF / GPS OR CENTER REQUIRED",countyNode,countyButton:null,
       webEnabled: false, webBusy: false, webAbort: null,
       webProbeAbort: null, webProbePromise: null,
       webReconnect: null, webDisconnect: null, webStatus: "WEB OFF",
@@ -1082,6 +1154,17 @@
       if (view.fix) view.center = { lat: view.fix.lat, lon: view.fix.lon };
       refresh(view);
     }, "Center map on latest location fix");
+    view.countyButton = control("COUNTY", () => {
+      if(view.countyEnabled){disableCounty(view);return;}
+      if(view.sitesVisible || view.siteCentered){
+        view.countyStatus="CLOSE SITES BEFORE COUNTY LOOKUP";refresh(view);return;
+      }
+      view.countyEnabled=true;
+      const location=view.fix ? {lat:view.fix.lat,lon:view.fix.lon} :
+        view.gpsState==="MANUAL CENTER / NOT A FIX" ? {...view.center} : null;
+      if(location)void loadCounty(view,location);
+      else {view.countyStatus="GPS ON OR ENTER CENTER, THEN COUNTY LOADS";refresh(view);}
+    },"Allow Census lookup of current manual/GPS location; then opt-in OSM viewport roads");
     view.siteButton = control("SITES", () => {
       if (view.sitesVisible) hideLocalSites(view);
       else showLocalSites(view);
@@ -1108,11 +1191,12 @@
     const zoomOut = control("-", () => { view.zoom = clamp(view.zoom - 1, MIN_ZOOM, MAX_ZOOM); refresh(view); },
       "Zoom out");
     toolbar.append(view.locate, view.followButton, importButton, view.baseButton,
+      view.countyButton,
       view.siteButton, view.webButton, view.webRefresh, manualButton, zoomIn, zoomOut);
     if (options && typeof options.onTools === "function") {
       toolbar.append(control("GIS", options.onTools, "Open Scout GIS tools"));
     }
-    root.append(toolbar, stage, webStatusNode, status, sitePanel, sourceBox, manual, file);
+    root.append(toolbar, stage, webStatusNode, countyNode, status, sitePanel, sourceBox, manual, file);
     host.replaceChildren(root);
 
     manual.addEventListener("submit", (event) => {
@@ -1132,7 +1216,9 @@
         manual.hidden = true;
       }
       refresh(view);
-      if (view.webEnabled) void webFetch(view);
+      if (view.countyEnabled && view.gpsState==="MANUAL CENTER / NOT A FIX")
+        void loadCounty(view,{lat,lon});
+      else if (view.webEnabled) void webFetch(view);
     });
 
     file.addEventListener("change", async () => {
