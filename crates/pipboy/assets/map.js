@@ -478,8 +478,10 @@
   }
 
   function countyMask(ctx,view,draw) {
-    if(!view.county||typeof ctx.save!=="function"||
-       typeof ctx.clip!=="function"||typeof ctx.restore!=="function")return draw();
+    if(!view.county)return draw();
+    // Do not render out-of-county polygons if a canvas lacks clipping.
+    if(typeof ctx.save!=="function"||typeof ctx.clip!=="function"||
+       typeof ctx.restore!=="function")return;
     ctx.save();
     ctx.beginPath();
     countyPath(ctx,view);
