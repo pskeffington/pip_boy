@@ -437,7 +437,6 @@ fn experiment(body: &Value, store: &WorkbenchStore) -> Result<Response, Response
     ))
 }
 
-
 fn county_cache(store: &WorkbenchStore) -> CountyCache {
     CountyCache::new(
         store
@@ -455,14 +454,19 @@ fn county_package(req: &Request, store: &WorkbenchStore) -> Result<Response, Res
     let cache_only = body.get("cache_only").and_then(Value::as_bool) == Some(true);
     let confirm = body.get("confirm").and_then(Value::as_bool) == Some(true);
     if !confirm && !cache_only {
-        return Err(Response::error(403, "Confirm Census county network acquisition"));
+        return Err(Response::error(
+            403,
+            "Confirm Census county network acquisition",
+        ));
     }
     let bytes = county_cache(store)
         .fetch(geoid, source, !cache_only && confirm)
         .map_err(|error| match error.kind() {
             io::ErrorKind::NotFound => Response::error(404, "No cached county package"),
             io::ErrorKind::InvalidInput => Response::error(422, "Invalid county GEOID or source"),
-            io::ErrorKind::WouldBlock => Response::error(409, "County download already in progress"),
+            io::ErrorKind::WouldBlock => {
+                Response::error(409, "County download already in progress")
+            }
             _ => Response::error(409, "County archive unavailable; original cache preserved"),
         })?;
     Ok(Response::new(200, "application/zip", bytes))
@@ -1034,11 +1038,9 @@ fn dispatch(req: &Request, store: &WorkbenchStore, port: u16) -> Response {
             "text/javascript; charset=utf-8",
             BOSTON_MAP_JS.as_bytes(),
         ),
-        ("GET", "/assets/map-county.js") => Response::new(
-            200,
-            "text/javascript; charset=utf-8",
-            COUNTY_JS.as_bytes(),
-        ),
+        ("GET", "/assets/map-county.js") => {
+            Response::new(200, "text/javascript; charset=utf-8", COUNTY_JS.as_bytes())
+        }
         ("GET", "/assets/map.js") => {
             Response::new(200, "text/javascript; charset=utf-8", MAP_JS.as_bytes())
         }
@@ -1745,7 +1747,11 @@ mod tests {
     fn county_source_api_is_allowlisted_local_and_explicit() {
         let temp = tempfile::tempdir().unwrap();
         let store = WorkbenchStore::new(temp.path().join("state"));
-        let index = dispatch(&request("GET", "/api/map/sources", Value::Null), &store, 8765);
+        let index = dispatch(
+            &request("GET", "/api/map/sources", Value::Null),
+            &store,
+            8765,
+        );
         assert_eq!(index.status, 200);
         let sources: Value = serde_json::from_slice(&index.body).unwrap();
         assert_eq!(sources["sources"].as_array().unwrap().len(), 3);
@@ -1761,17 +1767,16 @@ mod tests {
             json!({"geoid":"25025","source":"https://evil.invalid","confirm":true}),
         ];
         for (i, body) in cases.into_iter().enumerate() {
-            let response = dispatch(
-                &request("POST", "/api/map/package", body),
-                &store,
-                8765,
-            );
+            let response = dispatch(&request("POST", "/api/map/package", body), &store, 8765);
             assert_eq!(response.status, if i == 0 { 403 } else { 422 });
             assert!(!temp.path().join("state/county_cache").exists());
         }
         let response = dispatch(
-            &request("POST", "/api/map/package",
-                json!({"geoid":"25025","source":"tiger-roads","cache_only":true})),
+            &request(
+                "POST",
+                "/api/map/package",
+                json!({"geoid":"25025","source":"tiger-roads","cache_only":true}),
+            ),
             &store,
             8765,
         );
@@ -1783,10 +1788,9 @@ mod tests {
             "/api/map/package",
             json!({"geoid":"25025","source":"tiger-roads","confirm":true}),
         );
-        malicious.headers.insert(
-            "origin".to_owned(),
-            "https://untrusted.invalid".to_owned(),
-        );
+        malicious
+            .headers
+            .insert("origin".to_owned(), "https://untrusted.invalid".to_owned());
         assert_eq!(dispatch(&malicious, &store, 8765).status, 403);
         assert!(!temp.path().join("state/county_cache").exists());
 
@@ -1795,11 +1799,16 @@ mod tests {
         std::fs::write(
             cached_dir.join("tl_2025_25025_roads.zip"),
             b"PK\x03\x04local-cached-test",
-        ).unwrap();
+        )
+        .unwrap();
         let response = dispatch(
-            &request("POST", "/api/map/package",
-                json!({"geoid":"25025","source":"tiger-roads","cache_only":true})),
-            &store, 8765
+            &request(
+                "POST",
+                "/api/map/package",
+                json!({"geoid":"25025","source":"tiger-roads","cache_only":true}),
+            ),
+            &store,
+            8765,
         );
         assert_eq!(response.status, 200);
         assert_eq!(response.content_type, "application/zip");
