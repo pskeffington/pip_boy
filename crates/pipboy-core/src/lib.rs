@@ -14,6 +14,7 @@ pub mod host_report;
 pub mod lifecycle;
 pub mod metrics;
 pub mod mock_adapters;
+pub mod network_health;
 pub mod network_suite;
 pub mod notes;
 pub mod observation;
