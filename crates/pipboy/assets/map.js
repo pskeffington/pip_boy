@@ -408,7 +408,7 @@
     if (!shape.bostonBase) return true;
     // Original road class (CFCC) determines detail, not a fabricated feature.
     if (view.zoom < 10.8 && shape.cfcc >= 30) return false;
-    if (view.zoom < 11.8 && shape.cfcc >= 41) return false;
+    if (view.zoom < 12.5 && shape.cfcc >= 41) return false;
     const sw = screenPoint(view, shape.bounds[0], shape.bounds[1]);
     const ne = screenPoint(view, shape.bounds[2], shape.bounds[3]);
     return Math.max(sw[0], ne[0]) >= -12 &&
