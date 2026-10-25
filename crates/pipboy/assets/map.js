@@ -244,7 +244,9 @@
       const copy = make("div", "rb-map-site-copy");
       copy.append(make("strong", "", "#" + site.id + " " + site.name),
         make("small", "", site.kind.toUpperCase() + " · " + site.priority.toUpperCase() +
-          " · " + site.status.replaceAll("_", " ").toUpperCase()));
+          " · " + site.status.replaceAll("_", " ").toUpperCase()),
+        make("small", "", site.latitude.toFixed(5) + ", " +
+          site.longitude.toFixed(5) + " · MANUAL"));
       row.append(copy, control("FOCUS", () => {
         focusLocalSite(view, site);
         renderLocalSiteList(view);
@@ -284,6 +286,9 @@
       }
       view.sites = sites;
       view.siteStatus.textContent = sites.length + " SAVED · MANUAL ONLY / NOT GPS";
+      if (sites.some((site) => Math.abs(site.latitude) > MAX_LAT)) {
+        view.siteStatus.textContent += " · POLAR LAT CLAMPED ON MAP";
+      }
       if (pendingSiteFocus !== null) {
         const site = sites.find((item) => item.id === pendingSiteFocus);
         pendingSiteFocus = null;
