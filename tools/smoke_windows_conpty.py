@@ -245,8 +245,8 @@ class ConPty:
             self._drain(0.1)
             if marker in self.output[since:]:
                 return
-            if self.started and self.api.WaitForSingleObject(self.process.hProcess, 0) == WAIT_OBJECT_0:
-                raise AssertionError(f"ConPTY child exited before {marker!r}: {self.output[-700:]!r}")
+            # The child can exit before ConHost flushes pending pipe output.
+            # Keep draining until the deadline instead of racing process exit.
         alive = self.api.WaitForSingleObject(self.process.hProcess, 0) == WAIT_TIMEOUT
         raise AssertionError(
             f"ConPTY never displayed {marker!r}, child_alive={alive}, "
