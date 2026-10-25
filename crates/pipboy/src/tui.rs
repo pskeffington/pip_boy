@@ -11,6 +11,7 @@ use pipboy_core::lifecycle::State;
 use pipboy_core::metrics::Collector;
 use pipboy_core::notes::NoteStore;
 use pipboy_core::observation::Observation;
+use pipboy_core::workbench::{WorkbenchStore, PALETTE};
 use pipboy_core::runtime::{Capability, LocalOperation, ModuleHost, PermissionSet, PollOutcome};
 use ratatui::prelude::*;
 use std::error::Error;
@@ -55,6 +56,8 @@ pub fn run() -> Result<(), Box<dyn Error>> {
     let mut latest = Some(initial);
     let library = host.run_local(LocalOperation::LibraryRead, sources)?;
     let store = NoteStore::from_environment()?;
+    let bench_store = WorkbenchStore::from_environment()?;
+    let mut workbench = bench_store.load()?;
     let mut navigation = Navigation::default();
     let mut notes = Vec::new();
     let mut last_sample = Instant::now();
@@ -73,6 +76,7 @@ pub fn run() -> Result<(), Box<dyn Error>> {
                     stat: &body_stat,
                     library: &library,
                     notes: &notes,
+                    workbench: &workbench,
                 },
             )
         })?;
@@ -82,10 +86,52 @@ pub fn run() -> Result<(), Box<dyn Error>> {
                 if key.kind != KeyEventKind::Press {
                     continue;
                 }
+                if navigation.panel == 3 && navigation.palette_open {
+                    match key.code {
+                        KeyCode::Esc => navigation.palette_open = false,
+                        KeyCode::Enter => {
+                            if let Some(entry) = PALETTE.get(navigation.palette_selected) {
+                                if entry.availability.can_pin() {
+                                    if !workbench.slots.iter().any(|slot| slot.tool == entry.id) {
+                                        bench_store.add(entry.id)?;
+                                        workbench = bench_store.load()?;
+                                    }
+                                    navigation.focus_last_bench_slot(&workbench);
+                                    navigation.palette_open = false;
+                                }
+                            }
+                        }
+                        KeyCode::Up => navigation.palette_move(Action::Up),
+                        KeyCode::Down => navigation.palette_move(Action::Down),
+                        KeyCode::PageUp => navigation.palette_move(Action::PageUp),
+                        KeyCode::PageDown => navigation.palette_move(Action::PageDown),
+                        KeyCode::Home => navigation.palette_move(Action::Home),
+                        KeyCode::End => navigation.palette_move(Action::End),
+                        KeyCode::Tab | KeyCode::Right => navigation.apply(Action::Next, 0),
+                        KeyCode::BackTab | KeyCode::Left => {
+                            navigation.apply(Action::Previous, 0)
+                        }
+                        _ if exit_requested(key) => break,
+                        _ => {}
+                    }
+                    continue;
+                }
                 if exit_requested(key) {
                     break;
                 }
                 match key.code {
+                    KeyCode::Char('a' | 'A') if navigation.panel == 3 => {
+                        navigation.palette_open = true;
+                    }
+                    KeyCode::Char('x' | 'X') | KeyCode::Delete if navigation.panel == 3 => {
+                        if let Some(id) = navigation.selected_bench_slot(&workbench) {
+                            bench_store.remove(id)?;
+                            workbench = bench_store.load()?;
+                        }
+                    }
+                    KeyCode::Char('r' | 'R') if navigation.panel == 3 => {
+                        workbench = bench_store.load()?;
+                    }
                     KeyCode::Right | KeyCode::Tab | KeyCode::Left | KeyCode::BackTab => {
                         let action = if matches!(key.code, KeyCode::Right | KeyCode::Tab) {
                             Action::Next
@@ -95,6 +141,9 @@ pub fn run() -> Result<(), Box<dyn Error>> {
                         navigation.apply(action, 0);
                         if navigation.panel == 2 {
                             notes = host.run_local(LocalOperation::NotesRead, || store.list())?;
+                        }
+                        if navigation.panel == 3 {
+                            workbench = bench_store.load()?;
                         }
                     }
                     KeyCode::Up
@@ -111,10 +160,11 @@ pub fn run() -> Result<(), Box<dyn Error>> {
                             KeyCode::Home => Action::Home,
                             _ => Action::End,
                         };
-                        let count = if navigation.panel == 1 {
-                            library.len()
-                        } else {
-                            notes.len()
+                        let count = match navigation.panel {
+                            1 => library.len(),
+                            2 => notes.len(),
+                            3 => workbench.slots.len(),
+                            _ => 0,
                         };
                         navigation.apply(action, count);
                     }
