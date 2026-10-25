@@ -779,6 +779,101 @@ mod tests {
     }
 
     #[test]
+    fn incoming_peer_assignment_is_durable_idempotent_and_role_scoped() {
+        let temp = tempfile::tempdir().unwrap();
+        let store = TaskStore::new(temp.path().join("receiver"));
+        let packet = RemoteAssignment {
+            schema_version: 1,
+            from_device: "overseer-a".into(),
+            origin_task_id: 14,
+            origin_revision: 2,
+            task: new_task(),
+        };
+        let (imported, created) = store.import_remote(RemoteAssignment {
+            schema_version: packet.schema_version,
+            from_device: packet.from_device.clone(),
+            origin_task_id: packet.origin_task_id,
+            origin_revision: packet.origin_revision,
+            task: new_task(),
+        }).unwrap();
+        assert!(created);
+        assert_eq!(imported.id, 1);
+        assert_eq!(imported.origin.as_ref().unwrap().device, "overseer-a");
+        assert!(imported.sent_at.is_some());
+        assert!(imported.acknowledged_at.is_none());
+        assert!(imported.delivery.is_none());
+        let (same, added) = store.import_remote(packet).unwrap();
+        assert!(!added);
+        assert_eq!(same.id, imported.id);
+        assert_eq!(store.load().unwrap().tasks.len(), 1);
+        let ack = store.acknowledge(imported.id, imported.revision).unwrap();
+        let working = store.set_status(ack.id, ack.revision,
+            Status::InProgress, "Route verification").unwrap();
+        let reports = store.reports_for("overseer-a").unwrap();
+        assert_eq!(reports.len(), 1);
+        assert_eq!(reports[0].origin_task_id, 14);
+        assert_eq!(reports[0].status, Status::InProgress);
+        assert!(reports[0].acknowledged);
+        assert_eq!(working.status, Status::InProgress);
+        assert_eq!(TaskStore::new(temp.path().join("receiver"))
+            .load().unwrap().tasks.len(), 1);
+        let old_revision = RemoteAssignment {
+            schema_version: 1,
+            from_device: "overseer-a".into(),
+            origin_task_id: 14,
+            origin_revision: 1,
+            task: new_task(),
+        };
+        assert_eq!(store.import_remote(old_revision).unwrap_err().kind(),
+            io::ErrorKind::AlreadyExists);
+        let unknown = RemoteAssignment {
+            schema_version: 1, from_device: "evil".into(),
+            origin_task_id: 15, origin_revision: 1,
+            task: NewTask { role: "unrecognized".into(), ..new_task() }
+        };
+        assert!(store.import_remote(unknown).is_err());
+    }
+
+    #[test]
+    fn device_delivery_and_explicit_sync_keep_manual_status_separate() {
+        let temp = tempfile::tempdir().unwrap();
+        let store = TaskStore::new(temp.path().join("manager"));
+        let task = store.create(new_task()).unwrap();
+        let sent = store.record_device_delivery(task.id, task.revision,
+            "scout-one", 42).unwrap();
+        assert_eq!(sent.revision, 2);
+        assert!(sent.delivery.is_some());
+        assert!(sent.acknowledged_at.is_none());
+        assert!(sent.remote_progress.is_none());
+        assert_eq!(store.record_device_delivery(task.id, 1,
+            "scout-one", 42).unwrap_err().kind(), io::ErrorKind::AlreadyExists);
+        let first = RemoteReport {
+            from_device: "overseer-a".into(),
+            origin_task_id: task.id,
+            remote_task_id: 42,
+            status: Status::InProgress,
+            acknowledged: true,
+        };
+        assert!(store.reconcile_remote_reports("scout-one", "wrong",
+            std::slice::from_ref(&first)).is_err());
+        assert_eq!(store.reconcile_remote_reports("scout-one", "overseer-a",
+            std::slice::from_ref(&first)).unwrap(), 1);
+        let after = store.task(task.id).unwrap();
+        assert_eq!(after.revision, 3);
+        assert_eq!(after.status, Status::Todo);
+        assert_eq!(after.remote_progress.as_ref().unwrap().status, Status::InProgress);
+        assert!(after.remote_progress.as_ref().unwrap().acknowledged);
+        assert!(after.acknowledged_at.is_none());
+        assert_eq!(store.reconcile_remote_reports("scout-one", "overseer-a",
+            &[first]).unwrap(), 0);
+        assert_eq!(store.load().unwrap().tasks.len(), 1);
+        // Future schema and corruption must never be destroyed by import.
+        fs::write(store.path(), "{\"schema_version\":999}").unwrap();
+        assert!(store.reconcile_remote_reports("scout-one", "overseer-a", &[]).is_err());
+        assert_eq!(fs::read_to_string(store.path()).unwrap(), "{\"schema_version\":999}");
+    }
+
+    #[test]
     fn fresh_board_reads_without_creating_any_files() {
         let temp = tempfile::tempdir().unwrap();
         let path = temp.path().join("new");
