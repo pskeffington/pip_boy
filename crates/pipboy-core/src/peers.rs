@@ -51,7 +51,11 @@ fn valid_path(value: &str) -> bool {
         && !value.contains('\0')
         && value
             .bytes()
-            .all(|ch| ch.is_ascii_graphic() && !matches!(ch, b'%' | b'"' | b'\'' | b'\\' | b';'))
+            .all(|ch| {
+                ch.is_ascii_graphic()
+                    && !matches!(ch, b'%' | b'"' | b'\'' | b';')
+                    && (cfg!(windows) || ch != b'\\')
+            })
         && Path::new(value).is_absolute()
 }
 
@@ -317,6 +321,10 @@ mod tests {
         assert!(valid_target("pi@10.0.0.20"));
         assert!(valid_target("rustboy@scout.local"));
         assert!(!valid_path("../keys/id_ed25519"));
+        #[cfg(windows)]
+        assert!(valid_path(r"C:\Users\Public\.ssh\id_ed25519"));
+        #[cfg(not(windows))]
+        assert!(!valid_path(r"C:\Users\Public\.ssh\id_ed25519"));
         store.init("command-one").unwrap();
         assert!(store.init("another").is_err());
         assert!(store.trust_sender("command-one").is_err());
