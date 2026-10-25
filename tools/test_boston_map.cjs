@@ -7,13 +7,14 @@ function script(name) {
   return fs.readFileSync(
     path.join(__dirname, "../crates/pipboy/assets", name), "utf8");
 }
+const paint = {lines:0,labels:[]};
 class Element {
   constructor(tag) {
     this.tag=tag; this.children=[]; this.listeners={}; this.attrs={};
     this.hidden=false; this.isConnected=true; this.textContent="";
     this.className=""; this.files=[]; this.style={}; this.value="";
     this.ctx={setTransform(){},clearRect(){},fillRect(){},beginPath(){},
-      moveTo(){},lineTo(){},stroke(){},fillText(){},arc(){},fill(){},closePath(){}};
+      moveTo(){},lineTo(){paint.lines++;},stroke(){},fillText(label){paint.labels.push(label);},arc(){},fill(){},closePath(){}};
   }
   append(...xs){this.children.push(...xs);}
   replaceChildren(...xs){this.children=xs;}
@@ -68,10 +69,14 @@ async function main(){
   assert.match(view.status.textContent,/BOSTON \/ REAL STREETS/);
   assert.equal(requests.length,0,"Built-in map must never contact provider");
   assert.equal(view.fix,null,"Map center is not a GPS position");
+  const lineDraws = paint.lines;
+  assert.ok(lineDraws > 30,"Real Boston roads must be drawn as visible line geometry");
   assert.equal(view.shapes.length,0,"Bundled reference must not impersonate imported GIS");
 
+  paint.lines = 0;
   view.baseButton.listeners.click[0]();
   assert.equal(view.baseVisible,false,"Operator can hide actual Boston basemap");
+  assert.ok(paint.lines < lineDraws,"Turning BOS OFF must remove most street line draws");
   assert.equal(view.baseAttribution.hidden,true);
   view.baseButton.listeners.click[0]();
   assert.equal(view.baseVisible,true);
