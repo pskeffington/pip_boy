@@ -1,6 +1,7 @@
 //! Explicit direct LAN connection; no discovery, background service or saved game data.
 use crossterm::event::{self, Event, KeyCode, KeyEventKind, KeyModifiers};
 use pipboy_core::game::{Database, Frames};
+use pipboy_core::permissions::{Preference, PreferenceStore};
 use ratatui::{
     prelude::*,
     widgets::{Block, Borders, Paragraph, Wrap},
@@ -31,6 +32,13 @@ pub fn run(args: Vec<String>) -> Result<(), Box<dyn Error>> {
     let address = address.ok_or(usage)?;
     if !confirm {
         return Err("game connection requires explicit --confirm".into());
+    }
+    if PreferenceStore::from_environment()?
+        .list()?
+        .iter()
+        .any(|entry| entry.capability == "network.fetch" && entry.preference == Preference::Denied)
+    {
+        return Err("game connection denied by saved network.fetch preference; clear it explicitly with pipboy permissions clear network.fetch".into());
     }
     // Literal addresses avoid DNS activity and any network discovery.
     let mut socket = TcpStream::connect_timeout(&address, Duration::from_secs(3)).map_err(|error| io::Error::new(error.kind(), format!("cannot reach Fallout 4 at {address}: {error}; check game edition/service and firewall; Anniversary builds may require a game-side companion enabler (docs/GAME_MODE.md)")))?;

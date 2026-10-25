@@ -85,4 +85,16 @@ for mode in ['normal','interactive','busy','oversize']:exercise(mode)
 for args in [[],['--connect','localhost:27000','--confirm'],['--connect','127.0.0.1:27000'],['--connect','127.0.0.1:27000','--confirm','--confirm']]:
     result=subprocess.run([str(BIN),'game',*args],capture_output=True,timeout=5)
     assert result.returncode!=0 and not result.stdout
+with tempfile.TemporaryDirectory() as temporary:
+    env=dict(os.environ,PIPBOY_HOME=temporary)
+    subprocess.run([str(BIN),'permissions','deny','network.fetch'],env=env,capture_output=True,check=True)
+    policy=Path(temporary)/'permissions.json'
+    original=policy.read_bytes()
+    result=subprocess.run([str(BIN),'game','--connect','127.0.0.1:1','--confirm','--snapshot'],env=env,capture_output=True,text=True,timeout=5)
+    assert result.returncode!=0 and 'denied by saved' in result.stderr
+    assert policy.read_bytes()==original
+    policy.write_text('{invalid')
+    result=subprocess.run([str(BIN),'game','--connect','127.0.0.1:1','--confirm','--snapshot'],env=env,capture_output=True,text=True,timeout=5)
+    assert result.returncode!=0 and 'cannot reach' not in result.stderr
+    assert policy.read_text()=='{invalid'
 print('PASS: fragmented game stream, heartbeat echo, late references, busy/oversize refusal, strict consent/arguments, no commands or files')
