@@ -4,9 +4,9 @@
 //! declarative. No hardware, camera, console, GNSS or TAK transport is opened
 //! by browsing the dashboard or selecting a role.
 use crate::network_probe;
+use crate::peer;
 use crate::unifi;
 use pipboy_core::network_health;
-use crate::peer;
 use pipboy_core::network_suite;
 use pipboy_core::peers::PeerStore;
 use pipboy_core::scout_gis::{distance_meters, waypoint, Point};
@@ -774,8 +774,8 @@ fn dispatch(req: &Request, store: &WorkbenchStore, port: u16) -> Response {
                 let body = parse_json_body(
                     req,
                     &[
-                        "tool", "mode", "input", "extra", "samples", "site", "confirm",
-                        "lat", "lon", "lat2", "lon2", "name",
+                        "tool", "mode", "input", "extra", "samples", "site", "confirm", "lat",
+                        "lon", "lat2", "lon2", "name",
                     ],
                 )?;
                 experiment(&body, store)

@@ -48,7 +48,10 @@ pub fn tcp_health(
         ));
     }
     if !(network_health::MIN_SAMPLES..=network_health::MAX_SAMPLES).contains(&samples) {
-        return Err(io::Error::new(io::ErrorKind::InvalidInput, "Sample count must be 3..8"));
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "Sample count must be 3..8",
+        ));
     }
     let target = tcp_target(address, port)?;
     let mut observations = Vec::with_capacity(samples as usize);
@@ -73,12 +76,16 @@ pub fn tcp_health(
 /// A missing or unauthorized OS ping produces an error, never fake metrics.
 pub fn icmp_health(address: &str, samples: u8, confirmed: bool) -> io::Result<HealthReport> {
     if !confirmed {
-        return Err(io::Error::new(io::ErrorKind::PermissionDenied,
-            "ICMP test needs explicit confirmation"));
+        return Err(io::Error::new(
+            io::ErrorKind::PermissionDenied,
+            "ICMP test needs explicit confirmation",
+        ));
     }
     if !(network_health::MIN_SAMPLES..=network_health::MAX_SAMPLES).contains(&samples) {
-        return Err(io::Error::new(io::ErrorKind::InvalidInput,
-            "ICMP sample count must be 3..8"));
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "ICMP sample count must be 3..8",
+        ));
     }
     // Reuse the same literal, non-multicast, non-link-local IP validator.
     let target = tcp_target(address, "7")?.ip();
@@ -87,33 +94,68 @@ pub fn icmp_health(address: &str, samples: u8, confirmed: bool) -> io::Result<He
     if cfg!(target_os = "windows") {
         command.args(["-n", &count, "-w", "900", &target.to_string()]);
     } else if cfg!(target_os = "macos") {
-        command.args(["-n", "-c", &count, "-i", "0.25",
-                      "-W", "900", &target.to_string()]);
+        command.args([
+            "-n",
+            "-c",
+            &count,
+            "-i",
+            "0.25",
+            "-W",
+            "900",
+            &target.to_string(),
+        ]);
     } else {
-        command.args(["-n", "-c", &count, "-i", "0.25",
-                      "-W", "1", "-w", "8", &target.to_string()]);
+        command.args([
+            "-n",
+            "-c",
+            &count,
+            "-i",
+            "0.25",
+            "-W",
+            "1",
+            "-w",
+            "8",
+            &target.to_string(),
+        ]);
     }
     command.env("LANG", "C").env("LC_ALL", "C");
-    command.stdin(Stdio::null()).stdout(Stdio::piped()).stderr(Stdio::null());
-    let mut child = command.spawn().map_err(|_| io::Error::new(
-        io::ErrorKind::NotFound, "Native ping executable is unavailable"))?;
+    command
+        .stdin(Stdio::null())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::null());
+    let mut child = command.spawn().map_err(|_| {
+        io::Error::new(
+            io::ErrorKind::NotFound,
+            "Native ping executable is unavailable",
+        )
+    })?;
     let started = Instant::now();
     loop {
-        if child.try_wait()?.is_some() { break; }
+        if child.try_wait()?.is_some() {
+            break;
+        }
         if started.elapsed() > Duration::from_secs(9) {
             let _ = child.kill();
             let _ = child.wait();
-            return Err(io::Error::new(io::ErrorKind::TimedOut,
-                "Native ping exceeded its 9-second limit"));
+            return Err(io::Error::new(
+                io::ErrorKind::TimedOut,
+                "Native ping exceeded its 9-second limit",
+            ));
         }
         std::thread::sleep(Duration::from_millis(40));
     }
     let output = child.wait_with_output()?;
     if output.stdout.len() > 16 * 1024 {
-        return Err(io::Error::new(io::ErrorKind::InvalidData,
-            "Native ping output exceeded its 16-KiB limit"));
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            "Native ping output exceeded its 16-KiB limit",
+        ));
     }
-    parse_icmp(&String::from_utf8_lossy(&output.stdout), &target.to_string(), samples)
+    parse_icmp(
+        &String::from_utf8_lossy(&output.stdout),
+        &target.to_string(),
+        samples,
+    )
 }
 
 /// Parses only native ping output from a complete count-bounded invocation.
@@ -122,25 +164,45 @@ fn parse_icmp(output: &str, address: &str, expected: u8) -> io::Result<HealthRep
     let sent_received = output.lines().find_map(|line| {
         if line.contains("packets transmitted") {
             let parts: Vec<_> = line.split(',').collect();
-            let sent = parts.first()?.trim().split_whitespace().next()?.parse::<usize>().ok()?;
-            let received = parts.get(1)?.trim().split_whitespace().next()?.parse::<usize>().ok()?;
+            let sent = parts
+                .first()?
+                .trim()
+                .split_whitespace()
+                .next()?
+                .parse::<usize>()
+                .ok()?;
+            let received = parts
+                .get(1)?
+                .trim()
+                .split_whitespace()
+                .next()?
+                .parse::<usize>()
+                .ok()?;
             Some((sent, received))
         } else if line.contains("Packets: Sent = ") {
             let get = |needle: &str| -> Option<usize> {
                 let text = line.split_once(needle)?.1.trim_start();
                 text.split(|c: char| !c.is_ascii_digit())
-                    .next()?.parse::<usize>().ok()
+                    .next()?
+                    .parse::<usize>()
+                    .ok()
             };
             Some((get("Sent = ")?, get("Received = ")?))
         } else {
             None
         }
     });
-    let (sent, received) = sent_received.ok_or_else(|| io::Error::new(
-        io::ErrorKind::InvalidData, "Native ping did not provide a complete packet summary"))?;
+    let (sent, received) = sent_received.ok_or_else(|| {
+        io::Error::new(
+            io::ErrorKind::InvalidData,
+            "Native ping did not provide a complete packet summary",
+        )
+    })?;
     if sent != expected as usize || received > sent {
-        return Err(io::Error::new(io::ErrorKind::InvalidData,
-            "Native ping packet summary did not match the requested count"));
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            "Native ping packet summary did not match the requested count",
+        ));
     }
     let mut rtts = Vec::with_capacity(received);
     for line in output.lines() {
@@ -148,14 +210,18 @@ fn parse_icmp(output: &str, address: &str, expected: u8) -> io::Result<HealthRep
             continue;
         }
         let reading = if let Some((_, value)) = line.split_once("time=") {
-            let number: String = value.chars()
-                .take_while(|ch| ch.is_ascii_digit() || *ch == '.').collect();
+            let number: String = value
+                .chars()
+                .take_while(|ch| ch.is_ascii_digit() || *ch == '.')
+                .collect();
             number.parse::<f64>().ok()
         } else if line.contains("time<1ms") {
             // Windows reports a sub-millisecond bound, not an exact RTT.
             // Use the midpoint of the reported [0,1)ms interval and label it.
             Some(0.5)
-        } else { None };
+        } else {
+            None
+        };
         if let Some(time) = reading {
             if time.is_finite() && time >= 0.0 {
                 rtts.push(time);
@@ -163,8 +229,10 @@ fn parse_icmp(output: &str, address: &str, expected: u8) -> io::Result<HealthRep
         }
     }
     if rtts.len() != received {
-        return Err(io::Error::new(io::ErrorKind::InvalidData,
-            "Ping RTT lines do not match received replies"));
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            "Ping RTT lines do not match received replies",
+        ));
     }
     network_health::icmp_report(address, expected, &rtts)
 }
@@ -194,8 +262,8 @@ mod tests {
         let listener = TcpListener::bind("127.0.0.1:0").unwrap();
         let port = listener.local_addr().unwrap().port().to_string();
         assert_eq!(
-            tcp_health("127.0.0.1", &port, 4, false)
-                .unwrap_err().kind(), io::ErrorKind::PermissionDenied
+            tcp_health("127.0.0.1", &port, 4, false).unwrap_err().kind(),
+            io::ErrorKind::PermissionDenied
         );
         let report = tcp_health("127.0.0.1", &port, 4, true).unwrap();
         assert_eq!(report.attempts, 4);
@@ -205,7 +273,6 @@ mod tests {
         assert!(tcp_health("127.0.0.1", &port, 9, true).is_err());
         assert!(tcp_health("test.example", &port, 3, true).is_err());
     }
-
 
     #[test]
     fn parses_native_macos_linux_and_windows_ping_without_network() {
@@ -227,5 +294,4 @@ mod tests {
         assert_eq!(parse_icmp(windows, "127.0.0.1", 3).unwrap().connected, 2);
         assert!(parse_icmp("timed out", "127.0.0.1", 3).is_err());
     }
-
 }

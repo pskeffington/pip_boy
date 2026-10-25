@@ -1,8 +1,8 @@
 //! Explicit local workbench management. No pin operation executes a tool.
 use crate::network_probe;
+use crate::unifi;
 use pipboy_core::network_health;
 use pipboy_core::network_suite;
-use crate::unifi;
 use pipboy_core::workbench::{crc32_hex, encode_hex, inspect_hex, tool, WorkbenchStore, PALETTE};
 use std::error::Error;
 
@@ -200,9 +200,9 @@ pub fn run(args: Vec<String>) -> Result<(), Box<dyn Error>> {
                     println!("{}", result.console());
                     Ok(())
                 }
-                [mode, ..] if mode == "icmp" => Err(
-                    "usage: pipboy workbench net icmp IP SAMPLES(3..8) --confirm".into()
-                ),
+                [mode, ..] if mode == "icmp" => {
+                    Err("usage: pipboy workbench net icmp IP SAMPLES(3..8) --confirm".into())
+                }
                 [mode, address, port, samples, confirmation]
                     if mode == "health" && confirmation == "--confirm" =>
                 {
@@ -211,9 +211,9 @@ pub fn run(args: Vec<String>) -> Result<(), Box<dyn Error>> {
                     println!("{}", result.console());
                     Ok(())
                 }
-                [mode, ..] if mode == "health" => Err(
-                    "usage: pipboy workbench net health IP PORT SAMPLES(3..8) --confirm".into()
-                ),
+                [mode, ..] if mode == "health" => {
+                    Err("usage: pipboy workbench net health IP PORT SAMPLES(3..8) --confirm".into())
+                }
                 [mode, confirmation] if mode == "unifi" && confirmation == "--confirm" => {
                     let report = unifi::snapshot(None)?;
                     println!("{}", report["output"].as_str().unwrap_or("No UniFi report"));
@@ -224,9 +224,9 @@ pub fn run(args: Vec<String>) -> Result<(), Box<dyn Error>> {
                     println!("{}", report["output"].as_str().unwrap_or("No UniFi report"));
                     Ok(())
                 }
-                [mode, ..] if mode == "unifi" => Err(
-                    "usage: pipboy workbench net unifi [SITE_UUID] --confirm".into()
-                ),
+                [mode, ..] if mode == "unifi" => {
+                    Err("usage: pipboy workbench net unifi [SITE_UUID] --confirm".into())
+                }
                 [mode, address, port, confirmation]
                     if mode == "tcp" && confirmation == "--confirm" =>
                 {

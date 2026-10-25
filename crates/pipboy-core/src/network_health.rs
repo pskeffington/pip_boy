@@ -34,7 +34,10 @@ fn round2(value: f64) -> f64 {
 /// A strict count is shared by the CLI and local dashboard.
 pub fn count(value: &str) -> io::Result<u8> {
     if value.is_empty() || !value.bytes().all(|x| x.is_ascii_digit()) {
-        return Err(io::Error::new(io::ErrorKind::InvalidInput, "Sample count must be numeric"));
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "Sample count must be numeric",
+        ));
     }
     let n = value
         .parse::<u8>()
@@ -50,22 +53,30 @@ pub fn count(value: &str) -> io::Result<u8> {
 
 /// Summarizes completed connect attempts. Never generates samples itself.
 pub fn report(target: &str, samples: &[Option<f64>]) -> io::Result<HealthReport> {
-    if target.len() > 90 || target.is_empty()
+    if target.len() > 90
+        || target.is_empty()
         || !(MIN_SAMPLES as usize..=MAX_SAMPLES as usize).contains(&samples.len())
-        || samples.iter().flatten().any(|value| !value.is_finite() || *value < 0.0 || *value > 10_000.0)
+        || samples
+            .iter()
+            .flatten()
+            .any(|value| !value.is_finite() || *value < 0.0 || *value > 10_000.0)
     {
-        return Err(io::Error::new(io::ErrorKind::InvalidInput, "Invalid health sample data"));
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "Invalid health sample data",
+        ));
     }
     let mut successful: Vec<f64> = samples.iter().flatten().copied().collect();
     successful.sort_by(f64::total_cmp);
     let connected = successful.len();
     let failed = samples.len() - connected;
-    let variation: Vec<f64> = samples.windows(2).filter_map(|window| {
-        match (window[0], window[1]) {
+    let variation: Vec<f64> = samples
+        .windows(2)
+        .filter_map(|window| match (window[0], window[1]) {
             (Some(first), Some(second)) => Some((second - first).abs()),
             _ => None,
-        }
-    }).collect();
+        })
+        .collect();
     let mean = (!successful.is_empty()).then(|| successful.iter().sum::<f64>() / connected as f64);
     let median = (!successful.is_empty()).then(|| {
         if connected % 2 == 1 {
@@ -100,7 +111,9 @@ pub fn report(target: &str, samples: &[Option<f64>]) -> io::Result<HealthReport>
 impl HealthReport {
     pub fn console(&self) -> String {
         fn number(value: Option<f64>) -> String {
-            value.map(|v| format!("{v:.2} ms")).unwrap_or_else(|| "N/A".to_owned())
+            value
+                .map(|v| format!("{v:.2} ms"))
+                .unwrap_or_else(|| "N/A".to_owned())
         }
         if self.method == "icmp_echo" {
             return format!(
@@ -117,9 +130,16 @@ impl HealthReport {
              P95: {} | Max: {}\nVariation (mean adjacent |delta|): {}\n\
              Method: TCP handshake, fixed target; no application data or port scanning.\n\
              No ICMP RTT, UDP jitter, or throughput claims.",
-            self.target, self.attempts, self.connected, self.failed,
-            self.failure_percent, number(self.min_ms), number(self.mean_ms),
-            number(self.median_ms), number(self.p95_ms), number(self.max_ms),
+            self.target,
+            self.attempts,
+            self.connected,
+            self.failed,
+            self.failure_percent,
+            number(self.min_ms),
+            number(self.mean_ms),
+            number(self.median_ms),
+            number(self.p95_ms),
+            number(self.max_ms),
             number(self.variation_ms)
         )
     }
@@ -130,7 +150,10 @@ impl HealthReport {
 /// summary confirms transmitted and received counts.
 pub fn icmp_report(target: &str, sent: u8, times_ms: &[f64]) -> io::Result<HealthReport> {
     if !(MIN_SAMPLES..=MAX_SAMPLES).contains(&sent) || times_ms.len() > sent as usize {
-        return Err(io::Error::new(io::ErrorKind::InvalidInput, "Invalid ICMP summary"));
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "Invalid ICMP summary",
+        ));
     }
     let mut observations: Vec<Option<f64>> = times_ms.iter().copied().map(Some).collect();
     observations.resize(sent as usize, None);
@@ -191,5 +214,4 @@ mod tests {
         assert!(r.console().contains("ICMP packet loss: 20.00%"));
         assert!(icmp_report("target", 3, &[1.0, 1.0, 1.0, 1.0]).is_err());
     }
-
 }
