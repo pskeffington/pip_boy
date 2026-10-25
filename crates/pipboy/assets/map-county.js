@@ -9,7 +9,7 @@
   const MAX_UNPACKED = 64 * 1024 * 1024;
   const MAX_FEATURES = 60000;
   const MAX_VERTICES = 450000;
-  const SOURCES = Object.freeze(["tiger-roads", "tiger-areawater"]);
+  const SOURCES = Object.freeze(["tiger-roads", "tiger-areawater", "tiger-linearwater"]);
   const bad = (message) => { throw new Error(message); };
   const finite = (n) => typeof n === "number" && Number.isFinite(n);
   const validGeoid = (id) => typeof id === "string" && /^\d{5}$/.test(id) &&
@@ -168,7 +168,7 @@
     if (uint32(dv, 0, false) !== 9994 || uint32(dv, 28) !== 1000 ||
         uint32(dv, 24, false) * 2 !== raw.byteLength)
       bad("Invalid county SHP header");
-    const expected = layer === "roads" ? 3 : 5;
+    const expected = layer === "areawater" ? 5 : 3;
     const fileType = uint32(dv, 32);
     if (fileType !== expected) bad("County layer has wrong geometry type");
     const shapes = [];
@@ -213,7 +213,7 @@
       const paths = [];
       for (let i=0; i<parts.length; i++) {
         const path = coords.slice(parts[i], i+1<parts.length ? parts[i+1] : countPoints);
-        if (path.length < (layer==="roads"?2:4)) bad("County SHP short geometry");
+        if (path.length < (layer==="areawater"?4:2)) bad("County SHP short geometry");
         if (layer === "areawater" &&
             (path[0][0] !== path.at(-1)[0] || path[0][1] !== path.at(-1)[1]))
           bad("County water polygon is not closed");
@@ -223,13 +223,14 @@
       const record = label ? label(records) : {name:"",mtfcc:""};
       const major = /^(S1100|S1200)$/.test(record.mtfcc);
       shapes.push({
-        kind: layer==="roads" ? "line" : "polygon",
+        kind: layer==="areawater" ? "polygon" : "line",
         paths, label: record.name.slice(0,36),
         countyBase:true, countyLayer:layer, countyMajor:major,
         countyMtfcc:record.mtfcc,
         bounds:[west,south,east,north],
         style:layer==="roads"
           ? {stroke:major?"#b9dda1":"#729b7c",width:major?1.6:0.7,opacity:0.9}
+          : layer==="linearwater" ? {stroke:"#81b1b8",width:1.0,opacity:0.86}
           : {stroke:"#7ca6a6",fill:"rgba(43,104,111,.35)",width:0.85,opacity:0.86}
       });
       bbox[0]=Math.min(bbox[0],west);bbox[1]=Math.min(bbox[1],south);
@@ -245,7 +246,8 @@
   async function parsePackage(buffer, geoid, source) {
     if (!validGeoid(geoid) || !SOURCES.includes(source))
       bad("Invalid county package source or GEOID");
-    const layer = source === "tiger-roads" ? "roads" : "areawater";
+    const layer = source === "tiger-roads" ? "roads" :
+      source === "tiger-areawater" ? "areawater" : "linearwater";
     const directory = zipDirectory(buffer, geoid, layer);
     const shp = await unpack(directory.shp);
     const dbf = directory.dbf ? await unpack(directory.dbf) : null;
