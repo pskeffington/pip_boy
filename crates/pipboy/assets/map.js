@@ -233,7 +233,7 @@
     view.siteList.replaceChildren();
     const total = view.sites.length;
     const pages = Math.max(1, Math.ceil(total / SITE_PAGE_SIZE));
-    view.sitePage = Math.min(view.sitePage, pages - 1);
+    view.sitePage = clamp(view.sitePage, 0, pages - 1);
     view.sitePageLabel.textContent = (view.sitePage + 1) + "/" + pages;
     view.sitePrev.disabled = view.sitePage === 0;
     view.siteNext.disabled = view.sitePage === pages - 1;
@@ -1155,7 +1155,7 @@
     view.webReconnect = () => {
       if (active !== view) return;
       if (view.webEnabled) void webFetch(view);
-      else void probeWeb(view);
+      else if (!view.sitesVisible) void probeWeb(view);
     };
     view.webDisconnect = () => {
       if (active === view && view.webEnabled) {
@@ -1176,8 +1176,8 @@
     }
     window.requestAnimationFrame(() => {
       resize(view);
-      void probeWeb(view);
       if (view.siteAccess && pendingSiteFocus !== null) showLocalSites(view);
+      else void probeWeb(view);
       if (!view.siteAccess) pendingSiteFocus = null;
     });
     return view;
