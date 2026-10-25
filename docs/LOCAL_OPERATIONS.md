@@ -12,7 +12,7 @@ The local-operation gate is separate from the lifecycle-managed telemetry collec
 
 The offline default grants local read access, not write access. The user explicitly calling `notes add` or `notes import` grants local write permission to that command's short-lived host only. File writes remain protected by the note store's existing validation, locking and staged replacement. No background sync, external device access, or network activity was introduced.
 
-This is **cooperative in-process policy**, not OS-enforced isolation; arbitrary native code linked into the process is not restricted by these checks. Persistent per-adapter consent and device brokering remain separate, unfinished work.
+This is **cooperative in-process policy**, not OS-enforced isolation; arbitrary native code linked into the process is not restricted by these checks. A separate `PreferenceStore` now persists requested/denied external-adapter choices, but **does not authorize any capability**. Actual per-adapter consent and device brokering remain unfinished; see [permissions contract](PERMISSIONS.md).
 
 ## Acceptance commands
 

@@ -10,6 +10,7 @@ Rust-Boy is an experimental offline-first field systems console, not a safety-of
 - Explicit finite host sampling emits NDJSON to stdout only; it does not automatically save data, transmit measurements, or access external hardware.
 - Notes are created only through an explicit user command. They are stored in JSON under PIPBOY_HOME or the user's home directory.
 - Notes are plaintext and must not contain passwords, tokens, sensitive medical records, or restricted information.
+- Saved adapter preferences are separate from active permissions; `requested` does not open a device, access the network or authorize a receiver/transmitter.
 
 ## Capability architecture
 
@@ -27,6 +28,6 @@ Never import source or media solely because it is visible on GitHub. Capture rep
 
 File a private security report using GitHub's security advisory feature when available. Avoid publishing credentials, location traces, or sensitive sample files in issues.
 
-Local host telemetry starts only after the host checks its read grant. TUI P revokes that grant immediately, drops the collector/history, and clears the displayed reading. Resume grants host read access for the current session and explicitly restarts collection. Grants are not persisted. Notes/library and legacy `status` are still direct built-in services; this is not a general per-adapter consent system.
+Local host telemetry starts only after the host checks its read grant. TUI P revokes that grant immediately, drops the collector/history, and clears the displayed reading. Resume grants host read access for the current session and explicitly restarts collection. Grants are not persisted. STAT is lifecycle-managed, while trusted LIBRARY and NOTES operations use scoped `run_local` prechecks. `permissions.json` saves only future adapter intent; it is never loaded as active grants, and there is no OS broker or actual external-adapter authorization yet. See [adapter preferences](docs/PERMISSIONS.md) and [local operation controls](docs/LOCAL_OPERATIONS.md).
 
 Notes writers use a cooperative OS lock. Readers/search are side-effect free. Schema checks reject future versions, extra fields, duplicate/zero IDs, control characters and oversized data before rewriting. Ordinary staging errors preserve the current document. Locking does not constrain external editors or untrusted code; do not delete notes.lock while any writer may be active. See [storage limits and recovery](docs/STORAGE.md).

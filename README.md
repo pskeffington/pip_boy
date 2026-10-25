@@ -4,7 +4,7 @@
 
 Rust-Boy is an independent, modular toolkit for desktop terminals and future wearable field computers. It combines local host diagnostics, a curated research library, and a user-controlled offline journal under one minimal native interface. Planned adapters extend it to Raspberry Pi hardware, maps, receive-only radios, and authenticated local communications.
 
-> **Project status — local Linux quality checks pass; G0 platform/CI acceptance remains open.** STAT, LIBRARY, and NOTES have initial implementations. The TUI and finite NDJSON sampling command share versioned observations and bounded in-memory telemetry. The one-shot status CLI is now wired through the same lazy permission/lifecycle host, with new regression tests awaiting execution. Local tests pass on stable and Rust 1.81.0; see [validation evidence](docs/VALIDATION.md). Host telemetry now uses lifecycle/capability orchestration, with P to pause/resume in the TUI. Persistent per-adapter consent, cross-platform smoke tests, and external hardware remain unfinished.
+> **Project status — local Linux quality checks pass; G0 platform/CI acceptance remains open.** STAT, LIBRARY, and NOTES have initial implementations. The TUI and finite NDJSON sampling command share versioned observations and bounded in-memory telemetry. The one-shot status CLI and scoped LIBRARY/NOTES calls now use the host permission layer. An experimental adapter preference store and explicit CLI commands are implemented in source; newly added tests have not executed. Earlier Linux local tests passed on stable and Rust 1.81.0, but those results predate these changes; see [validation evidence](docs/VALIDATION.md). Host telemetry uses lifecycle/capability orchestration, with P to pause/resume in the TUI. **Saved requests do not grant permissions.** Device brokering, session-based adapter authorization, cross-platform acceptance and external hardware remain unfinished.
 
 ## Rust-Boy identity
 
@@ -58,6 +58,10 @@ cargo run -p pipboy -- modules
 cargo run -p pipboy -- plan G3
 cargo run -p pipboy -- evidence Rust
 cargo run -p pipboy -- doctor
+cargo run -p pipboy -- permissions list
+cargo run -p pipboy -- permissions request sdr.receive
+cargo run -p pipboy -- permissions deny sdr.receive
+cargo run -p pipboy -- permissions clear sdr.receive
 cargo run -p pipboy -- notes add "Field observation"
 cargo run -p pipboy -- notes list
 cargo run -p pipboy -- notes search "battery"
@@ -67,12 +71,17 @@ cargo run -p pipboy -- notes import notes-backup.json
 python3 tools/validate_catalog.py
 cargo fmt --all -- --check
 cargo test --workspace
+python3 tools/smoke_permissions.py # run after cargo build -p pipboy
 cargo clippy --workspace --all-targets -- -D warnings
 ```
 
 The `sample` command is intentionally bounded to 1–30 samples at 500–30000 ms intervals, writing NDJSON only to stdout. It does not create a recording or start a background service. Actual CPU sampling is subject to the sysinfo platform-dependent minimum refresh interval. The TUI retains at most 60 observations in memory and displays source, freshness, reading age, and dropped-record counts. Closing an NDJSON output pipe stops collection cleanly.
 
 Use **Left/Right** or **Tab** to change panels, **Up/Down** to select entries or scroll STAT, **Page Up/Down** to scroll detail text, **Home/End** for first/last, **R** to reload notes, **P** to pause/resume host collection, and **Q** to exit. The compact layout supports 40×12; smaller terminals show resize/exit guidance. See [console controls](docs/CONSOLE.md). Note files are plaintext and stored under `PIPBOY_HOME` or the platform's default Rust-Boy data directory. Do not store passwords, credentials, or sensitive records in notes.
+
+## Saved adapter preferences
+
+The new `permissions` CLI records `unset`, `requested`, or `denied` intent in a bounded, versioned local JSON file. A `requested` value is only a preference for future functionality: Rust-Boy still does not authorize radio, mesh, GNSS, Bluetooth, GPIO, device enumeration or network access. `permissions list` does not create files. See the [permission storage and threat boundary](docs/PERMISSIONS.md). The implementation requires compilation and runtime acceptance before use is considered verified.
 
 ## Repository navigation
 
@@ -86,6 +95,7 @@ Use **Left/Right** or **Tab** to change panels, **Up/Down** to select entries or
 | [docs/ROADMAP.md](docs/ROADMAP.md) | Phased implementation and acceptance gates |
 | [docs/G1_EXECUTION_PLAN.md](docs/G1_EXECUTION_PLAN.md) | Next G1 engineering slices and testable acceptance criteria |
 | [docs/STORAGE.md](docs/STORAGE.md) | Notes schema, limits, write locks and recovery rules |
+| [docs/PERMISSIONS.md](docs/PERMISSIONS.md) | External adapter preferences, storage and consent boundary |
 | [docs/CI_TRIAGE.md](docs/CI_TRIAGE.md) | GitHub Actions startup investigation and local verification |
 | [docs/LITERATURE_MATRIX.md](docs/LITERATURE_MATRIX.md) | Evidence matrix connecting standards and studies to modules |
 | [docs/MODULE_CATALOG.md](docs/MODULE_CATALOG.md) | Planned modules, features, dependency gates and acceptance criteria |

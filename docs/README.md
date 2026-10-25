@@ -8,6 +8,8 @@ Rust-Boy is an offline-first, Rust-native field systems console. This directory 
 | [Roadmap](ROADMAP.md) | G0–G4 work packages, verification and device gates |
 | [G1 execution plan](G1_EXECUTION_PLAN.md) | Ordered acceptance slices, current prototypes, remaining integration |
 | [CI triage](CI_TRIAGE.md) | Startup failures, manual workflow and Rust verification commands |
+| [Adapter preferences](PERMISSIONS.md) | Persistent requested/denied intent, schema limits and non-authorization boundary |
+| [Scoped local operations](LOCAL_OPERATIONS.md) | LIBRARY/NOTES in-process permission prechecks |
 | [Literature matrix](LITERATURE_MATRIX.md) | Primary research and standards mapped to module decisions and tests |
 | [Module catalog](MODULE_CATALOG.md) | Features, dependency edges, permission requirements and acceptance criteria |
 | [Object model](OBJECT_MODEL.md) | Rust trait architecture, host policy, adapter boundaries and lifecycle |

@@ -18,7 +18,7 @@ flowchart TD
     HOST --> STORE[Local Storage / user-owned notes]
 ```
 
-**Current implementation scope:** `ModuleHost` owns lifecycle states, capability grants and trusted built-in modules. The TUI and finite NDJSON command run a lazy `HostTelemetryModule` through it. Construction/registration performs no collector I/O; explicit start checks grants before initialization. Revocation stops affected modules immediately, regrant alone never restarts them, and host drop cleans up running modules. TUI P revokes/resumes local host reads and clears its cached display and observation history. These paths are locally tested on stable and Rust 1.81.0. Notes, library and legacy `status` remain direct service calls. The diagram shows the broader target architecture; OS isolation, device brokering, persistent settings and third-party plugins remain unimplemented.
+**Current implementation scope:** `ModuleHost` owns lifecycle states, capability grants and trusted built-in modules. The TUI and finite NDJSON command run a lazy `HostTelemetryModule` through it. Construction/registration performs no collector I/O; explicit start checks grants before initialization. Revocation stops affected modules immediately, regrant alone never restarts them, and host drop cleans up running modules. TUI P revokes/resumes local host reads and clears its cached display and observation history. These paths are locally tested on stable and Rust 1.81.0. The one-shot status CLI now uses the lifecycle host, while LIBRARY/NOTES calls use `run_local` permission prechecks. An independent `PreferenceStore` records future-adapter requests/denials, but does not create grants. These newer paths await runtime validation. The diagram shows the broader target: OS isolation, device brokering, actual adapter consent and third-party plugins remain unimplemented.
 
 ## Major objects / responsibilities
 
@@ -28,6 +28,8 @@ flowchart TD
 | `RuntimeModule` trait | Polymorphic, object-safe internal module contract | Concrete module implementation |
 | `ModuleHost` | Registration, duplicate and readiness checks, capability checks, start/stop/revoke and lifecycle outcomes | Module collection and user grants |
 | `PermissionSet` | Initially offline/read-only; manual grants require explicit application action | Host, not an adapter |
+| `LocalOperation` | Read/write capability precheck for trusted one-shot LIBRARY/NOTES actions | Short-lived caller policy |
+| `PreferenceStore` | Bounded versioned requested/denied intent for future external adapters, never active grants | Local `permissions.json` file |
 | `ModulePoll` | Explicit `Sample`, `Denied`, `Inactive`, `Failed` status plus lifecycle state for observability | Return value, no hidden success |
 | `Observation<T>` (implemented typed envelope) | Source, time, unit, validity and provenance of measurements | One sample; enforce data constraints |
 | `DeviceBroker` (G2 planned) | Authorized OS I/O handles for selected hardware | Controlled platform adapter |
@@ -65,6 +67,10 @@ Use concrete generic adapters for high-throughput SDR and packet decode paths wh
 5. `revoke` immediately stops affected running modules and moves them to Disabled. Start failure calls cleanup and moves to Unavailable; explicit stop/reset is needed before retry. Poll failures move to Degraded; a successful later poll recovers Running.
 
 **Critical distinction:** a capability array is a policy declaration; a malicious Rust module can still call `std::fs` or sockets if linked in-process. Real plugin isolation requires a separate process/sandbox, broker-only handles, and security review. G4 explicitly avoids loading untrusted native modules.
+
+### Persisted intent versus active grants
+
+`pipboy permissions list|request|deny|clear` maintains only future-adapter preferences. Runtime `PermissionSet` does not read this file or grant privileges from its content. A future device broker must separately check a trusted active-session authorization before supplying an OS device handle, and honor persisted denials. See [PERMISSIONS.md](PERMISSIONS.md); compilation/platform acceptance is still required.
 
 ### Runtime API migration
 
