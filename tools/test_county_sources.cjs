@@ -127,6 +127,54 @@ async function main(){
  assert.equal(fromCache.features,3);
  const p=calls.filter(c=>c.url==="/api/map/package").slice(-3);
  assert.ok(p.every(c=>JSON.parse(c.opts.body).cache_only===true));
+ // Integrated MAP: auto restore a cached county without network or GPS.
+ class E {
+   constructor(tag){this.tag=tag;this.children=[];this.listeners={};this.attrs={};
+     this.isConnected=true;this.hidden=false;this.value="";this.textContent="";
+     this.style={};this.className="";this.files=[];this.classList={add(){}};
+     this.ctx={setTransform(){},clearRect(){},fillRect(){},beginPath(){},
+       moveTo(){},lineTo(){},stroke(){},fillText(){},arc(){},fill(){},closePath(){}};}
+   append(...xs){this.children.push(...xs)}
+   replaceChildren(...xs){this.children=xs}
+   addEventListener(k,v){(this.listeners[k] ||= []).push(v)}
+   setAttribute(k,v){this.attrs[k]=v}
+   getContext(){return this.ctx}
+   getBoundingClientRect(){return{width:480,height:320,left:0,top:0}}
+   setPointerCapture(){}focus(){}click(){}
+ }
+ const doc={createElement:k=>new E(k)};
+ const nav={onLine:false,geolocation:{
+   watchPosition(){throw Error("Unexpected GPS")},clearWatch(){} }};
+ let countyLookups=0;
+ window.isSecureContext=true;window.devicePixelRatio=1;
+ window.requestAnimationFrame=fn=>fn();
+ window.addEventListener=()=>{};window.removeEventListener=()=>{};
+ window.RustBoyOnline={
+   countyAt:async()=>{countyLookups++;return{
+     id:"25025",name:"Suffolk",source:"Census TIGERweb",
+     shape:{kind:"line",paths:[[[-71.1,42.3],[-71.0,42.4]]],
+       style:{stroke:"#edca83",width:2}},paths:[]};},
+   ping:async()=>true
+ };
+ new Function("window","document","navigator","TextEncoder","fetch",
+   read("map.js"))(window,doc,nav,TextEncoder,fetchMock);
+ const map=window.RustBoyMap.mount(new E("div"));
+ for(let i=0;i<100 && map.countyShapes.length!==3;i++)
+   await new Promise(resolve=>setImmediate(resolve));
+ assert.equal(map.countyShapes.length,3,"cached county automatically populates MAP");
+ assert.equal(map.countyPackage.geoid,"25025");
+ assert.equal(countyLookups,0,"cache must not request Census or GPS");
+ nav.onLine=true;
+ map.countyButton.listeners.click[0]();
+ map.latitude.value="42.36";map.longitude.value="-71.06";
+ map.manual.listeners.submit[0]({preventDefault(){}});
+ for(let i=0;i<100 && !map.county;i++)
+   await new Promise(resolve=>setImmediate(resolve));
+ assert.equal(countyLookups,1,"manual CENTER triggers one lookup");
+ assert.equal(map.county.id,"25025");
+ assert.equal(map.webEnabled,false,"OSM remains separately opt-in");
+ window.RustBoyMap.unmount();
+ assert.equal(map.countyShapes.length,0,"unmount discards decoded county geometry");
  console.log("County source registry: bounded 2025 ZIP, SHP/DBF, raw geometry, offline cache: PASS");
 }
 main().catch(error=>{console.error(error);process.exitCode=1;});
