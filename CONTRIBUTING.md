@@ -15,6 +15,10 @@ cargo run --locked -p pipboy -- doctor
 
 Core layout: `crates/pipboy` (CLI/TUI), `crates/pipboy-core` (local core and mock adapters), `crates/rust-boy-broker` (separate **deny-only** process), `catalog/` (evidence and planned modules), `tools/` (validation), and `docs/` (technical contracts).
 
+## Peer transport and trusted remote commands
+
+The optional SSH bridge is implemented in `crates/pipboy/src/peer.rs` with validated configuration in `pipboy-core::peers`; typed durable receive/report storage belongs to `pipboy-core::tasks`. Do not add an unauthenticated listener, TOFU host-key enrollment, a shell-based arbitrary remote command or implicit task send on role load. Preserve the restricted `peer bridge SOURCE` command allowlist, idempotent receiver storage, and the distinction between a stored-delivery receipt and manual acknowledgment. Run `python3 tools/smoke_peer.py` and review [peer security](docs/PEER_TASK_TRANSPORT.md). The CI SSH substitute is not a cryptographic verification test.
+
 ## Task Control development
 
 The separate `crates/pipboy-core/src/tasks.rs` owns all validation, durable storage, revision-conflict checks and human handoff text. The local browser UI lives in `crates/pipboy/assets/tasks.{js,css}` and is shared by the desktop and micro renderers. Do not duplicate task state inside profile JSON, confuse an email draft with a send, or mark manual acknowledgment as verified. Follow [Task Control security contract](docs/TASK_CONTROL.md); test `python3 tools/smoke_tasks.py` after compiling the Rust binary.

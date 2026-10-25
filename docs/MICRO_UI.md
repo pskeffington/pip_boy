@@ -27,6 +27,10 @@ This is an intentionally separate HTML/CSS/JS shell, not a compressed desktop si
 
 No physical screen, Raspberry Pi graphics stack, battery sensor or refresh-rate measurement has yet been validated. **PWR is shown as "NOT DETECTED"**, not a fabricated charge percentage.
 
+## Direct device task delivery
+
+The Task Control detail now offers **SEND TO SELECTED DEVICE** only for explicitly enrolled OpenSSH peers. Once the destination durably saves the task, the manager sees its peer ID and stored receipt. Recipient operators can acknowledge and work on tasks in their own job HUD; the Overseer must deliberately request **REFRESH REMOTE STATUS** to view updates. This replaces the previous email-draft workflow; no background connections or task notifications are added. Pairing and host fingerprint verification are CLI/OS steps; see [peer setup](PEER_TASK_TRANSPORT.md).
+
 ## Overseer and role duty displays
 
 On a new install, Overseer begins with **TASK CONTROL** pre-pinned. STAT summarizes actual locally recorded open/overdue/blocked tasks and provides direct access to the task board; GEAR opens the same management module. Creation, reassignment, manual handoff and acknowledgement take explicit clicks. The other job HUDs show their **assigned duties**, filtering by their job ID, rather than a generic management control panel. Older saved Overseer boards need an explicit profile reload to receive the new Task Control pin without resetting task data.

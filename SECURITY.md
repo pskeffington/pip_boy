@@ -12,11 +12,15 @@ Rust-Boy is an **experimental local field console**, not a safety-of-life, secur
 
 The `ModuleHost` capability checks and mock leases are cooperative **in-process** controls; they are **not** an OS sandbox for untrusted native code. A separate deny-only process is likewise **not** a working OS permission broker.
 
-## Tasks, assignments and manual dispatch
+## Device-to-device task trust and persistent local data
 
-Task Control persists unencrypted `tasks.json` under `PIPBOY_HOME`, separate from notes and workbench preferences. The local task store uses bounded input, explicit schema validation, a cooperative file lock and atomic replacement on accepted writes. On Unix the file is private to the account (`0600`); this **does not protect against other processes running as the same user**. Do not record sensitive patient details, security credentials, private locations or other regulated material.
+The current Task Control UI uses explicitly paired OpenSSH peers, **not email**. The sender verifies a previously approved host key, uses a chosen private SSH key, disables password and SSH-agent fallback, limits execution time/output, and passes only a validated JSON assignment to a fixed remote Rust-Boy command. The recommended receiver uses a dedicated OS account and a key-specific \`authorized_keys\` **\`restrict,command="/absolute/pipboy peer bridge SOURCE"\`** rule: the Rust-Boy forced bridge allows only typed receive and matching status-receipt requests, not an arbitrary shell, port forwarding or other processes. Host key fingerprints must be verified out-of-band; \`ssh-keyscan\` output alone is untrusted.
 
-An assignment copied to clipboard or opened as an email draft has **not been sent or delivered by Rust-Boy**. The separate "Mark sent" and "Record acknowledgment" actions are manual declarations and **not authenticated receipts**. The current operational role selector controls which tasks are shown and edited in the UI but **is not user login or access control**; a local user can change profile. No outbound mail, webhook, LAN sync, TAK transport or automatic task notification is implemented. A future multiuser task network needs authenticated identities, secure transport, encrypted storage/authorization, acknowledgments and replay protection. See [task contract](docs/TASK_CONTROL.md).
+\`peers.json\` stores peer aliases, approved SSH targets, paths to SSH keys/known_hosts and local trusted labels **but no private key bytes**. \`tasks.json\` contains plaintext assignments, nonsecret origin references, stored-delivery receipt and separately imported remote progress. Data files are private to the OS account on Unix and atomically replaced; they are **not encrypted at rest**, and a locally logged-in user can switch roles. Roles and trusted sender *labels* are not human/device cryptographic identities. The forced key-level restriction is the receiver's supported source authentication boundary in this phase.
+
+No task is transmitted or synchronized on job selection, server startup or state GET. Sending requires explicit operator confirmation; remote progress refresh is also explicit. SSH response validation/receiver-side deduplication prevent a sender retry from silently creating repeated local tasks. There are **no** background task notifications, BLE/mesh/generic LAN listeners or direct video/GNSS actions.
+
+A compromised receiver OS account or unrestricted SSH authorized key can still perform account-level operations: **do not use this preview for safety-critical, confidential or regulated workflows**. Physical host-key, key-revocation, Linux/macOS Pi deployment and interrupted-delivery tests are pending. See [peer transport contract](docs/PEER_TASK_TRANSPORT.md).
 
 ## Micro display and device boundary
 

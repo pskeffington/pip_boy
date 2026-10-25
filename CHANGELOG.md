@@ -2,6 +2,13 @@
 
 This file records notable changes to Rust-Boy. This repository is in **development preview**; the Rust workspace version `0.1.0` is not a published production release. Dates are in UTC unless otherwise stated.
 
+## Unreleased — authenticated peer task transfer prototype (2026-10-25)
+
+- Replace the Overseer's email-draft controls with a **paired Rust-Boy device selector**, explicit **SEND TO DEVICE** confirmation, stored-delivery receipt, receiver-side acknowledgment and manual progress refresh.
+- Build an optional OpenSSH peer backend: private `peers.json` roster, explicit `peer init/trust/add/list/send/sync` CLI, bounded typed assignment/receipt protocol and restricted SSH forced-command bridge; task GETs and job loads never connect.
+- Add idempotent receiver task import, separate device IDs, origin/delivery/remote-progress fields, conflict protection and CI-tested two-home local SSH relay (not a real SSH encryption test).
+- Add [device-to-device setup and security guide](docs/PEER_TASK_TRANSPORT.md); no new listening port, wireless radio transport, push notification or auto-pairing. True physical Mac-to-Pi hardware testing remains open.
+
 ## Unreleased — Overseer Task Control and operational job HUDs (2026-10-25)
 
 - Preload `mission-board` / **TASK CONTROL** as the first Overseer module. Role-specific micro STAT screens replace the generic station page; other occupational HUDs have locally assigned task queues.

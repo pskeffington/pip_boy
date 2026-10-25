@@ -7,6 +7,12 @@ Rust-Boy is the public product name. The existing `pip_boy` repository, `pipboy`
 
 > **Verified integration baseline:** [Five-job Linux/macOS/Windows CI](https://github.com/pskeffington/pip_boy/actions/runs/40164915215) passed at `e7d1090`, including macOS PTY, Windows ConPTY, and the strict deny-all broker suite. **This does not complete a packaged release or enable physical devices.** The catalog's `implemented_unverified` status denotes a pending module acceptance review, not an absence of CI execution.
 
+## G1 explicit Rust-Boy device-to-device task link
+
+The new [peer task transport](PEER_TASK_TRANSPORT.md) introduces enrolled device labels, validated peer destinations and **explicit** host-key-pinned OpenSSH task delivery between two Rust-Boy installations. A receiver durably imports the job in its own task file; on-demand SSH reports convey operator acknowledgment and progress back without silently overwriting the manager's status. The task UI replaces the old email draft with a peer-device picker. No auto-connect, native mesh/radio, background sync or PS4 integration is implied.
+
+The test's local SSH substitute covers typed sender/receiver behavior, but real Mac-to-Pi host verification, restricted authorized_keys, network loss/retry and low-resolution UI acceptance are still external release gates. Future G2 extensions: native authenticated peer identity, durable offline outbox/retries, revocation, secure BLE/mesh transports and push notifications.
+
 ## G1 Overseer management and job-specific work queues
 
 [Task Control](TASK_CONTROL.md) is now an offline real module for Overseer with persistent work assignments, role and person fields, priorities, due dates, statuses, operator-marked sends/acknowledgments, bounded history and expected-revision edit conflict rejection. Both micro and desktop views share the same Rust task store, and non-management jobs show their assigned role queue while retaining their specialized tools. **Sharing is manual via copy/email draft**; no background notification, authenticated delivery or live cross-device synchronization is claimed.

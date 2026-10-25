@@ -8,6 +8,7 @@ Technical contracts, architecture decisions, research provenance and validation 
 
 | Guide | Focus |
 | --- | --- |
+| [Peer task transport](PEER_TASK_TRANSPORT.md) | Explicit OpenSSH Mac/Pi enrollment, restricted bridge, delivery and receipt sync |
 | [Overseer Task Control](TASK_CONTROL.md) | Persistent assignments, status, manual handoff and role queues |
 | [Micro handheld shell](MICRO_UI.md) | Six-tab phosphor UI, Mac launcher, 480×320 and 800×480 viewport plan |
 | [Graphical dashboard](DASHBOARD_UI.md) | Run local browser UI on Mac, load role templates, test offline tools and Custom |

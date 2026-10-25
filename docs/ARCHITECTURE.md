@@ -11,6 +11,12 @@ Rust-Boy is the public name of the modular console. The repository, executable, 
 
 The current `ModuleHost` is an **in-process testable policy precheck** and does not isolate untrusted code. Physical device access, OS-enforced permissions and transport isolation remain planned, not implemented.
 
+## Explicit peer task transport (no Rust-Boy network listener)
+
+A separate `pipboy-core::peers` private config holds local device labels, trusted sender labels and explicitly approved OpenSSH destinations. `pipboy peer send ID ALIAS --confirm` and the protected dashboard route invoke a fixed SSH command with strict host-key and key authentication. A receiving SSH account executes a **restricted `pipboy peer bridge SOURCE` forced command**: it only permits receive or source-specific receipt reporting, validates trusted source and stores the typed assignment through the task store. The sender checks the receiver's stored-task ID before persisting delivery; recipient acknowledgments/status are retrieved only on explicit `peer sync`. Host fingerprints must be verified out-of-band when enrolling a peer. This backend does not expose its own network service or run a discovery scan.
+
+The sender's status, authenticated SSH delivery receipt, receiving device's manual acknowledgment and receiver-reported progress remain distinct. Job template selection grants no SSH privilege and triggers no networking. See [peer transport guide](PEER_TASK_TRANSPORT.md).
+
 ## Task Control data and operational boundaries
 
 The Rust `pipboy-core::tasks` module persists a distinct, versioned `tasks.json` board under `PIPBOY_HOME`; the `workbench.json` file still stores role/pin configuration only. Task create/update requests use the existing loopback API but **never** start a communication channel. A reusable browser component `assets/tasks.js` powers both desktop and handheld mission boards. Overseer/Custom with `mission-board` pinned sees the full local manager board; other job profiles see only their locally assigned queue. These UI scopes are **not authenticated role-based access control**.

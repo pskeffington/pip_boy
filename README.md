@@ -10,11 +10,24 @@ Rust-Boy is an independent, Rust-native developer workbench with separate local 
 
 **Current stage:** development preview. The terminal console and offline workflows are implemented and tested on Linux, macOS and Windows. Physical GPIO, serial, SDR, Bluetooth, mesh, GNSS, live maps and physical device integrations are **not enabled**. Offline WGS84 GeoJSON Point tools are provided for the Reclamation Scout. An explicitly requested Fallout 4 TCP companion browser is available for validation. No packaged production release is claimed.
 
+## Peer-to-peer assignments — Mac ↔ handheld
+
+Overseer now sends tasks **directly to a paired Rust-Boy device**, not via email. The new offline-first peer backend uses an **explicit OpenSSH connection**: known-host fingerprint checks, a dedicated SSH key, a restricted receiver command, a bounded assignment envelope, receiver-side durable storage and a stored-delivery receipt. The receiving job HUD has its **own** task copy and can acknowledge and update work; the Overseer explicitly refreshes peer-reported progress. No auto-discovery, task broadcasting, notification daemon, new TCP listener or background sync is enabled.
+
+```bash
+git clone --branch feat/peer-task-transport https://github.com/pskeffington/pip_boy.git
+cd pip_boy
+./scripts/launch-micro.command
+# Device enrollment uses the peer CLI; see the complete setup guide.
+```
+
+[Device-to-device installation, SSH pairing and security](docs/PEER_TASK_TRANSPORT.md) · [Overseer Task Control](docs/TASK_CONTROL.md). **Linux/macOS/Windows CI checks are not a substitute for testing two physical devices and out-of-band host keys.** The SSH relay test exercises the Rust-Boy protocol without a real SSH server.
+
 ## Overseer Task Control — delegate and track
 
 The **Overseer** is now a manager, not a generic tool collector. Its first preloaded module is **TASK CONTROL**, a persistent offline assignment board. Create tasks with assignee, target job, due date, priority and instructions; filter overdue/blocked/completed work; reassign and record status and manual acknowledgments with revision-safe audit history. On the handheld, **STAT** provides actual task counts and a task queue, and each operational job sees its own assigned-duty list.
 
-**Handoffs:** Each assignment can generate an operator-controlled copyable message or an **email draft** in your local mail client. Neither action sends it; the user must explicitly send outside Rust-Boy, then mark sent and acknowledgment manually. **Cross-device delivery, authentication and automatic synchronization are not yet implemented.** These are local work records, not a networked multiuser system.
+**Device dispatch:** A manager explicitly selects a previously paired SSH device, confirms **SEND**, and receives an acknowledgement only after the remote Rust-Boy stores the assignment. Recipient status/acknowledgment is retrieved only when the manager requests a sync. SSH server setup and trust enrollment are manual; no automatic peer discovery, broadcasts or background task polling are enabled.
 
 Test the developer branch:
 

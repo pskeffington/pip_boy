@@ -10,6 +10,10 @@ Reviewed: **2026-10-25**. Repository: `pip_boy`; product: **Rust-Boy**. This is 
 4. **Truthful states:** Distinguish static layout, simulation, real local tools, explicit opt-in connectors, stale data, and entirely unimplemented features. A pinned icon is not proof of a live feed.
 5. **No IP confusion:** Vault-Tec terminology and citations inspire the profile names; tool design, UX, code, and visuals are original. No Vault-Tec affiliation or game artwork license is claimed. See [lore matrix](VAULT_TEC_LORE_MATRIX.md).
 
+## Overseer-to-job device assignments
+
+The R1 management board now has an **opt-in SSH peer task transport**. Operators enroll a peer and verify its host key, send a task through a typed restricted receiver, and later explicitly fetch the recipient's acknowledgment/status. This is a real backend delivery path but **not** a fully authenticated person-to-person workforce system or native BLE/mesh transport. See [device setup and limits](PEER_TASK_TRANSPORT.md).
+
 ## Handheld micro display shell
 
 [Micro terminal UI](MICRO_UI.md) provides the compact visual shell shared by the seven occupational templates and Custom: a top status band, six fixed thumb-sized navigation tabs, one active viewport and the existing confirmed profile save. Scout's geospatial page allows genuine offline waypoint/distance calculations, but a **working RustGIS map is deferred**. Security Chief's four-camera page is a no-video fixture with one-tap focus/back; genuine camera streams are a separate integration gate. The micro shell does not grant physical permissions or claim Pi hardware acceptance.
