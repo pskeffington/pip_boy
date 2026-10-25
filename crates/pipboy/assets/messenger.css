@@ -1,0 +1,50 @@
+/* Rust-Boy messenger: original phosphor micro layout, no external assets. */
+.rb-msg-root {min-width:0;max-width:100%;display:flex;flex-direction:column;gap:5px;
+  font:11px ui-monospace,SFMono-Regular,Consolas,monospace;color:#cbf4b8;}
+.rb-msg-root[hidden]{display:none}
+.rb-msg-title{font-size:12px;font-weight:800;letter-spacing:.06em}
+.rb-msg-transport{font-size:10px;color:#b7e6b7}
+.rb-msg-warning{font-size:9px;color:#f0d39b;line-height:1.2;overflow-wrap:anywhere}
+.rb-msg-status{font-size:10px;min-height:12px;color:#c2e9a7}
+.rb-msg-error{color:#f4bca1}
+.rb-msg-toolbar{display:flex;gap:5px;align-items:end}
+.rb-msg-label{font-size:10px;display:flex;flex-direction:column;gap:3px;min-width:0;flex:1}
+.rb-msg-select,.rb-msg-input{min-width:0;width:100%;background:#091f10;color:#d9f8c9;
+  border:1px solid #53774c;border-radius:2px;padding:6px;font:11px ui-monospace,Consolas,monospace}
+.rb-msg-select{min-height:30px}
+.rb-msg-input{min-height:45px;resize:vertical;line-height:1.35}
+.rb-msg-button{border:1px solid #64935a;background:#15311d;color:#d8f7b8;
+  border-radius:2px;min-height:30px;padding:5px 8px;font:700 10px ui-monospace,Consolas,monospace;
+  cursor:pointer}
+.rb-msg-button:hover:not(:disabled),.rb-msg-button:focus-visible{background:#2c4e2b;border-color:#b8e98d}
+.rb-msg-button:disabled{opacity:.4;cursor:default}
+.rb-msg-send{background:#b0f583;color:#102315}
+.rb-msg-thread{min-height:38px;max-height:150px;overflow-y:auto;scrollbar-width:thin;
+  border:1px solid #39593f;padding:3px;overscroll-behavior:contain}
+.rb-msg-item{padding:5px;margin:2px 0;border:1px solid #35553a;background:#102419}
+.rb-msg-item .rb-msg-button{min-height:25px}
+.rb-msg-meta{font-size:9px;color:#e2d19b}
+.rb-msg-body{font-size:11px;line-height:1.35;white-space:pre-wrap;overflow-wrap:anywhere;
+  margin:3px 0;color:#ddf8c5}
+.rb-msg-empty{font-size:10px;color:#9abf95;padding:9px}
+.rb-msg-pager{display:flex;gap:5px;align-items:center;justify-content:center}
+.rb-msg-pager .rb-msg-button{min-height:24px;padding:3px 7px}
+.rb-msg-pager span{font-size:10px;min-width:28px;text-align:center}
+.rb-msg-compose{display:flex;align-items:end;gap:6px;min-width:0}
+.rb-msg-compose .rb-msg-label{min-width:0}
+.rb-msg-compose .rb-msg-send{min-height:38px}
+.rb-msg-desktop-dock{margin-top:14px;border:1px solid #35573b;border-radius:5px;
+  padding:12px;background:#0a1c10;max-width:100%}
+.rb-msg-desktop-dock .rb-msg-thread{max-height:250px}
+@media(max-width:520px){
+  .rb-msg-thread{max-height:95px}
+  .rb-msg-button{min-height:27px;padding:3px 6px}
+  .rb-msg-compose .rb-msg-send{min-height:36px}
+  .rb-msg-warning{font-size:9px}
+}
+@media(max-height:360px){
+  .rb-msg-root{gap:3px}
+  .rb-msg-thread{max-height:70px}
+  .rb-msg-warning{font-size:8px}
+  .rb-msg-compose .rb-msg-input{min-height:36px}
+}
