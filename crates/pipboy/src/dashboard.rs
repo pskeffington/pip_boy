@@ -1824,6 +1824,47 @@ mod tests {
     }
 
     #[test]
+    fn messenger_api_requires_confirmation_and_never_auto_connects() {
+        let dir = tempfile::tempdir().unwrap();
+        let store = WorkbenchStore::new(dir.path().join("private/workbench.json"));
+        let empty = dispatch(&request("GET", "/api/messages", Value::Null), &store, 8765);
+        assert_eq!(empty.status, 200);
+        let response: Value = serde_json::from_slice(&empty.body).unwrap();
+        assert_eq!(response["messages"], json!([]));
+        assert_eq!(response["peers"], json!([]));
+        assert_eq!(response["e2ee"], false);
+        assert_eq!(response["storage"], "plaintext_local_only");
+        assert!(!dir.path().join("private/messages.json").exists());
+
+        for input in [
+            json!({"alias":"scout-one","body":"Hi"}),
+            json!({"alias":"scout-one","body":"\u{1b}[31m","confirm":true}),
+            json!({"alias":"not-paired","body":"Hello","confirm":true}),
+            json!({"alias":"scout-one","body":"Hello","confirm":false}),
+        ] {
+            let response = dispatch(
+                &request("POST", "/api/messages/send", input), &store, 8765,
+            );
+            assert_ne!(response.status, 200);
+            assert!(!dir.path().join("private/messages.json").exists());
+        }
+
+        let retry = dispatch(
+            &request("POST", "/api/messages/retry", json!({"id":1})),
+            &store, 8765,
+        );
+        assert_eq!(retry.status, 422);
+
+        let mut cross = request(
+            "POST", "/api/messages/send",
+            json!({"alias":"scout-one","body":"Hello","confirm":true}),
+        );
+        cross.headers.insert("origin".into(), "https://hostile.invalid".into());
+        assert_eq!(dispatch(&cross, &store, 8765).status, 403);
+        assert!(!dir.path().join("private/messages.json").exists());
+    }
+
+    #[test]
     fn county_source_api_is_allowlisted_local_and_explicit() {
         let temp = tempfile::tempdir().unwrap();
         let store = WorkbenchStore::new(temp.path().join("state"));
