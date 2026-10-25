@@ -4,6 +4,8 @@ This is the **Rust-Boy** project's reference library. The Pip-Boy names below id
 
 Repository discovery snapshot: 2026-10-24. Source metadata and license indicators are catalogued in ../catalog/sources.json. This is a reference library, not a vendored-code directory. Check the upstream license and exact commit again before adapting anything.
 
+The companion [literature matrix](LITERATURE_MATRIX.md) maps peer-reviewed research, official specifications and first-party documentation to the [planned module catalog](MODULE_CATALOG.md). Unlike the external project inventory below, the literature matrix represents design evidence, not code reuse authorization.
+
 ## Strongest architectural references
 
 | Project | Observed design | Fit | License indicator |

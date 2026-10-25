@@ -1,0 +1,754 @@
+[
+  {
+    "id": "stat",
+    "name": "Host status",
+    "gate": "G0",
+    "priority": "P0",
+    "domain": "core",
+    "status": "implemented_unverified",
+    "depends_on": [],
+    "capabilities": [
+      "host.read"
+    ],
+    "evidence": [
+      "L03",
+      "L19"
+    ],
+    "features": [
+      "CPU/memory/OS/uptime snapshot",
+      "Human-readable and JSON output"
+    ],
+    "acceptance": [
+      "Status runs without network or devices",
+      "No fabricated hardware values"
+    ]
+  },
+  {
+    "id": "library",
+    "name": "Reference library",
+    "gate": "G0",
+    "priority": "P0",
+    "domain": "core",
+    "status": "implemented_unverified",
+    "depends_on": [],
+    "capabilities": [
+      "files.read"
+    ],
+    "evidence": [
+      "L10",
+      "L19"
+    ],
+    "features": [
+      "Bundled GitHub source catalog",
+      "License and reuse classification"
+    ],
+    "acceptance": [
+      "Catalog validates unique IDs",
+      "No third-party source vendoring"
+    ]
+  },
+  {
+    "id": "notes",
+    "name": "Offline field notes",
+    "gate": "G0",
+    "priority": "P0",
+    "domain": "core",
+    "status": "implemented_unverified",
+    "depends_on": [],
+    "capabilities": [
+      "files.write"
+    ],
+    "evidence": [
+      "L04",
+      "L19"
+    ],
+    "features": [
+      "User-directed create/list notes",
+      "Local JSON persistence"
+    ],
+    "acceptance": [
+      "No write without explicit user action",
+      "Malformed notes rejected"
+    ]
+  },
+  {
+    "id": "telemetry",
+    "name": "Telemetry event stream",
+    "gate": "G1",
+    "priority": "P0",
+    "domain": "core",
+    "status": "planned",
+    "depends_on": [
+      "stat"
+    ],
+    "capabilities": [
+      "host.read",
+      "files.write"
+    ],
+    "evidence": [
+      "L01",
+      "L02",
+      "L03",
+      "L19",
+      "L25"
+    ],
+    "features": [
+      "Provenance-tagged samples",
+      "NDJSON export and interval controls",
+      "Bounded in-memory buffers"
+    ],
+    "acceptance": [
+      "Tests cover source, clock and sample freshness",
+      "No background uploads or implicit files"
+    ]
+  },
+  {
+    "id": "storage",
+    "name": "Storage and schema service",
+    "gate": "G1",
+    "priority": "P0",
+    "domain": "core",
+    "status": "planned",
+    "depends_on": [
+      "notes"
+    ],
+    "capabilities": [
+      "files.read",
+      "files.write"
+    ],
+    "evidence": [
+      "L04",
+      "L09",
+      "L19"
+    ],
+    "features": [
+      "Versioned local collections",
+      "Import/export and backup",
+      "Atomic write validation"
+    ],
+    "acceptance": [
+      "Old schemas migrate with fixtures",
+      "Interrupted write never silently destroys existing notes"
+    ]
+  },
+  {
+    "id": "power",
+    "name": "Power and resources",
+    "gate": "G1",
+    "priority": "P1",
+    "domain": "core",
+    "status": "planned",
+    "depends_on": [
+      "stat"
+    ],
+    "capabilities": [
+      "host.read"
+    ],
+    "evidence": [
+      "L03"
+    ],
+    "features": [
+      "Battery state if OS provides it",
+      "Disk and thermal indicators",
+      "Low-power refresh profiles"
+    ],
+    "acceptance": [
+      "Unsupported sensors read unknown not zero",
+      "Idle profiles measured on supported OS"
+    ]
+  },
+  {
+    "id": "network",
+    "name": "Local network link status",
+    "gate": "G1",
+    "priority": "P1",
+    "domain": "core",
+    "status": "planned",
+    "depends_on": [
+      "stat"
+    ],
+    "capabilities": [
+      "host.read"
+    ],
+    "evidence": [
+      "L20"
+    ],
+    "features": [
+      "Read-only interface and link diagnostics",
+      "No active scanning",
+      "Offline health indicators"
+    ],
+    "acceptance": [
+      "Default makes no outbound requests",
+      "Network data reports source and freshness"
+    ]
+  },
+  {
+    "id": "settings",
+    "name": "Settings and permission UI",
+    "gate": "G1",
+    "priority": "P0",
+    "domain": "core",
+    "status": "planned",
+    "depends_on": [
+      "storage"
+    ],
+    "capabilities": [
+      "files.read",
+      "files.write"
+    ],
+    "evidence": [
+      "L16",
+      "L22"
+    ],
+    "features": [
+      "Explicit per-adapter permission choices",
+      "Reversible configuration",
+      "Disabled-by-default external I/O"
+    ],
+    "acceptance": [
+      "Permissions tested before adapter callback",
+      "Settings migration and revocation tests"
+    ]
+  },
+  {
+    "id": "accessibility",
+    "name": "Accessible console",
+    "gate": "G1",
+    "priority": "P0",
+    "domain": "presentation",
+    "status": "planned",
+    "depends_on": [
+      "stat",
+      "settings"
+    ],
+    "capabilities": [],
+    "evidence": [
+      "L05",
+      "L18"
+    ],
+    "features": [
+      "Keyboard-only navigation",
+      "Contrast and color-independent status labels",
+      "Reduced-motion / low-bandwidth mode"
+    ],
+    "acceptance": [
+      "80x24 and smaller terminal fixtures",
+      "No status relies on color alone"
+    ]
+  },
+  {
+    "id": "diagnostics",
+    "name": "Diagnostics and evidence audit",
+    "gate": "G1",
+    "priority": "P0",
+    "domain": "core",
+    "status": "planned",
+    "depends_on": [
+      "library",
+      "settings"
+    ],
+    "capabilities": [
+      "files.read"
+    ],
+    "evidence": [
+      "L16",
+      "L17"
+    ],
+    "features": [
+      "Schema checks and adapter readiness",
+      "Human-readable diagnostics",
+      "Feature readiness truth table"
+    ],
+    "acceptance": [
+      "No device probing without consent",
+      "Every check reports pass/fail/not-run"
+    ]
+  },
+  {
+    "id": "gpio",
+    "name": "Physical controls",
+    "gate": "G2",
+    "priority": "P1",
+    "domain": "hardware",
+    "status": "planned",
+    "depends_on": [
+      "settings"
+    ],
+    "capabilities": [
+      "gpio.read"
+    ],
+    "evidence": [
+      "L06",
+      "L07"
+    ],
+    "features": [
+      "Rotary encoder/button event inputs",
+      "Debounce and long-press handling",
+      "Keyboard-equivalent action mapping"
+    ],
+    "acceptance": [
+      "Replay fixture on non-Pi host",
+      "Recover cleanly from device unavailability"
+    ]
+  },
+  {
+    "id": "devices",
+    "name": "Device broker",
+    "gate": "G2",
+    "priority": "P0",
+    "domain": "hardware",
+    "status": "planned",
+    "depends_on": [
+      "settings",
+      "diagnostics"
+    ],
+    "capabilities": [
+      "device.enumerate"
+    ],
+    "evidence": [
+      "L02",
+      "L03",
+      "L07",
+      "L14"
+    ],
+    "features": [
+      "Explicit device selection",
+      "Capabilities and permission broker",
+      "Safe disconnect and timeouts"
+    ],
+    "acceptance": [
+      "Unknown/unapproved device stays closed",
+      "Revoke permission blocks adapter invocation"
+    ]
+  },
+  {
+    "id": "display",
+    "name": "Wearable display layer",
+    "gate": "G2",
+    "priority": "P1",
+    "domain": "presentation",
+    "status": "planned",
+    "depends_on": [
+      "accessibility",
+      "gpio"
+    ],
+    "capabilities": [
+      "display.write"
+    ],
+    "evidence": [
+      "L05",
+      "L18"
+    ],
+    "features": [
+      "480x320 and 720x720 layout profiles",
+      "No-flicker refresh",
+      "Frame snapshots"
+    ],
+    "acceptance": [
+      "Layout fixtures at each profile",
+      "Accessible fallback without visual effects"
+    ]
+  },
+  {
+    "id": "serial",
+    "name": "Serial transport",
+    "gate": "G2",
+    "priority": "P1",
+    "domain": "hardware",
+    "status": "planned",
+    "depends_on": [
+      "devices"
+    ],
+    "capabilities": [
+      "serial.read"
+    ],
+    "evidence": [
+      "L14"
+    ],
+    "features": [
+      "Selected-port read-only session",
+      "Framed input with size limits",
+      "Device disconnect recovery"
+    ],
+    "acceptance": [
+      "No implicit port enumeration or open",
+      "Malformed frames and unplug tested"
+    ]
+  },
+  {
+    "id": "simulator",
+    "name": "Hardware event simulator",
+    "gate": "G2",
+    "priority": "P0",
+    "domain": "testing",
+    "status": "planned",
+    "depends_on": [
+      "gpio",
+      "display"
+    ],
+    "capabilities": [],
+    "evidence": [
+      "L05",
+      "L25"
+    ],
+    "features": [
+      "Deterministic event playback",
+      "Mock GPIO/serial/display adapters",
+      "Recorded golden traces"
+    ],
+    "acceptance": [
+      "CI runs without hardware",
+      "Replay gives same state transitions"
+    ]
+  },
+  {
+    "id": "gnss",
+    "name": "GNSS navigation input",
+    "gate": "G3",
+    "priority": "P1",
+    "domain": "field",
+    "status": "planned",
+    "depends_on": [
+      "devices",
+      "storage"
+    ],
+    "capabilities": [
+      "gnss.read"
+    ],
+    "evidence": [
+      "L08",
+      "L09"
+    ],
+    "features": [
+      "gpsd and NMEA adapters where allowed",
+      "Fix quality and staleness",
+      "Opt-in coordinate history"
+    ],
+    "acceptance": [
+      "No-fix and stale-fix shown explicitly",
+      "Location history disabled by default"
+    ]
+  },
+  {
+    "id": "map",
+    "name": "Offline cartography",
+    "gate": "G3",
+    "priority": "P1",
+    "domain": "field",
+    "status": "planned",
+    "depends_on": [
+      "storage",
+      "gnss",
+      "display"
+    ],
+    "capabilities": [
+      "files.read"
+    ],
+    "evidence": [
+      "L09",
+      "L10",
+      "L11"
+    ],
+    "features": [
+      "GPX/GeoJSON import",
+      "User-supplied licensed offline tiles",
+      "Track overlays and source badges"
+    ],
+    "acceptance": [
+      "Attribution persisted with map bundle",
+      "No OSM public raster tile scraping or prefetch"
+    ]
+  },
+  {
+    "id": "radio",
+    "name": "Receive-only SDR",
+    "gate": "G3",
+    "priority": "P2",
+    "domain": "field",
+    "status": "planned",
+    "depends_on": [
+      "devices",
+      "telemetry"
+    ],
+    "capabilities": [
+      "sdr.receive"
+    ],
+    "evidence": [
+      "L20",
+      "L24"
+    ],
+    "features": [
+      "Explicit selected receive-only device",
+      "Read-only signal status and sample metadata",
+      "Replay data fixtures"
+    ],
+    "acceptance": [
+      "No transmit API in default build",
+      "Disconnect/timeout and resource limits tested"
+    ]
+  },
+  {
+    "id": "adsb",
+    "name": "ADS-B receiver overlay",
+    "gate": "G3",
+    "priority": "P2",
+    "domain": "field",
+    "status": "planned",
+    "depends_on": [
+      "radio",
+      "map"
+    ],
+    "capabilities": [
+      "sdr.receive"
+    ],
+    "evidence": [
+      "L23",
+      "L24"
+    ],
+    "features": [
+      "Receive-only 1090ES / optional 978 UAT decoders",
+      "Aircraft records with timestamp and validity",
+      "Local-only track rendering"
+    ],
+    "acceptance": [
+      "Malformed frames rejected",
+      "No surveillance claims beyond received, unverified data"
+    ]
+  },
+  {
+    "id": "ble",
+    "name": "Nearby BLE adapter",
+    "gate": "G3",
+    "priority": "P2",
+    "domain": "field",
+    "status": "planned",
+    "depends_on": [
+      "devices",
+      "settings"
+    ],
+    "capabilities": [
+      "ble.discover"
+    ],
+    "evidence": [
+      "L12",
+      "L13",
+      "L22"
+    ],
+    "features": [
+      "User-initiated discovery",
+      "Manual peer and peripheral selection",
+      "Pairing/connection indicators"
+    ],
+    "acceptance": [
+      "Zero scanning on startup",
+      "Consent revoked shuts down adapter"
+    ]
+  },
+  {
+    "id": "mesh",
+    "name": "Authenticated local messaging",
+    "gate": "G3",
+    "priority": "P2",
+    "domain": "communications",
+    "status": "planned",
+    "depends_on": [
+      "ble",
+      "serial",
+      "settings"
+    ],
+    "capabilities": [
+      "mesh.transmit"
+    ],
+    "evidence": [
+      "L04",
+      "L12",
+      "L15",
+      "L21",
+      "L22"
+    ],
+    "features": [
+      "Manually selected peers and transport",
+      "Replay-protected message envelopes",
+      "Explicit send confirmation"
+    ],
+    "acceptance": [
+      "Threat model and cryptographic review before TX",
+      "No automatic broadcast or trust by proximity"
+    ]
+  },
+  {
+    "id": "sensors",
+    "name": "Environmental sensor adapters",
+    "gate": "G3",
+    "priority": "P2",
+    "domain": "field",
+    "status": "planned",
+    "depends_on": [
+      "devices",
+      "telemetry"
+    ],
+    "capabilities": [
+      "sensor.read"
+    ],
+    "evidence": [
+      "L06",
+      "L20"
+    ],
+    "features": [
+      "Temperature/pressure/air quality on approved hardware",
+      "Units/calibration and provenance",
+      "Stale-data alarms"
+    ],
+    "acceptance": [
+      "Missing calibration flagged",
+      "Read-only hardware paths verified"
+    ]
+  },
+  {
+    "id": "weather",
+    "name": "Local weather panel",
+    "gate": "G3",
+    "priority": "P2",
+    "domain": "field",
+    "status": "planned",
+    "depends_on": [
+      "sensors"
+    ],
+    "capabilities": [
+      "files.read"
+    ],
+    "evidence": [
+      "L04",
+      "L19"
+    ],
+    "features": [
+      "Local sensor summary",
+      "Optional manually imported forecasts",
+      "Freshness, timestamp and units"
+    ],
+    "acceptance": [
+      "Forecasts never shown as live measurement",
+      "Works with zero network connectivity"
+    ]
+  },
+  {
+    "id": "audio",
+    "name": "Field audio outputs",
+    "gate": "G3",
+    "priority": "P2",
+    "domain": "presentation",
+    "status": "planned",
+    "depends_on": [
+      "settings"
+    ],
+    "capabilities": [
+      "audio.play"
+    ],
+    "evidence": [
+      "L18"
+    ],
+    "features": [
+      "Local media and accessibility cues",
+      "User-supplied licensed files",
+      "Mute and quiet-mode controls"
+    ],
+    "acceptance": [
+      "No bundled copyrighted Fallout audio",
+      "Readable non-audio equivalents"
+    ]
+  },
+  {
+    "id": "plugins",
+    "name": "Versioned module API",
+    "gate": "G4",
+    "priority": "P1",
+    "domain": "platform",
+    "status": "planned",
+    "depends_on": [
+      "devices",
+      "simulator",
+      "diagnostics"
+    ],
+    "capabilities": [
+      "files.read"
+    ],
+    "evidence": [
+      "L01",
+      "L02",
+      "L15",
+      "L16",
+      "L17",
+      "L25"
+    ],
+    "features": [
+      "Signed declarative manifests",
+      "Versioned typed adapter contracts",
+      "Static registration first, no arbitrary dlopen"
+    ],
+    "acceptance": [
+      "Unknown or unsigned modules rejected",
+      "Never grant raw OS privileges via metadata alone"
+    ]
+  },
+  {
+    "id": "feeds",
+    "name": "Opt-in external data connectors",
+    "gate": "G4",
+    "priority": "P2",
+    "domain": "platform",
+    "status": "planned",
+    "depends_on": [
+      "settings",
+      "storage",
+      "network"
+    ],
+    "capabilities": [
+      "network.fetch"
+    ],
+    "evidence": [
+      "L04",
+      "L11",
+      "L19"
+    ],
+    "features": [
+      "User-configured endpoints",
+      "Request size/rate/time limits",
+      "Offline caches with provenance"
+    ],
+    "acceptance": [
+      "No automatic network requests in default config",
+      "Source failures do not block local console"
+    ]
+  },
+  {
+    "id": "release",
+    "name": "Reproducible release pipeline",
+    "gate": "G4",
+    "priority": "P0",
+    "domain": "platform",
+    "status": "planned",
+    "depends_on": [
+      "plugins",
+      "accessibility",
+      "simulator"
+    ],
+    "capabilities": [
+      "files.read"
+    ],
+    "evidence": [
+      "L03",
+      "L16",
+      "L17"
+    ],
+    "features": [
+      "Signed multi-platform builds",
+      "SBOM and supply chain attestations",
+      "Hardware and accessibility smoke matrix"
+    ],
+    "acceptance": [
+      "Release requires green jobs and human acceptance",
+      "No SLSA compliance claim without evidence"
+    ]
+  }
+]

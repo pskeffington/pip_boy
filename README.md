@@ -75,6 +75,11 @@ Use **Left/Right** or **Tab** to change console panels and **Q** to exit. Note f
 | [docs/README.md](docs/README.md) | Technical documentation index |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Core boundaries, adapters, and data guarantees |
 | [docs/ROADMAP.md](docs/ROADMAP.md) | Phased implementation and acceptance gates |
+| [docs/LITERATURE_MATRIX.md](docs/LITERATURE_MATRIX.md) | Evidence matrix connecting standards and studies to modules |
+| [docs/MODULE_CATALOG.md](docs/MODULE_CATALOG.md) | Planned modules, features, dependency gates and acceptance criteria |
+| [docs/OBJECT_MODEL.md](docs/OBJECT_MODEL.md) | Rust traits, composition, host policy, and proposed adapters |
+| [catalog/module_plan.json](catalog/module_plan.json) | Machine-readable planned features and module dependencies |
+| [catalog/literature.json](catalog/literature.json) | Machine-readable engineering evidence roster |
 | [docs/RESEARCH_LIBRARY.md](docs/RESEARCH_LIBRARY.md) | Evaluated third-party references and licensing policy |
 | [catalog/sources.json](catalog/sources.json) | Structured source index, not vendored code |
 | [crates/pipboy-core](crates/pipboy-core) | Shared data, telemetry, modules, and notes |

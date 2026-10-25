@@ -6,6 +6,9 @@ Rust-Boy is an offline-first, Rust-native field systems console. This directory 
 | --- | --- |
 | [Architecture](ARCHITECTURE.md) | Native core, interface, persistence, capability boundaries |
 | [Roadmap](ROADMAP.md) | G0–G4 work packages, verification and device gates |
+| [Literature matrix](LITERATURE_MATRIX.md) | Primary research and standards mapped to module decisions and tests |
+| [Module catalog](MODULE_CATALOG.md) | Features, dependency edges, permission requirements and acceptance criteria |
+| [Object model](OBJECT_MODEL.md) | Rust trait architecture, host policy, adapter boundaries and lifecycle |
 | [External research library](RESEARCH_LIBRARY.md) | Pip-Boy ecosystem survey, license review, source handling |
 
 **Top-level policies:** [Brand identity](../BRANDING.md) · [Security](../SECURITY.md) · [Contributing](../CONTRIBUTING.md) · [MIT license](../LICENSE)
