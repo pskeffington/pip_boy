@@ -1,6 +1,6 @@
 # Rust-Boy | GitHub Actions startup investigation
 
-**Status checked October 24, 2026:** Actions reports startup_failure and the inspected runs contain zero jobs. Run [40153691749](https://github.com/pskeffington/pip_boy/actions/runs/40153691749) at development head `642ea67` also reports `startup_failure` with zero jobs; the new status integration has not been run in CI. This is a workflow startup failure, not evidence of Rust compiler or test execution.
+**Status checked October 24, 2026:** Latest inspected simulated-broker head `ecbb861b` run [40159278156](https://github.com/pskeffington/pip_boy/actions/runs/40159278156) completed `startup_failure` with **zero jobs**. Earlier runs exhibited the same status. No Rust, Python or workflow test job executed; the cause requires GitHub Actions runner/account-policy investigation, not a claim about failing source compilation.
 
 [Example failed workflow](https://github.com/pskeffington/pip_boy/actions/runs/40149614562)
 
