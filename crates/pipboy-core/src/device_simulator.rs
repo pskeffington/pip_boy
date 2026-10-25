@@ -12,6 +12,9 @@ use std::error::Error;
 use std::fmt;
 use std::sync::Arc;
 
+/// Maximum simulated lease duration; no physical timer or device timeout exists.
+pub const MAX_VIRTUAL_TIMEOUT_MS: u64 = 60_000;
+
 /// A fixed virtual fixture, never a discovered physical device.
 #[derive(Clone, Copy, Debug)]
 pub struct SimulatedDevice {
@@ -96,6 +99,8 @@ pub enum BrokerError {
     Busy,
     InvalidLease,
     InvalidPreference,
+    InvalidTimeout,
+    ClockReversed,
     CounterExhausted,
     ReplayInvariant,
 }
@@ -114,6 +119,8 @@ impl fmt::Display for BrokerError {
             Self::InvalidPreference => {
                 "invalid or duplicate adapter preference; no session authorized"
             }
+            Self::InvalidTimeout => "simulated timeout must be between 1 and 60000 ms",
+            Self::ClockReversed => "simulated logical clock moved backwards; lease invalidated",
             Self::CounterExhausted => "simulated session counter exhausted",
             Self::ReplayInvariant => "deterministic replay fixture invariant violated",
         };
@@ -134,6 +141,8 @@ impl BrokerError {
             Self::Busy => "busy",
             Self::InvalidLease => "invalid_lease",
             Self::InvalidPreference => "invalid_preference",
+            Self::InvalidTimeout => "invalid_timeout",
+            Self::ClockReversed => "clock_reversed",
             Self::CounterExhausted => "counter_exhausted",
             Self::ReplayInvariant => "replay_invariant",
         }
@@ -153,6 +162,7 @@ pub struct SimulationLease {
 struct ActiveSession {
     device: &'static SimulatedDevice,
     generation: u64,
+    expires_at_ms: Option<u64>,
 }
 
 /// A truthful fixture event with no fabricated sensor value.
@@ -177,6 +187,7 @@ pub struct SimulatedBroker {
     disconnected: HashSet<&'static str>,
     generation: u64,
     sequence: u64,
+    logical_ms: u64,
 }
 
 impl SimulatedBroker {
@@ -189,6 +200,7 @@ impl SimulatedBroker {
             disconnected: HashSet::new(),
             generation: 0,
             sequence: 0,
+            logical_ms: 0,
         })
     }
 
@@ -225,6 +237,33 @@ impl SimulatedBroker {
         id: &str,
         confirmation: SessionConfirmation,
     ) -> Result<SimulationLease, BrokerError> {
+        self.open_internal(id, confirmation, None)
+    }
+
+    /// A bounded mock-only deadline measured by explicit logical clock ticks.
+    /// No wall-clock timer, actual device handle, or background task is created.
+    pub fn open_with_timeout(
+        &mut self,
+        id: &str,
+        confirmation: SessionConfirmation,
+        ttl_ms: u64,
+    ) -> Result<SimulationLease, BrokerError> {
+        if ttl_ms == 0 || ttl_ms > MAX_VIRTUAL_TIMEOUT_MS {
+            return Err(BrokerError::InvalidTimeout);
+        }
+        let deadline = self
+            .logical_ms
+            .checked_add(ttl_ms)
+            .ok_or(BrokerError::CounterExhausted)?;
+        self.open_internal(id, confirmation, Some(deadline))
+    }
+
+    fn open_internal(
+        &mut self,
+        id: &str,
+        confirmation: SessionConfirmation,
+        expires_at_ms: Option<u64>,
+    ) -> Result<SimulationLease, BrokerError> {
         if !self.policy_valid {
             return Err(BrokerError::InvalidPreference);
         }
@@ -249,12 +288,34 @@ impl SimulatedBroker {
             .checked_add(1)
             .ok_or(BrokerError::CounterExhausted)?;
         self.generation = generation;
-        self.active = Some(ActiveSession { device, generation });
+        self.active = Some(ActiveSession {
+            device,
+            generation,
+            expires_at_ms,
+        });
         Ok(SimulationLease {
             owner: Arc::clone(&self.owner),
             generation,
             device_id: device.id,
         })
+    }
+
+    /// Advance an injected, deterministic logical clock. Returns true only
+    /// when crossing an active session deadline, invalidating that lease.
+    /// A backwards tick fails closed and invalidates any active session.
+    pub fn advance_to(&mut self, logical_ms: u64) -> Result<bool, BrokerError> {
+        if logical_ms < self.logical_ms {
+            self.active = None;
+            return Err(BrokerError::ClockReversed);
+        }
+        self.logical_ms = logical_ms;
+        let expired = self
+            .active
+            .is_some_and(|session| session.expires_at_ms.is_some_and(|end| logical_ms >= end));
+        if expired {
+            self.active = None;
+        }
+        Ok(expired)
     }
 
     fn authorized(&self, lease: &SimulationLease) -> Result<&ActiveSession, BrokerError> {
@@ -318,6 +379,14 @@ impl SimulatedBroker {
     }
 
     pub fn close(&mut self, lease: &SimulationLease) -> Result<(), BrokerError> {
+        self.authorized(lease)?;
+        self.active = None;
+        Ok(())
+    }
+
+    /// Explicitly cancel an authorized simulated lease. Cancellation cannot
+    /// authorize a fresh lease; subsequent opens require new confirmation.
+    pub fn cancel(&mut self, lease: &SimulationLease) -> Result<(), BrokerError> {
         self.authorized(lease)?;
         self.active = None;
         Ok(())
@@ -574,6 +643,83 @@ mod tests {
         );
         assert_eq!(broker.active_device(), None);
         assert_eq!(BrokerError::Unavailable.code(), "unavailable");
+    }
+
+    #[test]
+    fn cancellation_drops_lease_without_auto_restart() {
+        let mut broker = SimulatedBroker::new(&[]).unwrap();
+        let old = broker
+            .open("sim:ble", SessionConfirmation::Confirmed)
+            .unwrap();
+        assert_eq!(broker.sample(&old).unwrap().sequence, 1);
+        broker.cancel(&old).unwrap();
+        assert!(broker.active_device().is_none());
+        assert_eq!(broker.sample(&old).unwrap_err(), BrokerError::InvalidLease);
+        assert_eq!(broker.cancel(&old).unwrap_err(), BrokerError::InvalidLease);
+        assert_eq!(
+            broker.open("sim:ble", SessionConfirmation::Absent).unwrap_err(),
+            BrokerError::ConfirmationRequired
+        );
+        let fresh = broker
+            .open("sim:ble", SessionConfirmation::Confirmed)
+            .unwrap();
+        assert_eq!(broker.sample(&fresh).unwrap().sequence, 2);
+    }
+
+    #[test]
+    fn logical_timeout_exact_boundary_invalidates_lease() {
+        let mut broker = SimulatedBroker::new(&[]).unwrap();
+        let old = broker
+            .open_with_timeout("sim:serial", SessionConfirmation::Confirmed, 200)
+            .unwrap();
+        assert!(!broker.advance_to(100).unwrap());
+        assert_eq!(broker.sample(&old).unwrap().sequence, 1);
+        assert!(!broker.advance_to(199).unwrap());
+        assert!(broker.advance_to(200).unwrap());
+        assert!(!broker.advance_to(200).unwrap());
+        assert_eq!(broker.sample(&old).unwrap_err(), BrokerError::InvalidLease);
+        assert!(broker.active_device().is_none());
+        assert_eq!(
+            broker.open("sim:serial", SessionConfirmation::Absent).unwrap_err(),
+            BrokerError::ConfirmationRequired
+        );
+    }
+
+    #[test]
+    fn invalid_timeouts_and_reverse_ticks_fail_without_activity() {
+        let mut broker = SimulatedBroker::new(&[]).unwrap();
+        assert_eq!(
+            broker
+                .open_with_timeout("sim:gpio", SessionConfirmation::Confirmed, 0)
+                .unwrap_err(),
+            BrokerError::InvalidTimeout
+        );
+        assert_eq!(
+            broker
+                .open_with_timeout(
+                    "sim:gpio",
+                    SessionConfirmation::Confirmed,
+                    MAX_VIRTUAL_TIMEOUT_MS + 1,
+                )
+                .unwrap_err(),
+            BrokerError::InvalidTimeout
+        );
+        assert!(broker.active_device().is_none());
+        assert!(!broker.advance_to(100).unwrap());
+        let lease = broker
+            .open("sim:gpio", SessionConfirmation::Confirmed)
+            .unwrap();
+        assert_eq!(broker.advance_to(99).unwrap_err(), BrokerError::ClockReversed);
+        assert_eq!(broker.sample(&lease).unwrap_err(), BrokerError::InvalidLease);
+        assert_eq!(BrokerError::ClockReversed.code(), "clock_reversed");
+        assert!(!broker.advance_to(u64::MAX - 5).unwrap());
+        assert_eq!(
+            broker
+                .open_with_timeout("sim:gpio", SessionConfirmation::Confirmed, 10)
+                .unwrap_err(),
+            BrokerError::CounterExhausted
+        );
+        assert!(broker.active_device().is_none());
     }
 
     #[test]
