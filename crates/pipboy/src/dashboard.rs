@@ -1,0 +1,647 @@
+//! Rust-Boy graphical dashboard: a loopback-only, dependency-free HTTP UI.
+//!
+//! This is a local companion window, not an external web service. Profiles are
+//! declarative. No hardware, camera, console, GNSS or TAK transport is opened
+//! by browsing the dashboard or selecting a role.
+use pipboy_core::scout_gis::{distance_meters, waypoint, Point};
+use pipboy_core::workbench::{
+    encode_hex, inspect_hex, ipv4_cidr, tool, WorkbenchStore, PALETTE, PRESETS,
+};
+use serde_json::{json, Value};
+use std::collections::BTreeMap;
+use std::error::Error;
+use std::io::{self, Read, Write};
+use std::net::{Ipv4Addr, TcpListener, TcpStream};
+use std::time::Duration;
+
+const DEFAULT_PORT: u16 = 8765;
+const MAX_HEADER: usize = 8192;
+const MAX_BODY: usize = 4096;
+const HTML: &str = include_str!("../assets/dashboard.html");
+const CSS: &str = include_str!("../assets/dashboard.css");
+const JS: &str = include_str!("../assets/dashboard.js");
+
+struct Request {
+    method: String,
+    path: String,
+    headers: BTreeMap<String, String>,
+    body: Vec<u8>,
+}
+
+impl Request {
+    fn header(&self, name: &str) -> Option<&str> {
+        self.headers.get(name).map(String::as_str)
+    }
+}
+
+#[derive(Debug)]
+struct Response {
+    status: u16,
+    content_type: &'static str,
+    body: Vec<u8>,
+}
+
+impl Response {
+    fn new(status: u16, content_type: &'static str, body: impl Into<Vec<u8>>) -> Self {
+        Self {
+            status,
+            content_type,
+            body: body.into(),
+        }
+    }
+
+    fn json(status: u16, data: &Value) -> Self {
+        Self::new(
+            status,
+            "application/json; charset=utf-8",
+            serde_json::to_vec(data).expect("serializing a validated JSON value"),
+        )
+    }
+
+    fn error(status: u16, message: &str) -> Self {
+        Self::json(status, &json!({ "error": message }))
+    }
+
+    fn write_to(&self, stream: &mut TcpStream) -> io::Result<()> {
+        let label = match self.status {
+            200 => "OK",
+            204 => "No Content",
+            400 => "Bad Request",
+            403 => "Forbidden",
+            404 => "Not Found",
+            405 => "Method Not Allowed",
+            409 => "Conflict",
+            411 => "Length Required",
+            413 => "Content Too Large",
+            415 => "Unsupported Media Type",
+            422 => "Unprocessable Content",
+            431 => "Request Header Fields Too Large",
+            500 => "Internal Server Error",
+            _ => "Error",
+        };
+        let head = format!(
+            "HTTP/1.1 {} {}\r\nContent-Type: {}\r\nContent-Length: {}\r\n\
+             Cache-Control: no-store, max-age=0\r\n\
+             Content-Security-Policy: default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'\r\n\
+             X-Content-Type-Options: nosniff\r\n\
+             X-Frame-Options: DENY\r\n\
+             Referrer-Policy: no-referrer\r\n\
+             Cross-Origin-Resource-Policy: same-origin\r\n\
+             Connection: close\r\n\r\n",
+            self.status,
+            label,
+            self.content_type,
+            self.body.len()
+        );
+        stream.write_all(head.as_bytes())?;
+        stream.write_all(&self.body)?;
+        stream.flush()
+    }
+}
+
+fn bad_request(message: &'static str) -> io::Error {
+    io::Error::new(io::ErrorKind::InvalidInput, message)
+}
+
+fn receive(stream: &mut TcpStream) -> Result<Request, Response> {
+    let mut data = Vec::new();
+    let boundary = loop {
+        if let Some(offset) = data.windows(4).position(|part| part == b"\r\n\r\n") {
+            if offset + 4 > MAX_HEADER {
+                return Err(Response::error(431, "HTTP headers exceed 8 KiB"));
+            }
+            break offset + 4;
+        }
+        if data.len() >= MAX_HEADER {
+            return Err(Response::error(431, "HTTP headers exceed 8 KiB"));
+        }
+        let mut chunk = [0u8; 1024];
+        let count = stream
+            .read(&mut chunk)
+            .map_err(|_| Response::error(400, "Incomplete HTTP request"))?;
+        if count == 0 {
+            return Err(Response::error(400, "Incomplete HTTP headers"));
+        }
+        data.extend_from_slice(&chunk[..count]);
+        if data.len() > MAX_HEADER + MAX_BODY {
+            return Err(Response::error(413, "HTTP request too large"));
+        }
+    };
+
+    let head = std::str::from_utf8(&data[..boundary])
+        .map_err(|_| Response::error(400, "Invalid HTTP header text"))?;
+    let mut lines = head.split("\r\n");
+    let first = lines.next().unwrap_or_default();
+    let mut words = first.split_whitespace();
+    let method = words.next().unwrap_or_default();
+    let path = words.next().unwrap_or_default();
+    let version = words.next().unwrap_or_default();
+    if words.next().is_some()
+        || !matches!(method, "GET" | "POST")
+        || !path.starts_with('/')
+        || version != "HTTP/1.1"
+    {
+        return Err(Response::error(400, "Unsupported HTTP request line"));
+    }
+    let mut headers = BTreeMap::new();
+    for line in lines {
+        if line.is_empty() {
+            continue;
+        }
+        if line.starts_with(' ') || line.starts_with('\t') {
+            return Err(Response::error(400, "Folded HTTP headers are not allowed"));
+        }
+        let (name, value) = line
+            .split_once(':')
+            .ok_or_else(|| Response::error(400, "Malformed HTTP header"))?;
+        if name.is_empty() || !name.bytes().all(|c| c.is_ascii_alphanumeric() || c == b'-') {
+            return Err(Response::error(400, "Malformed HTTP header name"));
+        }
+        let key = name.to_ascii_lowercase();
+        if headers.contains_key(&key) {
+            return Err(Response::error(400, "Duplicate HTTP headers are not allowed"));
+        }
+        let value = value.trim();
+        if value.bytes().any(|c| c.is_ascii_control()) {
+            return Err(Response::error(400, "Malformed HTTP header value"));
+        }
+        headers.insert(key, value.to_owned());
+    }
+    if headers.contains_key("transfer-encoding") {
+        return Err(Response::error(400, "Chunked HTTP uploads are not accepted"));
+    }
+    let declared_length = headers
+        .get("content-length")
+        .map(|value| value.parse::<usize>())
+        .transpose()
+        .map_err(|_| Response::error(400, "Invalid Content-Length"))?;
+    if method == "POST" && declared_length.is_none() {
+        return Err(Response::error(411, "Content-Length required"));
+    }
+    let length = declared_length.unwrap_or(0);
+    if length > MAX_BODY {
+        return Err(Response::error(413, "JSON request body exceeds 4 KiB"));
+    }
+    if method == "GET" && length != 0 {
+        return Err(Response::error(400, "GET requests cannot contain a body"));
+    }
+    let received = data.len() - boundary;
+    if received > length {
+        return Err(Response::error(400, "Unexpected bytes after HTTP request body"));
+    }
+    while data.len() - boundary < length {
+        let mut chunk = [0u8; 1024];
+        let required = (boundary + length - data.len()).min(chunk.len());
+        let count = stream
+            .read(&mut chunk[..required])
+            .map_err(|_| Response::error(400, "Incomplete request body"))?;
+        if count == 0 {
+            return Err(Response::error(400, "Incomplete request body"));
+        }
+        data.extend_from_slice(&chunk[..count]);
+    }
+    Ok(Request {
+        method: method.to_string(),
+        path: path.to_string(),
+        headers,
+        body: data[boundary..].to_vec(),
+    })
+}
+
+fn parse_json_body(req: &Request, permitted: &[&str]) -> Result<Value, Response> {
+    if req.header("content-type") != Some("application/json") {
+        return Err(Response::error(415, "Require Content-Type: application/json"));
+    }
+    let value: Value = serde_json::from_slice(&req.body)
+        .map_err(|_| Response::error(400, "Invalid JSON request body"))?;
+    let object = value
+        .as_object()
+        .ok_or_else(|| Response::error(400, "Expected a JSON object"))?;
+    if object.keys().any(|key| !permitted.contains(&key.as_str())) {
+        return Err(Response::error(400, "Unexpected JSON field"));
+    }
+    Ok(value)
+}
+
+fn str_field<'a>(body: &'a Value, key: &str) -> Result<&'a str, Response> {
+    body.get(key)
+        .and_then(Value::as_str)
+        .ok_or_else(|| Response::error(422, "Missing or invalid string field"))
+}
+
+fn state(store: &WorkbenchStore) -> Result<Response, Response> {
+    let active = store
+        .load()
+        .map_err(|_| Response::error(409, "Cannot read the local workbench; original file preserved"))?;
+    Ok(Response::json(
+        200,
+        &json!({
+            "app": "Rust-Boy",
+            "mode": "local_dashboard",
+            "active": active,
+            "profiles": PRESETS,
+            "palette": PALETTE,
+            "engine": {
+                "rustgis": "not_integrated",
+                "camera_wall": "not_integrated",
+                "tak": "not_integrated",
+                "game_link": "explicit_cli_only"
+            },
+            "storage": "local",
+            "network": "loopback_only"
+        }),
+    ))
+}
+
+fn native_result(value: io::Result<String>) -> Response {
+    match value {
+        Ok(output) => Response::json(200, &json!({"kind": "computed", "output": output})),
+        Err(_) => Response::error(422, "Invalid input for this offline tool"),
+    }
+}
+
+fn experiment(body: &Value, store: &WorkbenchStore) -> Result<Response, Response> {
+    let tool_id = str_field(body, "tool")?;
+    let active = store
+        .load()
+        .map_err(|_| Response::error(409, "Workbench state unavailable"))?;
+    if !active.slots.iter().any(|slot| slot.tool == tool_id) {
+        return Err(Response::error(409, "Load a role containing this tool first"));
+    }
+    let output = match tool_id {
+        "byte-lab" => {
+            let input = str_field(body, "input")?;
+            if input.len() > 4096 {
+                return Err(Response::error(422, "Hex input exceeds 4 KiB"));
+            }
+            return Ok(native_result(inspect_hex(input)));
+        }
+        "net-lab" => {
+            let input = str_field(body, "input")?;
+            if input.len() > 64 {
+                return Err(Response::error(422, "CIDR input exceeds 64 bytes"));
+            }
+            return Ok(native_result(ipv4_cidr(input)));
+        }
+        "geo-lab" => {
+            let mode = str_field(body, "mode")?;
+            let a = Point::from_text(str_field(body, "lat")?, str_field(body, "lon")?)
+                .map_err(|_| Response::error(422, "Invalid WGS84 starting coordinate"))?;
+            if mode == "waypoint" {
+                let name = str_field(body, "name")?;
+                waypoint(name, a)
+                    .and_then(|feature| serde_json::to_string_pretty(&feature).map_err(io::Error::other))
+                    .map_err(|_| Response::error(422, "Invalid waypoint name or coordinates"))?
+            } else if mode == "distance" {
+                let b = Point::from_text(str_field(body, "lat2")?, str_field(body, "lon2")?)
+                    .map_err(|_| Response::error(422, "Invalid WGS84 destination coordinate"))?;
+                let meters = distance_meters(a, b);
+                format!(
+                    "SCOUT GIS / OFFLINE\nGreat-circle distance: {:.2} m ({:.3} km)\n\
+                     Model: mean-radius spherical Earth\n\
+                     No map renderer, GPS or location sharing is active.",
+                    meters,
+                    meters / 1000.0
+                )
+            } else {
+                return Err(Response::error(422, "Unknown GIS experiment mode"));
+            }
+        }
+        "host" => {
+            let report = super::status::collect_details()
+                .map_err(|_| Response::error(409, "Host telemetry not available"))?;
+            serde_json::to_string_pretty(&report)
+                .map_err(|_| Response::error(500, "Cannot format host data"))?
+        }
+        "library" => {
+            "Reference catalog: pipboy sources\nBundled source documents only. No network fetch performed."
+                .to_string()
+        }
+        "notes" => {
+            "Local notes are available via: pipboy notes list\n\
+             No note contents are read or exposed by this dashboard."
+                .to_string()
+        }
+        "simulator" => {
+            "Use: pipboy simulate list\nSynthetic fixture environment only. No hardware access."
+                .to_string()
+        }
+        "game" => {
+            "PLAYSTATION / MANUAL OPT-IN\nUse: pipboy game --ps4 <PS4_IP> --confirm\n\
+             This dashboard does not connect to a console or poll the LAN."
+                .to_string()
+        }
+        _ => {
+            return Err(Response::error(422, "Unsupported or unavailable tool"));
+        }
+    };
+    Ok(Response::json(
+        200,
+        &json!({
+            "kind": if matches!(tool_id, "geo-lab" | "host") { "computed" } else { "information" },
+            "output": output
+        }),
+    ))
+}
+
+fn dispatch(req: &Request, store: &WorkbenchStore, port: u16) -> Response {
+    let expected_host = format!("127.0.0.1:{port}");
+    if req.header("host") != Some(expected_host.as_str()) {
+        return Response::error(403, "Only the exact loopback host is allowed");
+    }
+    if req.method == "POST" {
+        let expected_origin = format!("http://{expected_host}");
+        if req.header("origin") != Some(expected_origin.as_str()) {
+            return Response::error(403, "Mutations require same-origin browser requests");
+        }
+    }
+    match (req.method.as_str(), req.path.as_str()) {
+        ("GET", "/") => Response::new(200, "text/html; charset=utf-8", HTML.as_bytes()),
+        ("GET", "/assets/dashboard.css") => {
+            Response::new(200, "text/css; charset=utf-8", CSS.as_bytes())
+        }
+        ("GET", "/assets/dashboard.js") => {
+            Response::new(200, "text/javascript; charset=utf-8", JS.as_bytes())
+        }
+        ("GET", "/favicon.ico") => Response::new(204, "text/plain; charset=utf-8", Vec::new()),
+        ("GET", "/api/state") => state(store).unwrap_or_else(|error| error),
+        ("POST", "/api/profile") => {
+            let result = (|| {
+                let body = parse_json_body(req, &["id", "confirm"])?;
+                if body.get("confirm").and_then(Value::as_bool) != Some(true) {
+                    return Err(Response::error(422, "Confirm profile replacement explicitly"));
+                }
+                let id = str_field(&body, "id")?;
+                if !PRESETS.iter().any(|profile| profile.id == id) {
+                    return Err(Response::error(422, "Unknown role profile"));
+                }
+                store
+                    .apply_preset(id)
+                    .map_err(|_| Response::error(409, "Cannot replace workbench; original preserved"))?;
+                state(store)
+            })();
+            result.unwrap_or_else(|error| error)
+        }
+        ("POST", "/api/custom/add") => {
+            let result = (|| {
+                let body = parse_json_body(req, &["id"])?;
+                let id = str_field(&body, "id")?;
+                if store.load().map_err(|_| Response::error(409, "Workbench unavailable"))?.profile
+                    != "custom"
+                {
+                    return Err(Response::error(409, "Select Custom before pinning modules"));
+                }
+                let candidate = tool(id).ok_or_else(|| Response::error(422, "Unknown tool"))?;
+                if !candidate.availability.can_pin() {
+                    return Err(Response::error(422, "Unimplemented hardware tools cannot be pinned"));
+                }
+                store.add(id).map_err(|_| Response::error(409, "Tool already pinned or storage unavailable"))?;
+                state(store)
+            })();
+            result.unwrap_or_else(|error| error)
+        }
+        ("POST", "/api/custom/remove") => {
+            let result = (|| {
+                let body = parse_json_body(req, &["id"])?;
+                let id = body.get("id")
+                    .and_then(Value::as_u64)
+                    .filter(|value| *value != 0)
+                    .ok_or_else(|| Response::error(422, "Invalid slot number"))?;
+                if store.load().map_err(|_| Response::error(409, "Workbench unavailable"))?.profile
+                    != "custom"
+                {
+                    return Err(Response::error(409, "Select Custom before removing a slot"));
+                }
+                store.remove(id).map_err(|_| Response::error(409, "Cannot remove slot"))?;
+                state(store)
+            })();
+            result.unwrap_or_else(|error| error)
+        }
+        ("POST", "/api/experiment") => {
+            let result = (|| {
+                let body = parse_json_body(
+                    req,
+                    &["tool", "mode", "input", "lat", "lon", "lat2", "lon2", "name"],
+                )?;
+                experiment(&body, store)
+            })();
+            result.unwrap_or_else(|error| error)
+        }
+        ("GET", _) | ("POST", _) => Response::error(404, "Unknown dashboard endpoint"),
+        _ => Response::error(405, "Unsupported method"),
+    }
+}
+
+fn serve_client(mut stream: TcpStream, store: &WorkbenchStore, port: u16) -> io::Result<()> {
+    stream.set_read_timeout(Some(Duration::from_secs(3)))?;
+    stream.set_write_timeout(Some(Duration::from_secs(3)))?;
+    let response = match receive(&mut stream) {
+        Ok(request) => dispatch(&request, store, port),
+        Err(response) => response,
+    };
+    response.write_to(&mut stream)
+}
+
+#[cfg(target_os = "macos")]
+fn open_browser(url: &str) {
+    if let Err(error) = std::process::Command::new("open").arg(url).spawn() {
+        eprintln!("Could not open the browser automatically: {error}");
+    }
+}
+
+pub fn run(args: Vec<String>) -> Result<(), Box<dyn Error>> {
+    let usage = "usage: pipboy dashboard [--port 0..65535] [--open (macOS)]";
+    let mut port = DEFAULT_PORT;
+    let mut open = false;
+    let mut iter = args.into_iter();
+    while let Some(flag) = iter.next() {
+        match flag.as_str() {
+            "--port" => port = iter.next().ok_or(usage)?.parse::<u16>()?,
+            "--open" if !open => open = true,
+            _ => return Err(usage.into()),
+        }
+    }
+    let listener = TcpListener::bind((Ipv4Addr::LOCALHOST, port))?;
+    let port = listener.local_addr()?.port();
+    let url = format!("http://127.0.0.1:{port}/");
+    println!("RUST-BOY DASHBOARD / LOCAL ONLY");
+    println!("Open {url}");
+    println!("Eight job templates, Custom last; live hardware and RustGIS are not connected.");
+    println!("Press Ctrl+C in this terminal to stop the dashboard.");
+    io::stdout().flush()?;
+    #[cfg(target_os = "macos")]
+    if open {
+        open_browser(&url);
+    }
+    #[cfg(not(target_os = "macos"))]
+    if open {
+        eprintln!("--open is Mac-only; open the printed URL manually.");
+    }
+    let store = WorkbenchStore::from_environment()?;
+    for connection in listener.incoming() {
+        match connection {
+            Ok(stream) => {
+                if let Err(error) = serve_client(stream, &store, port) {
+                    eprintln!("Dashboard request ended: {error}");
+                }
+            }
+            Err(error) => eprintln!("Dashboard connection refused: {error}"),
+        }
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs;
+
+    fn request(method: &str, path: &str, body: Value) -> Request {
+        let mut headers = BTreeMap::new();
+        headers.insert("host".to_owned(), "127.0.0.1:8765".to_owned());
+        if method == "POST" {
+            headers.insert("origin".to_owned(), "http://127.0.0.1:8765".to_owned());
+            headers.insert("content-type".to_owned(), "application/json".to_owned());
+        }
+        Request {
+            method: method.to_owned(),
+            path: path.to_owned(),
+            headers,
+            body: if method == "POST" {
+                serde_json::to_vec(&body).unwrap()
+            } else {
+                Vec::new()
+            },
+        }
+    }
+
+    #[test]
+    fn all_profiles_are_loaded_from_rust_templates_and_custom_is_last() {
+        let temp = tempfile::tempdir().unwrap();
+        let store = WorkbenchStore::new(temp.path().join("fresh"));
+        let response = dispatch(&request("GET", "/api/state", Value::Null), &store, 8765);
+        assert_eq!(response.status, 200);
+        let state: Value = serde_json::from_slice(&response.body).unwrap();
+        assert_eq!(state["active"]["profile"], "overseer");
+        assert_eq!(state["profiles"].as_array().unwrap().len(), 8);
+        assert_eq!(state["profiles"][7]["id"], "custom");
+        assert_eq!(state["profiles"][7]["tools"], json!([]));
+        assert_eq!(state["engine"]["rustgis"], "not_integrated");
+        assert!(!temp.path().join("fresh").exists());
+        for endpoint in ["/", "/assets/dashboard.css", "/assets/dashboard.js"] {
+            let r = dispatch(&request("GET", endpoint, Value::Null), &store, 8765);
+            assert_eq!(r.status, 200);
+            assert!(!r.body.is_empty());
+        }
+    }
+
+    #[test]
+    fn cross_origin_and_unknown_host_cannot_write_workbench() {
+        let temp = tempfile::tempdir().unwrap();
+        let store = WorkbenchStore::new(temp.path().join("state"));
+        let mut req = request("POST", "/api/profile", json!({"id":"custom","confirm":true}));
+        req.headers.insert("origin".to_owned(), "https://example.invalid".to_owned());
+        assert_eq!(dispatch(&req, &store, 8765).status, 403);
+        req.headers.insert("origin".to_owned(), "http://127.0.0.1:8765".to_owned());
+        req.headers.insert("host".to_owned(), "attacker.local".to_owned());
+        assert_eq!(dispatch(&req, &store, 8765).status, 403);
+        req.headers.insert("host".to_owned(), "127.0.0.1:8765".to_owned());
+        req.headers.remove("content-type");
+        assert_eq!(dispatch(&req, &store, 8765).status, 415);
+        let wrong = request("POST", "/api/profile", json!({"id":"custom"}));
+        assert_eq!(dispatch(&wrong, &store, 8765).status, 422);
+        assert!(!temp.path().join("state").exists());
+    }
+
+    #[test]
+    fn role_activation_custom_pinning_and_offline_lab_work_end_to_end() {
+        let temp = tempfile::tempdir().unwrap();
+        let root = temp.path().join("state");
+        let store = WorkbenchStore::new(root.clone());
+        let apply = request(
+            "POST",
+            "/api/profile",
+            json!({"id":"reclamation-scout","confirm":true}),
+        );
+        assert_eq!(dispatch(&apply, &store, 8765).status, 200);
+        assert_eq!(store.load().unwrap().slots[0].tool, "geo-lab");
+        let lab = request(
+            "POST",
+            "/api/experiment",
+            json!({"tool":"geo-lab","mode":"waypoint","name":"Camp","lat":"42","lon":"-70.75"}),
+        );
+        let output = dispatch(&lab, &store, 8765);
+        assert_eq!(output.status, 200);
+        assert!(String::from_utf8_lossy(&output.body).contains("-70.75"));
+        let current = request("POST", "/api/profile", json!({"id":"custom","confirm":true}));
+        assert_eq!(dispatch(&current, &store, 8765).status, 200);
+        assert!(store.load().unwrap().slots.is_empty());
+        assert_eq!(dispatch(&lab, &store, 8765).status, 409);
+        let add = request("POST", "/api/custom/add", json!({"id":"net-lab"}));
+        assert_eq!(dispatch(&add, &store, 8765).status, 200);
+        let net = request(
+            "POST",
+            "/api/experiment",
+            json!({"tool":"net-lab","input":"192.168.1.50/24"}),
+        );
+        assert!(String::from_utf8_lossy(&dispatch(&net, &store, 8765).body).contains("192.168.1.0/24"));
+        let remove = request("POST", "/api/custom/remove", json!({"id":1}));
+        assert_eq!(dispatch(&remove, &store, 8765).status, 200);
+        assert!(store.load().unwrap().slots.is_empty());
+        assert!(!root.join("notes.json").exists());
+        assert!(!root.join("permissions.json").exists());
+    }
+
+    #[test]
+    fn no_arbitrary_commands_hardware_endpoints_or_saved_secrets() {
+        let temp = tempfile::tempdir().unwrap();
+        let store = WorkbenchStore::new(temp.path().join("state"));
+        for (path, body) in [
+            ("/api/custom/add", json!({"id":"radio"})),
+            ("/api/custom/add", json!({"id":"geo-lab"})),
+            ("/api/experiment", json!({"tool":"game","input":"scan"})),
+            ("/api/shell", json!({"cmd":"echo hi"})),
+        ] {
+            assert_ne!(dispatch(&request("POST", path, body), &store, 8765).status, 200);
+        }
+        assert_eq!(dispatch(&request("GET", "/api/unknown", Value::Null), &store, 8765).status, 404);
+        assert!(!temp.path().join("state").exists());
+        let secret = "Bearer random-secret";
+        let malformed = request("POST", "/api/profile", json!({"id":secret,"confirm":true}));
+        let response = dispatch(&malformed, &store, 8765);
+        assert_eq!(response.status, 422);
+        assert!(!String::from_utf8_lossy(&response.body).contains(secret));
+    }
+
+    #[test]
+    fn malformed_existing_store_is_preserved_on_dashboard_mutations() {
+        let temp = tempfile::tempdir().unwrap();
+        let store = WorkbenchStore::new(temp.path().to_path_buf());
+        fs::write(store.path(), "invalid").unwrap();
+        let req = request("POST", "/api/profile", json!({"id":"overseer","confirm":true}));
+        assert_eq!(dispatch(&req, &store, 8765).status, 409);
+        assert_eq!(fs::read_to_string(store.path()).unwrap(), "invalid");
+    }
+
+    #[test]
+    fn csp_headers_deny_external_scripts_and_framing() {
+        let response = Response::new(200, "text/plain", b"ok".to_vec());
+        let header = format!(
+            "HTTP/1.1 {}\r\nContent-Security-Policy: default-src 'none'; frame-ancestors 'none'",
+            response.status
+        );
+        assert!(header.contains("frame-ancestors 'none'"));
+        assert!(HTML.contains("/assets/dashboard.css"));
+        assert!(HTML.contains("/assets/dashboard.js"));
+        assert!(JS.contains("/api/state"));
+        assert!(CSS.contains("@media"));
+        assert!(!JS.contains("eval("));
+    }
+
+    #[test]
+    fn legacy_hex_helper_is_available_without_network_or_side_effects() {
+        assert_eq!(encode_hex("Hi").unwrap(), "48 69");
+        assert_eq!(inspect_hex("4869").unwrap().contains("Hi"), true);
+        assert!(bad_request("not a request").to_string().contains("not a request"));
+    }
+}
