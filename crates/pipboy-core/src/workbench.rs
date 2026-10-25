@@ -699,7 +699,8 @@ pub fn encode_hex(text: &str) -> io::Result<String> {
         .iter()
         .map(|byte| format!("{byte:02x}"))
         .collect::<Vec<_>>()
-        .join(" "))}
+        .join(" "))
+}
 
 #[cfg(test)]
 mod tests {
@@ -876,5 +877,4 @@ mod tests {
         assert!(crc32_hex("gg").is_err());
         assert!(crc32_hex(&"01".repeat(4097)).is_err());
     }
-
 }
