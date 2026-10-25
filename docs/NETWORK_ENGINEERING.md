@@ -49,3 +49,55 @@ Deterministic Rust tests cover private-subnet validation, /24 bounds, IP sorting
 Manual acceptance on a real authorized LAN must compare responsive IPs against a known inventory and repeated sweep results, then validate macOS/Linux/Windows ping behavior, service firewall behavior, bounded resource load, UI responsiveness, 480×320 readability, and browser monitor cancellation. No claim of complete inventory accuracy is made before this physical acceptance.
 
 Refer to [DIAG evidence schema](DIAGNOSTICS.md) for importing authorized fault telemetry and [network architecture](ARCHITECTURE.md) for the separation of local UI from device data.
+
+
+## UniFi Network connected-client inventory (opt-in)
+
+The optional adapter uses **only the official local UniFi Network Integration API**, documented in [Ubiquiti's API getting-started guide](https://help.ui.com/hc/en-us/articles/30076656117655-Getting-Started-with-the-Official-UniFi-API) and [Network's List Connected Clients endpoint](https://developer.ui.com/network/v10.6.106/getconnectedclientoverviewpage).
+
+It performs only GET requests to:
+
+- `/v1/sites?offset=N&limit=200`
+- `/v1/sites/{siteId}/clients?offset=N&limit=200`
+
+On a UniFi OS gateway these are prefixed by `/proxy/network/integration`. A standalone Network Application uses `/integration`. This adapter does not call client actions, changes, service configuration, guest authorization or firmware endpoints.
+
+Configuration is **server-side only**, with no browser key input and no persistent token file:
+
+| Variable | Example / meaning |
+| --- | --- |
+| `RUSTBOY_UNIFI_HOST` | Controller **private IPv4** address, e.g. `192.168.1.1` |
+| `RUSTBOY_UNIFI_PORT` | `443` (UniFi OS, default) or `8443` (standalone) |
+| `RUSTBOY_UNIFI_MODE` | `unifi-os` (default) or `standalone` |
+| `RUSTBOY_UNIFI_API_KEY` | Official Integration API key from the controller; secret, environment only |
+| `RUSTBOY_UNIFI_CA_CERT` | Optional **trusted CA PEM file** if the controller certificate is not trusted by the host OS |
+
+On your Mac, start a shell with the configuration set, then run the CLI or dashboard from that same shell:
+
+```bash
+export RUSTBOY_UNIFI_HOST=192.168.1.1
+export RUSTBOY_UNIFI_MODE=unifi-os
+# Set RUSTBOY_UNIFI_PORT=8443 if running a standalone Network Application.
+# Set RUSTBOY_UNIFI_CA_CERT=/trusted/ca.pem if the controller uses a private CA.
+# Export your API key from a local secret manager; never place it in repo files or URLs.
+
+cargo run --locked -p pipboy -- net unifi sites --confirm
+cargo run --locked -p pipboy -- net unifi clients <SITE_UUID> --confirm
+cargo run --locked -p pipboy -- net unifi compare <SITE_UUID> 192.168.1.0/24 --confirm
+cargo run --locked -p pipboy -- dashboard --micro --open
+```
+
+`net unifi clients` counts **controller-reported connected clients** (wired, Wi-Fi and VPN) and reports how many provide IP addresses. A comparison joins **distinct IPv4 addresses** from that inventory to **actively responding** scan targets. A client lacking an IPv4, a different VLAN, multiple clients sharing an address, or a device without UniFi reporting cannot be paired reliably. The comparison never relabels cached-only ARP neighbors as active responses.
+
+In the desktop/micro **NET ENGINEER** menu, choose **UNIFI SITES** first, then enter its UUID in **UNIFI CLIENTS** or **UNIFI / LAN CHECK**. Tick authorized access and press the action button. Refresh can optionally repeat every 60 seconds while the view remains open; no controller query happens on login, page load, or role selection.
+
+### Transport / safety gates
+
+- The controller must be a private IPv4 address (not a public host or a browser-supplied URL), and the site ID must be a UUID. Only HTTPS ports 443 and 8443 are allowed.
+- Rust starts local `curl` with an allowlisted GET URL, explicit timeouts, maximum response size and **TLS certificate verification enforced**. Custom trusted CA PEM is supported; there is deliberately no `--insecure` / `-k` bypass.
+- The API key is provided as a header through curl's standard input. It is not part of the command line, URL, process log, HTTP API response, or source repository. The curl child has the key environment variable removed.
+- Redirects, HTTP fallback, shell interpolation, automatic API-key discovery, controller updates and external Site Manager/cloud access are disabled.
+- Pagination is checked for coherent offsets, count and totalCount, with a maximum of 2,000 clients/200 sites. If an inventory changes during pagination, the adapter fails rather than claiming a complete count.
+- Browser POST `/api/net/unifi` needs exact loopback Host/Origin, explicit confirmation, and NET ENGINEER pinned. Returned client names/IP addresses are private local data, so **never expose the loopback dashboard through a proxy**.
+
+**Limitations:** the first adapter relies on an installed curl executable (not yet an embedded Rust TLS implementation), local API availability varies by UniFi Network version, and access with a real controller has not been verified. The operator must choose suitable read-only account/API permissions. A standard site inventory from the API is not an all-time client registry or a cross-vendor census.
