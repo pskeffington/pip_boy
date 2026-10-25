@@ -12,9 +12,10 @@ use std::sync::{Mutex, OnceLock};
 pub const MAX_ARCHIVE: u64 = 12 * 1024 * 1024;
 const MAX_COUNTIES: usize = 4;
 const VINTAGE: &str = "2025";
-const SOURCE_LIST: [(&str, &str, &str); 2] = [
+const SOURCE_LIST: [(&str, &str, &str); 3] = [
     ("tiger-roads", "ROADS", "roads"),
     ("tiger-areawater", "AREAWATER", "areawater"),
+    ("tiger-linearwater", "LINEARWATER", "linearwater"),
 ];
 
 fn invalid(message: &'static str) -> io::Error {
@@ -46,7 +47,9 @@ pub fn sources() -> Value {
             {"id":"tiger-roads","layer":"roads","kind":"line","origin":"www2.census.gov",
              "description":"County-wide TIGER All Roads centerlines"},
             {"id":"tiger-areawater","layer":"water","kind":"polygon","origin":"www2.census.gov",
-             "description":"County-wide TIGER areal water polygons; not a surveyed shoreline"}
+             "description":"County-wide TIGER areal water polygons; not a surveyed shoreline"},
+            {"id":"tiger-linearwater","layer":"waterways","kind":"line","origin":"www2.census.gov",
+             "description":"County-wide TIGER linear rivers, streams and hydrography"}
         ],
         "limits": {"max_zip_bytes":MAX_ARCHIVE,"max_cached_counties":MAX_COUNTIES,
                    "position":"resolved county GEOID only","network":"explicit COUNTY action"}
@@ -259,8 +262,9 @@ mod tests {
     #[test]
     fn source_catalog_is_a_strict_pair() {
         let data = sources();
-        assert_eq!(data["sources"].as_array().unwrap().len(), 2);
+        assert_eq!(data["sources"].as_array().unwrap().len(), 3);
         assert_eq!(source("tiger-roads").unwrap().1, "roads");
         assert_eq!(source("tiger-areawater").unwrap().1, "areawater");
+        assert_eq!(source("tiger-linearwater").unwrap().1, "linearwater");
     }
 }
