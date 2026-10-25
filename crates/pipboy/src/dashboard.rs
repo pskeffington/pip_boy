@@ -4,6 +4,7 @@
 //! declarative. No hardware, camera, console, GNSS or TAK transport is opened
 //! by browsing the dashboard or selecting a role.
 use pipboy_core::scout_gis::{distance_meters, waypoint, Point};
+use pipboy_core::tasks::{NewTask, Status, TaskStore};
 use pipboy_core::workbench::{inspect_hex, ipv4_cidr, tool, WorkbenchStore, PALETTE, PRESETS};
 use serde_json::{json, Value};
 use std::collections::BTreeMap;
@@ -21,6 +22,8 @@ const JS: &str = include_str!("../assets/dashboard.js");
 const MICRO_HTML: &str = include_str!("../assets/micro.html");
 const MICRO_CSS: &str = include_str!("../assets/micro.css");
 const MICRO_JS: &str = include_str!("../assets/micro.js");
+const TASKS_JS: &str = include_str!("../assets/tasks.js");
+const TASKS_CSS: &str = include_str!("../assets/tasks.css");
 
 struct Request {
     method: String,
@@ -359,6 +362,130 @@ fn experiment(body: &Value, store: &WorkbenchStore) -> Result<Response, Response
     ))
 }
 
+/// Task records are in a separate local file and survive job-template changes.
+fn task_store(workbench: &WorkbenchStore) -> TaskStore {
+    let root = workbench
+        .path()
+        .parent()
+        .unwrap_or_else(|| std::path::Path::new("."));
+    TaskStore::new(root.to_path_buf())
+}
+
+fn manager_role(store: &WorkbenchStore) -> Result<(String, bool), Response> {
+    let board = store
+        .load()
+        .map_err(|_| Response::error(409, "Workbench unavailable; original file preserved"))?;
+    let manager = board.slots.iter().any(|slot| slot.tool == "mission-board");
+    Ok((board.profile, manager))
+}
+
+fn tasks_read(store: &WorkbenchStore) -> Result<Response, Response> {
+    let (role, manager) = manager_role(store)?;
+    let task_store = task_store(store);
+    let mut board = task_store
+        .load()
+        .map_err(|_| Response::error(409, "Task board unavailable; original file preserved"))?;
+    if !manager {
+        board.tasks.retain(|task| task.role == role);
+    }
+    Ok(Response::json(
+        200,
+        &json!({
+            "board": board,
+            "manager": manager,
+            "role": role,
+            "delivery": "manual_handoff_only"
+        }),
+    ))
+}
+
+fn tasks_create(req: &Request, store: &WorkbenchStore) -> Result<Response, Response> {
+    let (_, manager) = manager_role(store)?;
+    if !manager {
+        return Err(Response::error(403, "Pin Task Control or load Overseer to create assignments"));
+    }
+    let body = parse_json_body(
+        req,
+        &["title", "details", "assignee", "role", "contact", "priority", "due"],
+    )?;
+    let task: NewTask = serde_json::from_value(body)
+        .map_err(|_| Response::error(422, "Invalid new task fields"))?;
+    let result = task_store(store).create(task).map_err(|_| {
+        Response::error(422, "Task validation or local storage failed; no task sent")
+    })?;
+    Ok(Response::json(200, &json!({"task": result, "sent": false})))
+}
+
+fn positive_integer(body: &Value, key: &str) -> Result<u64, Response> {
+    body.get(key)
+        .and_then(Value::as_u64)
+        .filter(|value| *value > 0)
+        .ok_or_else(|| Response::error(422, "Missing or invalid task ID/revision"))
+}
+
+fn tasks_change(req: &Request, store: &WorkbenchStore) -> Result<Response, Response> {
+    let body = parse_json_body(
+        req,
+        &["id", "revision", "operation", "status", "note", "assignee", "role", "contact"],
+    )?;
+    let id = positive_integer(&body, "id")?;
+    let revision = positive_integer(&body, "revision")?;
+    let operation = str_field(&body, "operation")?;
+    let (role, manager) = manager_role(store)?;
+    let tasks = task_store(store);
+    let existing = tasks.task(id).map_err(|_| Response::error(404, "Task not found"))?;
+    if !manager && existing.role != role {
+        return Err(Response::error(403, "Only the assigned role or Task Control can update this task"));
+    }
+    let changed = match operation {
+        "status" => {
+            let status: Status = serde_json::from_value(
+                body.get("status")
+                    .cloned()
+                    .ok_or_else(|| Response::error(422, "Missing task status"))?,
+            )
+            .map_err(|_| Response::error(422, "Invalid task status"))?;
+            let note = body.get("note").and_then(Value::as_str).unwrap_or("");
+            tasks.set_status(id, revision, status, note)
+        }
+        "reassign" if manager => {
+            let person = str_field(&body, "assignee")?;
+            let target = str_field(&body, "role")?;
+            let contact = body.get("contact").and_then(Value::as_str);
+            tasks.reassign(id, revision, person, target, contact)
+        }
+        "sent" if manager => tasks.mark_sent(id, revision),
+        "acknowledge" => tasks.acknowledge(id, revision),
+        _ => return Err(Response::error(403, "Operation restricted to Task Control")),
+    };
+    let task = changed.map_err(|error| {
+        if error.kind() == io::ErrorKind::AlreadyExists {
+            Response::error(409, "Task was edited elsewhere; refresh the board")
+        } else if error.kind() == io::ErrorKind::NotFound {
+            Response::error(404, "Task not found")
+        } else {
+            Response::error(422, "Task update invalid or storage unavailable")
+        }
+    })?;
+    Ok(Response::json(200, &json!({"task": task})))
+}
+
+fn tasks_handoff(req: &Request, store: &WorkbenchStore) -> Result<Response, Response> {
+    let (_, manager) = manager_role(store)?;
+    if !manager {
+        return Err(Response::error(403, "Task handoff is an Overseer/Task Control operation"));
+    }
+    let body = parse_json_body(req, &["id"])?;
+    let id = positive_integer(&body, "id")?;
+    let task = task_store(store)
+        .task(id)
+        .map_err(|_| Response::error(404, "Task not found"))?;
+    Ok(Response::json(
+        200,
+        &json!({"text": task.handoff(), "sent": false, "transport": "operator_controlled"}),
+    ))
+}
+
 fn dispatch(req: &Request, store: &WorkbenchStore, port: u16) -> Response {
     let expected_host = format!("127.0.0.1:{port}");
     if req.header("host") != Some(expected_host.as_str()) {
@@ -381,6 +508,12 @@ fn dispatch(req: &Request, store: &WorkbenchStore, port: u16) -> Response {
         ("GET", "/assets/micro.js") => {
             Response::new(200, "text/javascript; charset=utf-8", MICRO_JS.as_bytes())
         }
+        ("GET", "/assets/tasks.js") => {
+            Response::new(200, "text/javascript; charset=utf-8", TASKS_JS.as_bytes())
+        }
+        ("GET", "/assets/tasks.css") => {
+            Response::new(200, "text/css; charset=utf-8", TASKS_CSS.as_bytes())
+        }
         ("GET", "/assets/dashboard.css") => {
             Response::new(200, "text/css; charset=utf-8", CSS.as_bytes())
         }
@@ -389,6 +522,16 @@ fn dispatch(req: &Request, store: &WorkbenchStore, port: u16) -> Response {
         }
         ("GET", "/favicon.ico") => Response::new(204, "text/plain; charset=utf-8", Vec::new()),
         ("GET", "/api/state") => state(store).unwrap_or_else(|error| error),
+        ("GET", "/api/tasks") => tasks_read(store).unwrap_or_else(|error| error),
+        ("POST", "/api/tasks/create") => {
+            tasks_create(req, store).unwrap_or_else(|error| error)
+        }
+        ("POST", "/api/tasks/change") => {
+            tasks_change(req, store).unwrap_or_else(|error| error)
+        }
+        ("POST", "/api/tasks/handoff") => {
+            tasks_handoff(req, store).unwrap_or_else(|error| error)
+        },
         ("POST", "/api/profile") => {
             let result = (|| {
                 let body = parse_json_body(req, &["id", "confirm"])?;
@@ -579,6 +722,8 @@ mod tests {
         assert!(!temp.path().join("fresh").exists());
         for endpoint in [
             "/",
+            "/assets/tasks.css",
+            "/assets/tasks.js",
             "/assets/dashboard.css",
             "/assets/dashboard.js",
             "/micro",
@@ -715,6 +860,102 @@ mod tests {
         );
         assert_eq!(dispatch(&req, &store, 8765).status, 409);
         assert_eq!(fs::read_to_string(store.path()).unwrap(), "invalid");
+    }
+
+    #[test]
+    fn manager_can_create_assign_dispatch_and_track_but_other_roles_cannot_reassign() {
+        let temp = tempfile::tempdir().unwrap();
+        let root = temp.path().join("operator");
+        let store = WorkbenchStore::new(root.clone());
+        let empty = dispatch(&request("GET", "/api/tasks", Value::Null), &store, 8765);
+        assert_eq!(empty.status, 200);
+        assert!(!root.exists());
+        let make = request("POST", "/api/tasks/create", json!({
+            "title": "Check radio room",
+            "details": "Record any unusual noise",
+            "assignee": "Engineer One",
+            "role": "head-engineer",
+            "contact": "engineer@example.org",
+            "priority": "high",
+            "due": "2026-11-03"
+        }));
+        let created = dispatch(&make, &store, 8765);
+        assert_eq!(created.status, 200);
+        let data: Value = serde_json::from_slice(&created.body).unwrap();
+        assert_eq!(data["task"]["revision"], 1);
+        assert_eq!(data["sent"], false);
+        let handoff = dispatch(
+            &request("POST", "/api/tasks/handoff", json!({"id": 1})),
+            &store,
+            8765,
+        );
+        assert_eq!(handoff.status, 200);
+        let content: Value = serde_json::from_slice(&handoff.body).unwrap();
+        assert_eq!(content["sent"], false);
+        assert!(content["text"].as_str().unwrap().contains("RB-0001"));
+        assert_eq!(dispatch(
+            &request("POST", "/api/tasks/change",
+                json!({"id":1,"revision":1,"operation":"acknowledge"})),
+            &store,
+            8765,
+        ).status, 422);
+        assert_eq!(dispatch(
+            &request("POST", "/api/tasks/change",
+                json!({"id":1,"revision":1,"operation":"sent"})),
+            &store,
+            8765,
+        ).status, 200);
+        assert_eq!(dispatch(
+            &request("POST", "/api/tasks/change",
+                json!({"id":1,"revision":1,"operation":"sent"})),
+            &store,
+            8765,
+        ).status, 409);
+        store.apply_preset("head-engineer").unwrap();
+        let jobs = dispatch(&request("GET", "/api/tasks", Value::Null), &store, 8765);
+        let assigned: Value = serde_json::from_slice(&jobs.body).unwrap();
+        assert_eq!(assigned["board"]["tasks"][0]["role"], "head-engineer");
+        assert_eq!(assigned["manager"], false);
+        assert_eq!(dispatch(&make, &store, 8765).status, 403);
+        assert_eq!(dispatch(
+            &request("POST", "/api/tasks/change",
+                json!({"id":1,"revision":2,"operation":"reassign",
+                    "assignee":"Somebody", "role":"overseer"})),
+            &store, 8765,
+        ).status, 403);
+        assert_eq!(dispatch(
+            &request("POST", "/api/tasks/change",
+                json!({"id":1,"revision":2,"operation":"acknowledge"})),
+            &store,
+            8765,
+        ).status, 200);
+        assert_eq!(dispatch(
+            &request("POST", "/api/tasks/change",
+                json!({"id":1,"revision":3,"operation":"status","status":"in_progress",
+                    "note":"Inspection underway"})),
+            &store,
+            8765,
+        ).status, 200);
+        assert_eq!(task_store(&store).task(1).unwrap().status, Status::InProgress);
+        assert!(!root.join("permissions.json").exists());
+    }
+
+    #[test]
+    fn task_mutations_require_same_origin_and_do_not_destroy_corrupted_stores() {
+        let temp = tempfile::tempdir().unwrap();
+        let store = WorkbenchStore::new(temp.path().to_path_buf());
+        let mut malicious = request("POST", "/api/tasks/create", json!({
+            "title": "Do work", "assignee": "Person", "role": "head-engineer", "priority":"normal"
+        }));
+        malicious.headers.insert("origin".to_owned(), "http://attacker.invalid".to_owned());
+        assert_eq!(dispatch(&malicious, &store, 8765).status, 403);
+        assert!(!task_store(&store).path().exists());
+        std::fs::write(task_store(&store).path(), "bad-json").unwrap();
+        let valid = request("POST", "/api/tasks/create", json!({
+            "title": "Do work", "assignee": "Person", "role": "head-engineer", "priority":"normal"
+        }));
+        assert_eq!(dispatch(&valid, &store, 8765).status, 422);
+        assert_eq!(std::fs::read_to_string(task_store(&store).path()).unwrap(), "bad-json");
     }
 
     #[test]
