@@ -60,7 +60,7 @@ These are design intentions, not an assertion that contrast or accessibility com
 
 **Typography:** system monospace for command outputs and instrument readouts; accessible system sans-serif for prose and long-form documentation. Do not bundle commercial or game-specific fonts.
 
-**Map provenance:** Only actual Boston SAM street geometry and traceable real GIS layers are drawn; stylization must never fabricate landmarks, paths or gameplay locations.
+**Map provenance:** Only actual Boston SAM street geometry, traced-source **Boston land/water-excluded** shapes, Natural Earth coastline and Census-returned county roads/rail/hydrography or separately imported real GIS layers are drawn. Historical generalized Suffolk outline is labeled **historical**; it is not substituted for the current county. Stylization must never fabricate streets, shorelines, landmarks, paths or gameplay locations.
 
 **Motion:** static by default. Any CRT/scanline aesthetic must be optional, low-intensity, and disabled in reduced-motion mode. Never sacrifice clarity to imitate a game UI.
 
