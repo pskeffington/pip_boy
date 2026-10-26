@@ -10,6 +10,9 @@ use std::process::{Command, Stdio};
 use std::sync::{Mutex, OnceLock};
 
 pub const MAX_ARCHIVE: u64 = 12 * 1024 * 1024;
+const MAX_BOUNDARY: u64 = 1024 * 1024;
+const MAX_BOUNDARY_VERTICES: usize = 12_000;
+const MAX_BOUNDARY_RINGS: usize = 256;
 const MAX_COUNTIES: usize = 4;
 const VINTAGE: &str = "2025";
 const SOURCE_LIST: [(&str, &str, &str); 4] = [
@@ -90,6 +93,116 @@ impl CountyCache {
         self.root.join(Self::name(geoid, layer))
     }
 
+    fn boundary_path(&self, geoid: &str) -> PathBuf {
+        self.root.join(format!("boundary_{VINTAGE}_{geoid}.geojson"))
+    }
+
+    // Fixed Census TIGERweb layer 37 is ACS 2025 county geometry.
+    // The server downloads by GEOID, not device/user coordinates.
+    fn boundary_url(geoid: &str) -> String {
+        format!(
+            "https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/State_County/MapServer/37/query?f=geojson&where=GEOID%3D%27{geoid}%27&outFields=GEOID%2CNAME&returnGeometry=true&outSR=4326&maxAllowableOffset=0.00015"
+        )
+    }
+
+    fn boundary_raw(path: &Path) -> io::Result<Vec<u8>> {
+        let size = fs::metadata(path)?.len();
+        if !(2..=MAX_BOUNDARY).contains(&size) {
+            return Err(invalid("County boundary exceeds 1 MiB or is empty"));
+        }
+        let mut bytes = Vec::with_capacity(size as usize);
+        File::open(path)?
+            .take(MAX_BOUNDARY + 1)
+            .read_to_end(&mut bytes)?;
+        if bytes.len() as u64 != size {
+            return Err(invalid("County boundary changed during read"));
+        }
+        Ok(bytes)
+    }
+
+    // A cached file must pass the SAME structural checks as a fresh
+    // source response. Merely having a file or GEOID does not verify it.
+    fn parse_boundary(geoid: &str, raw: &[u8], cache_hit: bool) -> io::Result<Value> {
+        if !geoid_valid(geoid) || raw.len() as u64 > MAX_BOUNDARY {
+            return Err(invalid("Invalid county or boundary size"));
+        }
+        let payload: Value = serde_json::from_slice(raw)
+            .map_err(|_| invalid("Census boundary JSON is invalid"))?;
+        if payload.get("type").and_then(Value::as_str) != Some("FeatureCollection") {
+            return Err(invalid("Census boundary must be a GeoJSON FeatureCollection"));
+        }
+        let features = payload.get("features").and_then(Value::as_array)
+            .ok_or_else(|| invalid("Missing Census county features"))?;
+        if features.len() != 1 {
+            return Err(invalid("Census county response must contain one feature"));
+        }
+        let feature = &features[0];
+        if feature.pointer("/properties/GEOID").and_then(Value::as_str) != Some(geoid) {
+            return Err(invalid("Census county GEOID does not match selection"));
+        }
+        let name = feature.pointer("/properties/NAME").and_then(Value::as_str)
+            .ok_or_else(|| invalid("Census county name is missing"))?;
+        if name.is_empty() || name.len() > 100 || name.chars().any(char::is_control) {
+            return Err(invalid("Census county name is invalid"));
+        }
+        let geometry = feature.get("geometry")
+            .ok_or_else(|| invalid("Missing Census county geometry"))?;
+        let parts = geometry.get("coordinates").and_then(Value::as_array)
+            .ok_or_else(|| invalid("Missing Census county coordinates"))?;
+        // Both Polygon and MultiPolygon become a flat ring list; even-odd
+        // parity in the viewer preserves holes for landmark clipping.
+        let polygons: Vec<&Value> = match geometry.get("type").and_then(Value::as_str) {
+            Some("Polygon") => vec![&geometry["coordinates"]],
+            Some("MultiPolygon") => parts.iter().collect(),
+            _ => return Err(invalid("Census county is not Polygon or MultiPolygon")),
+        };
+        let mut rings: Vec<Vec<[f64; 2]>> = Vec::new();
+        let mut vertices = 0;
+        for polygon in polygons {
+            let paths = polygon.as_array()
+                .ok_or_else(|| invalid("Invalid county polygon parts"))?;
+            for path in paths {
+                let points = path.as_array()
+                    .ok_or_else(|| invalid("Invalid county ring"))?;
+                vertices += points.len();
+                if points.len() < 4 || vertices > MAX_BOUNDARY_VERTICES ||
+                    rings.len() >= MAX_BOUNDARY_RINGS {
+                    return Err(invalid("County boundary exceeds geometry bounds"));
+                }
+                let mut ring = Vec::with_capacity(points.len());
+                for point in points {
+                    let pair = point.as_array()
+                        .ok_or_else(|| invalid("Invalid county vertex"))?;
+                    if pair.len() < 2 {
+                        return Err(invalid("County vertex is not longitude/latitude"));
+                    }
+                    let lon = pair[0].as_f64().ok_or_else(|| invalid("Invalid county longitude"))?;
+                    let lat = pair[1].as_f64().ok_or_else(|| invalid("Invalid county latitude"))?;
+                    if !lon.is_finite() || !lat.is_finite() ||
+                        lon.abs() > 180.0 || lat.abs() > 90.0 {
+                        return Err(invalid("County coordinates outside geographic range"));
+                    }
+                    ring.push([lon, lat]);
+                }
+                if ring.first() != ring.last() {
+                    return Err(invalid("County boundary ring must be closed"));
+                }
+                rings.push(ring);
+            }
+        }
+        if rings.is_empty() {
+            return Err(invalid("County boundary contains no rings"));
+        }
+        Ok(json!({
+            "schema":1, "geoid":geoid, "name":name,
+            "paths":rings,
+            "source":"U.S. Census TIGERweb State_County ACS 2025 / January 1 2025",
+            "vintage":"2025-01-01",
+            "cache_hit":cache_hit,
+            "network_used":!cache_hit
+        }))
+    }
+
     fn read_zip(path: &Path) -> io::Result<Vec<u8>> {
         let size = fs::metadata(path)?.len();
         if !(4..=MAX_ARCHIVE).contains(&size) {
@@ -133,6 +246,12 @@ impl CountyCache {
                 if split.len() == 4 && geoid_valid(split[2]) {
                     counties.insert(split[2].to_owned());
                 }
+            } else if let Some(id) = name.strip_prefix(&format!("boundary_{VINTAGE}_"))
+                .and_then(|n| n.strip_suffix(".geojson"))
+            {
+                if geoid_valid(id) {
+                    counties.insert(id.to_owned());
+                }
             }
         }
         if counties.len() >= MAX_COUNTIES && !counties.contains(geoid) {
@@ -171,10 +290,80 @@ impl CountyCache {
                 }
             }
         }
+        let boundary_cached = geoid.as_ref().is_some_and(|id| {
+            Self::boundary_raw(&self.boundary_path(id))
+                .and_then(|raw| Self::parse_boundary(id, &raw, true))
+                .is_ok()
+        });
         Ok(json!({
             "schema":1,"active_geoid":geoid,"cached_sources":cached,
+            "boundary_cached":boundary_cached,
             "vintage":VINTAGE,"network_used":false
         }))
+    }
+
+    pub fn boundary(&self, geoid: &str, allow_network: bool) -> io::Result<Value> {
+        if !geoid_valid(geoid) {
+            return Err(invalid("GEOID must be a valid five-digit county identifier"));
+        }
+        let path = self.boundary_path(geoid);
+        match Self::boundary_raw(&path) {
+            Ok(raw) => {
+                let boundary = Self::parse_boundary(geoid, &raw, true)?;
+                if allow_network {
+                    self.ensure_root()?;
+                    self.remember(geoid)?;
+                }
+                return Ok(boundary);
+            }
+            Err(error) if error.kind() == io::ErrorKind::NotFound => {}
+            Err(error) => return Err(error),
+        }
+        if !allow_network {
+            return Err(io::Error::new(io::ErrorKind::NotFound, "County boundary not cached"));
+        }
+        let lock = FETCH_LOCK.get_or_init(|| Mutex::new(()));
+        let _guard = lock.try_lock().map_err(|_| {
+            io::Error::new(io::ErrorKind::WouldBlock, "Another county download is in progress")
+        })?;
+        // A second process/request may have filled the cache while waiting.
+        match Self::boundary_raw(&path) {
+            Ok(raw) => {
+                let boundary = Self::parse_boundary(geoid, &raw, true)?;
+                self.remember(geoid)?;
+                return Ok(boundary);
+            }
+            Err(error) if error.kind() == io::ErrorKind::NotFound => {}
+            Err(error) => return Err(error),
+        }
+        self.limit_new_county(geoid)?;
+        self.ensure_root()?;
+        let tmp = tempfile::Builder::new()
+            .prefix(".county-boundary-")
+            .tempfile_in(&self.root)?;
+        // No supplied URL, no GPS coordinates, redirects, insecure TLS,
+        // shell invocation, arbitrary domains, or retries.
+        let cmd = if cfg!(windows) { "curl.exe" } else { "curl" };
+        let success = Command::new(cmd)
+            .args([
+                "--fail", "--silent", "--show-error", "--proto", "=https",
+                "--max-redirs", "0", "--connect-timeout", "8", "--max-time", "25",
+                "--max-filesize", "1048576", "--retry", "0", "--output",
+            ])
+            .arg(tmp.path())
+            .arg(Self::boundary_url(geoid))
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .status()?;
+        if !success.success() {
+            return Err(io::Error::other("Census boundary unavailable; existing cache preserved"));
+        }
+        let raw = Self::boundary_raw(tmp.path())?;
+        let boundary = Self::parse_boundary(geoid, &raw, false)?;
+        tmp.as_file().sync_all()?;
+        tmp.persist(&path).map_err(|error| error.error)?;
+        self.remember(geoid)?;
+        Ok(boundary)
     }
 
     pub fn fetch(&self, geoid: &str, source_id: &str, allow_network: bool) -> io::Result<Vec<u8>> {
