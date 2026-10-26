@@ -18,3 +18,9 @@
 .rb-radio-compact .rb-radio-controls button{min-height:40px}
 .rb-radio-compact .rb-radio-volume button{min-height:36px}
 @media (max-width:480px){.rb-radio{padding:7px;gap:5px}.rb-radio-top{font-size:11px}.rb-radio-station{font-size:12px}.rb-radio-message{font-size:10px}}
+
+.rb-radio-output-label{display:grid;gap:4px;font-size:11px;font-weight:700;letter-spacing:.05em}
+.rb-radio-output{width:100%;min-height:39px;border:1px solid #477a58;background:#07120c;color:#d9ffcf;font:inherit;padding:5px;border-radius:5px}
+.rb-radio-output:disabled{opacity:.55}
+.rb-radio-output:focus-visible{outline:3px solid #f1e995;outline-offset:2px}
+.rb-radio-compact .rb-radio-output{min-height:36px}
