@@ -86,3 +86,11 @@ The smoke script launches the **actual Rust server** on an ephemeral loopback po
 Do not substitute the decorative grid for navigation. RustGIS integration will require an evaluated **process/IPC or native map renderer interface**, offline layers, map pan/zoom, true GNSS consent (if enabled), waypoint/GeoJSON interoperability and Pi ARM64 GPU/performance acceptance. The compiler minimum is Rust 1.90, but no RustGIS crate is linked in this dashboard pass.
 
 See [role roadmap](ROLE_ROADMAP.md), [Scout GIS/TAK plan](SCOUT_GIS_TAK.md), [security policy](../SECURITY.md), and [camera-wall roadmap](SECURITY_CAMERA_WALL.md).
+
+## One-screen viewport rule (October 2026)
+
+The desktop shell must fit one viewport without document-level scrolling. At wide widths, the role rail, central workspace and inspector are visible simultaneously. Below 1100 CSS pixels, **ROLES / WORKSPACE / INSPECTOR** becomes an explicit three-way screen switch rather than stacking tall panels. The central workspace is subdivided into **MODULES / VIEWPORT / MESSAGES / ADD TOOLS**; the latter appears for active Custom only. Modules, roles, and Custom palette use six-item pages with visible PREV/NEXT rather than long vertical lists.
+
+**Acceptance criteria:** at normal browser zoom, do not expose a body scrollbar; keep the masthead, page switches, active screen and its navigation in the visible window; never hide the last module behind a clipping mask. At 480×320, use the dedicated `/micro` shell, which was specifically designed for the handheld. Dense data output, long device messages, authorization forms, and accessibility zoom may still use *internal* scrolling when needed; hiding essential controls is not an acceptable no-scroll implementation. The desktop radio and other future modules should use the same focused-panel/paging contract rather than adding sections below the fold.
+
+Browser/physical hardware acceptance is still required at 480×320, 800×480, 1280×720, and 1920×1080, including focus, touch operation, enlarged fonts, and no clipped buttons. A CSS-only no-scroll result does not establish that all embedded components fit.
