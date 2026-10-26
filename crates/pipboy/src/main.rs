@@ -16,6 +16,7 @@ use pipboy_core::virtual_transport::VirtualTransport;
 use std::error::Error;
 mod console;
 mod county_cache;
+mod zip_index;
 mod dashboard;
 mod diagnostics;
 mod endpoint_probe;
