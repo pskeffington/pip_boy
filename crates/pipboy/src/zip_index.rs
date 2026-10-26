@@ -66,7 +66,9 @@ fn parse(raw: &[u8]) -> io::Result<Vec<Intersection>> {
     let content = std::str::from_utf8(raw)
         .map_err(|_| invalid("ZCTA relationship index has invalid UTF-8"))?;
     let mut lines = content.trim_start_matches('\u{feff}').lines();
-    let header = lines.next().ok_or_else(|| invalid("Missing ZCTA relationship header"))?;
+    let header = lines
+        .next()
+        .ok_or_else(|| invalid("Missing ZCTA relationship header"))?;
     if header.trim_end_matches('\r').split('|').collect::<Vec<_>>() != HEADERS {
         return Err(invalid("Unexpected Census ZCTA relationship file schema"));
     }
@@ -89,8 +91,11 @@ fn parse(raw: &[u8]) -> io::Result<Vec<Intersection>> {
         }
         let geoid = fields[9];
         let name = fields[10];
-        if !valid_zip(zcta) || !valid_county(geoid) || name.is_empty()
-            || name.len() > 100 || name.chars().any(char::is_control)
+        if !valid_zip(zcta)
+            || !valid_county(geoid)
+            || name.is_empty()
+            || name.len() > 100
+            || name.chars().any(char::is_control)
         {
             return Err(invalid("Invalid Census ZCTA/county identifier or name"));
         }
@@ -112,7 +117,9 @@ fn parse(raw: &[u8]) -> io::Result<Vec<Intersection>> {
         });
     }
     if parsed.is_empty() {
-        return Err(invalid("Census ZCTA relationship index has no relationships"));
+        return Err(invalid(
+            "Census ZCTA relationship index has no relationships",
+        ));
     }
     Ok(parsed)
 }
@@ -172,7 +179,10 @@ impl ZipIndex {
         }
         let lock = FETCH_LOCK.get_or_init(|| Mutex::new(()));
         let _guard = lock.try_lock().map_err(|_| {
-            io::Error::new(io::ErrorKind::WouldBlock, "Census index download in progress")
+            io::Error::new(
+                io::ErrorKind::WouldBlock,
+                "Census index download in progress",
+            )
         })?;
         match self.read() {
             Ok(entries) => return Ok((entries, true)),
@@ -188,9 +198,22 @@ impl ZipIndex {
         let cmd = if cfg!(windows) { "curl.exe" } else { "curl" };
         let ok = isolated_command(cmd)
             .args([
-                "--fail", "--silent", "--show-error", "--proto", "=https",
-                "--max-redirs", "0", "--connect-timeout", "8", "--max-time", "60",
-                "--max-filesize", "9437184", "--retry", "0", "--output",
+                "--fail",
+                "--silent",
+                "--show-error",
+                "--proto",
+                "=https",
+                "--max-redirs",
+                "0",
+                "--connect-timeout",
+                "8",
+                "--max-time",
+                "60",
+                "--max-filesize",
+                "9437184",
+                "--retry",
+                "0",
+                "--output",
             ])
             .arg(temp.path())
             .arg(SOURCE_URL)
@@ -198,7 +221,9 @@ impl ZipIndex {
             .stderr(Stdio::null())
             .status()?;
         if !ok.success() {
-            return Err(io::Error::other("Census ZCTA relationship download unavailable"));
+            return Err(io::Error::other(
+                "Census ZCTA relationship download unavailable",
+            ));
         }
         let mut bytes = Vec::new();
         File::open(temp.path())?
@@ -210,7 +235,9 @@ impl ZipIndex {
         let entries = parse(&bytes)?;
         // The production national source contains many thousands of rows.
         if entries.len() < 30_000 {
-            return Err(invalid("Truncated national Census ZCTA relationship download"));
+            return Err(invalid(
+                "Truncated national Census ZCTA relationship download",
+            ));
         }
         temp.as_file().sync_all()?;
         temp.persist(self.path()).map_err(|error| error.error)?;
@@ -224,9 +251,9 @@ impl ZipIndex {
         let (entries, cache_hit) = self.entries(allow_network)?;
         let mut found: BTreeMap<String, (String, u64, u64)> = BTreeMap::new();
         for row in entries.iter().filter(|row| row.zcta == zip) {
-            let item = found.entry(row.geoid.clone()).or_insert_with(|| {
-                (row.county_name.clone(), 0, row.total_land)
-            });
+            let item = found
+                .entry(row.geoid.clone())
+                .or_insert_with(|| (row.county_name.clone(), 0, row.total_land));
             item.1 = item.1.saturating_add(row.part_land);
             item.2 = item.2.max(row.total_land);
         }
@@ -258,7 +285,12 @@ impl ZipIndex {
         }))
     }
 
-    pub fn county_zctas(&self, geoid: &str, offset: usize, allow_network: bool) -> io::Result<Value> {
+    pub fn county_zctas(
+        &self,
+        geoid: &str,
+        offset: usize,
+        allow_network: bool,
+    ) -> io::Result<Value> {
         if !valid_county(geoid) || offset > MAX_ROWS {
             return Err(invalid("Invalid county GEOID or ZCTA offset"));
         }
@@ -268,7 +300,7 @@ impl ZipIndex {
             *found.entry(row.zcta.clone()).or_default() += row.part_land;
         }
         let mut ordered: Vec<_> = found.into_iter().collect();
-        ordered.sort_by(|a,b| b.1.cmp(&a.1).then_with(|| a.0.cmp(&b.0)));
+        ordered.sort_by(|a, b| b.1.cmp(&a.1).then_with(|| a.0.cmp(&b.0)));
         let total = ordered.len();
         let zctas: Vec<_> = ordered
             .into_iter()
@@ -325,11 +357,17 @@ mod tests {
         assert_eq!(single["status"], "single_county");
         assert_eq!(single["requires_selection"], false);
         assert_eq!(single["counties"][0]["geoid"], "25025");
-        assert_eq!(index.resolve_zip("99999", false).unwrap()["status"], "no_zcta");
+        assert_eq!(
+            index.resolve_zip("99999", false).unwrap()["status"],
+            "no_zcta"
+        );
         let reverse = index.county_zctas("25023", 0, false).unwrap();
         assert_eq!(reverse["zctas"], json!(["02360"]));
         assert_eq!(reverse["total"], 1);
-        assert_eq!(index.county_zctas("25023", 12, false).unwrap()["zctas"], json!([]));
+        assert_eq!(
+            index.county_zctas("25023", 12, false).unwrap()["zctas"],
+            json!([])
+        );
     }
 
     #[test]
