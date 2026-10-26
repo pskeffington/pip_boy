@@ -51,7 +51,7 @@ window.RustBoyNetwork = (() => {
       root.append(row);
     }
 
-    function pager(page, total, change) {
+    function pager(page, total, change, target = root) {
       const row = node("div", "net-actions net-pager");
       const previous = control("◀", () => change(page - 1));
       const next = control("▶", () => change(page + 1));
@@ -60,31 +60,98 @@ window.RustBoyNetwork = (() => {
       previous.setAttribute("aria-label", "Previous page");
       next.setAttribute("aria-label", "Next page");
       row.append(previous, node("span", "", (page + 1) + " / " + total), next);
-      root.append(row);
+      target.append(row);
+    }
+
+    const toolDescription = Object.freeze({
+      scan: "PRIVATE LAN DISCOVERY",
+      "unifi-sites": "CONTROLLER SITE ROSTER",
+      "unifi-clients": "CONNECTED DEVICE ROSTER",
+      "unifi-compare": "CONTROLLER / PROBE MATCH",
+      icmp: "LATENCY / RESPONSE LOSS",
+      health: "TCP CONNECT TIMINGS",
+      cidr4: "IPv4 RANGE / HOSTS",
+      cidr6: "IPv6 NETWORK PREFIX",
+      split4: "ADDRESS PLAN / SUBNETS",
+      route: "LONGEST PREFIX MATCH",
+      aggregate4: "MERGE IPv4 BLOCKS",
+      overlap4: "INTERSECT IPv4 RANGES",
+      mac: "MAC / INTERFACE ID",
+      vlan: "802.1Q TAG DECODE",
+      mtu: "PACKET SIZE BUDGET",
+      tcp: "SINGLE PORT CHECK"
+    });
+
+    // This is a snapshot of the last explicit request, not a live link indicator.
+    function lastReadout() {
+      if (!lastResult) return "NONE";
+      const data = lastResult;
+      const report = data.report || data.probe;
+      const inventory = data.inventory || data.controller;
+      if (data.comparison) {
+        return data.comparison.controller_clients + " UNIFI / " +
+          data.comparison.matched_active_probe + " MATCH";
+      }
+      if (report) {
+        return report.responding_devices + " RESP / " + report.cached_only_devices + " CACHE";
+      }
+      if (inventory?.clients) return inventory.connected_clients + " CLIENTS";
+      if (inventory?.sites) return inventory.sites.length + " SITES";
+      if (data.metrics) return data.metrics.connected + " / " + data.metrics.attempts + " REPLIES";
+      return data.kind === "computed" ? "CALCULATED" : "COMPLETE";
     }
 
     function menu() {
       screen = "menu";
       stop();
       root.replaceChildren();
-      root.append(node("div", "net-caption", "NETWORK ENGINEER / SELECT TOOL"));
-      const grid = node("div", "net-menu");
       const total = Math.max(1, Math.ceil(candidates.length / 6));
       menuPage = Math.max(0, Math.min(menuPage, total - 1));
+      const landing = node("div", "net-landing");
+      const heading = node("div", "net-launch-head");
+      heading.append(
+        node("strong", "net-caption", "NETWORK ENGINEER / SELECT TOOL"),
+        node("span", "net-count", candidates.length + " TOOLS / " + total + " PAGES")
+      );
+      landing.append(heading);
+
+      const stats = node("div", "net-status-strip");
+      for (const [label, value] of [
+        ["SESSION", "STANDBY"],
+        ["REQUESTS", "MANUAL ONLY"],
+        ["LAST RESULT / NOT LIVE", lastReadout()]
+      ]) {
+        const cell = node("div", "net-status-cell");
+        cell.append(node("span", "net-status-label", label),
+          node("strong", "net-status-value", value));
+        stats.append(cell);
+      }
+      landing.append(stats);
+
+      const grid = node("div", "net-menu");
       for (const op of candidates.slice(menuPage * 6, menuPage * 6 + 6)) {
-        const item = control(op.name, () => {
+        const item = control("", () => {
           operation = op;
           values = { input: op.example, extra: op.extra_example || "", samples: "5" };
           lastResult = null;
           configure();
         });
         item.classList.add("net-tile");
-        item.append(node("small", "", op.active ? "MANUAL" : "OFFLINE"));
+        item.append(
+          node("strong", "net-tile-title", op.name),
+          node("span", "net-tile-detail", toolDescription[op.id] || "NETWORK TOOL"),
+          node("small", "net-tile-mode", op.active ? "AUTHORIZATION REQUIRED" : "OFFLINE CALCULATION")
+        );
         grid.append(item);
       }
       if (!candidates.length) grid.append(node("p", "", "Tool catalog unavailable. Reload the dashboard."));
-      root.append(grid);
-      if (total > 1) pager(menuPage, total, (page) => { menuPage = page; menu(); });
+      landing.append(grid);
+
+      const footer = node("div", "net-launch-footer");
+      footer.append(node("span", "net-page-hint", "SELECT TOOL / CONFIGURE / RUN"));
+      if (total > 1) pager(menuPage, total, (page) => { menuPage = page; menu(); }, footer);
+      landing.append(footer);
+      root.append(landing);
     }
 
     function field(form, key, label, value) {
