@@ -887,7 +887,9 @@
             ...(staged.layers["tiger-roads"]?.shapes||[]),
             ...(staged.layers["tiger-pointlm"]?.shapes||[])
           ];
-          if(cacheOnly && !view.county && !view.fix)fitCountyPackage(view);
+          if(cacheOnly && !view.fix && !view.centerSelected &&
+              !view.shapes.length && !view.onlineShapes.length)
+            fitCountyPackage(view);
           refresh(view);
         }
       });
@@ -914,13 +916,34 @@
   async function restoreCachedCounty(view) {
     if(!window.RustBoyCounty)return;
     const version=++view.countyCacheReadVersion;
-    try{
+    const current=() => active===view && version===view.countyCacheReadVersion &&
+      !view.countyEnabled && !view.sitesVisible && !view.centerSelected && !view.fix;
+    try {
       const cache=await window.RustBoyCounty.active();
-      if(active===view && version===view.countyCacheReadVersion &&
-         !view.countyEnabled && !view.sitesVisible && cache.active_geoid &&
-         cache.cached_sources.length)
+      if(!current() || !cache.active_geoid ||
+          (!cache.cached_sources.length && !cache.boundary_cached))return;
+      // A county-boundary cache, fetched independently from official TIGERweb
+      // by the Rust host, restores POI clipping safely on a cold offline start.
+      if(cache.boundary_cached && typeof window.RustBoyCounty.boundary==="function") {
+        try {
+          const polygon=await window.RustBoyCounty.boundary(cache.active_geoid,{cacheOnly:true});
+          if(!current())return;
+          view.county=polygon;
+          view.countyStatus=polygon.name.toUpperCase()+" / OFFLINE VERIFIED COUNTY";
+          if(!cache.cached_sources.length && !view.shapes.length)
+            fitLayer(view,[polygon.shape]);
+          refresh(view);
+        } catch (_) {
+          if(!current())return;
+          view.countyStatus="COUNTY BOUNDARY CACHE INVALID / LANDMARKS HIDDEN";
+          refresh(view);
+        }
+      }
+      if(current() && cache.cached_sources.length)
         void loadCountyPackages(view,cache.active_geoid,true);
-    }catch(_){/* Missing cache leaves the locally selected grid/map untouched. */}
+    } catch (_) {
+      // Missing loopback cache leaves the operator's existing map untouched.
+    }
   }
 
   function disableCounty(view) {
@@ -945,8 +968,17 @@
       refresh(view); return;
     }
     if (navigator.onLine===false) {
-      view.countyStatus="OFFLINE / IMPORT LOCAL COUNTY GEOJSON";
-      refresh(view); return;
+      if(view.county && window.RustBoyCounty?.contains &&
+          window.RustBoyCounty.contains(view.county.shape.paths,
+            location.lon,location.lat)) {
+        view.countyStatus="OFFLINE / VERIFIED CACHED COUNTY "+view.county.id;
+        refresh(view);
+        void loadCountyPackages(view,view.county.id,true);
+      } else {
+        view.countyStatus="OFFLINE / NO MATCHING CACHED COUNTY / IMPORT LOCAL GIS";
+        refresh(view);
+      }
+      return;
     }
     const version=++view.countyRequest;
     if(view.countyAbort)view.countyAbort.abort();
@@ -965,9 +997,31 @@
       view.zoom=Math.max(view.zoom,10);
       refresh(view);
       if(window.RustBoyCounty) {
-        // Explicit COUNTY consent permits fixed Census source-list downloads.
-        // OSM WEB stays a separate explicit operator choice.
-        void loadCountyPackages(view,county.id,false);
+        // The host independently fetches the exact GEOID boundary and caches
+        // it; no GPS coordinate is sent to the loopback boundary endpoint.
+        // It is safe to fall back to the live Census polygon for this session
+        // if boundary storage or the second Census request is unavailable.
+        if(typeof window.RustBoyCounty.boundary==="function") {
+          try {
+            const saved=await window.RustBoyCounty.boundary(county.id,{
+              cacheOnly:false,signal:controller.signal
+            });
+            if(active!==view || !view.countyEnabled ||
+                version!==view.countyRequest || controller.signal.aborted)return;
+            view.county=saved;
+            view.countyStatus=county.name.toUpperCase()+
+              (saved.cacheHit?" / BOUNDARY CACHE REUSED":" / BOUNDARY CACHED");
+            refresh(view);
+          } catch (error) {
+            if(active!==view || !view.countyEnabled ||
+                version!==view.countyRequest || controller.signal.aborted)return;
+            view.countyStatus=county.name.toUpperCase()+
+              " / BOUNDARY CACHE UNAVAILABLE / LIVE CENSUS POLYGON";
+            refresh(view);
+          }
+        }
+        if(active===view && view.countyEnabled && version===view.countyRequest)
+          void loadCountyPackages(view,county.id,false);
       } else if(view.webEnabled) {
         void webFetch(view);
       } else {

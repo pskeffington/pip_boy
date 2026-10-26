@@ -115,4 +115,5 @@ async function main(){
     "Offline restore must never fetch/use state POIs without a polygon");
   console.log("POINTLM: real state filename, named point SHP, verified county clip and hole, offline fail-closed PASS");
 }
-main().catch(e=>{console.error(e);process.exitCode=1;});
+if(require.main===module)main().catch(e=>{console.error(e);process.exitCode=1;});
+module.exports={pointShp,pointDbf};

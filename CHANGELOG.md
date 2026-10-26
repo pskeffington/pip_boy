@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-10-26 — Offline county-boundary and landmark ingestion
+
+- Add a fixed-host, GEOID-only TIGERweb boundary fetch, bound to an explicit COUNTY action and strict geographic/JSON limits; atomically cache and revalidate raw Census GeoJSON.
+- Restore source county polygons with roads, waterways and county-clipped state POINTLM landmarks on cold offline MAP startup, without a GPS prompt or remote request. Missing or invalid boundary caches fail closed.
+- Enforce the four-county cache budget for both county archives and stored boundary sources. Add dedicated Rust API and browser integration tests covering consent, offline caching, mismatched GEOIDs, and landmark clipping.
+- Retain Census 2025 vintage, truthful source status and last-good geometry. Live provider interoperability and Pi field hardware acceptance remain open.
+
+
 ## 2026-10-26 — County-first map ingest (PR #36; release gate pending)
 
 - Remove bundled demonstration-city geometry, routes, source credits, build generator and fixtures from the normal deliverable. MAP starts on an unlocated reference grid rather than a fictional default position.
