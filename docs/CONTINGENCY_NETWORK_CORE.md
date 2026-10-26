@@ -70,3 +70,7 @@ Meshtastic protobuf data payload is **not** arbitrary unlimited application byte
 ## Priority
 
 **First** independently powered Ethernet / local Wi-Fi with existing pinned SSH (fastest path with verified primitives). **Second** Meshtastic via USB after crypto-envelope gate, as a *short-message contingency*. **Third** MeshCore and Reticulum via separately reviewed adapters. Keep LoRaWAN in the telemetry track because gateway/backhaul requirements undermine a no-infrastructure fallback. No software can guarantee RF propagation through metal infrastructure or deep tunnels.
+
+## Implementation roadmap
+
+See [communications development roadmap](COMMUNICATIONS_DEVELOPMENT_ROADMAP.md) for M00–M12 sequencing, workstreams, immediate implementation passes, and verification criteria.
