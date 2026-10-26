@@ -1629,6 +1629,8 @@ mod tests {
         let json: Value = serde_json::from_slice(&state.body).unwrap();
         assert!(json["stations"].as_array().unwrap().len() >= 4);
         assert_eq!(json["sdr"], "not_connected");
+        assert_eq!(json["output"], "system");
+        assert!(json["outputs"].is_array());
         let invalid = request(
             "POST",
             "/api/radio",
