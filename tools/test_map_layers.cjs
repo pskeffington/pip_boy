@@ -66,7 +66,7 @@ const sources={
   "tiger-pointlm":[landmark]
 };
 win.RustBoyCounty={
-  validGeoid:x=>/^\\d{5}$/.test(x),
+  validGeoid:x=>/^\d{5}$/.test(x),
   active:async()=>({active_geoid:"25025",boundary_cached:true,
     cached_sources:Object.keys(sources)}),
   boundary:async()=>({id:"25025",name:"Source County",paths:[
