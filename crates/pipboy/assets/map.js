@@ -1134,13 +1134,15 @@
         (report.errors.length?" / PARTIAL - SEE SOURCES":" / SOURCES LOADED") +
         (staged.warnings.length?" / "+staged.warnings.join("; ").slice(0,90):"");
       refresh(view);
+      return Boolean(view.countyPackage?.geoid===geoid);
     }catch(error){
       if(active!==view || view.countyPackageVersion!==version ||
-         controller.signal.aborted)return;
+         controller.signal.aborted)return false;
       view.countyStatus="COUNTY "+geoid+" / "+
         (error instanceof Error?error.message:"SOURCE FAILED").slice(0,75)+
         " / PREVIOUS MAP KEPT";
       refresh(view);
+      return false;
     }finally{
       if(view.countyPackageAbort===controller)view.countyPackageAbort=null;
     }
