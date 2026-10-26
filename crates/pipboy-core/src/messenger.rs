@@ -396,7 +396,7 @@ mod tests {
         assert!(new);
         assert_eq!(received.delivery, Delivery::Received);
         assert_eq!(received.remote_origin_id, Some(15));
-        assert_eq!(store.receive(&frame, "scout-one").unwrap().1, false);
+        assert!(!store.receive(&frame, "scout-one").unwrap().1);
         let mut altered = frame;
         altered.body = "Changed after first delivery".into();
         assert!(store.receive(&altered, "scout-one").is_err());
