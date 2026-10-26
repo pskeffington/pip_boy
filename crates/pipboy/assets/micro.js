@@ -250,6 +250,7 @@ function showStat() {
   if (station.page && station.tool) {
     actions.append(button("MAP", () => setTab(station.page), "micro-button"));
   }
+  actions.append(button("RADIO", () => { openedTool = "native-radio"; render(); }, "micro-button"));
   actions.append(button("TOOLS", () => setTab("gear"), "micro-button"));
   root.append(actions);
   const taskSection = make("div", "task-station-summary");
