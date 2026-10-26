@@ -240,3 +240,93 @@ dialog::backdrop { background:#000c; backdrop-filter:blur(4px); }
   .job-station-summary { padding:8px; }
   .job-command-panel .task-specs { grid-template-columns:1fr; }
 }
+
+
+/* One-screen operator contract: navigation pages replace long document flow. */
+html, body { height:100%; overflow:hidden; }
+.app-shell { height:100dvh; min-height:0; overflow:hidden; }
+.pane-tabs { display:none; }
+.dashboard { min-height:0; overflow:hidden; }
+.role-panel, .main-panel, .detail-panel { min-height:0; overflow:hidden; }
+.role-list { flex:1 1 auto; min-height:0; overflow:hidden; }
+.role-card { min-height:0; flex:1 1 0; padding:6px 8px; }
+.role-panel .panel-top { padding:11px 12px 8px; }
+.role-panel-bottom, .detail-foot { display:none; }
+.main-panel { display:flex; flex-direction:column; gap:8px; overflow:hidden; padding:12px; }
+.workspace-head { flex:none; }
+.workspace-head h1 { font-size:clamp(17px,1.6vw,22px); margin:2px 0 3px; }
+.workspace-subtitle { display:none; }
+.hud-strip { flex:none; margin-top:0; padding:7px 0; gap:5px; }
+.hud-strip .tiny-label { margin-bottom:2px; }
+.workspace-stage { flex:1 1 0; display:flex; flex-direction:column; min-height:0; min-width:0; }
+.stage-tabs { display:flex; gap:5px; flex:none; margin-bottom:8px; }
+.stage-tabs button, .pane-tabs button, .deck-button { border:1px solid var(--border-lit); border-radius:5px; background:#15241a; color:var(--text); font:700 10px var(--mono); padding:8px 11px; min-height:36px; cursor:pointer; }
+.stage-tabs button[aria-pressed="true"], .pane-tabs button[aria-pressed="true"] { background:var(--lime); color:#152119; }
+.stage-surface:not([hidden]) { display:flex; flex-direction:column; flex:1 1 0; min-height:0; min-width:0; overflow:hidden; }
+.stage-surface > .section-heading { flex:none; margin:2px 0 8px; }
+.module-grid { flex:1 1 0; min-height:0; overflow:hidden; grid-template-columns:repeat(3,minmax(0,1fr)); grid-template-rows:repeat(2,minmax(0,1fr)); align-items:stretch; }
+.module-card { min-height:0; padding:9px; gap:5px; }
+.deck-pager { display:flex; flex:none; min-height:42px; justify-content:space-between; align-items:center; gap:8px; padding:3px 0; }
+.deck-pager:empty { min-height:0; padding:0; }
+.deck-button { min-width:82px; min-height:36px; }
+.deck-button:disabled { opacity:.35; cursor:default; }
+.deck-count { font:11px var(--mono); color:var(--lime); }
+.custom-palette { border-top:0; margin:0; }
+.palette-grid { display:grid; flex:1 1 0; min-height:0; grid-template-columns:repeat(2,minmax(0,1fr)); grid-template-rows:repeat(3,minmax(0,1fr)); overflow:hidden; }
+.palette-button { min-height:0; }
+.extension-content { flex:1 1 0; min-height:0; overflow:hidden; }
+.rb-map-desktop-host { height:100%; min-height:0; }
+.stage-surface[data-stage="messages"] .rb-msg-desktop-dock { flex:1; min-height:0; margin-top:0; overflow:auto; }
+.detail-header { padding:12px; }
+.detail-header h2 { font-size:16px; margin:3px 0; }
+.detail-header > p { display:none; }
+.detail-status { margin-top:6px; }
+.testbench, #network-workspace { min-height:0; flex:1 1 0; overflow:auto; padding:8px 11px; }
+.statusbar { min-height:20px; }
+@media(max-height:650px) {
+  .masthead { min-height:42px; padding:0 8px; }
+  .brand-mark { width:34px; height:34px; }
+  .brand-copy strong { font-size:15px; }
+  .panel-top .eyebrow,.role-panel-bottom { display:none; }
+  .workspace-head .eyebrow { display:none; }
+  .hud-strip { padding:4px 0; }
+  .role-desc { display:none; }
+  .section-heading { margin:2px 0 5px; }
+  .module-glyph { font-size:16px; }
+  .module-category { margin-top:1px; }
+  .stage-tabs { margin-bottom:4px; }
+}
+@media(max-width:1100px) {
+  body { overflow:hidden; }
+  .app-shell { height:100dvh; min-height:0; padding:5px; }
+  .pane-tabs { display:flex; flex:none; gap:5px; }
+  .pane-tabs button { flex:1; min-height:38px; }
+  .dashboard { display:block; flex:1 1 0; min-height:0; }
+  .dashboard > .panel { display:none; height:100%; overflow:hidden; }
+  .dashboard[data-pane="roles"] > .role-panel { display:flex; }
+  .dashboard[data-pane="workspace"] > .main-panel { display:flex; }
+  .dashboard[data-pane="inspector"] > .detail-panel { display:flex; }
+  .role-panel { min-height:0; }
+  .role-list { flex-direction:column; overflow:hidden; padding:7px; }
+  .role-card { width:100%; flex:1 1 0; min-height:0; }
+  .main-panel { padding:9px; }
+  .detail-panel { overflow:hidden; }
+  .testbench { overflow:auto; }
+  .statusbar { display:none; }
+}
+@media(max-width:600px) {
+  .masthead { min-height:38px; }
+  .hud-strip { grid-template-columns:repeat(4,minmax(0,1fr)); gap:3px; }
+  .hud-strip > div { border-right:0; padding-right:0; }
+  .hud-strip strong { font-size:9px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .hud-strip .tiny-label { font-size:8px; }
+  .stage-tabs button { padding:6px; flex:1; min-width:0; }
+  .module-grid { grid-template-columns:repeat(2,minmax(0,1fr)); grid-template-rows:repeat(3,minmax(0,1fr)); }
+  .module-card { padding:7px; }
+  .module-glyph { font-size:14px; }
+  .module-name { font-size:11px; }
+  .module-category { font-size:8px; }
+}
+@media (pointer:coarse) {
+  .deck-button,.stage-tabs button,.pane-tabs button { min-height:44px; }
+}
