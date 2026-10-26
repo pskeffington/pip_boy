@@ -107,6 +107,7 @@ window.RustBoyNetwork = (() => {
           event.altKey || event.ctrlKey || event.metaKey || event.repeat) return;
       const target = event.target;
       if (target && root.contains && !root.contains(target) &&
+          !target.contains?.(root) &&
           target !== document.body && target !== document.documentElement) return;
       if (target?.isContentEditable) return;
       const tag = String(target?.tagName || "").toUpperCase();
