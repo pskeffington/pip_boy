@@ -330,3 +330,65 @@ html, body { height:100%; overflow:hidden; }
 @media (pointer:coarse) {
   .deck-button,.stage-tabs button,.pane-tabs button { min-height:44px; }
 }
+
+
+/* Focused viewport pass: each workspace has a fixed header and one active body. */
+.extension-content { display:flex; flex-direction:column; min-height:0; }
+.extension-tabs { display:flex; flex:none; gap:5px; padding:5px; border-bottom:1px solid var(--border); }
+.extension-tabs button { flex:1; min-width:0; border:1px solid var(--border-lit); border-radius:4px; background:#122219; color:var(--text); min-height:35px; padding:6px 8px; font:700 11px var(--mono); cursor:pointer; }
+.extension-tabs button[aria-pressed="true"] { background:var(--lime); color:#152119; }
+.extension-tabs button:focus-visible { outline:2px solid var(--lime); outline-offset:1px; }
+.extension-focused-body { flex:1 1 0; min-height:0; min-width:0; display:flex; flex-direction:column; overflow:hidden; }
+.extension-focused-body > .rb-map-desktop-host { flex:1 1 0; min-height:0; height:100%; }
+.extension-focused-body > .rb-reclamation-desktop,
+.extension-focused-body > .job-assignments { flex:1 1 0; min-height:0; overflow:auto; }
+.extension-content > .camera-wall { flex:1 1 0; min-height:0; overflow:hidden; display:flex; flex-direction:column; padding:8px; }
+.extension-content > .camera-wall .camera-grid { flex:1 1 0; min-height:0; grid-template-rows:repeat(2,minmax(0,1fr)); }
+.extension-content > .camera-wall .camera-cell { min-height:0; aspect-ratio:auto; }
+.extension-content > .camera-wall.focused .camera-cell { min-height:0; aspect-ratio:auto; height:100%; }
+.extension-content > .camera-wall.focused .camera-grid { display:block; }
+.extension-content > .camera-wall-heading { flex:none; }
+.extension-content > .job-command-panel, .extension-content > .job-station-summary { flex:1 1 0; min-height:0; overflow:auto; }
+.inspector-return { display:none; color:var(--lime); background:#15251a; border:1px solid var(--border-lit); border-radius:5px; padding:7px 10px; font:700 11px var(--mono); cursor:pointer; min-height:36px; margin-bottom:9px; }
+@media(max-width:1100px) {
+  .inspector-return { display:block; align-self:flex-start; }
+}
+@media(max-height:480px) {
+  .app-shell { gap:4px; padding:4px; }
+  .main-panel { gap:4px; padding:6px; }
+  .masthead { min-height:32px; }
+  .masthead-right { gap:6px; }
+  .brand-mark { width:28px; height:28px; font-size:13px; }
+  .brand-copy strong { font-size:13px; }
+  .brand-copy > span { display:none; }
+  .status-chip { padding:4px 6px; }
+  .workspace-head h1 { font-size:15px; margin:0; }
+  .workspace-actions { flex-direction:row; align-items:center; gap:5px; }
+  .workspace-actions .primary-button { min-height:32px; padding:5px 8px; font-size:10px; }
+  .hud-strip { display:none; }
+  .stage-tabs { margin-bottom:3px; }
+  .stage-tabs button { min-height:32px; padding:4px 5px; font-size:9px; }
+  .module-grid { grid-template-rows:repeat(2,minmax(0,1fr)); }
+  .palette-grid { grid-template-rows:repeat(2,minmax(0,1fr)); }
+  .role-card { min-height:44px; }
+  .role-panel .panel-top { padding:5px 10px; }
+  .role-panel .panel-top h2 { margin:0; }
+  .role-panel .panel-top p { display:none; }
+  .section-heading { margin:0 0 3px!important; }
+  .deck-pager { min-height:38px; }
+  .module-card { gap:2px; }
+  .module-top { align-items:center; }
+  .module-card .module-category { display:none; }
+  .detail-header { padding:7px; }
+  .detail-header h2 { font-size:14px; }
+  .detail-header .eyebrow { display:none; }
+  .inspector-return { margin-bottom:4px; min-height:32px; }
+}
+@media(max-width:1100px) and (max-height:480px) {
+  .pane-tabs button { min-height:32px; padding:4px; font-size:10px; }
+  .module-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+}
+@media(pointer:coarse) {
+  .inspector-return,.extension-tabs button { min-height:44px; }
+  .role-card { min-height:44px; }
+}
