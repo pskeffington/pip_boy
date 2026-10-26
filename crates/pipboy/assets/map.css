@@ -118,3 +118,25 @@
   .rb-map-stage { min-height:70px; }
   .rb-map-extra { max-height:70px; }
 }
+
+/* Official Census map layers: collapsed by default, keyboard/touch reachable. */
+.rb-map-layers { flex:none; min-width:0; border-top:1px solid #406443;
+  font:10px ui-monospace, Consolas, monospace; color:#c5e7ae; }
+.rb-map-layers summary { cursor:pointer; padding:3px 5px; font-weight:700; }
+.rb-map-layers summary:focus-visible, .rb-map-layer-button:focus-visible {
+  outline:2px solid #e9f4bd; outline-offset:1px;
+}
+.rb-map-layer-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:4px; padding:4px; }
+.rb-map-layer-button { min-width:0; min-height:36px; padding:5px 3px;
+  white-space:nowrap; }
+.rb-map-layer-muted { color:#8ba48b; border-color:#384b3d; background:#0d1a12; }
+.rb-map-layer-button[aria-pressed="true"] { border-color:#9fcf7f; }
+@media (max-width:520px) {
+  .rb-map-layer-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .rb-map-layer-button { min-height:38px; font-size:10px; }
+}
+@media (max-height:360px) {
+  .rb-map-layer-grid { max-height:86px; overflow:auto; }
+  .rb-map-layers summary { padding:2px 4px; }
+}

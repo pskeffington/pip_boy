@@ -1,5 +1,30 @@
 # Changelog
 
+## 2026-10-26 — MAP layer controls and indexed handheld renderer
+
+- Add independent touch/keyboard ON/OFF switches for official Census roads, combined water, clipped landmarks and county border without modifying authoritative cached data or initiating location/provider calls.
+- Index each validated county source by geographic feature bounds for viewport-only drawing, with finite reference budgets and conservative full-scan fallback at the world seam or for extended/missing envelopes.
+- Preselect only MTFCC major roads at low zoom, suppress point landmarks until usable scale, coalesce touch redraws and reuse the per-frame Mercator camera transform. Keep all original source geometry intact.
+- Prioritize named landmarks ahead of street labels and apply small-screen collision avoidance; report loaded, candidate and drawn Census features in DATA SOURCES.
+- Gate a deterministic 20,000-feature test covering category filtering, offline source preservation, viewport candidate reductions, point-name visibility, no new network/GPS actions and session settings. Physical GNSS and Raspberry Pi FPS remain unverified.
+- Gate real headless Chromium layout at 480x320, 800x480 and 320x568 with collapsed/expanded layer controls, canvas height, touch-target size, accessible button state and zero implicit provider calls.
+
+
+## 2026-10-26 — Recursive documentation integrity (CI pending)
+
+- Extend the public Markdown auditor to nested guides in `docs/` and `catalog/` and optional `data/` index documentation, without crawling operator files.
+- Check reference-style link definitions as well as ordinary inline links; ignore footnotes, empty links, and fenced examples.
+- Add four offline regressions for nested guides, future public data folders, reference definitions, and empty/footnote input (13 total).
+
+
+## 2026-10-26 — Repository/code hygiene (PR #37; five CI jobs passed)
+
+- Add explicit repository ownership and maintenance guidance, link root documentation, and apply editor/line-ending conventions without relocating runtime data.
+- Consolidate Python validation assertions, make native CLI help navigable by functional group, and add offline public-Markdown link auditing (including directory containment, symlink, stale-reference, and mandatory-link checks) with nine regression tests.
+- Repair retired Boston-basemap references in branding and field/lore guides; preserve the county-first MAP and official offline county-boundary cache.
+- Keep standalone radio, communications, and public-data-index feature branches isolated.
+
+
 ## 2026-10-26 — Shared CI smoke-test roster (validation pending)
 
 - Consolidate two repeated CI Python smoke-test lists into one audited, deterministic runner: 19 checks on Linux stable and 17 on the macOS/Windows native matrix, preserving their original execution order.
