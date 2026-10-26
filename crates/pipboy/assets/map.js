@@ -1655,6 +1655,7 @@
         const next=!view.countyLayerVisible[key];
         view.countyLayerVisible[key]=next;
         countyPreferences={...view.countyLayerVisible};
+        setLayerStatus(view); // Accessibility state updates on the click, not next RAF.
         refresh(view);
       },"Show or hide Census "+COUNTY_LABELS[key].toLowerCase()+
         " without deleting cached geography or requesting network access");
@@ -1662,6 +1663,7 @@
       layerGrid.append(button);
     }
     layerPanel.append(layerSummary,layerGrid);
+    setLayerStatus(view); // Valid aria-pressed from the first paint onward.
     const tools = make("details", "rb-map-tools");
     const extra = make("div", "rb-map-extra");
     extra.append(importButton, view.siteButton, view.webButton, view.webRefresh);
