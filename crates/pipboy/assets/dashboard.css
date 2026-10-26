@@ -437,12 +437,12 @@ html, body { height:100%; overflow:hidden; }
 @media(max-height:480px) {
   .settings-surface { gap:3px; }
   .settings-surface .role-panel .panel-top { display:none; }
-  .settings-surface .role-list { grid-template-rows:repeat(2,minmax(0,1fr)); gap:3px; }
+  .settings-surface .role-list { grid-template-rows:minmax(44px,1fr); gap:3px; }
   .settings-surface .role-list .role-card { padding:4px; }
   .settings-surface .role-number { width:23px; height:23px; font-size:10px; }
   .settings-surface .role-title { font-size:10px; }
   .settings-surface .role-desc { display:none; }
-  .settings-profile-summary { padding:3px 7px; min-height:29px; }
+  .settings-profile-summary { display:none; }
   .settings-profile-summary .tiny-label { display:none; }
   .settings-profile-summary strong { font-size:10px; }
   .settings-choice { padding:2px 0; min-height:33px; }
@@ -456,3 +456,8 @@ html, body { height:100%; overflow:hidden; }
   .settings-profile-summary .secondary-button { min-height:44px; }
 }
 /* Keep Settings reachable from both viewport classes with no role sidebar. */
+
+@media (max-height:480px) and (pointer:coarse) {
+  .settings-surface .role-card, .settings-surface .deck-button,
+  .settings-choice .primary-button { min-height:44px; }
+}
