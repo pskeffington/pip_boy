@@ -165,10 +165,15 @@ async function main() {
       assert.equal(r.documentFitsAfter,true,"Page scrollbar present after navigation");
       assert.equal(r.initial.deckFits,true,"Module deck clipped");
       assert.equal(r.initial.cardsFit,true,"Module cards clipped");
-      assert.equal(r.initial.rolesFit,true,"Job selector clipped");
+      assert.equal(r.initial.rolesHidden,true,"Role selection must be hidden outside Settings");
+      assert.equal(r.initial.noRoleNavigation,true,"Role pane must not appear in top-level navigation");
+      assert.deepEqual(r.initial.commonTabs,["MODULES","VIEWPORT","MESSAGES","SETTINGS"],"Role-independent nav mismatch");
       assert.equal(r.initial.pagerFits,true,"Pager clipped");
       assert.equal(r.initial.paneTabsVisible,true);
-      assert.equal(r.rolePane,true,"Role pane clipped");
+      assert.equal(r.settings?.visible,true,"Settings stage missing");
+      assert.equal(r.settings?.roleButtonsVisible,true,"Settings role selector clipped");
+      assert.equal(r.settings?.rolePagerVisible,true,"Settings role pager clipped");
+      assert.equal(r.settings?.previewIsolated,true,"Role preview changed active module workspace");
       assert.equal(r.viewport,true,"Viewport panel clipped");
       assert.equal(r.messages,true,"Messages panel clipped");
       if(scenario!=="custom"){
@@ -185,6 +190,7 @@ async function main() {
         assert.equal(r.palette?.visible,true,"Custom tool palette unavailable");
         assert.equal(r.palette?.fit,true,"Custom palette clipped");
         assert.ok(r.palette?.next>0,"Custom palette next page missing");
+        assert.equal(r.palette?.back,true,"Custom palette cannot return to Settings");
       }
     }
   }finally{await new Promise(resolve=>server.close(resolve));}

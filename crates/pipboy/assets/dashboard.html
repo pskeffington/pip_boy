@@ -36,43 +36,27 @@
       </div>
       <div class="masthead-right">
         <span class="status-chip" id="server-status"><span class="live-dot" aria-hidden="true"></span> STARTING</span>
-        <a href="/micro" class="mini-button" title="Open the handheld view" aria-label="Open handheld view">HANDHELD ↗</a>
+        <a href="/micro" class="mini-button" title="Open handheld view">HANDHELD ↗</a>
         <button type="button" class="icon-button" id="refresh-state" title="Reload saved workspace" aria-label="Reload saved workspace">↻</button>
       </div>
     </header>
 
     <nav class="pane-tabs" aria-label="Desktop workspace panels">
-      <button type="button" data-pane-target="roles" aria-pressed="false">STATIONS</button>
       <button type="button" data-pane-target="workspace" aria-pressed="true">WORKSPACE</button>
       <button type="button" data-pane-target="inspector" aria-pressed="false">INSPECTOR</button>
     </nav>
     <div class="dashboard" data-pane="workspace">
-      <aside class="role-panel panel" aria-labelledby="templates-heading">
-        <div class="panel-top">
-          <h2 id="templates-heading">Stations</h2>
-        </div>
-        <nav id="role-list" class="role-list" aria-label="Job stations"></nav>
-        <div id="role-pager" class="deck-pager" aria-label="Station pages"></div>
-      </aside>
-
       <main class="main-panel panel" id="workspace" tabindex="-1">
         <div class="workspace-head">
-          <div class="workspace-identity">
+          <div>
             <div class="eyebrow">WORKSPACE <span class="divider-inline">/</span> <span id="view-mode">ACTIVE</span></div>
             <h1 id="workspace-title">Loading</h1>
-            <details class="copy-disclosure role-explanation" id="role-explanation">
-              <summary>About this station</summary>
-              <p class="workspace-subtitle" id="workspace-subtitle">Local workbench.</p>
-            </details>
-          </div>
-          <div class="workspace-actions">
-            <span class="active-pill" id="active-label">STARTING</span>
-            <button class="primary-button" id="load-role" type="button" disabled>Load</button>
+            <p class="workspace-subtitle" id="workspace-subtitle">Local workbench.</p>
           </div>
         </div>
 
         <div class="hud-strip" aria-label="Workspace status">
-          <div><span class="tiny-label">ROLE</span><strong id="status-role">—</strong></div>
+          <div><span class="tiny-label">STATION</span><strong id="status-role">—</strong></div>
           <div><span class="tiny-label">TOOLS</span><strong id="status-modules">—</strong></div>
           <div class="access-stat"><span class="tiny-label">ACCESS</span><strong class="positive">LOCAL · MANUAL</strong></div>
         </div>
@@ -82,7 +66,7 @@
             <button type="button" data-stage-target="modules" aria-pressed="true">TOOLS</button>
             <button type="button" data-stage-target="viewport" aria-pressed="false">VIEW</button>
             <button type="button" data-stage-target="messages" aria-pressed="false">MESSAGES</button>
-            <button type="button" data-stage-target="palette" aria-pressed="false" hidden>ADD TOOLS</button>
+            <button type="button" data-stage-target="settings" aria-pressed="false">SETTINGS</button>
           </nav>
         <section class="module-section stage-surface" data-stage="modules" aria-labelledby="modules-heading">
           <div class="section-heading">
@@ -92,8 +76,27 @@
           <div id="module-grid" class="module-grid" aria-live="polite"></div>
           <div id="module-pager" class="deck-pager" aria-label="Module pages"></div>
         </section>
+        <section class="settings-surface stage-surface" data-stage="settings" aria-label="Device settings" hidden>
+          <div class="section-heading"><h2>Settings</h2><span class="section-counter">LOCAL</span></div>
+          <div class="settings-profile-summary">
+            <div><span class="tiny-label">ACTIVE STATION</span><strong id="settings-current-role">—</strong></div>
+            <button id="open-palette" type="button" class="secondary-button" hidden>EDIT CUSTOM TOOLS</button>
+          </div>
+          <div class="role-panel" aria-labelledby="templates-heading">
+        <div class="panel-top">
+          <h2 id="templates-heading">Stations</h2>
+        </div>
+        <nav id="role-list" class="role-list" aria-label="Job stations"></nav>
+        <div id="role-pager" class="deck-pager" aria-label="Station pages"></div>
+      </div>
+          <div class="settings-choice">
+            <span id="settings-selection" aria-live="polite">Select a station.</span>
+            <button class="primary-button" id="load-role" type="button" disabled>Load</button>
+          </div>
+        </section>
         <section id="custom-palette" class="custom-palette stage-surface" data-stage="palette" aria-label="Custom tool palette" hidden>
             <div class="section-heading">
+              <button id="palette-back" type="button" class="secondary-button">◀ SETTINGS</button>
               <h3>Add tools</h3>
             </div>
             <div id="palette-grid" class="palette-grid"></div>
@@ -103,6 +106,7 @@
         <section class="extension-section stage-surface" data-stage="viewport" aria-labelledby="extension-heading" hidden>
           <div class="section-heading">
             <h2 id="extension-heading">Active view</h2>
+            
           </div>
           <div id="extension-content" class="extension-content"></div>
         </section>
@@ -122,9 +126,9 @@
           <span class="eyebrow">INSPECTOR</span>
           <h2 id="details-heading">Select a tool</h2>
           <div id="detail-status" class="detail-status"></div>
-          <details class="copy-disclosure detail-info" id="detail-info">
+          <details id="detail-info" class="copy-disclosure">
             <summary>About this tool</summary>
-            <p id="detail-description">Select a tool to view its capabilities.</p>
+            <p id="detail-description">Select a tool for details.</p>
           </details>
         </div>
         <div id="network-workspace" class="testbench" hidden></div>
@@ -150,7 +154,7 @@
         <div class="detail-foot">
           <details class="copy-disclosure">
             <summary>Safety &amp; access</summary>
-            <p>Templates arrange tools only. Network and hardware operations require separate authorization.</p>
+            <p>Templates arrange tools only. Network and hardware actions need separate authorization.</p>
           </details>
         </div>
       </aside>
@@ -158,7 +162,7 @@
 
     <footer class="statusbar">
       <div><span class="footer-pip" aria-hidden="true">◆</span> <span id="footer-message">Local · ready</span></div>
-      <div class="footer-shortcuts">ALT ↑↓ STATIONS <span class="status-separator">·</span> ALT ENTER LOAD <span class="status-separator">·</span> ESC BACK</div>
+      <div class="footer-shortcuts">SETTINGS: STATION <span class="status-separator">·</span> ESC: BACK</div>
     </footer>
   </div>
 

@@ -106,7 +106,7 @@ jobs:
           node --check tools/fixtures/dashboard-viewport-probe.js
           node --check tools/test_dashboard_viewport.cjs
           node tools/test_dashboard_viewport.cjs
-      - name: Desktop focus Chromium viewport acceptance
+      - name: Desktop concise focus Chromium acceptance
         if: matrix.toolchain == 'stable'
         run: node tools/test_desktop_viewport.cjs
       - name: Network Engineer real Chromium viewport acceptance

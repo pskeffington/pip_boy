@@ -385,3 +385,17 @@ small { font-size:11px; }
   .micro-device::after { display:none; }
   *, *::before, *::after { scroll-behavior:auto !important; }
 }
+
+
+/* Shared handheld chrome: role selection is a SETUP action, never a header action. */
+.terminal-brand {
+  min-width:0; display:flex; align-items:center; gap:9px;
+  font-size:12px; font-weight:800; letter-spacing:.045em; white-space:nowrap;
+}
+.terminal-brand > span:last-child { overflow:hidden; text-overflow:ellipsis; }
+@media(max-width:520px) {
+  .terminal-brand { gap:6px; font-size:11px; }
+}
+@media(max-width:370px) {
+  .terminal-brand { font-size:10px; }
+}

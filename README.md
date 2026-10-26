@@ -14,7 +14,7 @@ Rust-Boy is a Rust workbench for local diagnostics, field maps, network engineer
 
 [Documentation index](docs/README.md) · [Repository structure](docs/REPO_STRUCTURE.md) · [Architecture](docs/ARCHITECTURE.md) · [Organizational research](docs/ORGANIZATIONAL_OPTIMIZATION.md) · [Validation](docs/VALIDATION.md) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md).
 
-**Desktop focus view:** The Mac dashboard presents paged **Stations**, **Tools**, **View** and **Messages** instead of a long scrolling report. Detailed explanations appear on demand; the micro HUD is unchanged. See [desktop controls](docs/DASHBOARD_UI.md).
+**Desktop focus:** The shared console uses compact **TOOLS / VIEW / MESSAGES / SETTINGS** pages. Change stations only under Settings; optional explanations replace repeated text. The handheld `/micro` is unchanged. [Desktop guide](docs/DASHBOARD_UI.md).
 
 ## Quick start
 

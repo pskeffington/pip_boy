@@ -8,9 +8,7 @@ const ui = {
   roles: byId("role-list"),
   title: byId("workspace-title"),
   subtitle: byId("workspace-subtitle"),
-  roleExplanation: byId("role-explanation"),
   viewMode: byId("view-mode"),
-  activeLabel: byId("active-label"),
   load: byId("load-role"),
   roleStat: byId("status-role"),
   moduleStat: byId("status-modules"),
@@ -59,7 +57,7 @@ let desktopMessenger = null;
 let extensionMode = "map";
 let queuedSiteId = null;
 const PAGE_SIZE = 6;
-const rolesPerPage = () => window.innerHeight <= 480 ? 3 : PAGE_SIZE;
+const rolesPerPage = () => window.innerHeight <= 480 ? 2 : PAGE_SIZE;
 const cardsPerPage = () => window.innerHeight <= 480 ? 4 : PAGE_SIZE;
 function pager(id, total, current, setter, pageSize = PAGE_SIZE) {
   const host = byId(id);
@@ -76,17 +74,21 @@ function pager(id, total, current, setter, pageSize = PAGE_SIZE) {
   host.append(previous, el("span", "deck-count", `${current + 1} / ${pages}`), next);
 }
 function activateStage(stage) {
-  if (stage === "palette" && !(previewId === "custom" && selectedAvailable())) stage = "modules";
+  if (stage === "palette" && snapshot?.active.profile !== "custom") stage = "settings";
+  if (!["modules", "viewport", "messages", "settings", "palette"].includes(stage)) return;
   const previous = activeStage;
+  if (!["settings", "palette"].includes(stage) && previewId !== snapshot?.active.profile) {
+    previewId = snapshot.active.profile;
+    renderRoles();
+  }
   activeStage = stage;
   for (const button of document.querySelectorAll("[data-stage-target]")) {
-    button.hidden = button.dataset.stageTarget === "palette" && !(previewId === "custom" && selectedAvailable());
     button.setAttribute("aria-pressed", String(button.dataset.stageTarget === stage));
   }
   for (const section of document.querySelectorAll(".stage-surface")) section.hidden = section.dataset.stage !== stage;
   if (stage === "viewport" && snapshot) renderExtension();
   else if (previous === "viewport" && window.RustBoyMap) window.RustBoyMap.unmount();
-  // Device messaging is mounted only after an explicit MESSAGES page selection.
+  // First local journal read occurs only after operator opens MESSAGES.
   if (stage === "messages" && !desktopMessenger && window.RustBoyMessenger) {
     desktopMessenger = window.RustBoyMessenger.mount(byId("messenger-dock"));
   }
@@ -134,11 +136,31 @@ async function api(path, data) {
 }
 
 function profile() {
+  return snapshot?.profiles.find((entry) => entry.id === snapshot.active.profile) || null;
+}
+
+function pendingProfile() {
   return snapshot?.profiles.find((entry) => entry.id === previewId) || null;
 }
 
 function selectedAvailable() {
-  return previewId === snapshot?.active.profile;
+  return Boolean(profile());
+}
+
+function renderSettingsSelection() {
+  if (!snapshot) return;
+  const chosen = pendingProfile();
+  const active = profile();
+  byId("settings-current-role").textContent = active?.title || "UNKNOWN";
+  byId("open-palette").hidden = snapshot.active.profile !== "custom";
+  const same = chosen?.id === snapshot.active.profile;
+  const resetCustom = same && chosen?.id === "custom" && snapshot.active.slots.length > 0;
+  byId("settings-selection").textContent = !chosen ? "Choose a station."
+    : same ? "Current: " + chosen.title
+      : "Selected: " + chosen.title;
+  ui.load.disabled = working || (same && !resetCustom) || !chosen;
+  ui.load.textContent = resetCustom ? "Reset Custom"
+    : same ? "Loaded" : "Load";
 }
 
 function toolInfo(id) {
@@ -146,11 +168,7 @@ function toolInfo(id) {
 }
 
 function visibleModuleIds() {
-  const selected = profile();
-  if (!selected) return [];
-  return selectedAvailable()
-    ? snapshot.active.slots.map((entry) => entry.tool)
-    : selected.tools.slice();
+  return snapshot ? snapshot.active.slots.map((entry) => entry.tool) : [];
 }
 
 function renderRoles() {
@@ -173,38 +191,28 @@ function renderRoles() {
       button.append(el("span", "role-activated", "SAVED"));
     }
     button.addEventListener("click", () => {
+      // Preview remains inside Settings; active role, pins, and live tools do not change.
       previewId = role.id;
-      selectedTool = null;
-      selectedCamera = null;
-      lastOutput = "";
-      ui.roleExplanation.open = false;
-      ui.detailInfo.open = false;
-      modulePage = 0;
-      palettePage = 0;
-      extensionMode = "map";
-      renderAll();
-      if (window.matchMedia("(max-width: 1100px)").matches) {
-        activateStage("modules");
-        activatePane("workspace");
-      }
+      renderRoles();
     });
     ui.roles.append(button);
   }
   pager("role-pager", roles.length, rolePage, (page) => { rolePage = page; renderRoles(); }, size);
+  renderSettingsSelection();
 }
 
 function renderModules() {
   ui.modules.replaceChildren();
   const ids = visibleModuleIds();
   ui.moduleCount.textContent = String(ids.length);
-  ui.moduleStat.textContent = String(ids.length) + (selectedAvailable() ? " PINNED" : " PREVIEW");
+  ui.moduleStat.textContent = String(ids.length) + " PINNED";
   if (ids.length === 0) {
     const blank = el("div", "empty-state");
     blank.append(
       el("strong", "", "No tools yet"),
       el("p", "", selectedAvailable()
-        ? "Open Add tools."
-        : "Load Custom to add tools.")
+        ? "Open Settings to add tools."
+        : "Load Custom in Settings to add tools.")
     );
     ui.modules.append(blank);
   }
@@ -225,11 +233,7 @@ function renderModules() {
     const base = el("span");
     base.append(el("span", "module-name", info.name));
     if (info.availability !== "ready") {
-      const shortStatus = {
-        simulated: "SIM",
-        explicit_connection: "OPT-IN",
-        planned: "PLANNED"
-      };
+      const shortStatus = {simulated:"SIM",explicit_connection:"OPT-IN",planned:"PLANNED"};
       base.append(el("span", "module-category " + info.availability,
         shortStatus[info.availability] || info.availability.replace(/_/g, " ")));
     }
@@ -255,7 +259,7 @@ function renderModules() {
 }
 
 function renderCustomPalette() {
-  const activeCustom = previewId === "custom" && selectedAvailable();
+  const activeCustom = snapshot.active.profile === "custom";
   ui.paletteGrid.replaceChildren();
   if (!activeCustom) return;
   const pinned = new Set(snapshot.active.slots.map((slot) => slot.tool));
@@ -390,15 +394,16 @@ function renderExtension() {
     wall.append(grid, el("div", "camera-hint",
       selectedCamera === null
         ? "Select a camera to focus."
-        : "Select again or press Esc to return."
+        : "Select again or Esc to return."
     ));
     ui.extension.append(wall);
     return;
   }
   if (selectedAvailable() && selected.id !== "custom" && window.RustBoyTasks) {
     const station = el("div", "job-station-summary");
-    const name = el("strong", "", "Assigned tasks");
-    station.append(name);
+    const name = el("strong", "", "ASSIGNED OPERATIONS / " + selected.title.toUpperCase());
+    const purpose = el("p", "workspace-subtitle", selected.description);
+    station.append(name, purpose);
     const queue = el("div", "job-assignments");
     station.append(queue);
     ui.extension.append(station);
@@ -411,8 +416,8 @@ function renderExtension() {
     el("div", "")
   );
   placeholder.lastElementChild.append(
-    el("strong", "", "No active view"),
-    el("p", "", "Select a tool. Connections are always manual.")
+    el("strong", "", "EXTENSION BAY / UNSLOTTED"),
+    el("p", "", "Role-specific hardware and advanced modules will mount here after their acceptance gates. Nothing is auto-connected.")
   );
   ui.extension.append(placeholder);
 }
@@ -438,12 +443,12 @@ const forms = Object.freeze({
     field("name", "WAYPOINT LABEL", "Camp Alpha") + "</div>",
   "byte-lab":
     field("input", "HEX BYTES (UP TO 4096)", "48656c6c6f", 'autocomplete="off" spellcheck="false"'),
-  "diag": '<p class="workspace-subtitle">Local CPU / RAM check. Imports use the CLI.</p>',
-  "host": '<p class="workspace-subtitle">One-time host status.</p>',
-  "game": '<p class="workspace-subtitle">Manual console setup required.</p>',
-  "library": '<p class="workspace-subtitle">Offline reference.</p>',
-  "notes": '<p class="workspace-subtitle">Private local notes.</p>',
-  "simulator": '<p class="workspace-subtitle">Simulation only. No hardware.</p>'
+  "diag": '<p class="workspace-subtitle">Check the local host using read-only CPU/RAM evidence. For scoped JSONL imports use pipboy diag ingest on the CLI.</p>',
+  "host": '<p class="workspace-subtitle">Sample local host status on demand. No continuous background collection.</p>',
+  "game": '<p class="workspace-subtitle">Manual connection only. The browser does not contact a PlayStation.</p>',
+  "library": '<p class="workspace-subtitle">Shows the offline reference handoff. No network fetch.</p>',
+  "notes": '<p class="workspace-subtitle">Shows the local notes command. Your note contents stay private.</p>',
+  "simulator": '<p class="workspace-subtitle">Use deterministic fixtures. No physical interface is enabled.</p>'
 });
 
 function renderDetail() {
@@ -453,7 +458,7 @@ function renderDetail() {
   networkHost.hidden = true;
   networkHost.replaceChildren();
   ui.detailsTitle.textContent = "Select a tool";
-  ui.detailsDesc.textContent = "Choose a tool to see its details.";
+  ui.detailsDesc.textContent = "Choose a tool to see details.";
   ui.detailStatus.replaceChildren();
   ui.testbench.hidden = true;
   ui.handoff.hidden = true;
@@ -546,18 +551,10 @@ function renderAll() {
   const current = profile();
   if (!current) return;
   ui.status.innerHTML = '<span class="live-dot" aria-hidden="true"></span> READY';
-  ui.title.textContent = current.title;
-  ui.subtitle.textContent = current.description;
-  ui.viewMode.textContent = selectedAvailable() ? "ACTIVE" : "PREVIEW";
-  ui.activeLabel.textContent = selectedAvailable() ? "SAVED" : "PREVIEW";
-  ui.activeLabel.className = "active-pill " + (selectedAvailable() ? "loaded" : "preview");
-  ui.roleStat.textContent = current.id.toUpperCase().replace(/-/g, " ");
-  const isSame = selectedAvailable();
-  const customReset = current.id === "custom" && snapshot.active.slots.length > 0;
-  ui.load.disabled = working || (isSame && !customReset);
-  ui.load.textContent = isSame
-    ? (customReset ? "Reset Custom" : "Loaded")
-    : "Load";
+  ui.title.textContent = "WORKBENCH";
+  ui.subtitle.textContent = "Local tools only.";
+  ui.viewMode.textContent = "ACTIVE";
+  ui.roleStat.textContent = current.title.toUpperCase();
   renderRoles();
   renderModules();
   renderDetail();
@@ -565,12 +562,10 @@ function renderAll() {
   activatePane(activePane);
 }
 
-async function reload({ silent = false } = {}) {
+async function reload({silent = false} = {}) {
   try {
     snapshot = await api("/api/state");
-    if (!previewId || !snapshot.profiles.some((p) => p.id === previewId)) {
-      previewId = snapshot.active.profile;
-    }
+    previewId = snapshot.active.profile;
     if (!selectedTool) selectedTool = visibleModuleIds()[0] || null;
     rolePage = Math.floor(Math.max(0, snapshot.profiles.findIndex(p => p.id === previewId)) / rolesPerPage());
     renderAll();
@@ -593,9 +588,10 @@ async function changeProfile(id) {
     lastOutput = "";
     modulePage = 0;
     extensionMode = "map";
-    ui.roleExplanation.open = false;
     ui.detailInfo.open = false;
     notify("Station loaded: " + profile().title);
+    activeStage = "modules";
+    activePane = "workspace";
     renderAll();
   } catch (error) {
     notify(error.message, true);
@@ -607,7 +603,7 @@ async function changeProfile(id) {
 
 function loadSelected() {
   if (!snapshot || working || ui.load.disabled) return;
-  const current = profile();
+  const current = pendingProfile();
   if (!current) return;
   ui.confirmText.textContent = "Load " + current.title +
     " and replace pinned tools? Notes and permissions remain unchanged. No device connections are opened.";
@@ -700,6 +696,8 @@ async function copyOutput() {
 }
 
 document.querySelectorAll("[data-stage-target]").forEach(button => button.addEventListener("click", () => activateStage(button.dataset.stageTarget)));
+byId("open-palette").addEventListener("click", () => activateStage("palette"));
+byId("palette-back").addEventListener("click", () => activateStage("settings"));
 byId("inspector-return").addEventListener("click", () => { activateStage("modules"); activatePane("workspace"); });
 window.addEventListener("resize", () => { if (!snapshot) return; renderRoles(); renderModules(); });
 document.querySelectorAll("[data-pane-target]").forEach(button => button.addEventListener("click", () => activatePane(button.dataset.paneTarget)));
@@ -708,7 +706,7 @@ ui.refresh.addEventListener("click", () => { void reload(); });
 ui.form.addEventListener("submit", runLab);
 ui.copy.addEventListener("click", copyOutput);
 ui.confirm.addEventListener("close", () => {
-  if (ui.confirm.returnValue === "replace" && profile()) changeProfile(previewId);
+  if (ui.confirm.returnValue === "replace" && pendingProfile()) changeProfile(previewId);
 });
 document.addEventListener("keydown", (event) => {
   if (!snapshot) return;
@@ -724,6 +722,10 @@ document.addEventListener("keydown", (event) => {
       activatePane("workspace");
       return;
     }
+    if (activeStage === "palette") {
+      activateStage("settings");
+      return;
+    }
     if (activeStage !== "modules") {
       activateStage("modules");
       return;
@@ -732,27 +734,18 @@ document.addEventListener("keydown", (event) => {
   if (!event.altKey || event.ctrlKey || event.metaKey) return;
   if (event.key === "ArrowUp" || event.key === "ArrowDown") {
     event.preventDefault();
+    if (activeStage !== "settings") return;
     const i = snapshot.profiles.findIndex((p) => p.id === previewId);
     const delta = event.key === "ArrowUp" ? -1 : 1;
     const nextIndex = (i + delta + snapshot.profiles.length) % snapshot.profiles.length;
     previewId = snapshot.profiles[nextIndex].id;
     rolePage = Math.floor(nextIndex / rolesPerPage());
-    modulePage = 0;
-    selectedTool = null;
-    selectedCamera = null;
-    ui.roleExplanation.open = false;
-    ui.detailInfo.open = false;
-    extensionMode = "map";
-    lastOutput = "";
-    renderAll();
-    if (window.matchMedia("(max-width: 1100px)").matches) {
-      activateStage("modules");
-      activatePane("workspace");
-    }
-  } else if (event.key === "Enter") {
+    renderRoles();
+  } else if (event.key === "Enter" && activeStage === "settings") {
     event.preventDefault();
     loadSelected();
   }
 });
 
-void reload({ silent: true });
+// Messenger remains in the same workspace tab for every occupational profile.
+void reload({silent:true});

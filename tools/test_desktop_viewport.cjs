@@ -110,11 +110,12 @@ function fixturePage() {
     'roles:roles.length,tools:modules.length,',
     'roleHeights:roles.map(x=>x.getBoundingClientRect().height),',
     'toolHeights:modules.map(x=>x.getBoundingClientRect().height),',
-    'collapsedRole:!document.getElementById("role-explanation").open,',
+    'settingsInitiallyHidden:document.querySelector(\'[data-stage="settings"]\').hidden,',
     'collapsedDetail:!document.getElementById("detail-info").open,',
     'messagesInitiallyHidden:document.querySelector(\'[data-stage="messages"]\').hidden,',
     'messageChildrenInitially:document.getElementById("messenger-dock").children.length,',
     'mainRole:document.getElementById("workspace-title").textContent,',
+    'selectedStation:document.getElementById("status-role").textContent,',
     'toolCount:document.getElementById("module-count").textContent,',
     'initialRequests:[...window.__fixtureRequests],',
     'paneTabs:document.querySelectorAll("[data-pane-target]").length,',
@@ -126,6 +127,9 @@ function fixturePage() {
     'report.messagesAfterClick=!document.querySelector(\'[data-stage="messages"]\').hidden;',
     'report.messageChildrenAfterClick=document.getElementById("messenger-dock").children.length;',
     'report.afterRequests=[...window.__fixtureRequests];',
+    'document.querySelector(\'[data-stage-target="settings"]\').click();',
+    'report.settingsAfterClick=!document.querySelector(\'[data-stage="settings"]\').hidden;',
+    'report.stationHeightsInSettings=[...document.querySelectorAll(".role-card")].map(x=>x.getBoundingClientRect().height);',
     'document.getElementById("viewport-report").textContent=',
     'btoa(String.fromCharCode(...new TextEncoder().encode(JSON.stringify(report))));',
     '},140);',
@@ -191,51 +195,53 @@ function render(chrome,port,width,height) {
 }
 
 function check(data,width,height) {
-  console.log("Desktop " + width + "x" + height + ": " + JSON.stringify(data));
-  assert.ok(!data.error,data.error || "");
-  assert.equal(data.width,width,"Chromium iframe viewport width");
-  assert.equal(data.height,height,"Chromium iframe viewport height");
-  assert.ok(data.scrollWidth<=width+2,"Unwanted horizontal overflow");
-  assert.ok(data.scrollHeight<=height+2,"One-screen workspace requires no document scrolling");
-  assert.equal(data.paneTabs,3,"Focused STATIONS/WORKSPACE/INSPECTOR navigation missing");
-  assert.equal(data.stageTabs,4,"TOOLS/VIEW/MESSAGES/ADD TOOLS pages missing");
-  assert.equal(data.roles,6,"First page of 8 station templates should contain 6 stations");
-  assert.match(data.rolePager,/1\s*\/\s*2/,"Station pagination unavailable");
-  assert.equal(data.tools,5,"Five head-engineer tool fixtures missing");
-  assert.equal(data.toolCount,"5","Tools count must reflect Rust snapshot");
-  assert.equal(data.mainRole,"Head Engineer Station");
-  assert.equal(data.mainVisible,true,"Workspace must start active");
-  assert.ok(data.activeStage,"Tools stage must be visible on initial load");
-  assert.ok(data.collapsedRole && data.collapsedDetail,
-    "Explanations must stay collapsed until requested");
+  console.log("Desktop "+width+"x"+height+": "+JSON.stringify(data));
+  assert.ok(!data.error,data.error||"");
+  assert.equal(data.width,width);
+  assert.equal(data.height,height);
+  assert.ok(data.scrollWidth<=width+2,"Unexpected document horizontal overflow");
+  assert.ok(data.scrollHeight<=height+2,"One-screen desktop must not scroll the document");
+  assert.equal(data.paneTabs,2,"WORKSPACE/INSPECTOR pane controls missing");
+  assert.equal(data.stageTabs,4,"TOOLS/VIEW/MESSAGES/SETTINGS pages missing");
+  assert.equal(data.roles,6,"First of eight stations must show six entries");
+  assert.match(data.rolePager,/1\s*\/\s*2/,"Settings station pager unavailable");
+  assert.equal(data.tools,5,"Five Head Engineer tools must be available");
+  assert.equal(data.toolCount,"5","Tool count must reflect Rust data");
+  assert.equal(data.mainRole,"WORKBENCH");
+  assert.equal(data.selectedStation,"HEAD ENGINEER STATION");
+  assert.ok(data.mainVisible && data.activeStage,"Workspace tools must start visible");
+  assert.ok(data.collapsedDetail,"Tool explanation should start closed");
   assert.ok(data.messagesInitiallyHidden && data.messageChildrenInitially===0,
-    "Messenger must not mount or be visible when first opening desktop");
+    "Messenger must not be open or mounted on initial desktop load");
+  assert.ok(data.settingsInitiallyHidden,"Settings must not dominate initial workspace");
   assert.deepEqual(data.initialRequests,[{url:"/api/state",method:"GET"}],
-    "Initial page made unexpected network requests");
+    "Opening the desktop sent unexpected network requests");
   assert.ok(data.messagesAfterClick && data.messageChildrenAfterClick>0,
-    "MESSAGES selection failed to mount the local Messenger widget");
+    "Selecting Messages must mount the local Messenger component");
   assert.ok(data.afterRequests.some(x=>x.url==="/api/messages"&&x.method==="GET"),
-    "Manually selecting Messages must load local journal status");
+    "Selecting Messages should read local journal state");
   assert.ok(data.afterRequests.every(x=>x.method==="GET"),
-    "Changing pages must never issue POSTs, scans or messages");
+    "Switching pages must not send messages or network probes");
+  assert.ok(data.settingsAfterClick,"Settings page must open manually");
+  assert.equal(data.stationHeightsInSettings.length,6,
+    "Station template paging must remain available in Settings");
+  assert.ok(data.stationHeightsInSettings.every(h=>h>0),
+    "Settings station choices must be visible when opened");
   assert.ok(data.stage.y>=data.main.y && data.stage.y<height-60,
-    "Primary stage navigation must be visible near first screen");
+    "Workspace pages must remain within one-screen viewport");
   assert.ok(data.toolHeights.every(h=>h>=44),
-    "Visible tool controls must be at least 44px tall");
-  if(width>1100){
-    assert.ok(data.roleVisible && data.detailVisible,"Wide layout requires three panes");
-    assert.ok(data.roleHeights.every(h=>h>=44),
-      "Visible station targets must be at least 44px tall");
-    for(const pane of [data.role,data.main,data.detail])
+    "Normal desktop tool choices must remain >=44px");
+  if(width>1100) {
+    assert.ok(data.detailVisible,"Wide desktop needs an inspector");
+    for(const pane of [data.main,data.detail]) {
       assert.ok(pane.w>135 && pane.x>=-2 && pane.right<=width+2,
         "Pane clipped horizontally: "+JSON.stringify(pane));
-    assert.ok(data.role.right<=data.main.x+2 && data.main.right<=data.detail.x+2,
-      "Desktop panes overlap");
+    }
+    assert.ok(data.main.right<=data.detail.x+2,"Desktop inspector overlaps workspace");
   }else{
-    assert.ok(!data.roleVisible && !data.detailVisible,
-      "Narrow layouts should show focused workspace pane only");
+    assert.ok(!data.detailVisible,"Narrow desktop should focus workspace pane");
     assert.ok(data.main.w>width*.75 && data.main.right<=width+2,
-      "Narrow workspace must span available viewport");
+      "Narrow workspace must fill available window");
   }
 }
 
