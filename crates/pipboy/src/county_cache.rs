@@ -94,7 +94,8 @@ impl CountyCache {
     }
 
     fn boundary_path(&self, geoid: &str) -> PathBuf {
-        self.root.join(format!("boundary_{VINTAGE}_{geoid}.geojson"))
+        self.root
+            .join(format!("boundary_{VINTAGE}_{geoid}.geojson"))
     }
 
     // Fixed Census TIGERweb layer 37 is ACS 2025 county geometry.
@@ -126,12 +127,16 @@ impl CountyCache {
         if !geoid_valid(geoid) || raw.len() as u64 > MAX_BOUNDARY {
             return Err(invalid("Invalid county or boundary size"));
         }
-        let payload: Value = serde_json::from_slice(raw)
-            .map_err(|_| invalid("Census boundary JSON is invalid"))?;
+        let payload: Value =
+            serde_json::from_slice(raw).map_err(|_| invalid("Census boundary JSON is invalid"))?;
         if payload.get("type").and_then(Value::as_str) != Some("FeatureCollection") {
-            return Err(invalid("Census boundary must be a GeoJSON FeatureCollection"));
+            return Err(invalid(
+                "Census boundary must be a GeoJSON FeatureCollection",
+            ));
         }
-        let features = payload.get("features").and_then(Value::as_array)
+        let features = payload
+            .get("features")
+            .and_then(Value::as_array)
             .ok_or_else(|| invalid("Missing Census county features"))?;
         if features.len() != 1 {
             return Err(invalid("Census county response must contain one feature"));
@@ -140,14 +145,19 @@ impl CountyCache {
         if feature.pointer("/properties/GEOID").and_then(Value::as_str) != Some(geoid) {
             return Err(invalid("Census county GEOID does not match selection"));
         }
-        let name = feature.pointer("/properties/NAME").and_then(Value::as_str)
+        let name = feature
+            .pointer("/properties/NAME")
+            .and_then(Value::as_str)
             .ok_or_else(|| invalid("Census county name is missing"))?;
         if name.is_empty() || name.len() > 100 || name.chars().any(char::is_control) {
             return Err(invalid("Census county name is invalid"));
         }
-        let geometry = feature.get("geometry")
+        let geometry = feature
+            .get("geometry")
             .ok_or_else(|| invalid("Missing Census county geometry"))?;
-        let parts = geometry.get("coordinates").and_then(Value::as_array)
+        let parts = geometry
+            .get("coordinates")
+            .and_then(Value::as_array)
             .ok_or_else(|| invalid("Missing Census county coordinates"))?;
         // Both Polygon and MultiPolygon become a flat ring list; even-odd
         // parity in the viewer preserves holes for landmark clipping.
@@ -159,27 +169,36 @@ impl CountyCache {
         let mut rings: Vec<Vec<[f64; 2]>> = Vec::new();
         let mut vertices = 0;
         for polygon in polygons {
-            let paths = polygon.as_array()
+            let paths = polygon
+                .as_array()
                 .ok_or_else(|| invalid("Invalid county polygon parts"))?;
             for path in paths {
-                let points = path.as_array()
+                let points = path
+                    .as_array()
                     .ok_or_else(|| invalid("Invalid county ring"))?;
                 vertices += points.len();
-                if points.len() < 4 || vertices > MAX_BOUNDARY_VERTICES ||
-                    rings.len() >= MAX_BOUNDARY_RINGS {
+                if points.len() < 4
+                    || vertices > MAX_BOUNDARY_VERTICES
+                    || rings.len() >= MAX_BOUNDARY_RINGS
+                {
                     return Err(invalid("County boundary exceeds geometry bounds"));
                 }
                 let mut ring = Vec::with_capacity(points.len());
                 for point in points {
-                    let pair = point.as_array()
+                    let pair = point
+                        .as_array()
                         .ok_or_else(|| invalid("Invalid county vertex"))?;
                     if pair.len() < 2 {
                         return Err(invalid("County vertex is not longitude/latitude"));
                     }
-                    let lon = pair[0].as_f64().ok_or_else(|| invalid("Invalid county longitude"))?;
-                    let lat = pair[1].as_f64().ok_or_else(|| invalid("Invalid county latitude"))?;
-                    if !lon.is_finite() || !lat.is_finite() ||
-                        lon.abs() > 180.0 || lat.abs() > 90.0 {
+                    let lon = pair[0]
+                        .as_f64()
+                        .ok_or_else(|| invalid("Invalid county longitude"))?;
+                    let lat = pair[1]
+                        .as_f64()
+                        .ok_or_else(|| invalid("Invalid county latitude"))?;
+                    if !lon.is_finite() || !lat.is_finite() || lon.abs() > 180.0 || lat.abs() > 90.0
+                    {
                         return Err(invalid("County coordinates outside geographic range"));
                     }
                     ring.push([lon, lat]);
@@ -246,7 +265,8 @@ impl CountyCache {
                 if split.len() == 4 && geoid_valid(split[2]) {
                     counties.insert(split[2].to_owned());
                 }
-            } else if let Some(id) = name.strip_prefix(&format!("boundary_{VINTAGE}_"))
+            } else if let Some(id) = name
+                .strip_prefix(&format!("boundary_{VINTAGE}_"))
                 .and_then(|n| n.strip_suffix(".geojson"))
             {
                 if geoid_valid(id) {
@@ -304,7 +324,9 @@ impl CountyCache {
 
     pub fn boundary(&self, geoid: &str, allow_network: bool) -> io::Result<Value> {
         if !geoid_valid(geoid) {
-            return Err(invalid("GEOID must be a valid five-digit county identifier"));
+            return Err(invalid(
+                "GEOID must be a valid five-digit county identifier",
+            ));
         }
         let path = self.boundary_path(geoid);
         match Self::boundary_raw(&path) {
@@ -320,11 +342,17 @@ impl CountyCache {
             Err(error) => return Err(error),
         }
         if !allow_network {
-            return Err(io::Error::new(io::ErrorKind::NotFound, "County boundary not cached"));
+            return Err(io::Error::new(
+                io::ErrorKind::NotFound,
+                "County boundary not cached",
+            ));
         }
         let lock = FETCH_LOCK.get_or_init(|| Mutex::new(()));
         let _guard = lock.try_lock().map_err(|_| {
-            io::Error::new(io::ErrorKind::WouldBlock, "Another county download is in progress")
+            io::Error::new(
+                io::ErrorKind::WouldBlock,
+                "Another county download is in progress",
+            )
         })?;
         // A second process/request may have filled the cache while waiting.
         match Self::boundary_raw(&path) {
@@ -346,9 +374,22 @@ impl CountyCache {
         let cmd = if cfg!(windows) { "curl.exe" } else { "curl" };
         let success = Command::new(cmd)
             .args([
-                "--fail", "--silent", "--show-error", "--proto", "=https",
-                "--max-redirs", "0", "--connect-timeout", "8", "--max-time", "25",
-                "--max-filesize", "1048576", "--retry", "0", "--output",
+                "--fail",
+                "--silent",
+                "--show-error",
+                "--proto",
+                "=https",
+                "--max-redirs",
+                "0",
+                "--connect-timeout",
+                "8",
+                "--max-time",
+                "25",
+                "--max-filesize",
+                "1048576",
+                "--retry",
+                "0",
+                "--output",
             ])
             .arg(tmp.path())
             .arg(Self::boundary_url(geoid))
@@ -356,7 +397,9 @@ impl CountyCache {
             .stderr(Stdio::null())
             .status()?;
         if !success.success() {
-            return Err(io::Error::other("Census boundary unavailable; existing cache preserved"));
+            return Err(io::Error::other(
+                "Census boundary unavailable; existing cache preserved",
+            ));
         }
         let raw = Self::boundary_raw(tmp.path())?;
         let boundary = Self::parse_boundary(geoid, &raw, false)?;
@@ -483,8 +526,7 @@ mod tests {
 
     #[test]
     fn boundary_parser_rejects_unmatched_or_malformed_counties() {
-        let value = CountyCache::parse_boundary("25025", &county_fixture("25025"), false)
-            .unwrap();
+        let value = CountyCache::parse_boundary("25025", &county_fixture("25025"), false).unwrap();
         assert_eq!(value["geoid"], "25025");
         assert_eq!(value["paths"].as_array().unwrap().len(), 2);
         assert_eq!(value["cache_hit"], false);
@@ -492,10 +534,14 @@ mod tests {
         assert!(CountyCache::parse_boundary("25023", &county_fixture("25025"), false).is_err());
         let mut invalid: Value = serde_json::from_slice(&county_fixture("25025")).unwrap();
         invalid["features"][0]["geometry"]["coordinates"][0][1][0] = json!(181.0);
-        assert!(CountyCache::parse_boundary("25025", invalid.to_string().as_bytes(), false).is_err());
+        assert!(
+            CountyCache::parse_boundary("25025", invalid.to_string().as_bytes(), false).is_err()
+        );
         invalid["features"][0]["geometry"]["coordinates"][0][1][0] = json!(-71.0);
         invalid["features"][0]["geometry"]["coordinates"][0][3][0] = json!(-71.1);
-        assert!(CountyCache::parse_boundary("25025", invalid.to_string().as_bytes(), false).is_err());
+        assert!(
+            CountyCache::parse_boundary("25025", invalid.to_string().as_bytes(), false).is_err()
+        );
         assert!(CountyCache::parse_boundary("25025", b"{}", false).is_err());
         assert!(CountyCache::parse_boundary("25025", b"{", false).is_err());
     }
@@ -535,7 +581,7 @@ mod tests {
         ));
         let tmp = tempfile::tempdir().unwrap();
         let cache = CountyCache::new(tmp.path().to_path_buf());
-        for id in ["25001","25003","25005","25007"] {
+        for id in ["25001", "25003", "25005", "25007"] {
             fs::write(cache.boundary_path(id), county_fixture(id)).unwrap();
         }
         assert!(cache.limit_new_county("25009").is_err());
