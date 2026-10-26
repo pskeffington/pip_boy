@@ -53,11 +53,15 @@ let lastOutput = "";
 let rolePage = 0, modulePage = 0, palettePage = 0;
 let activeStage = "modules";
 let activePane = "workspace";
+let extensionMode = "map";
+let queuedSiteId = null;
 const PAGE_SIZE = 6;
-function pager(id, total, current, setter) {
+const rolesPerPage = () => window.innerHeight <= 480 ? 3 : PAGE_SIZE;
+const cardsPerPage = () => window.innerHeight <= 480 ? 4 : PAGE_SIZE;
+function pager(id, total, current, setter, pageSize = PAGE_SIZE) {
   const host = byId(id);
   host.replaceChildren();
-  const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const pages = Math.max(1, Math.ceil(total / pageSize));
   if (pages < 2) return;
   const previous = el("button", "deck-button", "◀ PREV");
   const next = el("button", "deck-button", "NEXT ▶");
@@ -70,6 +74,7 @@ function pager(id, total, current, setter) {
 }
 function activateStage(stage) {
   if (stage === "palette" && !(previewId === "custom" && selectedAvailable())) stage = "modules";
+  const previous = activeStage;
   activeStage = stage;
   for (const button of document.querySelectorAll("[data-stage-target]")) {
     button.hidden = button.dataset.stageTarget === "palette" && !(previewId === "custom" && selectedAvailable());
@@ -77,6 +82,7 @@ function activateStage(stage) {
   }
   for (const section of document.querySelectorAll(".stage-surface")) section.hidden = section.dataset.stage !== stage;
   if (stage === "viewport" && snapshot) renderExtension();
+  else if (previous === "viewport" && window.RustBoyMap) window.RustBoyMap.unmount();
 }
 function activatePane(pane) {
   activePane = pane;
@@ -143,9 +149,10 @@ function visibleModuleIds() {
 function renderRoles() {
   ui.roles.replaceChildren();
   const roles = snapshot.profiles;
-  rolePage = Math.min(rolePage, Math.max(0, Math.ceil(roles.length / PAGE_SIZE) - 1));
+  const size = rolesPerPage();
+  rolePage = Math.min(rolePage, Math.max(0, Math.ceil(roles.length / size) - 1));
   for (const [index, role] of roles.entries()) {
-    if (Math.floor(index / PAGE_SIZE) !== rolePage) continue;
+    if (Math.floor(index / size) !== rolePage) continue;
     const button = el("button", "role-card");
     button.type = "button";
     button.setAttribute("aria-pressed", String(role.id === previewId));
@@ -163,11 +170,18 @@ function renderRoles() {
       selectedTool = null;
       selectedCamera = null;
       lastOutput = "";
+      modulePage = 0;
+      palettePage = 0;
+      extensionMode = "map";
       renderAll();
+      if (window.matchMedia("(max-width: 1100px)").matches) {
+        activateStage("modules");
+        activatePane("workspace");
+      }
     });
     ui.roles.append(button);
   }
-  pager("role-pager", roles.length, rolePage, (page) => { rolePage = page; renderRoles(); });
+  pager("role-pager", roles.length, rolePage, (page) => { rolePage = page; renderRoles(); }, size);
 }
 
 function renderModules() {
@@ -186,9 +200,10 @@ function renderModules() {
     ui.modules.append(blank);
   }
   if (!ids.includes(selectedTool)) selectedTool = ids[0] || null;
-  modulePage = Math.min(modulePage, Math.max(0, Math.ceil(ids.length / PAGE_SIZE) - 1));
+  const size = cardsPerPage();
+  modulePage = Math.min(modulePage, Math.max(0, Math.ceil(ids.length / size) - 1));
   for (const [index, id] of ids.entries()) {
-    if (Math.floor(index / PAGE_SIZE) !== modulePage) continue;
+    if (Math.floor(index / size) !== modulePage) continue;
     const info = toolInfo(id);
     if (!info) continue;
     const card = el("button", "module-card");
@@ -211,10 +226,17 @@ function renderModules() {
       lastOutput = "";
       renderModules();
       renderDetail();
+      if (window.matchMedia("(max-width: 1100px)").matches) activatePane("inspector");
     });
     ui.modules.append(card);
   }
-  pager("module-pager", ids.length, modulePage, (page) => { modulePage = page; renderModules(); });
+  pager("module-pager", ids.length, modulePage, (page) => {
+    modulePage = page;
+    selectedTool = ids[page * size] || null;
+    lastOutput = "";
+    renderModules();
+    renderDetail();
+  }, size);
   renderCustomPalette();
 }
 
@@ -224,9 +246,10 @@ function renderCustomPalette() {
   if (!activeCustom) return;
   const pinned = new Set(snapshot.active.slots.map((slot) => slot.tool));
   const all = snapshot.palette;
-  palettePage = Math.min(palettePage, Math.max(0, Math.ceil(all.length / PAGE_SIZE) - 1));
+  const size = cardsPerPage();
+  palettePage = Math.min(palettePage, Math.max(0, Math.ceil(all.length / size) - 1));
   for (const [index, item] of all.entries()) {
-    if (Math.floor(index / PAGE_SIZE) !== palettePage) continue;
+    if (Math.floor(index / size) !== palettePage) continue;
     const unavailable = item.availability === "planned";
     const alreadyPinned = pinned.has(item.id);
     const button = el("button", "palette-button");
@@ -242,7 +265,20 @@ function renderCustomPalette() {
     button.addEventListener("click", () => addCustomTool(item.id));
     ui.paletteGrid.append(button);
   }
-  pager("palette-pager", all.length, palettePage, (page) => { palettePage = page; renderCustomPalette(); });
+  pager("palette-pager", all.length, palettePage, (page) => { palettePage = page; renderCustomPalette(); }, size);
+}
+
+function extensionTabs(options, selected) {
+  const nav = el("nav", "extension-tabs");
+  nav.setAttribute("aria-label", "Module viewport panels");
+  for (const [id, label] of options) {
+    const button = el("button", "", label);
+    button.type = "button";
+    button.setAttribute("aria-pressed", String(id === selected));
+    button.addEventListener("click", () => { extensionMode = id; renderExtension(); });
+    nav.append(button);
+  }
+  return nav;
 }
 
 function renderExtension() {
@@ -270,37 +306,54 @@ function renderExtension() {
     return;
   }
   if (selected.id === "reclamation-scout") {
-    const map = el("div", "rb-map-desktop-host");
-    ui.extension.append(map);
-    if (window.RustBoyMap) {
-      requestAnimationFrame(() => {
-        if (map.isConnected) window.RustBoyMap.mount(map, {
-          reclamation: selectedAvailable() &&
-            snapshot.active.slots.some((slot) => slot.tool === "reclamation")
+    if (!["map", "sites", "tasks"].includes(extensionMode)) extensionMode = "map";
+    const options = selectedAvailable() ? [["map","MAP"],["sites","SITES"],["tasks","DUTIES"]] : [["map","MAP"]];
+    ui.extension.append(extensionTabs(options, extensionMode));
+    const body = el("div", "extension-focused-body");
+    ui.extension.append(body);
+    if (extensionMode === "map" || !selectedAvailable()) {
+      const map = el("div", "rb-map-desktop-host");
+      body.append(map);
+      if (window.RustBoyMap) {
+        requestAnimationFrame(() => {
+          if (!map.isConnected || activeStage !== "viewport") return;
+          window.RustBoyMap.mount(map, {
+            reclamation: selectedAvailable() &&
+              snapshot.active.slots.some((slot) => slot.tool === "reclamation")
+          });
+          if (queuedSiteId && window.RustBoyMap.queueSiteFocus(queuedSiteId)) queuedSiteId = null;
         });
-      });
-    }
-    if (selectedAvailable() && window.RustBoyReclamation) {
+      }
+    } else if (extensionMode === "sites" && window.RustBoyReclamation) {
       const station = el("div", "rb-reclamation-desktop");
-      ui.extension.append(station);
+      body.append(station);
       window.RustBoyReclamation.mount(station, {
         onMap: (site) => {
-          if (window.RustBoyMap && window.RustBoyMap.queueSiteFocus(site.id)) {
-            if (typeof map.scrollIntoView === "function") {
-              map.scrollIntoView({ block: "nearest" });
-            }
-          }
+          queuedSiteId = site.id;
+          extensionMode = "map";
+          renderExtension();
         }
       });
-    }
-    if (selectedAvailable() && window.RustBoyTasks) {
+    } else if (extensionMode === "tasks" && window.RustBoyTasks) {
       const queue = el("div", "job-assignments");
-      ui.extension.append(queue);
+      body.append(queue);
       window.RustBoyTasks.summary(queue, { role: selected.id });
+    } else {
+      body.append(el("p", "panel-note", "This component is not available."));
     }
     return;
   }
   if (selected.id === "security-chief") {
+    if (!["cameras", "tasks"].includes(extensionMode)) extensionMode = "cameras";
+    if (selectedAvailable()) {
+      ui.extension.append(extensionTabs([["cameras","CAMERAS"],["tasks","DUTIES"]], extensionMode));
+      if (extensionMode === "tasks") {
+        const queue = el("div", "extension-focused-body");
+        ui.extension.append(queue);
+        if (window.RustBoyTasks) window.RustBoyTasks.summary(queue, { role: selected.id });
+        return;
+      }
+    }
     const wall = el("div", "camera-wall" + (selectedCamera !== null ? " focused" : ""));
     wall.append(el("div", "camera-wall-heading", "SECURITY / FOUR-CAMERA UI FIXTURE — NO LIVE VIDEO"));
     const grid = el("div", "camera-grid");
@@ -326,11 +379,6 @@ function renderExtension() {
         : "Click focused tile or press Esc to return to the four-camera grid."
     ));
     ui.extension.append(wall);
-    if (selectedAvailable() && window.RustBoyTasks) {
-      const queue = el("div", "job-assignments");
-      ui.extension.append(queue);
-      window.RustBoyTasks.summary(queue, { role: selected.id });
-    }
     return;
   }
   if (selectedAvailable() && selected.id !== "custom" && window.RustBoyTasks) {
@@ -500,7 +548,6 @@ function renderAll() {
     : (current.id === "custom" ? "Load Custom" : "Load station");
   renderRoles();
   renderModules();
-  renderExtension();
   renderDetail();
   activateStage(activeStage);
   activatePane(activePane);
@@ -513,6 +560,7 @@ async function reload() {
       previewId = snapshot.active.profile;
     }
     if (!selectedTool) selectedTool = visibleModuleIds()[0] || null;
+    rolePage = Math.floor(Math.max(0, snapshot.profiles.findIndex(p => p.id === previewId)) / rolesPerPage());
     renderAll();
     notify("Local workbench synchronized.");
   } catch (error) {
@@ -531,6 +579,8 @@ async function changeProfile(id) {
     selectedTool = null;
     selectedCamera = null;
     lastOutput = "";
+    modulePage = 0;
+    extensionMode = "map";
     notify("Loaded " + profile().title + ". No tools executed.");
     renderAll();
   } catch (error) {
@@ -636,6 +686,8 @@ async function copyOutput() {
 }
 
 document.querySelectorAll("[data-stage-target]").forEach(button => button.addEventListener("click", () => activateStage(button.dataset.stageTarget)));
+byId("inspector-return").addEventListener("click", () => { activateStage("modules"); activatePane("workspace"); });
+window.addEventListener("resize", () => { if (!snapshot) return; renderRoles(); renderModules(); });
 document.querySelectorAll("[data-pane-target]").forEach(button => button.addEventListener("click", () => activatePane(button.dataset.paneTarget)));
 ui.load.addEventListener("click", loadSelected);
 ui.refresh.addEventListener("click", reload);
