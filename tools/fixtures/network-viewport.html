@@ -90,6 +90,7 @@
     const bytes = new TextEncoder().encode(JSON.stringify(report));
     document.getElementById("viewport-report").textContent =
       btoa(String.fromCharCode(...bytes));
+    if (parent !== window) parent.postMessage({type:"rustboy-layout-report",value:report},location.origin);
   }
   window.addEventListener("load",async()=>{
     try {
