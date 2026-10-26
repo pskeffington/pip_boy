@@ -192,6 +192,10 @@ async function main() {
   assert.match(env.container.textContent, /192\.168\.1\.3/);
   assert.equal(env.calls.length, 1, "Paging generated a new network request");
   assert.equal(env.timers.size, 1);
+  const resultNodes = walk(env.container);
+  assert.ok(resultNodes.indexOf(button(env.container, "STOP REFRESH")) <
+    resultNodes.indexOf(find(env.container, (item) => item.tagName === "dl")),
+    "STOP REFRESH must be above the scrollable result inventory");
   button(env.container, "STOP REFRESH").dispatch("click");
   assert.equal(env.timers.size, 0);
   assert.match(env.container.textContent, /REFRESH STOPPED/);
