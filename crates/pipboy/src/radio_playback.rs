@@ -32,6 +32,14 @@ enum PlaybackFailure {
 }
 
 impl PlaybackFailure {
+    fn class(&self) -> FailureClass {
+        match self {
+            Self::Network(_) => FailureClass::NetworkTransient,
+            Self::Output(_) => FailureClass::OutputUnavailable,
+            Self::Permanent(_) => FailureClass::Permanent,
+        }
+    }
+
     fn message(self) -> String {
         match self {
             Self::Network(message) | Self::Output(message) | Self::Permanent(message) => message,
@@ -248,12 +256,7 @@ fn play_with_recovery(
         if cancelled.load(Ordering::Acquire) {
             return Ok(());
         }
-        let class = match &error {
-            PlaybackFailure::Network(_) => FailureClass::NetworkTransient,
-            PlaybackFailure::Output(_) => FailureClass::OutputUnavailable,
-            PlaybackFailure::Permanent(_) => FailureClass::Permanent,
-        };
-        match decide(class, attempted_retries, cancelled.load(Ordering::Acquire)) {
+        match decide(error.class(), attempted_retries, cancelled.load(Ordering::Acquire)) {
             RecoveryAction::RetryAfter(delay) => {
                 signal(controller, generation, PlaybackEvent::ConnectionLost);
                 attempted_retries += 1;
@@ -491,6 +494,26 @@ pub fn run_demo(station_id: &str, duration_seconds: Option<u64>) -> Result<(), S
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn device_failures_never_consume_the_network_retry_budget() {
+        let output = PlaybackFailure::Output("Bluetooth output lost".into());
+        assert_eq!(output.class(), FailureClass::OutputUnavailable);
+        assert_eq!(
+            decide(output.class(), 0, false),
+            RecoveryAction::SelectOutput
+        );
+        let network = PlaybackFailure::Network("stream ended".into());
+        assert_eq!(network.class(), FailureClass::NetworkTransient);
+        assert!(matches!(
+            decide(network.class(), 0, false),
+            RecoveryAction::RetryAfter(_)
+        ));
+        assert_eq!(
+            PlaybackFailure::Permanent("unknown codec".into()).class(),
+            FailureClass::Permanent
+        );
+    }
 
     #[test]
     fn refuses_unapproved_stream_without_opening_audio() {
