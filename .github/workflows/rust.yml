@@ -86,6 +86,7 @@ jobs:
           node tools/test_county_map.cjs
           node tools/test_county_sources.cjs
           node tools/test_county_boundary_cache.cjs
+          node tools/test_map_layers.cjs
           node tools/test_rustgis_online.cjs
           node tools/test_rustgis_online_view.cjs
       - name: Network Engineer real Chromium viewport acceptance
