@@ -43,35 +43,16 @@
     </header>
 
     <nav class="pane-tabs" aria-label="Desktop workspace panels">
-      <button type="button" data-pane-target="roles" aria-pressed="false">ROLES</button>
       <button type="button" data-pane-target="workspace" aria-pressed="true">WORKSPACE</button>
       <button type="button" data-pane-target="inspector" aria-pressed="false">INSPECTOR</button>
     </nav>
     <div class="dashboard" data-pane="workspace">
-      <aside class="role-panel panel" aria-labelledby="templates-heading">
-        <div class="panel-top">
-          <span class="eyebrow">01 / OPERATOR</span>
-          <h2 id="templates-heading">Job templates</h2>
-          <p>Choose a station to preview its tools.</p>
-        </div>
-        <nav id="role-list" class="role-list" aria-label="Vault-Tec-inspired job profiles"></nav>
-        <div id="role-pager" class="deck-pager" aria-label="Job template pages"></div>
-        <div class="role-panel-bottom">
-          <span class="small-square" aria-hidden="true"></span>
-          <span>07 ready-made <span class="dim">/</span> 01 custom</span>
-        </div>
-      </aside>
-
       <main class="main-panel panel" id="workspace" tabindex="-1">
         <div class="workspace-head">
           <div>
             <div class="eyebrow"><span class="signal-square" aria-hidden="true"></span> 02 / WORKSPACE <span class="divider-inline">/</span> <span id="view-mode">ACTIVE STATION</span></div>
             <h1 id="workspace-title">Loading dashboard</h1>
             <p class="workspace-subtitle" id="workspace-subtitle">Preparing the local workbench.</p>
-          </div>
-          <div class="workspace-actions">
-            <span class="active-pill" id="active-label">INITIALIZING</span>
-            <button class="primary-button" id="load-role" type="button" disabled>Load template</button>
           </div>
         </div>
 
@@ -87,7 +68,7 @@
             <button type="button" data-stage-target="modules" aria-pressed="true">MODULES</button>
             <button type="button" data-stage-target="viewport" aria-pressed="false">VIEWPORT</button>
             <button type="button" data-stage-target="messages" aria-pressed="false">MESSAGES</button>
-            <button type="button" data-stage-target="palette" aria-pressed="false" hidden>ADD TOOLS</button>
+            <button type="button" data-stage-target="settings" aria-pressed="false">SETTINGS</button>
           </nav>
         <section class="module-section stage-surface" data-stage="modules" aria-labelledby="modules-heading">
           <div class="section-heading">
@@ -97,8 +78,33 @@
           <div id="module-grid" class="module-grid" aria-live="polite"></div>
           <div id="module-pager" class="deck-pager" aria-label="Module pages"></div>
         </section>
+        <section class="settings-surface stage-surface" data-stage="settings" aria-label="Device settings" hidden>
+          <div class="section-heading"><h2>Device settings</h2><span class="section-counter">LOCAL / MANUAL</span></div>
+          <div class="settings-profile-summary">
+            <div><span class="tiny-label">ACTIVE PROFILE</span><strong id="settings-current-role">—</strong></div>
+            <button id="open-palette" type="button" class="secondary-button" hidden>MANAGE CUSTOM TOOLS</button>
+          </div>
+          <div class="role-panel" aria-labelledby="templates-heading">
+        <div class="panel-top">
+          <span class="eyebrow">01 / OPERATOR</span>
+          <h2 id="templates-heading">Job templates</h2>
+          <p>Choose a station to preview its tools.</p>
+        </div>
+        <nav id="role-list" class="role-list" aria-label="Vault-Tec-inspired job profiles"></nav>
+        <div id="role-pager" class="deck-pager" aria-label="Job template pages"></div>
+        <div class="role-panel-bottom">
+          <span class="small-square" aria-hidden="true"></span>
+          <span>07 ready-made <span class="dim">/</span> 01 custom</span>
+        </div>
+      </div>
+          <div class="settings-choice">
+            <span id="settings-selection" aria-live="polite">Select a profile to load.</span>
+            <button class="primary-button" id="load-role" type="button" disabled>Load profile</button>
+          </div>
+        </section>
         <section id="custom-palette" class="custom-palette stage-surface" data-stage="palette" aria-label="Custom tool palette" hidden>
             <div class="section-heading">
+              <button id="palette-back" type="button" class="secondary-button">◀ SETTINGS</button>
               <h3>Tool palette <span class="dim">/ CUSTOM ONLY</span></h3>
             </div>
             <div id="palette-grid" class="palette-grid"></div>
@@ -160,7 +166,7 @@
 
     <footer class="statusbar">
       <div><span class="footer-pip" aria-hidden="true">◆</span> LOCAL FIELD OS <span class="status-separator">/</span> <span id="footer-message">No external services connected</span></div>
-      <div class="footer-shortcuts">ALT + ↑↓: TEMPLATES <span class="status-separator">/</span> ALT + ENTER: LOAD <span class="status-separator">/</span> ESC: BACK</div>
+      <div class="footer-shortcuts">SETTINGS: CHANGE PROFILE <span class="status-separator">/</span> ESC: BACK</div>
     </footer>
   </div>
 
