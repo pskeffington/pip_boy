@@ -87,7 +87,10 @@ impl<D: RadioDevice> RadioTuner<D> {
         {
             return Err(RadioError::InvalidCapabilities);
         }
-        Ok(Self { device, active: None })
+        Ok(Self {
+            device,
+            active: None,
+        })
     }
 
     pub fn capabilities(&self) -> &RadioCapabilities {
@@ -101,14 +104,21 @@ impl<D: RadioDevice> RadioTuner<D> {
     /// State changes only after the driver acknowledges the configuration.
     pub fn tune(&mut self, settings: Tuning) -> Result<(), RadioError> {
         let c = self.device.capabilities();
-        if !c.frequency_ranges.iter().any(|r| r.contains(settings.frequency_hz)) {
+        if !c
+            .frequency_ranges
+            .iter()
+            .any(|r| r.contains(settings.frequency_hz))
+        {
             return Err(RadioError::UnsupportedFrequency(settings.frequency_hz));
         }
         if !c.sample_rates_hz.contains(&settings.sample_rate_hz) {
             return Err(RadioError::UnsupportedSampleRate(settings.sample_rate_hz));
         }
         if let Some(gain) = settings.gain_db_tenths {
-            if !c.gain_range_db_tenths.is_some_and(|(low, high)| (low..=high).contains(&gain)) {
+            if !c
+                .gain_range_db_tenths
+                .is_some_and(|(low, high)| (low..=high).contains(&gain))
+            {
                 return Err(RadioError::UnsupportedGain(gain));
             }
         }
@@ -126,7 +136,9 @@ impl<D: RadioDevice> RadioTuner<D> {
         }
         let count = self.device.read_iq(buffer)?;
         if count > buffer.len() || count % 2 != 0 {
-            return Err(RadioError::Device("driver returned invalid I/Q count".into()));
+            return Err(RadioError::Device(
+                "driver returned invalid I/Q count".into(),
+            ));
         }
         Ok(count)
     }
@@ -143,7 +155,10 @@ impl Default for SimulatedRadio {
         Self {
             capabilities: RadioCapabilities {
                 name: "SIMULATED SDR - NO RF INPUT".into(),
-                frequency_ranges: vec![FrequencyRange { min_hz: 24_000_000, max_hz: 1_700_000_000 }],
+                frequency_ranges: vec![FrequencyRange {
+                    min_hz: 24_000_000,
+                    max_hz: 1_700_000_000,
+                }],
                 sample_rates_hz: vec![240_000, 1_024_000, 2_048_000],
                 gain_range_db_tenths: Some((0, 500)),
             },
@@ -197,10 +212,16 @@ mod tests {
         let mut tuner = RadioTuner::new(SimulatedRadio::default()).unwrap();
         let mut invalid = settings();
         invalid.frequency_hz = 1;
-        assert_eq!(tuner.tune(invalid), Err(RadioError::UnsupportedFrequency(1)));
+        assert_eq!(
+            tuner.tune(invalid),
+            Err(RadioError::UnsupportedFrequency(1))
+        );
         invalid = settings();
         invalid.sample_rate_hz = 1;
-        assert_eq!(tuner.tune(invalid), Err(RadioError::UnsupportedSampleRate(1)));
+        assert_eq!(
+            tuner.tune(invalid),
+            Err(RadioError::UnsupportedSampleRate(1))
+        );
         assert_eq!(tuner.active_tuning(), None);
     }
 
