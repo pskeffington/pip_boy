@@ -82,16 +82,16 @@ pub(crate) struct RadioInput {
     pub(crate) content_type: Option<String>,
 }
 
-/// The guard must outlive the decoder. Drop cancels HTTP reads and joins the
-/// single Tokio network worker within its per-chunk timeout boundary.
+/// The guard must outlive the decoder. Dropping the compressed-byte reader
+/// releases the sender; the join waits for the bounded HTTP read to finish.
+/// Do NOT flip the session's cancel flag here: reconnection creates a new
+/// stream within the same user-authorized session.
 pub(crate) struct NetworkGuard {
-    cancelled: Arc<AtomicBool>,
     worker: Option<JoinHandle<()>>,
 }
 
 impl Drop for NetworkGuard {
     fn drop(&mut self) {
-        self.cancelled.store(true, Ordering::Release);
         if let Some(worker) = self.worker.take() {
             let _ = worker.join();
         }
@@ -131,7 +131,6 @@ pub(crate) fn open_station(
         })
         .map_err(|e| format!("Cannot launch native radio receiver: {e}"))?;
     let guard = NetworkGuard {
-        cancelled: Arc::clone(&cancelled),
         worker: Some(worker),
     };
 
