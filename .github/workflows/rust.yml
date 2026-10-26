@@ -26,6 +26,8 @@ jobs:
           python3 tools/validate_rust_version.py
           python3 tools/validate_repo.py
           python3 tools/test_validate_repo.py
+          python3 tools/run_smokes.py --check
+          python3 tools/test_run_smokes.py
 
   rust:
     name: Rust ${{ matrix.toolchain }}
@@ -110,25 +112,7 @@ jobs:
         if: matrix.toolchain == 'stable'
         run: |
           cargo build --workspace --locked
-          python3 tools/smoke_runtime.py
-          python3 tools/smoke_notes.py
-          python3 tools/smoke_permissions.py
-          python3 tools/smoke_simulator.py
-          python3 tools/smoke_replay.py
-          python3 tools/smoke_transport.py
-          python3 tools/smoke_mock_adapters.py
-          python3 tools/smoke_native_cli.py
-          python3 tools/smoke_broker.py
-          python3 tools/smoke_game.py
-          python3 tools/smoke_workbench.py
-          python3 tools/smoke_network.py
-          python3 tools/smoke_network_health.py
-          python3 tools/smoke_scout.py
-          python3 tools/smoke_dashboard.py
-          python3 tools/smoke_micro.py
-          python3 tools/smoke_tasks.py
-          python3 tools/smoke_peer.py
-          python3 tools/smoke_messenger_protocol.py
+          python3 tools/run_smokes.py linux
 
   native:
     name: Native ${{ matrix.os }}
@@ -159,23 +143,7 @@ jobs:
       - name: Offline preferences and virtual-device smoke
         shell: bash
         run: |
-          ${{ matrix.python }} tools/smoke_permissions.py
-          ${{ matrix.python }} tools/smoke_simulator.py
-          ${{ matrix.python }} tools/smoke_replay.py
-          ${{ matrix.python }} tools/smoke_transport.py
-          ${{ matrix.python }} tools/smoke_mock_adapters.py
-          ${{ matrix.python }} tools/smoke_native_cli.py
-          ${{ matrix.python }} tools/smoke_broker.py
-          ${{ matrix.python }} tools/smoke_game.py
-          ${{ matrix.python }} tools/smoke_workbench.py
-          ${{ matrix.python }} tools/smoke_network.py
-          ${{ matrix.python }} tools/smoke_network_health.py
-          ${{ matrix.python }} tools/smoke_scout.py
-          ${{ matrix.python }} tools/smoke_dashboard.py
-          ${{ matrix.python }} tools/smoke_micro.py
-          ${{ matrix.python }} tools/smoke_tasks.py
-          ${{ matrix.python }} tools/smoke_peer.py
-          ${{ matrix.python }} tools/smoke_messenger_protocol.py
+          ${{ matrix.python }} tools/run_smokes.py native
       - name: Native macOS terminal PTY journey
         if: matrix.os == 'macos-latest'
         shell: bash

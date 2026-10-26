@@ -25,6 +25,29 @@
 - Keep standalone radio, communications, and public-data-index feature branches isolated.
 
 
+## 2026-10-26 — Shared CI smoke-test roster (validation pending)
+
+- Consolidate two repeated CI Python smoke-test lists into one audited, deterministic runner: 19 checks on Linux stable and 17 on the macOS/Windows native matrix, preserving their original execution order.
+- Keep native macOS PTY and Windows ConPTY tests as separate platform-specific steps; do not add radio, network or device permissions.
+- Fail closed on missing, unclassified, duplicated or symlinked scripts; add `--check` and `--list` without running any test files.
+- Add 11 local regression tests for roster integrity, invocation order, current-interpreter execution and fail-fast behavior. Catalog CI now checks inventory drift before Rust jobs.
+
+
+## 2026-10-26 — Recursive documentation integrity (PR #40; five CI jobs passed)
+
+- Extend the public Markdown auditor to nested guides in `docs/` and `catalog/` and optional `data/` index documentation, without crawling operator files.
+- Check reference-style link definitions as well as ordinary inline links; ignore footnotes, empty links, and fenced examples.
+- Add four offline regressions for nested guides, future public data folders, reference definitions, and empty/footnote input (13 total).
+
+
+## 2026-10-26 — Repository/code hygiene (PR #37; five CI jobs passed)
+
+- Add explicit repository ownership and maintenance guidance, link root documentation, and apply editor/line-ending conventions without relocating runtime data.
+- Consolidate Python validation assertions, make native CLI help navigable by functional group, and add offline public-Markdown link auditing (including directory containment, symlink, stale-reference, and mandatory-link checks) with nine regression tests.
+- Repair retired Boston-basemap references in branding and field/lore guides; preserve the county-first MAP and official offline county-boundary cache.
+- Keep standalone radio, communications, and public-data-index feature branches isolated.
+
+
 ## 2026-10-26 — Offline county-boundary and landmark ingestion
 
 - Add a fixed-host, GEOID-only TIGERweb boundary fetch, bound to an explicit COUNTY action and strict geographic/JSON limits; atomically cache and revalidate raw Census GeoJSON.

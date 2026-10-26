@@ -1,5 +1,20 @@
 # Rust-Boy | CI troubleshooting history
 
+## Current smoke-test inventory (2026-10-26)
+
+The CI workflow now uses one explicit [Python smoke-test roster](../tools/run_smokes.py). It replaces duplicated per-platform command lists; it does **not** add hardware operations or reduce test coverage. Child scripts run in their prior order, with the currently selected Python interpreter, and the first failure stops the suite.
+
+| Profile | Command after `cargo build --workspace --locked` | Coverage |
+| --- | --- | --- |
+| Linux stable | `python3 tools/run_smokes.py linux` | 19 tests: 17 shared CLI/API mocks plus notes and POSIX PTY |
+| Native macOS / Windows | `python3 tools/run_smokes.py native` (or `python` on Windows) | The same 17 shared scripts, in the same order |
+| Native terminal extras | Dedicated workflow steps, unchanged | `smoke_runtime.py` on macOS; `smoke_windows_conpty.py` on Windows |
+
+Run `python3 tools/run_smokes.py --check` to verify the names, file presence, and classification of all 20 `smoke_*.py` scripts **without running them**. New tests fail CI until explicitly assigned to a profile or a platform-specific step; symlinked/missing tests also fail. `python3 tools/run_smokes.py native --list` displays the exact ordered roster, and `python3 tools/test_run_smokes.py` runs 11 standard-library regressions. Windows ConPTY and macOS PTY retain their dedicated CI steps; notes remain Linux-only pending separate native acceptance.
+
+The roster itself does not build Rust or discover devices. Build the executable before starting an execution profile. Existing child smoke scripts may use loopback mocks; this is not evidence of physical hardware acceptance.
+
+
 **Current policy (October 25, 2026):** Rust-Boy declares Rust **1.90** as its minimum; CI uses stable and **1.90.0**. The `rust` job now sets `RUSTUP_TOOLCHAIN` and asserts `rustc --version`. This is necessary because `rust-toolchain.toml` selects stable and overrides `rustup default`; for example, the job labeled 1.81 in [run 40172664621](https://github.com/pskeffington/pip_boy/actions/runs/40172664621) actually used rustc **1.99.0**. Treat old matrix-job labels as historical records, not proof of minimum-compiler verification.
 
 **Updated October 25, 2026 — resolved for Rust-Boy's GitHub-hosted Ubuntu workflow.** GitHub Actions was already enabled. A [minimal runner](https://github.com/pskeffington/pip_boy/actions/runs/40159954191) and [first-party checkout](https://github.com/pskeffington/pip_boy/actions/runs/40160030487) both passed. Adding a third-party Rust toolchain action reproduced [startup_failure with zero jobs](https://github.com/pskeffington/pip_boy/actions/runs/40160046958). Replacing third-party toolchain/cache actions with runner-native `rustup` recovered job admission. Following rustfmt cleanup, [run 40160147824](https://github.com/pskeffington/pip_boy/actions/runs/40160147824) passed all three jobs: catalog, Rust stable (92 unit tests and five smoke scripts), and Rust 1.81.0 (92 unit tests). The precise account-level third-party action policy was not retrieved; this is a reproducible workflow-level diagnosis, not proof of a specific account setting.
