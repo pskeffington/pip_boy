@@ -91,6 +91,10 @@ jobs:
       - name: Network Engineer real Chromium viewport acceptance
         if: matrix.toolchain == 'stable'
         run: node tools/test_network_viewport.cjs
+      - name: Install native ALSA development library
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends libasound2-dev pkg-config
       - name: Compile all targets
         run: cargo check --workspace --all-targets --locked
       - name: Unit tests
