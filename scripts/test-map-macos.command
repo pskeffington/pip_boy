@@ -127,6 +127,7 @@ for test in \
   tools/test_pointlm_ingestion.cjs \
   tools/test_county_boundary_cache.cjs \
   tools/test_map_layers.cjs \
+  tools/test_map_zip.cjs \
   tools/test_rustgis_map_import.cjs \
   tools/test_rustgis_map_view.cjs
 do
