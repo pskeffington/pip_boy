@@ -205,7 +205,10 @@ async function main() {
   assert.equal(env.window.events.size, 0);
 
   const pad = environment();
-  assert.equal(pageKey(pad, "ArrowDown"), true, "D-pad down should focus first tool");
+  assert.equal(pageKey(pad, "ArrowDown", {target:pad.container}), true,
+    "D-pad down from the focused viewport should focus the first tool");
+  assert.equal(pageKey(pad, "ArrowRight", {target:pad.document.createElement("button")}), false,
+    "An unrelated focused shell button must not hijack network paging");
   assert.match(pad.document.activeElement.textContent, /SCAN LAN/);
   assert.equal(pageKey(pad, "ArrowDown"), true);
   assert.match(pad.document.activeElement.textContent, /UNIFI SITES/);
