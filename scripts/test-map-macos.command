@@ -8,6 +8,7 @@ Rust-Boy MAP / macOS local development
 Usage:
   bash scripts/test-map-macos.command [--launch]
   bash scripts/test-map-macos.command --verify [--require-chromium]
+  bash scripts/test-map-macos.command --audit-cache [--json]
   bash scripts/test-map-macos.command --help
 
 --launch             Run the native Rust micro HUD in the Mac's default browser.
@@ -19,6 +20,11 @@ Usage:
 --require-chromium   Additionally require and run real Chromium viewport checks
                      at 480x320, 800x480 and 320x568. Without this flag, the
                      Chromium check runs only when a supported browser exists.
+--audit-cache        Inspect the county already saved in the separate test home
+                     via native Rust's cache-only API, independently checking
+                     the county polygon and CRC of ZIP source archives.
+                     Zero Census/OSM or GPS requests. Never modifies cache.
+--json               With --audit-cache, print metadata only (no coordinates).
 --help               Print this help without touching Rust or user data.
 
 The browser UI is JavaScript rendered by a native Rust loopback service.
@@ -32,7 +38,7 @@ if [[ "$mode" == "--help" || "$mode" == "-h" ]]; then
   usage
   exit 0
 fi
-if [[ "$mode" != "--launch" && "$mode" != "--verify" ]]; then
+if [[ "$mode" != "--launch" && "$mode" != "--verify" && "$mode" != "--audit-cache" ]]; then
   usage >&2
   exit 2
 fi
@@ -40,6 +46,11 @@ shift "$(( $# > 0 ? 1 : 0 ))"
 require_chromium=false
 if [[ "$mode" == "--verify" && "${1:-}" == "--require-chromium" ]]; then
   require_chromium=true
+  shift
+fi
+audit_json=false
+if [[ "$mode" == "--audit-cache" && "${1:-}" == "--json" ]]; then
+  audit_json=true
   shift
 fi
 if [[ "$#" -ne 0 ]]; then
@@ -62,7 +73,7 @@ if ! command -v cargo >/dev/null 2>&1; then
   exit 1
 fi
 
-if [[ "$mode" == "--launch" ]]; then
+if [[ "$mode" == "--launch" || "$mode" == "--audit-cache" ]]; then
   if [[ -z "${RUSTBOY_MAP_TEST_HOME:-}" ]]; then
     RUSTBOY_MAP_TEST_HOME="${HOME}/Library/Application Support/Rust-Boy/MapTest"
   fi
@@ -75,6 +86,16 @@ if [[ "$mode" == "--launch" ]]; then
     exit 2
   fi
   export PIPBOY_HOME="$RUSTBOY_MAP_TEST_HOME"
+  if [[ "$mode" == "--audit-cache" ]]; then
+    if ! command -v python3 >/dev/null 2>&1; then
+      printf '%s\n' 'Python 3 is required for local cache verification.' >&2
+      exit 1
+    fi
+    if [[ "$audit_json" == "true" ]]; then
+      exec python3 tools/audit_map_cache.py --home "$PIPBOY_HOME" --json
+    fi
+    exec python3 tools/audit_map_cache.py --home "$PIPBOY_HOME"
+  fi
   printf '%s\n' 'Native Rust-Boy / Mac MAP test session' \
     'UI: http://127.0.0.1:<chosen-port>/micro (browser opens automatically)' \
     "Test data: $PIPBOY_HOME" \
@@ -92,13 +113,13 @@ if ! command -v node >/dev/null 2>&1; then
   exit 1
 fi
 
-printf '%s\n' '[1/4] Build native Rust for this Mac (no cross-compile).'
+printf '%s\n' '[1/5] Build native Rust for this Mac (no cross-compile).'
 cargo build --locked -p pipboy
-printf '%s\n' '[2/4] Run native Rust county-cache and boundary tests.'
+printf '%s\n' '[2/5] Run native Rust county-cache and boundary tests.'
 cargo test --locked -p pipboy -- county_cache
-printf '%s\n' '[3/4] Run native Rust loopback micro HTTP smoke (temporary test home).'
+printf '%s\n' '[3/5] Run native Rust loopback micro HTTP smoke (temporary test home).'
 python3 tools/smoke_micro.py
-printf '%s\n' '[4/4] Run offline MAP browser-logic tests (no live providers).'
+printf '%s\n' '[4/5] Run offline MAP browser-logic tests (no live providers).'
 for test in \
   tools/test_map_boot.cjs \
   tools/test_map_gps_permissions.cjs \
@@ -111,6 +132,8 @@ for test in \
 do
   node "$test"
 done
+printf '%s\n' '[5/5] Real native Rust offline cache replay (synthetic fixtures; no downloads).'
+python3 tools/test_audit_map_cache.py
 
 # Chromium is optional for ordinary Mac smoke tests: Safari can be used for
 # manual acceptance. A caller can require Chromium rather than silently skip.
@@ -143,4 +166,4 @@ else
   printf '%s\n' 'SKIP Chromium viewport check (no supported browser found); use Safari for manual UI.'
 fi
 printf '%s\n' 'PASS: macOS Rust, offline MAP parser/viewport logic and loopback API smoke tests.'
-printf '%s\n' 'NEXT: run --launch, choose CENTER + COUNTY, restart offline, and record field results.'
+printf '%s\n' 'NEXT: run --launch, choose CENTER + COUNTY, then --audit-cache before/after an offline restart.'

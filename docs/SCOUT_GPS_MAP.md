@@ -49,6 +49,8 @@ The displayed **DATA SOURCES** view exposes dataset names, source origin, featur
 
 ### Verification
 
+**Offline cache audit:** After acquiring a county by explicit operator action, run `bash scripts/test-map-macos.command --audit-cache`. This invokes the native Rust cache-only API, checks county boundary and stored ZIP CRC/structure without network, and reports complete/partial/corrupt state. See [Mac MAP test procedure](MAC_MAP_TESTING.md#audit-the-real-saved-county-without-a-network-connection). 
+
 **Active test target is the Mac**, using the native Rust `pipboy` service and a local browser. Run `bash scripts/test-map-macos.command --verify`, then `--launch` and follow the [Mac MAP acceptance checklist](MAC_MAP_TESTING.md). The separate Mac test home deliberately preserves the downloaded county cache between restarts. The DATA SOURCES panel now records bounded local-only canvas draw timing (last and rolling p95) and a separate source-delivery duration; these are not FPS measurements. Physical Pi hardware acceptance is deferred.
 
 

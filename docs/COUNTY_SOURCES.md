@@ -28,6 +28,10 @@ The host derives `STATEFP` strictly from the first two digits of the validated c
 
 Source CRS is **GCS NAD83**; Rust-Boy displays raw longitude and latitude in a Web Mercator viewer and currently does **not** apply a formal NAD83-to-WGS84 transform. Features are reference cartography, not survey-grade alignment, road condition, or verified safe passage. Water polygons do not by themselves certify coastlines.
 
+## macOS offline integrity audit
+
+After an operator-initiated COUNTY load, the [Mac-native cache audit](MAC_MAP_TESTING.md#audit-the-real-saved-county-without-a-network-connection) can replay the active county through Rust-Boy's own **cache-only** API. Run `bash scripts/test-map-macos.command --audit-cache`; no external map, GPS, or manual coordinates are requested. The audit checks the independently validated stored boundary and each 2025 TIGER archive's ZIP CRC, compressed/uncompressed size, source naming and SHP/DBF presence. It reports COMPLETE, PARTIAL, EMPTY or FAIL without exporting geometry or site records. This independent cross-check catches corrupted ZIP bytes that the Rust caching layer's initial signature check alone would not find. It is source integrity verification, **not** cryptographic authentication of Census files or a survey-grade map claim.
+
 ## Rendering and layer visibility
 
 The local MAP engine groups source IDs into four display categories: **ROADS** (`tiger-roads`), **WATER** (`tiger-areawater` and `tiger-linearwater`), **LANDMARKS** (`tiger-pointlm`, clipped by verified boundary), and **BORDER** (the independently validated Census county polygon). Toggling only changes canvas visibility. It never edits source ZIPs, county identifiers, attributes, or the boundary cache, and never sends a request. RustGIS and OSM overlay controls remain independent.
