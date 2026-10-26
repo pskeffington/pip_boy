@@ -1,0 +1,376 @@
+//! In-process IP-radio playback worker using native Rust decoding and CPAL.
+//! No subprocesses, browser playback, persistent audio files or RF transmit.
+
+use crate::radio_http::NativeRadioHttp;
+use crate::radio_output::NativeAudioOutput;
+use pipboy_core::radio_controller::{
+    PlaybackEvent, PlaybackState, RadioCommand, RadioController, RadioSession,
+};
+use pipboy_core::radio_directory::station_by_id;
+use pipboy_core::radio_pcm::PcmConverter;
+use pipboy_core::radio_stream::open_station;
+use std::io::{self, Read, Seek, SeekFrom};
+use std::sync::{
+    atomic::{AtomicBool, AtomicU8, Ordering},
+    Arc, Mutex,
+};
+use std::thread::{self, JoinHandle};
+use std::time::{Duration, Instant};
+use symphonia::core::audio::SampleBuffer;
+use symphonia::core::codecs::{DecoderOptions, CODEC_TYPE_NULL};
+use symphonia::core::errors::Error as DecodeError;
+use symphonia::core::formats::FormatOptions;
+use symphonia::core::io::{MediaSource, MediaSourceStream};
+use symphonia::core::meta::MetadataOptions;
+use symphonia::core::probe::Hint;
+
+/// No direct audio output or network access occurs until the caller issues
+/// an explicit PlayInternet command. One engine owns one active worker.
+pub struct NativeRadioEngine {
+    controller: Arc<Mutex<RadioController>>,
+    cancelled: Arc<AtomicBool>,
+    volume: Arc<AtomicU8>,
+    worker: Option<JoinHandle<()>>,
+}
+
+impl NativeRadioEngine {
+    pub fn start_internet(station_id: &str, volume_percent: u8) -> Result<Self, String> {
+        if station_by_id(station_id).is_none() {
+            return Err("Unknown curated internet radio station".into());
+        }
+        if volume_percent > 100 {
+            return Err("Volume must be between 0 and 100".into());
+        }
+        let mut controller = RadioController::default();
+        controller
+            .apply(RadioCommand::SetVolume(volume_percent))
+            .map_err(|e| format!("{e:?}"))?;
+        let generation = controller
+            .apply(RadioCommand::PlayInternet {
+                station_id: station_id.to_owned(),
+            })
+            .map_err(|e| format!("{e:?}"))?;
+        let controller = Arc::new(Mutex::new(controller));
+        let cancelled = Arc::new(AtomicBool::new(false));
+        let volume = Arc::new(AtomicU8::new(volume_percent));
+        let worker_controller = Arc::clone(&controller);
+        let worker_cancelled = Arc::clone(&cancelled);
+        let worker_volume = Arc::clone(&volume);
+        let id = station_id.to_owned();
+        let worker = thread::Builder::new()
+            .name("rust-boy-radio-ip".into())
+            .spawn(move || {
+                let result = decode_and_play(
+                    &id,
+                    generation,
+                    &worker_controller,
+                    &worker_cancelled,
+                    worker_volume,
+                );
+                if let Err(error) = result {
+                    if !worker_cancelled.load(Ordering::Acquire) {
+                        worker_controller
+                            .lock()
+                            .expect("radio state mutex poisoned")
+                            .event(generation, PlaybackEvent::Error(error));
+                    }
+                }
+            })
+            .map_err(|e| format!("Unable to start radio worker: {e}"))?;
+        Ok(Self {
+            controller,
+            cancelled,
+            volume,
+            worker: Some(worker),
+        })
+    }
+
+    pub fn status(&self) -> RadioSession {
+        self.controller
+            .lock()
+            .expect("radio state mutex poisoned")
+            .state()
+            .clone()
+    }
+
+    pub fn set_volume(&self, percent: u8) -> Result<(), String> {
+        self.controller
+            .lock()
+            .expect("radio state mutex poisoned")
+            .apply(RadioCommand::SetVolume(percent))
+            .map_err(|e| format!("{e:?}"))?;
+        self.volume.store(percent, Ordering::Release);
+        Ok(())
+    }
+
+    pub fn stop(&mut self) {
+        self.cancelled.store(true, Ordering::Release);
+        let _ = self
+            .controller
+            .lock()
+            .expect("radio state mutex poisoned")
+            .apply(RadioCommand::Stop);
+        // The playback HTTP read timeout is finite, so joining cannot wait
+        // forever on a stalled network read.
+        if let Some(worker) = self.worker.take() {
+            let _ = worker.join();
+        }
+    }
+}
+
+impl Drop for NativeRadioEngine {
+    fn drop(&mut self) {
+        self.stop();
+    }
+}
+
+/// A non-seekable, thread-safe media source around the R2 ICY reader.
+/// Only the decoder worker locks it, never the real-time CPAL callback.
+struct LiveMediaSource<R: Read + Send> {
+    reader: Mutex<R>,
+}
+
+impl<R: Read + Send> LiveMediaSource<R> {
+    fn new(reader: R) -> Self {
+        Self {
+            reader: Mutex::new(reader),
+        }
+    }
+}
+
+impl<R: Read + Send> Read for LiveMediaSource<R> {
+    fn read(&mut self, bytes: &mut [u8]) -> io::Result<usize> {
+        self.reader
+            .get_mut()
+            .map_err(|_| io::Error::other("Audio source lock poisoned"))?
+            .read(bytes)
+    }
+}
+
+impl<R: Read + Send> Seek for LiveMediaSource<R> {
+    fn seek(&mut self, _: SeekFrom) -> io::Result<u64> {
+        Err(io::Error::new(
+            io::ErrorKind::Unsupported,
+            "Live broadcasts are not seekable",
+        ))
+    }
+}
+
+impl<R: Read + Send> MediaSource for LiveMediaSource<R> {
+    fn is_seekable(&self) -> bool {
+        false
+    }
+
+    fn byte_len(&self) -> Option<u64> {
+        None
+    }
+}
+
+fn signal(controller: &Arc<Mutex<RadioController>>, generation: u64, event: PlaybackEvent) {
+    controller
+        .lock()
+        .expect("radio state mutex poisoned")
+        .event(generation, event);
+}
+
+fn decode_and_play(
+    station_id: &str,
+    generation: u64,
+    controller: &Arc<Mutex<RadioController>>,
+    cancelled: &AtomicBool,
+    volume: Arc<AtomicU8>,
+) -> Result<(), String> {
+    // Establish an audio device before opening a remote broadcaster.
+    let mut output = NativeAudioOutput::open(volume)?;
+    if cancelled.load(Ordering::Acquire) {
+        return Ok(());
+    }
+    let http = NativeRadioHttp::for_playback().map_err(|e| e.to_string())?;
+    let stream = open_station(&http, station_id).map_err(|e| e.to_string())?;
+    if cancelled.load(Ordering::Acquire) {
+        return Ok(());
+    }
+    signal(controller, generation, PlaybackEvent::Connected);
+
+    let mut hint = Hint::new();
+    let mime = stream.content_type.as_deref().unwrap_or_default();
+    if mime.contains("aac") {
+        hint.with_extension("aac");
+    } else {
+        hint.with_extension("mp3");
+    }
+    let source = LiveMediaSource::new(stream.reader);
+    let media = MediaSourceStream::new(Box::new(source), Default::default());
+    let probed = symphonia::default::get_probe()
+        .format(
+            &hint,
+            media,
+            &FormatOptions::default(),
+            &MetadataOptions::default(),
+        )
+        .map_err(|e| format!("Unsupported radio stream format: {e}"))?;
+    let mut format = probed.format;
+    let track = format
+        .tracks()
+        .iter()
+        .find(|track| track.codec_params.codec != CODEC_TYPE_NULL)
+        .ok_or("No decodable audio track in stream")?;
+    let track_id = track.id;
+    let mut decoder = symphonia::default::get_codecs()
+        .make(&track.codec_params, &DecoderOptions::default())
+        .map_err(|e| format!("Unsupported radio codec: {e}"))?;
+    let mut converter: Option<PcmConverter> = None;
+    let mut previous_format: Option<(u32, usize)> = None;
+    let mut started = false;
+    let mut announced = false;
+
+    while !cancelled.load(Ordering::Acquire) {
+        if output.has_failed() {
+            return Err("Native audio output device disconnected or failed".into());
+        }
+        let packet = match format.next_packet() {
+            Ok(packet) => packet,
+            Err(DecodeError::IoError(err)) => {
+                return Err(format!("Broadcast stream ended or stalled: {err}"));
+            }
+            Err(DecodeError::ResetRequired) => {
+                return Err("Broadcast format changed; reconnect required".into());
+            }
+            Err(err) => return Err(format!("Broadcast packet error: {err}")),
+        };
+        if packet.track_id() != track_id {
+            continue;
+        }
+        let decoded = match decoder.decode(&packet) {
+            Ok(audio) => audio,
+            Err(DecodeError::DecodeError(_)) => continue,
+            Err(err) => return Err(format!("Radio audio decode error: {err}")),
+        };
+        let spec = *decoded.spec();
+        let source_channels = spec.channels.count();
+        if previous_format != Some((spec.rate, source_channels)) {
+            converter = Some(
+                PcmConverter::new(
+                    spec.rate,
+                    output.sample_rate,
+                    source_channels,
+                    output.channels,
+                )
+                .map_err(|e| format!("Unsupported broadcast audio format: {e:?}"))?,
+            );
+            previous_format = Some((spec.rate, source_channels));
+        }
+        // The allocation and decode occur only on the worker, never in CPAL.
+        // Reject unreasonably long decoded packets.
+        if decoded.capacity() > 192_000 {
+            return Err("Radio audio packet exceeds bounded frame budget".into());
+        }
+        let mut samples = SampleBuffer::<f32>::new(decoded.capacity() as u64, spec);
+        samples.copy_interleaved_ref(decoded);
+        let keep_going = converter
+            .as_mut()
+            .expect("PCM converter is initialized")
+            .convert(samples.samples(), |frame| output.push_frame(frame, cancelled))
+            .map_err(|e| format!("Radio PCM conversion failed: {e:?}"))?;
+        if !keep_going {
+            return Ok(());
+        }
+
+        if !started && output.buffered_samples() >= output.minimum_prebuffer_samples() {
+            output.start()?;
+            started = true;
+            signal(controller, generation, PlaybackEvent::Buffered);
+        }
+        if started && !announced && output.played_samples() > 0 {
+            signal(controller, generation, PlaybackEvent::PlaybackStarted);
+            announced = true;
+        }
+    }
+    Ok(())
+}
+
+/// Interactive operator demo. A non-interactive caller should pass a duration,
+/// otherwise standard input supports 'volume N', 'status' and 'stop'.
+pub fn run_demo(station_id: &str, duration_seconds: Option<u64>) -> Result<(), String> {
+    let mut player = NativeRadioEngine::start_internet(station_id, 60)?;
+    println!("RUST-BOY RADIO / {station_id} / native Rust audio / 60% volume");
+    if let Some(seconds) = duration_seconds {
+        if !(1..=300).contains(&seconds) {
+            player.stop();
+            return Err("Demo duration must be 1..300 seconds".into());
+        }
+        let started_at = Instant::now();
+        while started_at.elapsed() < Duration::from_secs(seconds) {
+            thread::sleep(Duration::from_millis(100));
+            let snapshot = player.status();
+            if snapshot.state == PlaybackState::Failed {
+                let error = snapshot.last_error.unwrap_or_else(|| "Unknown failure".into());
+                player.stop();
+                return Err(error);
+            }
+        }
+    } else {
+        println!("Type: status | volume 0..100 | stop");
+        let mut input = String::new();
+        loop {
+            input.clear();
+            let len = io::stdin()
+                .read_line(&mut input)
+                .map_err(|e| format!("Radio console input error: {e}"))?;
+            if len == 0 {
+                break;
+            }
+            let command = input.trim();
+            if command == "stop" || command == "q" {
+                break;
+            }
+            if command == "status" {
+                let state = player.status();
+                println!("RADIO {:?} / {:?}", state.state, state.last_error);
+            } else if let Some(value) = command.strip_prefix("volume ") {
+                let percent = value
+                    .parse::<u8>()
+                    .map_err(|_| "Volume must be a number from 0 to 100")?;
+                player.set_volume(percent)?;
+                println!("RADIO VOLUME {percent}%");
+            } else {
+                println!("Available: status | volume N | stop");
+            }
+            if player.status().state == PlaybackState::Failed {
+                let reason = player.status().last_error.unwrap_or_default();
+                player.stop();
+                return Err(reason);
+            }
+        }
+    }
+    let final_state = player.status();
+    player.stop();
+    if final_state.state == PlaybackState::Failed {
+        return Err(final_state
+            .last_error
+            .unwrap_or_else(|| "Radio playback failed".into()));
+    }
+    println!("RUST-BOY RADIO / STOPPED");
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn refuses_unapproved_stream_without_opening_audio() {
+        assert!(NativeRadioEngine::start_internet("untrusted", 50).is_err());
+        assert!(NativeRadioEngine::start_internet("skylab", 101).is_err());
+    }
+
+    #[test]
+    fn live_media_source_does_not_offer_seeking() {
+        let mut source = LiveMediaSource::new(io::Cursor::new(vec![1u8, 2, 3]));
+        let mut bytes = [0u8; 2];
+        assert_eq!(source.read(&mut bytes).unwrap(), 2);
+        assert_eq!(bytes, [1, 2]);
+        assert!(!source.is_seekable());
+        assert!(source.seek(SeekFrom::Start(0)).is_err());
+    }
+}
