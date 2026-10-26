@@ -2,6 +2,7 @@
 //! No hardware capture is performed by this command.
 use pipboy_core::radio::{Demodulation, RadioTuner, SimulatedRadio, Tuning};
 use std::error::Error;
+use pipboy_core::radio_directory::{curated_stations, select_source, NoHardwareEnumerator, PublisherTcpCheck, UncheckedConnectivity, RadioSource};
 
 fn modulation(value: &str) -> Option<Demodulation> {
     match value.to_ascii_lowercase().as_str() {
@@ -17,6 +18,34 @@ fn modulation(value: &str) -> Option<Demodulation> {
 
 pub fn run(args: Vec<String>) -> Result<(), Box<dyn Error>> {
     match args.as_slice() {
+        [action] if action == "stations" => {
+            println!("RADIO / CURATED DIRECTORY / published metadata, stream unchecked");
+            for station in curated_stations() {
+                println!("{} | {} | {} kbps {} | {}", station.id, station.name, station.nominal_kbps, station.format, station.playlist_url);
+            }
+            println!("No playback initiated. Refer to docs/RADIO_SDR.md for publisher source and usage terms.");
+            Ok(())
+        }
+        [action, confirm] if action == "stations" && confirm == "--check-ip" => {
+            let check = PublisherTcpCheck::default();
+            let source = select_source(&NoHardwareEnumerator, &check);
+            println!("RADIO SOURCE: {:?}", source);
+            if source == RadioSource::InternetDirectory {
+                println!("Publisher TCP reachable; stream health and playback NOT yet verified.");
+                for station in curated_stations() {
+                    println!("{} | {} | {} | {}", station.id, station.name, station.genre, station.playlist_url);
+                }
+            } else {
+                println!("No approved provider route detected. Offline radio mode.");
+            }
+            println!("Physical SDR autodetection is not yet implemented; no actual receiver was queried.");
+            Ok(())
+        }
+        [action] if action == "source" => {
+            let source = select_source(&NoHardwareEnumerator, &UncheckedConnectivity);
+            println!("RADIO SOURCE: {:?} (network not checked; no physical SDR enumerator)", source);
+            Ok(())
+        }
         [action] if action == "capabilities" => {
             let tuner = RadioTuner::new(SimulatedRadio::default())?;
             let caps = tuner.capabilities();
@@ -45,7 +74,7 @@ pub fn run(args: Vec<String>) -> Result<(), Box<dyn Error>> {
             println!("SIMULATED ONLY: no antenna, live RF or audio decoder connected.");
             Ok(())
         }
-        _ => Err("usage: pipboy radio <capabilities|simulate FREQ_HZ am|nfm|wfm|usb|lsb|iq>".into()),
+        _ => Err("usage: pipboy radio <capabilities|source|stations [--check-ip]|simulate FREQ_HZ am|nfm|wfm|usb|lsb|iq>".into()),
     }
 }
 
