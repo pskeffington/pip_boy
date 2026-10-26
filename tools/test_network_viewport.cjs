@@ -58,8 +58,9 @@ function hostHtml(width,height,view) {
   return '<!doctype html><html lang="en"><head><meta charset="utf-8">' +
     '<title>Rust-Boy viewport host</title>' +
     '<style>html,body{margin:0}iframe{border:0;display:block}</style></head><body>' +
-    '<iframe id="handheld" title="Handheld preview" style="width:' + width +
-    'px;height:' + height + 'px" src="/fixture?view=' + view + '"></iframe>' +
+    '<iframe id="handheld" title="Handheld preview" width="' + width +
+    '" height="' + height + '" style="width:' + width + 'px;height:' + height +
+    'px" src="/fixture?view=' + view + '"></iframe>' +
     '<pre id="viewport-report" hidden></pre><script>' + script + '</script></body></html>';
 }
 
@@ -142,7 +143,7 @@ async function main() {
         response.writeHead(400);response.end("Invalid viewport fixture");return;
       }
       response.writeHead(200,{"Content-Type":"text/html; charset=utf-8","Cache-Control":"no-store",
-        "Content-Security-Policy":"default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self'; frame-src 'self'"});
+        "Content-Security-Policy":"default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; frame-src 'self'"});
       response.end(hostHtml(width,height,view));
       return;
     }
