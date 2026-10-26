@@ -17,9 +17,8 @@ Technical contracts, architecture decisions, research provenance and validation 
 | [Graphical dashboard](DASHBOARD_UI.md) | Run local browser UI on Mac, load role templates, test offline tools and Custom |
 | [Quick start](../README.md#quick-start) | Clone, build, run the terminal UI and inspect local status |
 | [Console controls](CONSOLE.md) | Keyboard navigation, resize behavior and terminal restoration |
-| [Boston offline real-street basemap](BOSTON_BASEMAP.md) | Pinned City SAM geometry, provenance, coverage and licensing |
 | [Lore naming and tool crosswalk](LORE_NAMING.md) | Six-tab HUD names, role/tool alignment and capability boundaries |
-| [County source acquisition](COUNTY_SOURCES.md) | Allowlisted Census county road/water archives, GPS zone selection and offline cache lifecycle |
+| [County source acquisition](COUNTY_SOURCES.md) | Allowlisted TIGER county roads/water plus polygon-clipped state landmarks and offline cache |
 | [RustGIS-native map and GPS](SCOUT_GPS_MAP.md) | Native RustGIS map import, GPS, optional Overpass road reference, privacy and provenance |
 | [PACE messaging and route setup](PACE_MESSAGING.md) | Manual P/A routes, persistent wait/receipt evidence, blocked C transmission, local E hold and shared failure domains |
 | [Messenger build passes A–C](MESSENGER_BUILD_PASSES.md) | Wire contract, fault simulation, opt-in encrypted queue, local-IP retry and passive USB capture |
