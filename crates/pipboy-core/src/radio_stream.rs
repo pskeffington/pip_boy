@@ -286,7 +286,7 @@ impl<R: Read> Read for IcyAudioReader<R> {
             return Ok(0);
         }
         let cap = buffer.len().min(MAX_AUDIO_READ);
-        if let Some(_) = self.interval {
+        if self.interval.is_some() {
             if self.remaining_audio == 0 {
                 self.consume_metadata()?;
             }
@@ -417,7 +417,7 @@ mod tests {
                 body: {
                     let mut body = b"abcd".to_vec();
                     let mut meta = [0u8; 16];
-                    meta[..15].copy_from_slice(b"StreamTitle='X'");
+                    meta.copy_from_slice(b"StreamTitle='X';");
                     body.push(1);
                     body.extend_from_slice(&meta);
                     body.extend_from_slice(b"efgh");
@@ -432,7 +432,7 @@ mod tests {
         assert_eq!(&audio, b"abcd");
         assert_eq!(opened.reader.read(&mut audio).unwrap(), 4);
         assert_eq!(&audio, b"efgh");
-        assert_eq!(opened.reader.take_last_title(), None);
+        assert_eq!(opened.reader.take_last_title(), Some("X".into()));
     }
 
     #[test]
