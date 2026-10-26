@@ -169,3 +169,9 @@
   }
 }
 \n.rb-map-zip-list-heading { padding:3px 0; font-weight:bold; }\n.rb-map-zip-list-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:4px; }\n.rb-map-zip-list-item { min-height:38px; padding:4px; font-size:12px; letter-spacing:.04em; }\n
+/* MAP viewing is the primary task; initialization belongs in a collapsed disclosure. */
+.rb-map-setup { flex:none; border-bottom:1px solid #385b39; min-width:0; }
+.rb-map-setup > summary { cursor:pointer; padding:5px 7px; font-size:10px; font-weight:700; }
+.rb-map-setup-controls { display:flex; gap:4px; flex-wrap:wrap; padding:4px 0; }
+.rb-map-setup-controls .rb-map-button { flex:1 1 90px; }
+.rb-map-setup:not([open]) { max-height:30px; }
