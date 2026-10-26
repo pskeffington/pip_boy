@@ -2,7 +2,7 @@
 
 ## Universal location settings
 
-Open **Settings → Location / Map** on any role. Enable GPS, choose a five-digit ZIP, or enter latitude/longitude there. ZIP selection and **Load Area** resolve and load the county; GPS enables county lookup as fixes arrive. The setup screen also owns Layers, imports and map-source controls. The Map screen contains only Recenter, Fit, zoom and the geographic viewport.
+Open **Settings → Location / Map** on any role. Enable GPS, choose a five-digit ZIP, or enter latitude/longitude there. ZIP selection and **Load Area** resolve and load the county; GPS enables county lookup as fixes arrive. The setup screen also owns Layers, imports and map-source controls. The Map screen is canvas only, with no buttons or setup/status rows. Recenter, Fit and zoom buttons also live in Settings; pan and wheel gestures remain on the map.
 
 Accepted center, county and bounded geography survive tab changes in page memory, including areas without an imported layer. Returning to Map does not repeat ZIP/manual lookup. The local county cache remains available across restarts. GPS permission is explicit: after enabling it, a fresh watch resumes only on the visible Map/location settings screen and stops when leaving; live fixes are not retained or written to disk. Submitting manual coordinates or accepting a ZIP replaces GPS mode. Existing provider consent, cache-only fallback and site-coordinate privacy rules remain in force.
 
@@ -23,7 +23,7 @@ The bottom rail always has **STATUS / [active role] / DATA / MAP / RADIO**, in t
 | Status | System Stat, System Diag and local task summary |
 | Active role | Mission Log, Network Engineer, Byte Lab, Sim Bay, Survey GIS, Field Log and future specialist pins; Security Chief camera placeholders |
 | Data | Journal, Archives, Game Link, Messenger and assigned duties |
-| Map | Shared county/vector map with Recenter, Fit and zoom only |
+| Map | Full geographic viewport with no buttons |
 | Radio | Direct shared native Rust radio controls and output settings |
 
 Each palette descriptor has a Rust-owned `section` field. Only pinned modules appear, each in one launcher category; shared Messenger, duties, Map and Radio remain available to every role. Unknown future section metadata defaults to the role deck. Browsing categories never starts a probe, playback, peer delivery or a hardware connection.

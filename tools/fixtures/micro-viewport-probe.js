@@ -25,8 +25,8 @@ const inside=(node,box)=>{
         if(ui.content.querySelector(".rb-map-manual,.rb-map-zip,.rb-map-layers,.rb-map-tools"))
           throw Error("Location/source ingestion leaked onto Map");
         const nav=ui.content.querySelector(".rb-map-toolbar");
-        if(!nav || nav.querySelectorAll("button").length !== 4)
-          throw Error("Map must only have four navigation controls");
+        if(nav || ui.content.querySelector(".rb-map button"))
+          throw Error("Map must not show any buttons");
       }
       const box=ui.viewport.getBoundingClientRect();
       const header=document.querySelector(".topbar").getBoundingClientRect();

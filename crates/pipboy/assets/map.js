@@ -1599,7 +1599,10 @@
 
   function resize(view) {
     if (active !== view) return;
-    const rect = view.stage.getBoundingClientRect();
+    const rect = view.settingsMode ? {
+      width: mapMemory?.viewportWidth || view.host.getBoundingClientRect().width || 480,
+      height: mapMemory?.viewportHeight || Math.max(160, (window.innerHeight || 320) - 90)
+    } : view.stage.getBoundingClientRect();
     view.width = Math.max(1, Math.round(rect.width));
     view.height = Math.max(1, Math.round(rect.height));
     view.dpr = Math.min(2, window.devicePixelRatio || 1);
@@ -1639,6 +1642,7 @@
       countyPackage: view.countyPackage, countyShapes: view.countyShapes,
       countyStatus: view.countyStatus, centerSelected: view.centerSelected,
       countyLastLookup: view.countyLastLookup,
+      viewportWidth: view.width, viewportHeight: view.height,
       gpsRequested: view.watchId !== null || view.gpsPending
     };
     // Cancels the GPS watch, clears the live fix, and invalidates late callbacks.
@@ -1796,7 +1800,7 @@
     sitePager.append(sitePrev, sitePageLabel, siteNext, siteRefresh);
     sitePanel.append(siteSummary, siteStatus, siteList, sitePager);
     const view = {
-      host, root, stage, canvas, status, file, sourceBox, sourceSummary, sourceLines,
+      host, root, stage, canvas, status, file, sourceBox, sourceSummary, sourceLines, settingsMode,
       manual, latitude, longitude,
       zipPanel,zipForm,zipInput,zipStatus,zipCandidates,zipCountyButton,
       zipList,zipListPrev,zipListNext,zipOffset:0,zipVersion:0,
@@ -1888,8 +1892,9 @@
       "Zoom in");
     const zoomOut = control("-", () => { view.zoom = clamp(view.zoom - 1, MIN_ZOOM, MAX_ZOOM); refresh(view); },
       "Zoom out");
-    if (settingsMode) toolbar.append(view.locate, manualButton, zipButton, view.countyButton);
-    else if (navigationOnly) toolbar.append(view.followButton, view.fitButton, zoomIn, zoomOut);
+    if (settingsMode) toolbar.append(view.locate, manualButton, zipButton, view.countyButton,
+      view.followButton, view.fitButton, zoomIn, zoomOut);
+    else if (navigationOnly) { /* Map canvas only; controls live in Settings. */ }
     else toolbar.append(view.locate, view.followButton, manualButton,zipButton,
       view.countyButton, view.fitButton, zoomIn, zoomOut);
     const layerPanel=make("details","rb-map-layers");
@@ -1928,7 +1933,8 @@
         tools, webStatusNode, sitePanel, sourceBox, file, stage);
       stage.hidden = true;
     } else if (navigationOnly) {
-      root.append(toolbar, stage, status);
+      root.append(stage);
+      root.classList.add("rb-map-canvas-only");
     } else root.append(toolbar, layerPanel, tools, zipPanel, manual, stage, webStatusNode, countyNode, status, gpsHelp,
       sitePanel, sourceBox, file);
     host.replaceChildren(root);

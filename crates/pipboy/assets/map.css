@@ -172,8 +172,14 @@
 /* Location/source ingestion lives in universal Settings, away from navigation. */
 .rb-map-settings { display:flex; flex-direction:column; height:auto; min-height:0; gap:8px; }
 .rb-map-settings .rb-map-stage[hidden] { display:none; }
-.rb-map-settings .rb-map-toolbar { grid-template-columns:repeat(4,minmax(0,1fr)); }
+.rb-map-settings .rb-map-toolbar { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); max-height:none; overflow:visible; }
 .rb-map-location-copy { font-size:11px; margin:0; }
 .rb-map-settings-host { min-width:0; }
 .rb-map-settings .rb-map-manual:not([hidden]) { display:grid; }
 .rb-map-settings .rb-map-button { min-height:44px; }
+
+.rb-map-canvas-only { display:flex; flex-direction:column; height:100%; min-height:0; padding:0; gap:0; }
+.rb-map-canvas-only .rb-map-stage { flex:1; min-height:0; height:100%; }
+
+.micro-device[data-depth="root"] .micro-content:has(.rb-map-canvas-only) { padding:0; }
+.rb-map-canvas-only .rb-map-stage { border:0; border-radius:0; }

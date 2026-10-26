@@ -201,8 +201,8 @@ async function main(){
   win.RustBoyMap.unmount();
   const callsBeforeNavigation = requests.length;
   const navigation = win.RustBoyMap.mount(new E("div"), {navigationOnly:true});
-  assert.equal(navigation.root.children.length,3,"Map only contains navigation, canvas and status");
-  assert.equal(navigation.root.children[0].children.length,4,"Map only has recenter, fit and zoom controls");
+  assert.equal(navigation.root.children.length,1,"Map only contains the geographic viewport");
+  assert.equal(navigation.root.children[0],navigation.stage,"The map stage is the only top-level content");
   assert.ok(!navigation.root.children.includes(navigation.zipPanel));
   assert.ok(!navigation.root.children.includes(navigation.manual));
   assert.equal(navigation.county.id,"25025","Settings/map handoff keeps the selected county");

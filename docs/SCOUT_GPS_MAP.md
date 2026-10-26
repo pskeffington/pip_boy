@@ -2,13 +2,15 @@
 
 Rust-Boy's MAP is an **offline-first field reference viewer**. The Fallout-inspired phosphor display is a rendering style; the geography comes from real, identified source records. No city, roadway, landmark, or GPS position is invented or preselected. The first MAP screen is an **unlocated reference grid**, not a demonstration region. No external provider is contacted on MAP entry.
 
+All location ingestion, Layers, imports and map control buttons live under universal **Settings → Location / Map**. Accepted area/geometry survives tab changes; an explicitly enabled GPS session resumes only while Map/location settings is visible. Live fixes are cleared on exit and never restored as current.
+
 ## First-run operator sequence
 
-1. Open **MAP**. It starts with `CENTER UNSET / GRID ONLY` unless the local device has an earlier county ZIP cache or the current browser session already holds an imported layer.
-2. Press **GPS ON** to request browser location, or **CENTER** to provide WGS84 latitude and longitude manually. The manually entered point is never represented as a GPS reading. A saved GPS fix is not written to Rust-Boy storage; GPS watches stop on MAP exit.
-3. Press **COUNTY** to explicitly permit a location-to-county lookup with U.S. Census TIGERweb. That provider receives the *chosen* location. If the operator set a manual center, it takes precedence over a currently available GPS fix.
+1. Open **Settings → Location / Map**. It starts with `CENTER UNSET / GRID ONLY` unless the local device has an earlier county ZIP cache or the current browser session already holds an imported layer.
+2. In Settings, press **GPS ON** to request browser location, or **CENTER** to provide WGS84 latitude and longitude manually. The manually entered point is never represented as a GPS reading. A saved GPS fix is not written to Rust-Boy storage; GPS watches stop on MAP exit.
+3. GPS ON or manual **LOAD AREA** explicitly permits location-to-county lookup with U.S. Census TIGERweb. That provider receives the *chosen* location. If the operator set a manual center, it takes precedence over a currently available GPS fix.
 4. The resolved county GEOID is passed to the **local** allowlisted Census package service. No raw position is passed to the package service, which retrieves **2025 All Roads**, **Areal Water**, and **Linear Water** records for the selected county. The viewer displays genuine centerlines, polygons, names, classifications and source vintage. A fourth source, state-level **Point Landmarks**, is shown **only after the returned points have been clipped to the verified county polygon**.
-5. Use **FIT** to frame available geography and **+/-** to zoom. Finger drag pans and disables follow. **RECENTER** returns to the live browser fix when one is available. Roads, water and landmark symbols use Rust-Boy's green/amber phosphor style, without fictional geometries.
+5. Open **MAP** for the full geographic viewport, without buttons or setup rows. Pan by dragging and zoom with wheel gestures; **FIT**, **RECENTER** and zoom buttons are available under Settings → Location / Map. Use **FIT** to frame available geography and **+/-** to zoom. Finger drag pans and disables follow. **RECENTER** returns to the live browser fix when one is available. Roads, water and landmark symbols use Rust-Boy's green/amber phosphor style, without fictional geometries.
 
 The 480×320 primary bar contains GPS, FOLLOW/RECENTER, CENTER, **ZIP**, COUNTY, FIT and zoom. Census visibility toggles are grouped beneath the collapsed **LAYERS** disclosure. Secondary **RUSTGIS**, **SITES**, **WEB**, and **GIS** actions are under **TOOLS / MAP SOURCES**. Controls are designed for finger access and keyboard focus, but final physical touchscreen acceptance remains outstanding.
 

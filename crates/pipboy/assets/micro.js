@@ -302,17 +302,7 @@ function showMap() {
   root.classList.add("rb-map-micro-host");
   const holder = make("div", "rb-map-mount");
   root.append(holder);
-  if (window.RustBoyMap) {
-    requestAnimationFrame(() => {
-      if (holder.isConnected) window.RustBoyMap.mount(holder, {
-        navigationOnly: true,
-        onTools: hasTool("geo-lab") ? () => openTool("geo-lab", "waypoint") : null,
-        reclamation: hasTool("reclamation")
-      });
-    });
-  } else {
-    holder.textContent = "LOCAL MAP MODULE UNAVAILABLE";
-  }
+  if (!window.RustBoyMap) holder.textContent = "LOCAL MAP MODULE UNAVAILABLE";
   return root;
 }
 
@@ -603,6 +593,14 @@ function render() {
         tab === "map" ? showMap() :
           tab === "data" ? showData() :
             tab === "radio" ? showRadio() : showConf());
+  // Mount only after the map host is connected, so no deferred frame can
+  // reopen a detached view after navigation or suspend GPS cleanup.
+  if (!openedTool && tab === "map" && window.RustBoyMap) {
+    window.RustBoyMap.mount(ui.content.querySelector(".rb-map-mount"), {
+      navigationOnly: true,
+      reclamation: hasTool("reclamation")
+    });
+  }
 }
 
 async function reload({silent = false} = {}) {

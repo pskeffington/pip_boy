@@ -2,6 +2,8 @@
 
 This source contract acquires **real vector records** for a deliberately selected U.S. county. No bundled demonstration city or manufactured geometry is part of normal runtime. The map is styled by Rust-Boy, but source shapes are not altered into fictional roads or points.
 
+All acquisition/source controls now live under **Settings → Location / Map** in micro and desktop. MAP itself is a full geographic viewport without buttons.
+
 ## Provenance and fixed acquisition path
 
 - **County resolution:** after GPS or explicit WGS84 manual center, pressing COUNTY sends that *selected point* to U.S. Census TIGERweb `State_County/MapServer/37` for a bounded polygon and five-digit county GEOID. The county boundary is legal/statistical geography, **not** a surveyed shoreline.
