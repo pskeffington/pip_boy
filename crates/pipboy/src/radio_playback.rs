@@ -176,7 +176,7 @@ fn decode_and_play(
     station_id: &str,
     generation: u64,
     controller: &Arc<Mutex<RadioController>>,
-    cancelled: &AtomicBool,
+    cancelled: &Arc<AtomicBool>,
     volume: Arc<AtomicU8>,
 ) -> Result<(), String> {
     // Establish an audio device before opening a remote broadcaster.
