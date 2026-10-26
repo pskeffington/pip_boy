@@ -128,3 +128,7 @@ The deterministic smoke relay starts two **separate Rust-Boy homes** and tests e
 ## LINK Messenger
 
 The same pinned OpenSSH transport now supports a separate **Messenger** operation. The dedicated authorized_keys forced bridge additionally permits exactly `pipboy peer message-receive`, bound to its named source key. Messages live in a separate bounded plaintext journal rather than the task board. See [Messenger operator guide and security limitations](MESSENGER.md). One-way task pairing is sufficient to send a message in one direction; receiving a reply requires reverse pairing.
+
+## Planned communications continuity
+
+PACE source analysis, failure-domain independence, resilient queues and transport-adapter acceptance gates are maintained in [Communications redundancy plan](COMMUNICATIONS_REDUNDANCY_PLAN.md). No automatic fallback or alternate radio interface is implied by the existing OpenSSH peer channel.
