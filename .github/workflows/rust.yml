@@ -93,6 +93,9 @@ jobs:
       - name: Network Engineer real Chromium viewport acceptance
         if: matrix.toolchain == 'stable'
         run: node tools/test_network_viewport.cjs
+      - name: RADIO micro real Chromium viewport acceptance
+        if: matrix.toolchain == 'stable'
+        run: node tools/test_radio_viewport.cjs
       - name: Install native ALSA development library
         run: |
           sudo apt-get update -qq

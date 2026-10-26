@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Rust-Boy radio compact viewport fixture</title>
+  <link rel="stylesheet" href="/assets/micro.css">
+  <link rel="stylesheet" href="/assets/radio-ui.css">
+  <script defer src="/assets/radio-ui.js"></script>
+</head>
+<body class="micro-phosphor">
+  <!-- The production micro shell and native RADIO UI, with synthetic local data only. -->
+  <div class="hardware-wrap">
+    <div class="micro-device" id="micro-device" data-depth="detail">
+      <header class="topbar">
+        <button class="role-switch" type="button"><span class="rb-mark">RB/</span><span>SCOUT</span></button>
+        <div class="right-status"><time>00:00</time><span>LOCAL</span></div>
+      </header>
+      <div class="view-heading">
+        <button class="micro-back" type="button">‹ BACK</button>
+        <div class="heading-left"><h1>RADIO</h1></div>
+        <span class="mode-indicator">IP</span>
+      </div>
+      <main id="micro-viewport" class="micro-viewport" tabindex="-1">
+        <section class="micro-content"><div class="micro-panel"><div id="radio-mount"></div></div></section>
+      </main>
+      <nav class="tab-rail" aria-label="Handheld tabs">
+        <button class="tab">STAT</button><button class="tab">GEAR</button>
+        <button class="tab">MAP</button><button class="tab">DATA</button>
+        <button class="tab">LINK</button><button class="tab">SETUP</button>
+      </nav>
+      <div class="micro-bottom">LOCAL</div>
+    </div>
+  </div>
+  <pre id="viewport-report" hidden></pre>
+  <script>
+  "use strict";
+  const scenario=new URLSearchParams(location.search).get("scenario") || "ready";
+  const stations=[
+    {id:"skylab",name:"Skylab Radio (UK)",genre:"Chillout / lounge / ambient",category:"CHILL",format:"Streaming",nominal_kbps:0},
+    {id:"groovesalad",name:"Groove Salad",genre:"Ambient / downtempo",category:"CHILL",format:"MP3",nominal_kbps:128},
+    {id:"dronezone",name:"Drone Zone",genre:"Atmospheric / ambient",category:"AMBIENT",format:"MP3",nominal_kbps:128}
+  ];
+  const output={id:"system",name:"System default",default:true,available:true};
+  const preferred={id:"bluetooth",name:"Bluetooth Speaker",default:false,available:true};
+  let snapshot={
+    source:"none",status:"stopped",station:null,error:null,volume:60,
+    output:"system",output_available:true,output_failure:false,outputs:[output,preferred],
+    presets:{schema_version:1,favorites:["skylab","groovesalad"],last_selected:"groovesalad"},
+    stations,sdr:"not_connected"
+  };
+  if(scenario==="playing")snapshot={...snapshot,source:"native_ip",status:"playing",station:"skylab"};
+  if(scenario==="output-lost")snapshot={...snapshot,source:"native_ip",status:"failed",
+    station:"skylab",output:"bluetooth",output_available:false,output_failure:true,
+    error:"Audio output disconnected",outputs:[output]};
+  const calls=[];
+  window.fetch=async(url,options)=>{
+    calls.push({url,method:options?.method||"GET"});
+    if(url!=="/api/radio")throw Error("Unexpected network URL");
+    if(options?.method==="POST")throw Error("Viewport fixture must not request native playback");
+    return{ok:true,json:async()=>({...snapshot})};
+  };
+  const tick=(ms=35)=>new Promise(resolve=>setTimeout(resolve,ms));
+  function geometry(element){
+    const r=element?.getBoundingClientRect();
+    return r?{left:r.left,top:r.top,right:r.right,bottom:r.bottom,
+      width:r.width,height:r.height}:null;
+  }
+  function within(child,parent){
+    const a=geometry(child),b=geometry(parent);
+    return !!(a&&b&&a.width>0&&a.height>0&&
+      a.left>=b.left-1&&a.right<=b.right+1&&
+      a.top>=b.top-1&&a.bottom<=b.bottom+1);
+  }
+  function publish(result){
+    const bytes=new TextEncoder().encode(JSON.stringify(result));
+    document.getElementById("viewport-report").textContent=
+      btoa(String.fromCharCode(...bytes));
+    if(parent!==window)
+      parent.postMessage({type:"rustboy-radio-layout",value:result},location.origin);
+  }
+  window.addEventListener("load",async()=>{
+    try {
+      const mounted=window.RustBoyRadio.mount(document.getElementById("radio-mount"),
+        {compact:true});
+      await tick();
+      if(scenario==="favorites"){
+        document.querySelector(".rb-radio-filter").click();
+        await tick();
+      }
+      if(scenario==="settings"){
+        document.querySelector(".rb-radio-output-toggle").click();
+        await tick();
+      }
+      const viewport=document.getElementById("micro-viewport");
+      const primary=[
+        ".rb-radio-favorite",".rb-radio-filter",".rb-radio-prev",".rb-radio-station",
+        ".rb-radio-next",".rb-radio-play",".rb-radio-stop",
+        ".rb-radio-volume-down",".rb-radio-volume-up",".rb-radio-output-toggle"
+      ];
+      const touch=primary.map(selector=>{
+        const element=document.querySelector(selector);
+        return{selector,rect:geometry(element),visible:within(element,viewport)};
+      });
+      const panel=document.querySelector(".rb-radio-output-panel");
+      const result={
+        scenario,window:{width:innerWidth,height:innerHeight},
+        viewport:geometry(viewport),device:geometry(document.getElementById("micro-device")),
+        scrollHeight:viewport.scrollHeight,clientHeight:viewport.clientHeight,
+        scrollWidth:viewport.scrollWidth,clientWidth:viewport.clientWidth,
+        documentScrollHeight:document.documentElement.scrollHeight,
+        station:document.querySelector(".rb-radio-station")?.value,
+        visibleStationCount:document.querySelectorAll(".rb-radio-station option").length,
+        favoriteMode:document.querySelector(".rb-radio-filter")?.getAttribute("aria-pressed"),
+        controls:touch,primaryVisible:touch.every(control=>control.visible),
+        settingsExpanded:panel&&!panel.hidden,
+        settingsVisible:within(panel,viewport),
+        fallbackVisible:!document.querySelector(".rb-radio-fallback")?.hidden,
+        requests:calls
+      };
+      mounted.destroy();
+      publish(result);
+    }catch(error){publish({error:String(error.stack||error)});}
+  });
+  </script>
+</body>
+</html>

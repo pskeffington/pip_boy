@@ -47,7 +47,7 @@ Only the worker can emit playback status. A successful connection must never be 
 - A new versioned `RadioPresetStore` writes only directory-approved IDs, up to 12 favorites in user-defined order, plus the last selected station. Reads are side-effect free; writes are short, validated, locked and atomic under the same application-owned data root as the workbench.
 - The local RADIO API supports `select`, `favorite` and `move_favorite` as metadata-only commands; the HUD displays favorites-only browsing, a tap-sized star, and explicit earlier/later reordering in a compact settings overlay. Play, Stop, PCM, network retry and Bluetooth selection are unchanged.
 - Rust unit tests cover persistence/restart, order boundaries, duplicate/foreign ID rejection, corrupt and oversized input preservation, writer lock contention and symlink rejection. The offline Node HUD regression covers restoration without autoplay, user selection/favorites/reorder, and Bluetooth manual recovery.
-- **Gates:** exact-head five-job CI, actual 480×320 touch/screenshots, full broadcaster stream testing and Mac/Pi fault injections. Persistence implementation is not evidence of real-SDR reception. No user data migration is performed.
+- **Gates:** exact-head five-job CI plus real Chromium 480×320 synthetic layout checks, actual physical touch/screenshots, full broadcaster stream testing and Mac/Pi fault injections. Persistence implementation is not evidence of real-SDR reception. No user data migration is performed.
 
 ## R4.5 / R4.6 first station-directory and micro-layout pass (2026-10-26)
 
