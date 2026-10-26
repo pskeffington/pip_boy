@@ -3,7 +3,8 @@
 use pipboy_core::radio::{Demodulation, RadioTuner, SimulatedRadio, Tuning};
 use std::error::Error;
 use std::process::Command;
-use pipboy_core::radio_directory::{curated_stations, station_by_id, select_source, NoHardwareEnumerator, PublisherTcpCheck, UncheckedConnectivity, RadioSource};
+use std::time::Duration;
+use pipboy_core::radio_directory::{curated_stations, station_by_id, station_tcp_reachable, select_source, NoHardwareEnumerator, PublisherTcpCheck, UncheckedConnectivity, RadioSource};
 
 fn modulation(value: &str) -> Option<Demodulation> {
     match value.to_ascii_lowercase().as_str() {
@@ -56,6 +57,13 @@ fn launch_station(id: &str, player: &str) -> Result<(), Box<dyn Error>> {
 
 pub fn run(args: Vec<String>) -> Result<(), Box<dyn Error>> {
     match args.as_slice() {
+        [action, id, confirm] if action == "check" && confirm == "--confirm" => {
+            let station = station_by_id(id).ok_or("unknown curated radio station ID")?;
+            let reachability = station_tcp_reachable(id, Duration::from_secs(2)).ok_or("station is not allowlisted")?;
+            println!("RADIO / {} / TCP: {:?}", station.name, reachability);
+            println!("TCP reachability does not prove stream data or audio playback.");
+            Ok(())
+        }
         [action, id, confirm] if action == "listen" && confirm == "--confirm" => {
             launch_station(id, "system")
         }
@@ -119,7 +127,7 @@ pub fn run(args: Vec<String>) -> Result<(), Box<dyn Error>> {
             println!("SIMULATED ONLY: no antenna, live RF or audio decoder connected.");
             Ok(())
         }
-        _ => Err("usage: pipboy radio <capabilities|source|stations [--check-ip]|listen STATION_ID --confirm [--player system|vlc|ffplay]|simulate FREQ_HZ am|nfm|wfm|usb|lsb|iq>".into()),
+        _ => Err("usage: pipboy radio <capabilities|source|stations [--check-ip]|check STATION_ID --confirm|listen STATION_ID --confirm [--player system|vlc|ffplay]|simulate FREQ_HZ am|nfm|wfm|usb|lsb|iq>".into()),
     }
 }
 
