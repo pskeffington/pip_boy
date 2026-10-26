@@ -7,8 +7,6 @@ const $ = (id) => document.getElementById(id);
 const ui = {
   screen: $("micro-device"),
   back: $("micro-back"),
-  roleSwitch: $("role-switch"),
-  roleShort: $("role-short"),
   clock: $("local-clock"),
   code: $("page-code"),
   title: $("page-title"),
@@ -39,49 +37,6 @@ const glyphs = {
   "diag": "!", "net-lab": "⌘", "byte-lab": "0x", "simulator": "◈",
   "geo-lab": "⌖", "reclamation": "▧"
 };
-const roleStations = Object.freeze({
-  "overseer": {
-    heading: "OPS",
-    purpose: "TASKS / TEAM",
-    quick: "TASKS", tool: "mission-board"
-  },
-  "head-engineer": {
-    heading: "ENGINEER",
-    purpose: "SYSTEM / NET",
-    quick: "NETWORK", tool: "net-lab"
-  },
-  "security-chief": {
-    heading: "SECURITY",
-    purpose: "CAMERAS / WATCH",
-    quick: "CAM WALL", page: "link"
-  },
-  "vault-doctor": {
-    heading: "MEDICAL",
-    purpose: "REFERENCE / NOTES",
-    quick: "ARCHIVES", tool: "library"
-  },
-  "university-researcher": {
-    heading: "RESEARCH",
-    purpose: "LAB / DATA",
-    quick: "BYTE LAB", tool: "byte-lab"
-  },
-  "reclamation-scout": {
-    heading: "SCOUT",
-    purpose: "SITES / SURVEYS",
-    quick: "SITES", tool: "reclamation", page: "map"
-  },
-  "records-custodian": {
-    heading: "RECORDS",
-    purpose: "ARCHIVES / JOURNAL",
-    quick: "ARCHIVES", tool: "library"
-  },
-  "custom": {
-    heading: "CUSTOM",
-    purpose: "USER / TOOLS",
-    quick: "ADD TOOLS", page: "conf"
-  }
-});
-
 function openDuties() {
   openedTool = "assigned-duties";
   render();
@@ -173,14 +128,7 @@ function toolInfo(id) {
   return snapshot?.palette.find((entry) => entry.id === id) || null;
 }
 
-function labelForProfile(profile) {
-  const title = profile?.title || "RUST-BOY";
-  if (profile?.id === "custom") return "CUSTOM";
-  return title.replace(/\s+(Operations|Station|Field Kit)$/i, "").toUpperCase();
-}
-
 function renderHeading() {
-  ui.roleShort.textContent = labelForProfile(activeProfile());
   const index = pages.indexOf(tab);
   ui.code.textContent = String(index + 1).padStart(2, "0");
   const label = openedTool === "secure-messenger" ? "MESSENGER"
@@ -237,18 +185,11 @@ function showStat() {
   const root = panel();
   root.classList.add("micro-home");
   const profileId = snapshot.active.profile;
-  const station = roleStations[profileId] || roleStations.custom;
-  root.append(sectionTop("QUICK ACCESS", ""));
+  root.append(sectionTop("QUICK ACCESS", "LOCAL"));
   const actions = make("div", "quick-row micro-home-actions");
-  if (station.tool && hasTool(station.tool)) {
-    actions.append(button(station.quick, () => openTool(station.tool), "micro-button solid"));
-  } else if (station.page) {
-    actions.append(button(station.quick, () => setTab(station.page), "micro-button solid"));
-  }
-  if (station.page && station.tool) {
-    actions.append(button("MAP", () => setTab(station.page), "micro-button"));
-  }
-  actions.append(button("TOOLS", () => setTab("gear"), "micro-button"));
+  // The same controls and ordering for every profile; only pinned tools vary.
+  actions.append(button("TOOLS", () => setTab("gear"), "micro-button solid"));
+  actions.append(button("MAP", () => setTab("map"), "micro-button"));
   root.append(actions);
   const taskSection = make("div", "task-station-summary");
   root.append(taskSection);
@@ -344,9 +285,10 @@ function showData() {
   const tools = allPinned().filter((id) =>
     ["notes", "library", "byte-lab", "simulator", "geo-lab", "reclamation", "net-lab", "diag"].includes(id));
   root.append(sectionTop("DATA", String(tools.length) + " TOOLS"));
-  if (snapshot.active.profile !== "overseer") {
-    root.append(button("MY DUTIES", openDuties, "micro-button solid"));
-  }
+  root.append(button("DUTIES", () => {
+    if (snapshot.active.profile === "overseer" && hasTool("mission-board")) openTool("mission-board");
+    else openDuties();
+  }, "micro-button solid"));
   if (tools.length) pagedTiles(root, tools, "data");
   else root.append(make("div", "custom-empty", "NO DATA TOOLS"));
   return root;
@@ -418,10 +360,10 @@ function showConf() {
     }, 4);
     return root;
   }
-  root.append(sectionTop("SETTINGS", "LOCAL"));
+  root.append(sectionTop("DEVICE SETTINGS", "LOCAL"));
   const current = make("div", "block-box lit preview-row compact-profile");
   current.append(make("strong", "", activeProfile()?.title || "UNKNOWN"),
-    button("CHANGE", openRoles, "micro-button compact"));
+    button("CHANGE PROFILE", openRoles, "micro-button compact"));
   root.append(current);
   const effects = make("div", "button-row");
   effects.append(
@@ -772,7 +714,6 @@ function init() {
   observer.observe(ui.content, { childList: true, subtree: true });
   window.addEventListener("resize", ensureVisible);
   ui.tabs.forEach((item) => item.addEventListener("click", () => setTab(item.dataset.tab)));
-  ui.roleSwitch.addEventListener("click", openRoles);
   ui.back.addEventListener("click", back);
   ui.closeRoles.addEventListener("click", () => ui.rolesDialog.close());
   ui.cancelRoles.addEventListener("click", () => ui.rolesDialog.close());
