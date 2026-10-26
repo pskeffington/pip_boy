@@ -54,6 +54,8 @@ let rolePage = 0, modulePage = 0, palettePage = 0;
 let activeStage = "modules";
 let activePane = "workspace";
 let desktopMessenger = null;
+let desktopRadioUI = null;
+let radioPaneOpen = false;
 let extensionMode = "map";
 let queuedSiteId = null;
 const PAGE_SIZE = 6;
@@ -86,12 +88,40 @@ function activateStage(stage) {
     button.setAttribute("aria-pressed", String(button.dataset.stageTarget === stage));
   }
   for (const section of document.querySelectorAll(".stage-surface")) section.hidden = section.dataset.stage !== stage;
-  if (stage === "viewport" && snapshot) renderExtension();
+  if (stage === "viewport" && snapshot && !radioPaneOpen) renderExtension();
   else if (previous === "viewport" && window.RustBoyMap) window.RustBoyMap.unmount();
+  syncRadioSubview();
   // First local journal read occurs only after operator opens MESSAGES.
   if (stage === "messages" && !desktopMessenger && window.RustBoyMessenger) {
     desktopMessenger = window.RustBoyMessenger.mount(byId("messenger-dock"));
   }
+}
+// The RADIO dock is a VIEWPORT subview, not a permanent second page below it.
+// Radio UI mounting is lazy; leaving VIEWPORT stops local status polling only.
+// The Rust native engine and any explicitly playing audio remain undisturbed.
+function syncRadioSubview() {
+  const dock = byId("radio-dock");
+  const toggle = byId("radio-view-toggle");
+  if (!dock || !toggle) return;
+  const visible = radioPaneOpen && activeStage === "viewport";
+  ui.extension.hidden = radioPaneOpen;
+  dock.hidden = !radioPaneOpen;
+  toggle.textContent = radioPaneOpen ? "◀ ACTIVE VIEW" : "RADIO / IP";
+  toggle.setAttribute("aria-pressed", String(radioPaneOpen));
+  if (visible && !desktopRadioUI && window.RustBoyRadio) {
+    desktopRadioUI = window.RustBoyRadio.mount(dock, {compact:true});
+  } else if (!visible && desktopRadioUI) {
+    desktopRadioUI.destroy();
+    desktopRadioUI = null;
+    dock.replaceChildren();
+  }
+}
+function toggleRadioSubview() {
+  if (activeStage !== "viewport") return;
+  radioPaneOpen = !radioPaneOpen;
+  if (radioPaneOpen && window.RustBoyMap) window.RustBoyMap.unmount();
+  syncRadioSubview();
+  if (!radioPaneOpen && snapshot) renderExtension();
 }
 function activatePane(pane) {
   activePane = pane;
@@ -698,6 +728,7 @@ async function copyOutput() {
 document.querySelectorAll("[data-stage-target]").forEach(button => button.addEventListener("click", () => activateStage(button.dataset.stageTarget)));
 byId("open-palette").addEventListener("click", () => activateStage("palette"));
 byId("palette-back").addEventListener("click", () => activateStage("settings"));
+byId("radio-view-toggle").addEventListener("click", toggleRadioSubview);
 byId("inspector-return").addEventListener("click", () => { activateStage("modules"); activatePane("workspace"); });
 window.addEventListener("resize", () => { if (!snapshot) return; renderRoles(); renderModules(); });
 document.querySelectorAll("[data-pane-target]").forEach(button => button.addEventListener("click", () => activatePane(button.dataset.paneTarget)));
@@ -726,6 +757,10 @@ document.addEventListener("keydown", (event) => {
       activateStage("settings");
       return;
     }
+    if (activeStage === "viewport" && radioPaneOpen) {
+      toggleRadioSubview();
+      return;
+    }
     if (activeStage !== "modules") {
       activateStage("modules");
       return;
@@ -750,7 +785,5 @@ document.addEventListener("keydown", (event) => {
 // Messenger remains in the same workspace tab for every occupational profile.
 void reload({silent:true});
 
-// The desktop RADIO dock shares one in-process Rust playback session with micro.
-if (window.RustBoyRadio && document.getElementById("radio-dock")) {
-  window.RustBoyRadio.mount(document.getElementById("radio-dock"));
-}
+// RADIO is explicitly mounted only via VIEWPORT → RADIO / IP. No autoplay,
+ // background status polling, or permanently visible dock on dashboard launch.

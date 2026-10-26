@@ -108,16 +108,11 @@
         <section class="extension-section stage-surface" data-stage="viewport" aria-labelledby="extension-heading" hidden>
           <div class="section-heading">
             <h2 id="extension-heading">Active view</h2>
-            
+            <button type="button" id="radio-view-toggle" class="secondary-button"
+              aria-controls="radio-dock" aria-pressed="false">RADIO / IP</button>
           </div>
           <div id="extension-content" class="extension-content"></div>
-        </section>
-        <section class="extension-section" aria-labelledby="radio-heading">
-          <div class="section-heading">
-            <h2 id="radio-heading">RADIO</h2>
-            <span class="section-counter">NATIVE / IP RECEIVER</span>
-          </div>
-          <div id="radio-dock"></div>
+          <div id="radio-dock" aria-label="Native IP radio" hidden></div>
         </section>
         <section class="extension-section stage-surface" data-stage="messages" aria-labelledby="messenger-heading" hidden>
           <div class="section-heading">

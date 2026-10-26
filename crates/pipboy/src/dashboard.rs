@@ -8,9 +8,9 @@ mod network_routes;
 mod task_routes;
 
 use crate::county_cache::{self, CountyCache};
-use crate::zip_index::ZipIndex;
 use crate::radio_output::available_outputs;
 use crate::radio_playback::NativeRadioEngine;
+use crate::zip_index::ZipIndex;
 use pipboy_core::network_health;
 use pipboy_core::network_suite;
 use pipboy_core::radio_directory::curated_stations;
