@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/pskeffington/pip_boy/blob/main/data/schemas/index-manifest-v1.schema.json",
+  "title": "Rust-Boy public reference index manifest v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "policy",
+    "documents"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "policy": {
+      "const": "public-reference-only"
+    },
+    "documents": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 128,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "path",
+          "domain",
+          "title",
+          "summary",
+          "enabled"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9.-]{2,79}$"
+          },
+          "path": {
+            "type": "string",
+            "minLength": 3
+          },
+          "domain": {
+            "enum": [
+              "catalog",
+              "docs"
+            ]
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 180
+          },
+          "summary": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 180
+          },
+          "enabled": {
+            "type": "boolean"
+          }
+        }
+      }
+    }
+  }
+}

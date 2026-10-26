@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/pskeffington/pip_boy/blob/main/data/schemas/public-index-v1.schema.json",
+  "title": "Rust-Boy compiled public reference index v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "policy",
+    "manifest_git_blob_sha1",
+    "entries",
+    "postings"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "policy": {
+      "const": "public-reference-only"
+    },
+    "manifest_git_blob_sha1": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "entries": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 128,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "path",
+          "domain",
+          "title",
+          "summary",
+          "git_blob_sha1",
+          "bytes"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          },
+          "domain": {
+            "enum": [
+              "catalog",
+              "docs"
+            ]
+          },
+          "title": {
+            "type": "string"
+          },
+          "summary": {
+            "type": "string"
+          },
+          "git_blob_sha1": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{40}$"
+          },
+          "bytes": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 262144
+          }
+        }
+      }
+    },
+    "postings": {
+      "type": "object",
+      "propertyNames": {
+        "pattern": "^[a-z0-9]{2,40}$"
+      },
+      "additionalProperties": {
+        "type": "array",
+        "minItems": 1,
+        "items": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

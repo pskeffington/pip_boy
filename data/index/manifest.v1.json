@@ -1,0 +1,190 @@
+{
+  "schema_version": 1,
+  "policy": "public-reference-only",
+  "documents": [
+    {
+      "id": "catalog.literature",
+      "path": "catalog/literature.json",
+      "domain": "catalog",
+      "title": "Research evidence",
+      "summary": "Literature source records with limitations, engineering implications and linked modules.",
+      "enabled": true
+    },
+    {
+      "id": "catalog.modules",
+      "path": "catalog/module_plan.json",
+      "domain": "catalog",
+      "title": "Module plan",
+      "summary": "Planned modules, gates, dependencies, capabilities and acceptance conditions.",
+      "enabled": true
+    },
+    {
+      "id": "catalog.roles",
+      "path": "catalog/role_roadmap.json",
+      "domain": "catalog",
+      "title": "Role roadmap",
+      "summary": "Occupation-specific workbench needs, source references and planned gates.",
+      "enabled": true
+    },
+    {
+      "id": "catalog.sources",
+      "path": "catalog/sources.json",
+      "domain": "catalog",
+      "title": "External source registry",
+      "summary": "Reference-only upstream projects and licensing review dispositions.",
+      "enabled": true
+    },
+    {
+      "id": "docs.architecture",
+      "path": "docs/ARCHITECTURE.md",
+      "domain": "docs",
+      "title": "System architecture",
+      "summary": "Workspace, policy boundaries, transports, dashboard and data lifecycles.",
+      "enabled": true
+    },
+    {
+      "id": "docs.county",
+      "path": "docs/COUNTY_SOURCES.md",
+      "domain": "docs",
+      "title": "County data sources",
+      "summary": "Approved geospatial source roster, locality lookup and cache policy.",
+      "enabled": true
+    },
+    {
+      "id": "docs.data-index",
+      "path": "docs/DATA_INDEX.md",
+      "domain": "docs",
+      "title": "Data indexing contract",
+      "summary": "Allowlisted public index structure, generation, validation and query commands.",
+      "enabled": true
+    },
+    {
+      "id": "docs.diagnostics",
+      "path": "docs/DIAGNOSTICS.md",
+      "domain": "docs",
+      "title": "Diagnostics",
+      "summary": "Read-only host and bounded offline diagnostic evidence ingestion.",
+      "enabled": true
+    },
+    {
+      "id": "docs.messenger",
+      "path": "docs/MESSENGER.md",
+      "domain": "docs",
+      "title": "Messenger",
+      "summary": "Authenticated device messaging scope, limitations and user controls.",
+      "enabled": true
+    },
+    {
+      "id": "docs.micro",
+      "path": "docs/MICRO_UI.md",
+      "domain": "docs",
+      "title": "Micro interface",
+      "summary": "Handheld controls, navigation and field acceptance status.",
+      "enabled": true
+    },
+    {
+      "id": "docs.network",
+      "path": "docs/NETWORK_ENGINEERING.md",
+      "domain": "docs",
+      "title": "Network engineering",
+      "summary": "Authorized local network probes and network engineering operations.",
+      "enabled": true
+    },
+    {
+      "id": "docs.network-health",
+      "path": "docs/NETWORK_HEALTH_UNIFI.md",
+      "domain": "docs",
+      "title": "Network health and UniFi",
+      "summary": "Controller client inventory and bounded health sampling.",
+      "enabled": true
+    },
+    {
+      "id": "docs.pace",
+      "path": "docs/PACE_MESSAGING.md",
+      "domain": "docs",
+      "title": "PACE messages",
+      "summary": "Redundant communications strategy and explicitly gated transports.",
+      "enabled": true
+    },
+    {
+      "id": "docs.permissions",
+      "path": "docs/PERMISSIONS.md",
+      "domain": "docs",
+      "title": "Permissions",
+      "summary": "User preference semantics and physical-device authorization boundaries.",
+      "enabled": true
+    },
+    {
+      "id": "docs.reclamation",
+      "path": "docs/RECLAMATION.md",
+      "domain": "docs",
+      "title": "Reclamation kit",
+      "summary": "Field site register, offline mapping and survey controls.",
+      "enabled": true
+    },
+    {
+      "id": "docs.roadmap",
+      "path": "docs/ROADMAP.md",
+      "domain": "docs",
+      "title": "Roadmap",
+      "summary": "Implementation phases, release gates and open validation work.",
+      "enabled": true
+    },
+    {
+      "id": "docs.roles",
+      "path": "docs/ROLE_ROADMAP.md",
+      "domain": "docs",
+      "title": "Role specification",
+      "summary": "Occupational workbenches and capability requirements.",
+      "enabled": true
+    },
+    {
+      "id": "docs.scout-gps",
+      "path": "docs/SCOUT_GPS_MAP.md",
+      "domain": "docs",
+      "title": "Scout GPS mapping",
+      "summary": "RustGIS import, GPS input, county road geometry and provenance.",
+      "enabled": true
+    },
+    {
+      "id": "docs.storage",
+      "path": "docs/STORAGE.md",
+      "domain": "docs",
+      "title": "Local storage",
+      "summary": "Notes and message storage contracts, transaction and recovery semantics.",
+      "enabled": true
+    },
+    {
+      "id": "docs.validation",
+      "path": "docs/VALIDATION.md",
+      "domain": "docs",
+      "title": "Validation results",
+      "summary": "Test matrix, evidence and unresolved hardware acceptance.",
+      "enabled": true
+    },
+    {
+      "id": "root.contributing",
+      "path": "CONTRIBUTING.md",
+      "domain": "docs",
+      "title": "Contribution guide",
+      "summary": "Development workflow, quality gates and engineering standards.",
+      "enabled": true
+    },
+    {
+      "id": "root.readme",
+      "path": "README.md",
+      "domain": "docs",
+      "title": "Project introduction",
+      "summary": "Installation, module status, operator commands and document navigation.",
+      "enabled": true
+    },
+    {
+      "id": "root.security",
+      "path": "SECURITY.md",
+      "domain": "docs",
+      "title": "Security policy",
+      "summary": "Threat model and defensive permission boundaries.",
+      "enabled": true
+    }
+  ]
+}
