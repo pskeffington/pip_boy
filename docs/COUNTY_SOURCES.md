@@ -28,10 +28,24 @@ The host derives `STATEFP` strictly from the first two digits of the validated c
 
 Source CRS is **GCS NAD83**; Rust-Boy displays raw longitude and latitude in a Web Mercator viewer and currently does **not** apply a formal NAD83-to-WGS84 transform. Features are reference cartography, not survey-grade alignment, road condition, or verified safe passage. Water polygons do not by themselves certify coastlines.
 
+## Offline county-boundary acquisition
+
+The 2025 Census TIGER/Line `COUNTY` shapefile is a **national** 80 MiB archive (`tl_2025_us_county.zip`), unsuitable for direct handheld loading. Rust-Boy instead uses bounded Census TIGERweb **ACS 2025 Counties layer 37**, queried for an exact five-digit county GEOID. No bounding-box approximation replaces real county geometry.
+
+After the operator explicitly selects COUNTY, the browser first resolves the selected GPS/manual coordinate at TIGERweb. The local Rust host then **independently requests the corresponding boundary by GEOID only**, via `POST /api/map/boundary` with `{geoid,confirm:true,cache_only:false}`. Neither the loopback boundary request nor the host's Census request includes the user's coordinates or private sites. The host validates the HTTPS GeoJSON response: exactly one FeatureCollection feature, matching GEOID, a valid name, Polygon/MultiPolygon rings, geographic coordinate bounds and closure, at most 256 rings/12,000 vertices, and no more than 1 MiB. Fixed `curl` arguments prohibit arbitrary destinations, redirects, retries, shell execution and disabled TLS verification.
+
+On success, the **raw validated GeoJSON** is atomically stored in `county_cache/boundary_2025_{GEOID}.geojson`, under the existing four-county cache limit. Every offline read revalidates the actual source JSON against its GEOID. A corrupt cache fails closed rather than being replaced silently. The local `GET /api/map/cache` reports `boundary_cached` without contacting Census or requesting geolocation.
+
+On future MAP launches, `POST /api/map/boundary` with `cache_only:true` restores the polygon from local storage, then cached county roads/water and state POINTLM landmarks are decoded. The **county boundary clips the landmarks even after a cold offline restart**. If no valid boundary is cached, roads and water still load while state landmark points stay hidden. Automatic cache restore must not replace a center explicitly selected by the operator. An explicit COUNTY action while offline may reuse a cached county only when the chosen position falls within that polygon (respecting holes).
+
+These county boundaries are generalized Census statistical geography, not signed files, surveyed shorelines or certified navigation guidance. Very large/complex polygons, upstream outages, mixed vintages, stale data and real handheld performance still require field acceptance.
+
+Primary sources: [TIGERweb county layer directory](https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/State_County/MapServer/layers), [2025 national county archive](https://www2.census.gov/geo/tiger/TIGER2025/COUNTY/), [2025 technical documentation](https://www.census.gov/programs-surveys/geography/technical-documentation/complete-technical-documentation/tiger-geo-line.2025.html).
+
 ## Cache and access controls
 
 - Up to four county cache keys; original ZIP archives persist under `PIPBOY_HOME/county_cache/` (default `~/.pipboy/county_cache/`). An active GEOID is stored locally and reveals an approximate area; protect the device and its storage.
-- On MAP entry, the local loopback API can restore the active county ZIPs **without GPS, Census or OSM network requests**. A cached state POINTLM file cannot be clipped in a cold session that lacks an authoritative county polygon; it remains hidden until one is available.
+- On MAP entry, the loopback API can restore the active county ZIPs and revalidated cached county polygon **without GPS, Census or OSM network requests**. POINTLM state points are then clipped and displayed offline when a valid stored polygon exists; otherwise they remain hidden.
 - Every ZIP is capped at 12 MiB; decompressed data, record counts (60,000) and geometry vertices (450,000 per linear/polygon source) are bounded. Oversize county archives require a validated smaller RustGIS/GeoJSON extract rather than silently dropping shape data.
 - COUNTY sends the chosen point to Census; the subsequent ZIP fetch sends only the GEOID/state identifiers to the Census archive host. Separate **WEB ON** sends the current viewport to Overpass as community reference data. Neither action can share saved private Reclamation site coordinates.
 
