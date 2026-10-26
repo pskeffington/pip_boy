@@ -67,7 +67,7 @@
   .rb-map-sites summary { padding:2px; }
 }
 
-/* Original Rust-Boy phosphor cartography. Geometry is actual Boston SAM data. */
+/* Original Rust-Boy phosphor cartography over verified source geometry. */
 .rb-map-stage::after { content:""; position:absolute; inset:0; z-index:2;
   pointer-events:none; opacity:.14;
   background:repeating-linear-gradient(to bottom, transparent 0px,
