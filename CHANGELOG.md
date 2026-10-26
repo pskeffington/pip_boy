@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-10-26 — County-first map ingest (PR #36; release gate pending)
+
+- Remove bundled demonstration-city geometry, routes, source credits, build generator and fixtures from the normal deliverable. MAP starts on an unlocated reference grid rather than a fictional default position.
+- Ingest source-derived 2025 Census All Roads, Areal Water and Linear Water by explicit county selection. Add state POINTLM as an allowlisted optional source; only named points strictly inside the resolved Census county polygon are displayed, including proper hole exclusion. Skip these points on a cold offline restore without an authoritative polygon.
+- Preserve previously validated county geography during source replacement failures. Keep source/vintage and partial-source reporting visible; do not silently substitute OpenStreetMap or ping external services on MAP entry.
+- Keep 480×320 primary navigation controls visible and move infrequent import/provider actions into expandable MAP tools. Add FIT and no-demo/point-clipping regression gates.
+- Hardware GNSS, real provider/large-county compatibility and touchscreen acceptance remain open; no certified navigation capability is claimed.
+
 ## 2026-10-26 — Handheld 480×320 viewport verification (PR #34)
 
 - Move STOP REFRESH and current watch status above long network results so critical controls remain within the initial handheld viewport; keep the large page controls reachable while scrolling.

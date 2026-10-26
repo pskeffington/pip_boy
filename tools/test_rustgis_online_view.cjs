@@ -60,10 +60,7 @@ async function until(cond){
 }
 async function main(){
   const view=window.RustBoyMap.mount(new Element("div"));
-  await until(()=>view.webStatus.includes("WEB READY"));
-  assert.equal(requests.length,1,"MAP entry pings status once without area");
-  assert.equal(requests[0].method,"GET");
-  assert.equal(requests[0].body,undefined);
+  assert.equal(requests.length,0,"Unlocated MAP start does not ping external providers");
 
   const native={name:"County",basemap:"Blank",
     layers:[{id:1,name:"Survey",visible:true,dataset:{name:"Survey",
@@ -74,7 +71,7 @@ async function main(){
   view.file.files=[{name:"county.rgismap",size:Buffer.byteLength(json),text:async()=>json}];
   await view.file.listeners.change[0]();
   assert.equal(view.shapes.length,1);
-  assert.equal(requests.length,1,"local import never activates web feature fetch");
+  assert.equal(requests.length,0,"local import never activates web feature fetch");
 
   view.latitude.value="37.1";view.longitude.value="-81.5";
   view.manual.listeners.submit[0]({preventDefault(){}});
@@ -110,13 +107,13 @@ async function main(){
   assert.equal(restored.onlineShapes.length,2);
   assert.equal(restored.fix,null);
   assert.equal(restored.webEnabled,false,"web consent not persisted across tabs");
-  assert.equal(requests.length,count,"remount does not re-ping within TTL");
+  assert.equal(requests.length,count,"remount does not issue external requests");
   const clear=restored.sourceBox.children.find(x=>x.textContent==="CLEAR MAP");
   assert.ok(clear);
   clear.listeners.click[0]();
   assert.equal(restored.shapes.length,0);
   assert.equal(restored.onlineShapes.length,0);
   window.RustBoyMap.unmount();
-  console.log("RustGIS web overlay: startup ping, opt-in bbox, native priority, offline cache, cleanup PASS");
+  console.log("RustGIS web overlay: no startup traffic, opt-in bbox, native priority, offline cache, cleanup PASS");
 }
 main().catch((e)=>{console.error(e);process.exitCode=1;});

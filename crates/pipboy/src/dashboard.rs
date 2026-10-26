@@ -36,8 +36,6 @@ const JS: &str = include_str!("../assets/dashboard.js");
 const MICRO_HTML: &str = include_str!("../assets/micro.html");
 const MICRO_CSS: &str = include_str!("../assets/micro.css");
 const MICRO_JS: &str = include_str!("../assets/micro.js");
-const BOSTON_BASE_JS: &str = include_str!("../assets/boston-base.js");
-const BOSTON_MAP_JS: &str = include_str!("../assets/boston-map.js");
 const MAP_JS: &str = include_str!("../assets/map.js");
 const MAP_IMPORT_JS: &str = include_str!("../assets/map-import.js");
 const MAP_ONLINE_JS: &str = include_str!("../assets/map-online.js");
@@ -1186,16 +1184,6 @@ fn dispatch(req: &Request, store: &WorkbenchStore, port: u16) -> Response {
             "text/javascript; charset=utf-8",
             MAP_ONLINE_JS.as_bytes(),
         ),
-        ("GET", "/assets/boston-base.js") => Response::new(
-            200,
-            "text/javascript; charset=utf-8",
-            BOSTON_BASE_JS.as_bytes(),
-        ),
-        ("GET", "/assets/boston-map.js") => Response::new(
-            200,
-            "text/javascript; charset=utf-8",
-            BOSTON_MAP_JS.as_bytes(),
-        ),
         ("GET", "/assets/map-county.js") => {
             Response::new(200, "text/javascript; charset=utf-8", COUNTY_JS.as_bytes())
         }
@@ -1966,7 +1954,8 @@ mod tests {
         );
         assert_eq!(index.status, 200);
         let sources: Value = serde_json::from_slice(&index.body).unwrap();
-        assert_eq!(sources["sources"].as_array().unwrap().len(), 3);
+        assert_eq!(sources["sources"].as_array().unwrap().len(), 4);
+        assert_eq!(sources["sources"][3]["id"], "tiger-pointlm");
         let cache = dispatch(&request("GET", "/api/map/cache", Value::Null), &store, 8765);
         assert_eq!(cache.status, 200);
         let manifest: Value = serde_json::from_slice(&cache.body).unwrap();
