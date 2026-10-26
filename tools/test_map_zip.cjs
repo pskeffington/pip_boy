@@ -111,8 +111,13 @@ async function main(){
   const view=win.RustBoyMap.mount(new E("div"));
   assert.equal(requests.length,0,"Initial map mount is external-traffic free");
   assert.equal(view.zipPanel.hidden,true,"ZIP input collapsed initially");
-  const zipToggle=view.root.children[0].children.find(n=>n.textContent==="ZIP");
-  assert.ok(zipToggle,"ZIP is in main map toolbar");
+  const setup=view.root.children[1];
+  assert.equal(setup.tag,"details","MAP SETUP is the second map region");
+  assert.ok(!setup.open,"MAP SETUP starts collapsed");
+  assert.ok(!view.root.children[0].children.some(n=>n.textContent==="ZIP"),
+    "ZIP initialization does not clutter the primary map toolbar");
+  const zipToggle=setup.children[1].children.find(n=>n.textContent==="ZIP");
+  assert.ok(zipToggle,"ZIP remains available under MAP SETUP");
   press(zipToggle);
   assert.equal(view.zipPanel.hidden,false);
   view.zipInput.value="02A08";

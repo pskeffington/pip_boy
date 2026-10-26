@@ -65,6 +65,8 @@ function measure(){
    clientHeight:document.documentElement.clientHeight
  });
  const initial=snapshot();
+ const setup=view.root.children[1];
+ setup.open=true;
  view.layerPanel.open=true;
  view.layerButtons.roads.click();
  view.layerButtons.roads.click();
@@ -148,7 +150,7 @@ function check(result,width,height){
     }
   }
   assert.ok(result.initial.stage.height>result.expanded.stage.height,
-    "Expanding LAYERS should trade canvas space for visible touch controls");
+    "Opening MAP SETUP and LAYERS should trade canvas space for touch controls");
   console.log(`MAP Chromium ${width}x${height}: `+
     `canvas=${Math.round(result.expanded.stage.height)}px, 4 visible layer buttons, no network PASS`);
 }
