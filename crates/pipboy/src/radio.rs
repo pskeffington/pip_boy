@@ -3,6 +3,9 @@
 use pipboy_core::radio::{Demodulation, RadioTuner, SimulatedRadio, Tuning};
 use std::error::Error;
 use std::time::Duration;
+use std::io::Read;
+use pipboy_core::radio_stream::open_station;
+use crate::radio_http::NativeRadioHttp;
 use pipboy_core::radio_directory::{curated_stations, station_by_id, station_tcp_reachable, select_source, NoHardwareEnumerator, PublisherTcpCheck, UncheckedConnectivity, RadioSource};
 
 fn modulation(value: &str) -> Option<Demodulation> {
@@ -19,6 +22,17 @@ fn modulation(value: &str) -> Option<Demodulation> {
 
 pub fn run(args: Vec<String>) -> Result<(), Box<dyn Error>> {
     match args.as_slice() {
+        [action, id, confirm] if action == "probe" && confirm == "--confirm" => {
+            let _ = station_by_id(id).ok_or("unknown curated radio station ID")?;
+            let transport = NativeRadioHttp::for_probe()?;
+            let mut stream = open_station(&transport, id)?;
+            let mut sample = [0u8; 8192];
+            let count = stream.reader.read(&mut sample)?;
+            if count == 0 { return Err("stream ended before audio bytes arrived".into()); }
+            println!("RADIO / {} / HTTPS AUDIO BYTES: {}", id, count);
+            println!("STREAM CHECK: bytes received, audio decoding/output not implemented.");
+            Ok(())
+        }
         [action, id, confirm] if action == "check" && confirm == "--confirm" => {
             let station = station_by_id(id).ok_or("unknown curated radio station ID")?;
             let reachability = station_tcp_reachable(id, Duration::from_secs(2)).ok_or("station is not allowlisted")?;
@@ -82,7 +96,7 @@ pub fn run(args: Vec<String>) -> Result<(), Box<dyn Error>> {
             println!("SIMULATED ONLY: no antenna, live RF or audio decoder connected.");
             Ok(())
         }
-        _ => Err("usage: pipboy radio <capabilities|source|stations [--check-ip]|check STATION_ID --confirm|simulate FREQ_HZ am|nfm|wfm|usb|lsb|iq>".into()),
+        _ => Err("usage: pipboy radio <capabilities|source|stations [--check-ip]|check STATION_ID --confirm|probe STATION_ID --confirm|simulate FREQ_HZ am|nfm|wfm|usb|lsb|iq>".into()),
     }
 }
 
