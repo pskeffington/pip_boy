@@ -93,7 +93,7 @@ See [Task Control and manual dispatch](TASK_CONTROL.md). Neither the task HUD no
 
 **Active offline labs:** For a profile containing the relevant tool, tap **ROLE** → **SURVEY GIS**, **NET ENGINEER**, **BYTE LAB** or **SYSTEM STAT** (under STATUS). The result is computed locally when **RUN** is pressed, using the existing Rust `/api/experiment` endpoint. The browser never auto-fetches host telemetry. Notes/library/simulator/game display safe manual handoffs, not arbitrary command execution. Scout's MAP page can open **WAYPOINT** or **DISTANCE** directly.
 
-**Security Chief fixture:** LINK displays four clearly disconnected camera tiles. Tap a tile to focus; tap it again, press BACK or Escape to return to the 2×2 wall. No stream URLs, snapshots, IP probing, video decoding, recording or camera sessions are present.
+**Security Chief fixture:** the role section opens four clearly disconnected camera tiles. Tap a tile to focus; tap it again, press BACK or Escape to return to the 2×2 wall. No stream URLs, snapshots, IP probing, video decoding, recording or camera sessions are present.
 
 ## Security and acceptance
 
@@ -119,7 +119,7 @@ The new smoke script starts an actual Rust loopback server with `--micro --port 
 
 MAP mounts the shared [RustGIS-native map and GPS viewer](SCOUT_GPS_MAP.md), supporting explicit browser GPS permission, manual location selection, RustGIS/GeoJSON imports, source manifests, follow, accuracy, and pan/zoom. It starts on an unlocated grid, without an outbound request. **COUNTY** retrieves source-derived Census roads and water features only after the operator chooses a location and explicitly requests county data; cached, validated county geometry remains available offline. A separate **WEB ON** control allows bounded external reference queries, while saved-site privacy constraints remain in force. There is no bundled demonstration-city basemap, fictional geography, navigational certification, native RustGIS renderer, remote raster layer, or USB serial GNSS integration. [County data provenance](COUNTY_SOURCES.md) · [Lore naming](LORE_NAMING.md).
 
-LINK now includes a compact [PACE route selector](PACE_MESSAGING.md) beside DEVICE.
+DATA → MESSENGER includes a compact [PACE route selector](PACE_MESSAGING.md) beside DEVICE.
 Primary/Alternate send only on explicit actions; Contingency is disabled and
 Emergency queues locally. Its banner states P/A share a LAN, C is receive-only
 and E holds locally. History encryption labels follow the actual queue mode.

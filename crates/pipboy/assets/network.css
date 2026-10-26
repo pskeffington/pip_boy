@@ -151,3 +151,9 @@
 @media (max-width:440px) {
   .net-compact .net-runbar .net-button { font-size:10px; padding-inline:8px; }
 }
+
+/* Reserve the shared 44px Settings header without shrinking touch controls. */
+@media (max-height:360px) {
+  .net-compact .net-landing { gap:2px; }
+  .net-compact .net-landing .net-tile { min-height:44px; }
+}
