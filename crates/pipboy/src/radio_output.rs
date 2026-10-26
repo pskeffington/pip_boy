@@ -20,6 +20,18 @@ pub struct OutputDeviceInfo {
     pub is_default: bool,
 }
 
+/// Bind index-based CPAL enumeration to the observed device name. CPAL 0.16
+/// does not expose a cross-platform persistent hardware identifier, so a
+/// reordered list fails closed rather than silently redirecting audio.
+fn device_key(index: usize, name: &str) -> String {
+    let mut hash: u64 = 0xcbf29ce484222325;
+    for byte in name.bytes() {
+        hash ^= u64::from(byte);
+        hash = hash.wrapping_mul(0x100000001b3);
+    }
+    format!("output-{index}-{hash:016x}")
+}
+
 pub fn available_outputs() -> Result<Vec<OutputDeviceInfo>, String> {
     let host = cpal::default_host();
     let default_name = host
@@ -43,7 +55,7 @@ pub fn available_outputs() -> Result<Vec<OutputDeviceInfo>, String> {
             name
         };
         result.push(OutputDeviceInfo {
-            id: format!("output-{index}"),
+            id: device_key(index, &device.name().unwrap_or_default()),
             name: label,
             is_default: false,
         });
@@ -59,12 +71,21 @@ fn resolve_output(host: &cpal::Host, output_id: &str) -> Result<cpal::Device, St
     }
     let index = output_id
         .strip_prefix("output-")
-        .and_then(|value| value.parse::<usize>().ok())
+        .and_then(|value| value.split_once('-'))
+        .and_then(|(index, _)| index.parse::<usize>().ok())
         .ok_or("Invalid audio output identifier")?;
-    host.output_devices()
+    let device = host
+        .output_devices()
         .map_err(|error| format!("Cannot enumerate audio outputs: {error}"))?
         .nth(index)
-        .ok_or_else(|| "Audio output disconnected; refresh the device list".into())
+        .ok_or_else(|| "Audio output disconnected; refresh the device list".to_owned())?;
+    let current_name = device
+        .name()
+        .map_err(|error| format!("Cannot identify selected audio output: {error}"))?;
+    if device_key(index, &current_name) != output_id {
+        return Err("Audio devices changed; select the output again".into());
+    }
+    Ok(device)
 }
 
 pub struct NativeAudioOutput {
@@ -206,4 +227,26 @@ where
             None,
         )
         .map_err(|e| format!("Cannot configure native audio stream: {e}"))
+}
+
+#[cfg(test)]
+mod output_identity_tests {
+    use super::*;
+
+    #[test]
+    fn name_bound_ids_reject_reordered_or_replaced_outputs() {
+        let speaker = device_key(0, "Built-in Output");
+        let bluetooth = device_key(1, "Bluetooth Headphones");
+        assert_ne!(speaker, bluetooth);
+        assert_ne!(bluetooth, device_key(0, "Bluetooth Headphones"));
+        assert_ne!(bluetooth, device_key(1, "USB Audio"));
+        assert_eq!(bluetooth, device_key(1, "Bluetooth Headphones"));
+    }
+
+    #[test]
+    fn output_identity_uses_full_utf8_name_and_is_deterministic() {
+        assert_ne!(device_key(0, "Audio"), device_key(0, "audio"));
+        assert_ne!(device_key(0, "Casque"), device_key(0, "Casqué"));
+        assert!(device_key(0, "Speaker").starts_with("output-0-"));
+    }
 }
