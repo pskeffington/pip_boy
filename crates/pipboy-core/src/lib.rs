@@ -30,6 +30,7 @@ pub mod peers;
 pub mod permissions;
 pub mod reclamation;
 pub mod radio;
+pub mod radio_directory;
 pub mod registry;
 pub mod runtime;
 pub mod scout_gis;
