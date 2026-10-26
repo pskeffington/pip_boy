@@ -143,6 +143,22 @@ impl RadioConnectivity for PublisherTcpCheck {
     }
 }
 
+/// Station-specific TCP reachability probe. Host and port are fixed by curated
+/// station ID, never inferred from a user-provided URL. Does not prove audio.
+pub fn station_tcp_reachable(id: &str, timeout: Duration) -> Option<IpReachability> {
+    let (host, port) = match id {
+        "skylab" => ("uksoutha.streaming.broadcast.radio", 29690),
+        "groovesalad" | "dronezone" | "deepspaceone" => ("somafm.com", 443),
+        _ => return None,
+    };
+    let timeout = timeout.min(Duration::from_secs(3));
+    let Ok(addrs) = (host, port).to_socket_addrs() else {
+        return Some(IpReachability::Unreachable);
+    };
+    let reachable = addrs.take(2).any(|addr| TcpStream::connect_timeout(&addr, timeout).is_ok());
+    Some(if reachable { IpReachability::Reachable } else { IpReachability::Unreachable })
+}
+
 pub fn curated_stations() -> &'static [InternetStation] {
     &CURATED_STATIONS
 }
@@ -167,6 +183,7 @@ mod tests {
     fn lookup_is_exact_and_allowlisted() {
         assert_eq!(station_by_id("skylab").map(|s| s.name), Some("Skylab Radio (UK)"));
         assert!(station_by_id("https://attacker.test").is_none());
+        assert_eq!(station_tcp_reachable("https://attacker.test", Duration::ZERO), None);
     }
     #[test]
     fn sdr_precedes_network() {
