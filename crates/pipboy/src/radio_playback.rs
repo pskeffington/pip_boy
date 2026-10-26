@@ -24,12 +24,40 @@ use symphonia::core::io::{MediaSource, MediaSourceStream};
 use symphonia::core::meta::MetadataOptions;
 use symphonia::core::probe::Hint;
 
+#[derive(Debug)]
+enum PlaybackFailure {
+    Network(String),
+    Output(String),
+    Permanent(String),
+}
+
+impl PlaybackFailure {
+    fn message(self) -> String {
+        match self {
+            Self::Network(message) | Self::Output(message) | Self::Permanent(message) => message,
+        }
+    }
+}
+
+impl From<String> for PlaybackFailure {
+    fn from(message: String) -> Self {
+        Self::Permanent(message)
+    }
+}
+
+impl From<&str> for PlaybackFailure {
+    fn from(message: &str) -> Self {
+        Self::Permanent(message.to_owned())
+    }
+}
+
 /// No direct audio output or network access occurs until the caller issues
 /// an explicit PlayInternet command. One engine owns one active worker.
 pub struct NativeRadioEngine {
     controller: Arc<Mutex<RadioController>>,
     cancelled: Arc<AtomicBool>,
     volume: Arc<AtomicU8>,
+    output_failed: Arc<AtomicBool>,
     worker: Option<JoinHandle<()>>,
 }
 
@@ -60,6 +88,8 @@ impl NativeRadioEngine {
         let worker_controller = Arc::clone(&controller);
         let worker_cancelled = Arc::clone(&cancelled);
         let worker_volume = Arc::clone(&volume);
+        let output_failed = Arc::new(AtomicBool::new(false));
+        let worker_output_failed = Arc::clone(&output_failed);
         let id = station_id.to_owned();
         let selected_output = output_id.to_owned();
         let worker = thread::Builder::new()
@@ -75,10 +105,13 @@ impl NativeRadioEngine {
                 );
                 if let Err(error) = result {
                     if !worker_cancelled.load(Ordering::Acquire) {
+                        if matches!(error, PlaybackFailure::Output(_)) {
+                            worker_output_failed.store(true, Ordering::Release);
+                        }
                         worker_controller
                             .lock()
                             .expect("radio state mutex poisoned")
-                            .event(generation, PlaybackEvent::Error(error));
+                            .event(generation, PlaybackEvent::Error(error.message()));
                     }
                 }
             })
@@ -87,8 +120,15 @@ impl NativeRadioEngine {
             controller,
             cancelled,
             volume,
+            output_failed,
             worker: Some(worker),
         })
+    }
+
+    /// An audio-device failure is never treated as transient network loss.
+    /// The HUD can offer an explicit output selection/retry.
+    pub fn output_failed(&self) -> bool {
+        self.output_failed.load(Ordering::Acquire)
     }
 
     pub fn status(&self) -> RadioSession {
@@ -188,13 +228,12 @@ fn play_with_recovery(
     cancelled: &Arc<AtomicBool>,
     volume: Arc<AtomicU8>,
     output_id: &str,
-) -> Result<(), String> {
+) -> Result<(), PlaybackFailure> {
     let mut attempted_retries = 0;
     loop {
         if cancelled.load(Ordering::Acquire) {
             return Ok(());
         }
-        let network_lost = AtomicBool::new(false);
         let result = decode_and_play(
             station_id,
             generation,
@@ -202,7 +241,6 @@ fn play_with_recovery(
             cancelled,
             Arc::clone(&volume),
             output_id,
-            &network_lost,
         );
         let Err(error) = result else {
             return Ok(());
@@ -210,10 +248,10 @@ fn play_with_recovery(
         if cancelled.load(Ordering::Acquire) {
             return Ok(());
         }
-        let class = if network_lost.load(Ordering::Acquire) {
-            FailureClass::NetworkTransient
-        } else {
-            FailureClass::Permanent
+        let class = match &error {
+            PlaybackFailure::Network(_) => FailureClass::NetworkTransient,
+            PlaybackFailure::Output(_) => FailureClass::OutputUnavailable,
+            PlaybackFailure::Permanent(_) => FailureClass::Permanent,
         };
         match decide(class, attempted_retries, cancelled.load(Ordering::Acquire)) {
             RecoveryAction::RetryAfter(delay) => {
@@ -253,10 +291,9 @@ fn decode_and_play(
     cancelled: &Arc<AtomicBool>,
     volume: Arc<AtomicU8>,
     output_id: &str,
-    network_lost: &AtomicBool,
-) -> Result<(), String> {
+) -> Result<(), PlaybackFailure> {
     // Establish an audio device before opening a remote broadcaster.
-    let mut output = NativeAudioOutput::open(volume, output_id)?;
+    let mut output = NativeAudioOutput::open(volume, output_id).map_err(PlaybackFailure::Output)?;
     if cancelled.load(Ordering::Acquire) {
         return Ok(());
     }
@@ -300,7 +337,7 @@ fn decode_and_play(
 
     while !cancelled.load(Ordering::Acquire) {
         if output.has_failed() {
-            return Err("Native audio output device disconnected or failed".into());
+            return Err(PlaybackFailure::Output("Native audio output device disconnected or failed".into()));
         }
         let packet = match format.next_packet() {
             Ok(packet) => packet,
@@ -308,8 +345,7 @@ fn decode_and_play(
                 if cancelled.load(Ordering::Acquire) {
                     return Ok(());
                 }
-                network_lost.store(true, Ordering::Release);
-                return Err(format!("Broadcast stream ended or stalled: {err}"));
+                return Err(PlaybackFailure::Network(format!("Broadcast stream ended or stalled: {err}")));
             }
             Err(DecodeError::ResetRequired) => {
                 return Err("Broadcast format changed; reconnect required".into());
@@ -353,11 +389,16 @@ fn decode_and_play(
             })
             .map_err(|e| format!("Radio PCM conversion failed: {e:?}"))?;
         if !keep_going {
+            if output.has_failed() && !cancelled.load(Ordering::Acquire) {
+                return Err(PlaybackFailure::Output(
+                    "Native audio output stopped consuming samples".into(),
+                ));
+            }
             return Ok(());
         }
 
         if !started && output.buffered_samples() >= output.minimum_prebuffer_samples() {
-            output.start()?;
+            output.start().map_err(PlaybackFailure::Output)?;
             started = true;
             signal(controller, generation, PlaybackEvent::Buffered);
         }
