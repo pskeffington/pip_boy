@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-10-26 — Handheld 480×320 viewport verification (PR #34)
+
+- Move STOP REFRESH and current watch status above long network results so critical controls remain within the initial handheld viewport; keep the large page controls reachable while scrolling.
+- Add an opt-in, synthetic-only real Chromium geometry gate for 480×320 menu/results, 800×480 menu and 320×568 portrait menu using production CSS and network component.
+- Check no idle network traffic, no clipped 2×2 menu tiles, touch pager size/reachability, and explicit-authorized synthetic request counts without contacting live controllers.
+- The new browser test and field hardware validation are separate. This UI pass remains unreleased pending the exact-head CI matrix.
+
 ## 2026-10-26 — Network Engineer touch and D-pad field controls (unreleased)
 
 - Merge the first 2×2 handheld tool deck, standby status strip and 48px PREV/NEXT touch targets through [PR #32](https://github.com/pskeffington/pip_boy/pull/32) after all five quality checks passed.
