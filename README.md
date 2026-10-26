@@ -51,7 +51,7 @@ git pull --ff-only origin main
 | Overseer Task Control | Persistent assignments, role queues, status, due dates and revision-safe history | Human/organizational identity beyond local role labels |
 | Peer task transport | Explicit paired-device OpenSSH send and receipt/status retrieval | Real Mac-to-Pi SSH pairing, interruption and key-rotation tests |
 | Reclamation Field Kit | Persistent manual-position survey sites, statuses, selectable offline map markers and GeoJSON export | Field GNSS, RustGIS full renderer, Pi touch acceptance and operational verification |
-| Scout maps | Default offline central-Boston real City SAM street geometry; imported RustGIS/GeoJSON layers, opt-in GPS and separately enabled web reference | Upstream RustGIS renderer, raster/terrain, native GNSS and Pi display |
+| Scout maps | Location-driven offline-first county map; Census TIGER roads, waters and verified-county landmarks; imported RustGIS/GeoJSON, explicit GPS and separately enabled OSM reference | Upstream RustGIS renderer, raster/terrain, native GNSS and Pi display |
 | Host / Library / Notes | Local telemetry with quality labels, bundled references and offline notes | Production packaging and accessibility acceptance |
 | Fallout 4 companion | Read-only TCP protocol browser, diagnostics and bounded observation | Actual game-build/PlayStation interoperability |
 | Device simulation | Fixed fixtures, bounded queues and mock adapters | Physical GPIO, serial, SDR, BLE, mesh and camera integrations |
@@ -118,7 +118,7 @@ Switch profiles through the UI or `pipboy workbench use head-engineer --replace`
 
 **County MAP:** select GPS ON or manual CENTER, then COUNTY. The map resolves the containing Census county GEOID and pulls approved TIGER 2025 county-wide roads, areal water and streams with bounded downloads. A prior county package restores from the local cache without remote requests. [County source guide](docs/COUNTY_SOURCES.md).
 
-**Scout MAP:** defaults to an **offline real-geometry central Boston street basemap** (10,634 source-derived segments, no fictional roads or landmarks), rendered in Rust-Boy's original phosphor style. **BOS OFF / BOS ON** hides or restores the reference; the source manifest identifies its dated municipal data. Coverage is partial, not live. [Boston basemap provenance](docs/BOSTON_BASEMAP.md) · [Lore naming](docs/LORE_NAMING.md).
+**Scout MAP:** begins with an unlocated reference grid. The operator selects GPS or a manual center, then COUNTY to resolve a Census GEOID and acquire verified 2025 TIGER/Line road, water and county-clipped point-landmark geometry from a fixed source registry. Cached county roads/water reload without internet; no demonstration city or fictitious features are bundled. [County ingestion and provenance](docs/COUNTY_SOURCES.md) · [Lore naming](docs/LORE_NAMING.md).
 
 **RustGIS import:** choose **RUSTGIS** to load `.rgismap`, `.rgis`, `.rgislyr`, `.rgismpk`, `.rgispkg` or GeoJSON. Native vector data remains primary; missing raster/streamed sources are reported. Browser GPS needs permission. **WEB ON** enables a separately labeled OpenStreetMap/Overpass reference overlay; provider reachability checks contain no coordinates. [Map/GPS guide](docs/SCOUT_GPS_MAP.md).
 
