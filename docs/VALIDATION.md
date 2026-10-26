@@ -1,5 +1,10 @@
 # Rust-Boy | Validation evidence
 
+## Task/peer HTTP route extraction — 2026-10-26 (CI pending)
+
+`crates/pipboy/src/dashboard/task_routes.rs` now contains the Task Control and explicitly confirmed peer handoff route implementations, keeping the same public endpoints and parent same-origin gate. A new Rust regression checks that every POST route in this family rejects hostile origins **before creating local stores**. Existing manager/role scoping, optimistic revision, malformed-store preservation, SSH peer smoke tests and desktop/micro launch checks remain registered in the five-job CI matrix. This is a structural extraction; this entry does **not** claim green CI or physical SSH interoperability. Exact-head workflow results must be recorded before merging.
+
+
 ## PACE routing local validation — 2026-10-25
 
 Exact Rust 1.90.0 passes 239 workspace tests (52 CLI/dashboard, 175 core,

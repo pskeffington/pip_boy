@@ -28,6 +28,8 @@ The sender's status, authenticated SSH delivery receipt, receiving device's manu
 
 ## Task Control data and operational boundaries
 
+The dashboard's `crates/pipboy/src/dashboard/task_routes.rs` contains the operator-facing Task Control and explicit peer-delivery route handlers. `dashboard.rs` retains the single loopback-host / same-origin request gate and dispatch table; the extracted module uses those shared request/response contracts, not a second server, storage schema or permission mechanism. The native SSH bridge remains `crates/pipboy/src/peer.rs`. Existing endpoint paths and error/status behavior are preserved by dashboard unit and smoke tests.
+
 The Rust `pipboy-core::tasks` module persists a distinct, versioned `tasks.json` board under `PIPBOY_HOME`; the `workbench.json` file still stores role/pin configuration only. Task create/update requests use the existing loopback API but **never** start a communication channel. A reusable browser component `assets/tasks.js` powers both desktop and handheld mission boards. Overseer/Custom with `mission-board` pinned sees the full local manager board; other job profiles see only their locally assigned queue. These UI scopes are **not authenticated role-based access control**.
 
 Task records include expected-revision optimistic concurrency, bounded events and explicit manual `sent_at` / `acknowledged_at` tracking. Clipboard handoffs and email drafts are only prepared after operator action; no automatic sending or receipt inference is performed. The local store rejects invalid/future schemas without replacing them. See [Task Control contract](TASK_CONTROL.md).

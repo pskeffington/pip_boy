@@ -3,6 +3,8 @@
 //! This is a local companion window, not an external web service. Profiles are
 //! declarative. No hardware, camera, console, GNSS or TAK transport is opened
 //! by browsing the dashboard or selecting a role.
+mod task_routes;
+
 use crate::county_cache::{self, CountyCache};
 use crate::peer;
 use pipboy_core::message_pace::{PaceStore, Tier};
@@ -13,7 +15,6 @@ use pipboy_core::network_suite;
 use pipboy_core::peers::PeerStore;
 use pipboy_core::reclamation::{NewSite, SiteStatus, SiteStore};
 use pipboy_core::scout_gis::{distance_meters, waypoint, Point};
-use pipboy_core::tasks::{NewTask, Status, TaskStore};
 use pipboy_core::unifi;
 use pipboy_core::workbench::{inspect_hex, tool, WorkbenchStore, PALETTE, PRESETS};
 use serde_json::{json, Value};
@@ -264,6 +265,13 @@ fn str_field<'a>(body: &'a Value, key: &str) -> Result<&'a str, Response> {
     body.get(key)
         .and_then(Value::as_str)
         .ok_or_else(|| Response::error(422, "Missing or invalid string field"))
+}
+
+fn positive_integer(body: &Value, key: &str) -> Result<u64, Response> {
+    body.get(key)
+        .and_then(Value::as_u64)
+        .filter(|value| *value > 0)
+        .ok_or_else(|| Response::error(422, "Missing or invalid task ID/revision"))
 }
 
 fn state(store: &WorkbenchStore) -> Result<Response, Response> {
@@ -627,243 +635,6 @@ fn reclamation_change(req: &Request, store: &WorkbenchStore) -> Result<Response,
 }
 
 /// Task records are in a separate local file and survive job-template changes.
-fn task_store(workbench: &WorkbenchStore) -> TaskStore {
-    let root = workbench
-        .path()
-        .parent()
-        .unwrap_or_else(|| std::path::Path::new("."));
-    TaskStore::new(root.to_path_buf())
-}
-
-fn manager_role(store: &WorkbenchStore) -> Result<(String, bool), Response> {
-    let board = store
-        .load()
-        .map_err(|_| Response::error(409, "Workbench unavailable; original file preserved"))?;
-    let manager = board.slots.iter().any(|slot| slot.tool == "mission-board");
-    Ok((board.profile, manager))
-}
-
-fn tasks_read(store: &WorkbenchStore) -> Result<Response, Response> {
-    let (role, manager) = manager_role(store)?;
-    let task_store = task_store(store);
-    let mut board = task_store
-        .load()
-        .map_err(|_| Response::error(409, "Task board unavailable; original file preserved"))?;
-    if !manager {
-        board.tasks.retain(|task| task.role == role);
-    }
-    Ok(Response::json(
-        200,
-        &json!({
-            "board": board,
-            "manager": manager,
-            "role": role,
-            "delivery": "manual_handoff_only"
-        }),
-    ))
-}
-
-fn tasks_create(req: &Request, store: &WorkbenchStore) -> Result<Response, Response> {
-    let (_, manager) = manager_role(store)?;
-    if !manager {
-        return Err(Response::error(
-            403,
-            "Pin Task Control or load Overseer to create assignments",
-        ));
-    }
-    let body = parse_json_body(
-        req,
-        &[
-            "title", "details", "assignee", "role", "contact", "priority", "due",
-        ],
-    )?;
-    let task: NewTask = serde_json::from_value(body)
-        .map_err(|_| Response::error(422, "Invalid new task fields"))?;
-    let result = task_store(store).create(task).map_err(|_| {
-        Response::error(422, "Task validation or local storage failed; no task sent")
-    })?;
-    Ok(Response::json(200, &json!({"task": result, "sent": false})))
-}
-
-fn positive_integer(body: &Value, key: &str) -> Result<u64, Response> {
-    body.get(key)
-        .and_then(Value::as_u64)
-        .filter(|value| *value > 0)
-        .ok_or_else(|| Response::error(422, "Missing or invalid task ID/revision"))
-}
-
-fn tasks_change(req: &Request, store: &WorkbenchStore) -> Result<Response, Response> {
-    let body = parse_json_body(
-        req,
-        &[
-            "id",
-            "revision",
-            "operation",
-            "status",
-            "note",
-            "assignee",
-            "role",
-            "contact",
-        ],
-    )?;
-    let id = positive_integer(&body, "id")?;
-    let revision = positive_integer(&body, "revision")?;
-    let operation = str_field(&body, "operation")?;
-    let (role, manager) = manager_role(store)?;
-    let tasks = task_store(store);
-    let existing = tasks
-        .task(id)
-        .map_err(|_| Response::error(404, "Task not found"))?;
-    if !manager && existing.role != role {
-        return Err(Response::error(
-            403,
-            "Only the assigned role or Task Control can update this task",
-        ));
-    }
-    let changed = match operation {
-        "status" => {
-            let status: Status = serde_json::from_value(
-                body.get("status")
-                    .cloned()
-                    .ok_or_else(|| Response::error(422, "Missing task status"))?,
-            )
-            .map_err(|_| Response::error(422, "Invalid task status"))?;
-            let note = body.get("note").and_then(Value::as_str).unwrap_or("");
-            tasks.set_status(id, revision, status, note)
-        }
-        "reassign" if manager => {
-            let person = str_field(&body, "assignee")?;
-            let target = str_field(&body, "role")?;
-            let contact = body.get("contact").and_then(Value::as_str);
-            tasks.reassign(id, revision, person, target, contact)
-        }
-        "sent" if manager => tasks.mark_sent(id, revision),
-        "acknowledge" => tasks.acknowledge(id, revision),
-        _ => return Err(Response::error(403, "Operation restricted to Task Control")),
-    };
-    let task = changed.map_err(|error| {
-        if error.kind() == io::ErrorKind::AlreadyExists {
-            Response::error(409, "Task was edited elsewhere; refresh the board")
-        } else if error.kind() == io::ErrorKind::NotFound {
-            Response::error(404, "Task not found")
-        } else {
-            Response::error(422, "Task update invalid or storage unavailable")
-        }
-    })?;
-    Ok(Response::json(200, &json!({"task": task})))
-}
-
-fn tasks_handoff(req: &Request, store: &WorkbenchStore) -> Result<Response, Response> {
-    let (_, manager) = manager_role(store)?;
-    if !manager {
-        return Err(Response::error(
-            403,
-            "Task handoff is an Overseer/Task Control operation",
-        ));
-    }
-    let body = parse_json_body(req, &["id"])?;
-    let id = positive_integer(&body, "id")?;
-    let task = task_store(store)
-        .task(id)
-        .map_err(|_| Response::error(404, "Task not found"))?;
-    Ok(Response::json(
-        200,
-        &json!({"text": task.handoff(), "sent": false, "transport": "operator_controlled"}),
-    ))
-}
-
-fn peers_read(store: &WorkbenchStore) -> Result<Response, Response> {
-    let (_, manager) = manager_role(store)?;
-    if !manager {
-        return Err(Response::error(
-            403,
-            "Only Task Control can inspect paired destinations",
-        ));
-    }
-    let root = store
-        .path()
-        .parent()
-        .unwrap_or_else(|| std::path::Path::new("."));
-    let peers = PeerStore::new(root.to_path_buf());
-    let status = peer::safe_peers_from_store(&peers)
-        .map_err(|_| Response::error(409, "Peer roster unavailable; original file preserved"))?;
-    Ok(Response::json(200, &status))
-}
-
-fn device_send(req: &Request, store: &WorkbenchStore) -> Result<Response, Response> {
-    let (_, manager) = manager_role(store)?;
-    if !manager {
-        return Err(Response::error(
-            403,
-            "Load Overseer or explicitly pin Task Control",
-        ));
-    }
-    let body = parse_json_body(req, &["id", "revision", "alias", "confirm"])?;
-    if body.get("confirm").and_then(Value::as_bool) != Some(true) {
-        return Err(Response::error(
-            422,
-            "Explicit device-send confirmation required",
-        ));
-    }
-    let id = positive_integer(&body, "id")?;
-    let revision = positive_integer(&body, "revision")?;
-    let alias = str_field(&body, "alias")?;
-    let root = store
-        .path()
-        .parent()
-        .unwrap_or_else(|| std::path::Path::new("."));
-    let peers = PeerStore::new(root.to_path_buf());
-    let tasks = TaskStore::new(root.to_path_buf());
-    let result =
-        peer::send_from_store(&tasks, &peers, id, revision, alias).map_err(|_| {
-            Response::error(409,
-            "Device delivery failed or task changed; verify SSH peer and reload before retrying")
-        })?;
-    Ok(Response::json(
-        200,
-        &json!({
-            "task": result,
-            "transport": "openssh",
-            "stored_on_receiver": true,
-            "human_acknowledged": false
-        }),
-    ))
-}
-
-fn device_sync(req: &Request, store: &WorkbenchStore) -> Result<Response, Response> {
-    let (_, manager) = manager_role(store)?;
-    if !manager {
-        return Err(Response::error(
-            403,
-            "Only Task Control can refresh peer receipts",
-        ));
-    }
-    let body = parse_json_body(req, &["alias", "confirm"])?;
-    if body.get("confirm").and_then(Value::as_bool) != Some(true) {
-        return Err(Response::error(
-            422,
-            "Explicit receipt-sync confirmation required",
-        ));
-    }
-    let alias = str_field(&body, "alias")?;
-    let root = store
-        .path()
-        .parent()
-        .unwrap_or_else(|| std::path::Path::new("."));
-    let peers = PeerStore::new(root.to_path_buf());
-    let tasks = TaskStore::new(root.to_path_buf());
-    let changed = peer::sync_from_store(&tasks, &peers, alias).map_err(|_| {
-        Response::error(
-            409,
-            "Could not verify or process remote progress; local records preserved",
-        )
-    })?;
-    Ok(Response::json(
-        200,
-        &json!({"updated": changed, "source": "openssh_explicit_sync"}),
-    ))
-}
-
 fn messenger_store(store: &WorkbenchStore) -> MessageStore {
     let root = store
         .path()
@@ -1273,18 +1044,18 @@ fn dispatch(req: &Request, store: &WorkbenchStore, port: u16) -> Response {
         ("POST", "/api/reclamation/change") => {
             reclamation_change(req, store).unwrap_or_else(|error| error)
         }
-        ("GET", "/api/tasks") => tasks_read(store).unwrap_or_else(|error| error),
-        ("GET", "/api/peers") => peers_read(store).unwrap_or_else(|error| error),
+        ("GET", "/api/tasks") => task_routes::tasks_read(store).unwrap_or_else(|error| error),
+        ("GET", "/api/peers") => task_routes::peers_read(store).unwrap_or_else(|error| error),
         ("GET", "/api/messages") => messages_read(store).unwrap_or_else(|error| error),
         ("POST", "/api/messages/send") => messages_send(req, store).unwrap_or_else(|error| error),
         ("POST", "/api/messages/retry") => messages_retry(req, store).unwrap_or_else(|error| error),
         ("POST", "/api/net/scan") => scan_network(req, store).unwrap_or_else(|error| error),
         ("POST", "/api/net/unifi") => unifi_request(req, store).unwrap_or_else(|error| error),
-        ("POST", "/api/peer/send") => device_send(req, store).unwrap_or_else(|error| error),
-        ("POST", "/api/peer/sync") => device_sync(req, store).unwrap_or_else(|error| error),
-        ("POST", "/api/tasks/create") => tasks_create(req, store).unwrap_or_else(|error| error),
-        ("POST", "/api/tasks/change") => tasks_change(req, store).unwrap_or_else(|error| error),
-        ("POST", "/api/tasks/handoff") => tasks_handoff(req, store).unwrap_or_else(|error| error),
+        ("POST", "/api/peer/send") => task_routes::device_send(req, store).unwrap_or_else(|error| error),
+        ("POST", "/api/peer/sync") => task_routes::device_sync(req, store).unwrap_or_else(|error| error),
+        ("POST", "/api/tasks/create") => task_routes::tasks_create(req, store).unwrap_or_else(|error| error),
+        ("POST", "/api/tasks/change") => task_routes::tasks_change(req, store).unwrap_or_else(|error| error),
+        ("POST", "/api/tasks/handoff") => task_routes::tasks_handoff(req, store).unwrap_or_else(|error| error),
         ("POST", "/api/profile") => {
             let result = (|| {
                 let body = parse_json_body(req, &["id", "confirm"])?;
@@ -1454,6 +1225,8 @@ pub fn run(args: Vec<String>) -> Result<(), Box<dyn Error>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use super::task_routes::task_store;
+    use pipboy_core::tasks::Status;
     use std::fs;
 
     fn request(method: &str, path: &str, body: Value) -> Request {
@@ -1923,6 +1696,25 @@ mod tests {
             std::fs::read_to_string(task_store(&store).path()).unwrap(),
             "bad-json"
         );
+    }
+
+    #[test]
+    fn task_peer_routes_reject_cross_origin_before_any_storage() {
+        let dir = tempfile::tempdir().unwrap();
+        let store = WorkbenchStore::new(dir.path().join("private/workbench.json"));
+        for path in [
+            "/api/tasks/create",
+            "/api/tasks/change",
+            "/api/tasks/handoff",
+            "/api/peer/send",
+            "/api/peer/sync",
+        ] {
+            let mut req = request("POST", path, json!({}));
+            req.headers.insert("origin".into(), "http://untrusted.invalid".into());
+            let response = dispatch(&req, &store, 8765);
+            assert_eq!(response.status, 403, "cross-origin route {path}");
+            assert!(!dir.path().join("private").exists());
+        }
     }
 
     #[test]

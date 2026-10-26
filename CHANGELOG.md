@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-10-26 — Dashboard Task Control route separation (CI pending)
+
+- Extract Task Control and explicitly confirmed peer-send/sync HTTP handlers from the monolithic dashboard server to `crates/pipboy/src/dashboard/task_routes.rs`, without changing public URLs, local storage, validation or native SSH boundaries.
+- Preserve parent loopback host/origin checks; add a table-driven regression asserting all Task/peer POST endpoints reject cross-origin requests before writing stores.
+- Assign the new route module to Task Control in the versioned component index and update the architecture/repository navigation guides. Do not merge until all five CI jobs pass.
+
+
 ## 2026-10-26 — MAP layer controls and indexed handheld renderer
 
 - Add independent touch/keyboard ON/OFF switches for official Census roads, combined water, clipped landmarks and county border without modifying authoritative cached data or initiating location/provider calls.
