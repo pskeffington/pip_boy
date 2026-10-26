@@ -4,7 +4,7 @@
 
 - Merge the first 2×2 handheld tool deck, standby status strip and 48px PREV/NEXT touch targets through [PR #32](https://github.com/pskeffington/pip_boy/pull/32) after all five quality checks passed.
 - Extend the Network Engineer keyboard-emulated hardware contract: D-pad up/down traverses focusable controls, left/right or PageUp/PageDown turns tool/result pages, and native Enter/Space remains the only button activation.
-- Strengthen high-contrast focus/pressed states and preserve the no-autoscan, no-repeat and no-implicit-authorization behavior. Restrict the handler to the mounted tool, outside any open dialog and away from text-field editing.
+- Strengthen high-contrast focus/pressed states and preserve the no-autoscan, no-repeat and no-implicit-authorization behavior. Restrict the handler to the mounted tool and outside open dialogs. Preserve caret Left/Right in single-line fields while enabling Up/Down form traversal; native select and multiline keys are left untouched.
 - Add regression cases for focus order, four-page boundaries, consent checkbox traversal, physical page keys and no network traffic from focus alone. Real touch, gloves, hardware switches and 480×320 browser visual acceptance remain open.
 
 ## 2026-10-25 — Persistent PACE delivery progress
