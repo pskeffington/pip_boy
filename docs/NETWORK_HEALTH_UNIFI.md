@@ -2,6 +2,10 @@
 
 The unified **NET ENGINEER** workspace is available from `main` in the CLI, desktop and micro HUD. Use Head Engineer or pin `net-lab` in Custom. Opening the workspace only displays tools.
 
+## HTTP route ownership
+
+The HUD's manually confirmed private LAN scan and read-only controller actions are implemented in `crates/pipboy/src/dashboard/network_routes.rs`, sharing the original parent loopback Host/Origin gate. `pipboy-core::network_probe` and `pipboy-core::unifi` remain responsible for network and controller policies; `endpoint_probe` owns separate measured ICMP/TCP health operations. Moving the HTTP functions does not change controller configuration, transmit permissions, probe rates or the need for explicit operator confirmation. Fixtures test rejection before network access; live device acceptance is separate.
+
 ## ICMP and TCP measurements
 
 ```bash

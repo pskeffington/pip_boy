@@ -1,5 +1,10 @@
 # Rust-Boy | Validation evidence
 
+## NET ENGINEER HTTP extraction — 2026-10-26 (CI pending)
+
+The source-only `dashboard/network_routes.rs` extraction preserves `POST /api/net/scan` and `POST /api/net/unifi` behind the original exact Host/Origin, content-type, bounded JSON and explicit `net-lab`/confirmation checks. New dashboard tests reject hostile Origin, missing consent, inappropriate roles, invalid CIDR length, invalid UniFi site IDs, public compare scope and unsupported operations **before network probes or controller access**. Prior network health and UniFi smoke checks remain in the existing five-job workflow. This entry is a proposed code-organization pass; exact-commit CI has not yet been verified, and actual UniFi/field Pi interoperability remains untested.
+
+
 ## Native Mac real-cache integrity audit — 2026-10-26 (CI pending)
 
 The new `tools/audit_map_cache.py` is invoked by `scripts/test-map-macos.command --audit-cache`, operating on an operator-selected existing local profile only. It starts the actual Rust loopback service and sends fixed cache-only, non-confirming HTTP requests to boundary/source endpoints; there is no outward provider call. An independent Python ZIP reader verifies archive structure, paths, decompression budget and CRC and reports failures/partial layers, while native Rust validates the county boundary GEOID and rings. `tools/test_audit_map_cache.py` uses a test-only fictional county and actual loopback server to verify missing, complete, partial, bad boundary and damaged ZIP responses without touching the operator's cache. No live Census retrieval or personal Mac test has yet been performed by this code.
@@ -8,9 +13,9 @@ The new `tools/audit_map_cache.py` is invoked by `scripts/test-map-macos.command
 
 `scripts/test-map-macos.command` provides a native macOS Rust build, isolated loopback HTTP smoke, offline GIS parser/permission tests, optional real Chrome emulation and a persistent test-home launch. [Mac MAP acceptance matrix](MAC_MAP_TESTING.md) defines cold startup, live Census GEOID resolution, layer toggles, full offline restart, GPS permission behavior and draw/source timing measurements. The GitHub macOS runner may execute the automated portion after CI passes; **no user-Mac field results are recorded yet**. Do not equate CI with a passed GPS, Safari, or physical touch session.
 
-## Messenger/PACE HTTP route separation — 2026-10-26 (CI pending)
+## Messenger/PACE HTTP route separation — 2026-10-26 (five-job CI passed; merged)
 
-The source-only Messenger handler extraction on `chore/dashboard-messenger-boundary` moves `GET /api/messages`, `POST /api/messages/send` and `POST /api/messages/retry` into `crates/pipboy/src/dashboard/messenger_routes.rs`. The sole parent Host/Origin validation and JSON parser remain unchanged. New offline Rust dashboard tests check denial of cross-origin mutations and invalid GET Host **before touching private stores**, explicit SEND/RETRY confirmation, invalid PACE tiers/text, unknown outgoing message IDs and unsupported content type. Existing desktop/micro, Messenger/PACE, SSH and workspace tests remain part of the five-job CI suite. **Pass status is pending exact-head CI; no live SSH, independent radio bearer or Raspberry Pi hardware test is claimed.**
+The source-only Messenger handler extraction on `chore/dashboard-messenger-boundary` moves `GET /api/messages`, `POST /api/messages/send` and `POST /api/messages/retry` into `crates/pipboy/src/dashboard/messenger_routes.rs`. The sole parent Host/Origin validation and JSON parser remain unchanged. New offline Rust dashboard tests check denial of cross-origin mutations and invalid GET Host **before touching private stores**, explicit SEND/RETRY confirmation, invalid PACE tiers/text, unknown outgoing message IDs and unsupported content type. Existing desktop/micro, Messenger/PACE, SSH and workspace tests remain part of the five-job CI suite. Five-job CI [run 40295084172](https://github.com/pskeffington/pip_boy/actions/runs/40295084172) passed on combined head `da650c89b7e2302eeb9115af1bbe22c22a576eba`; PR #45 merged as `c96d3943f2cbc51cd37498fc76f9879d47fe91f5`. No live SSH, independent radio bearer or Raspberry Pi hardware test is claimed.
 
 
 ## Task/peer HTTP route extraction — 2026-10-26 (five-job CI passed)
