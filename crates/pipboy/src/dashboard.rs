@@ -1299,12 +1299,10 @@ fn radio_command(req: &Request) -> Result<Response, Response> {
                 .map_err(|_| Response::error(500, "Output controller unavailable"))? =
                 output_id.to_owned();
             if let Some(state) = previous {
-                if !matches!(
+                if pipboy_core::radio_recovery::restart_after_output_change(
                     state.state,
-                    pipboy_core::radio_controller::PlaybackState::Stopped
-                ) && (state.state != pipboy_core::radio_controller::PlaybackState::Failed
-                    || recover_failed_output)
-                {
+                    recover_failed_output,
+                ) {
                     if let Some(station) = state.station_id {
                         *engine = Some(
                             NativeRadioEngine::start_internet(
@@ -1675,6 +1673,9 @@ mod tests {
         assert!(json["outputs"].is_array());
         assert!(json["output_available"].is_boolean());
         assert_eq!(json["output_failure"], false);
+        assert!(json["outputs"].as_array().unwrap().iter().all(|device| {
+            device["id"].is_string() && device["available"].is_boolean()
+        }));
         let invalid = request(
             "POST",
             "/api/radio",
