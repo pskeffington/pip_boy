@@ -34,7 +34,9 @@ window.RustBoyNetwork = (() => {
     let refreshes = 0;
     let status = null;
     let screen = "menu";
+    let activePager = null;
     const candidates = Array.isArray(operations) ? operations : [];
+    const toolsPerPage = compact ? 4 : 6;
 
     function stop() {
       generation++;
@@ -51,16 +53,45 @@ window.RustBoyNetwork = (() => {
       root.append(row);
     }
 
+    // Both touch taps and keyboard-emulated physical D-pads use this pager.
     function pager(page, total, change, target = root) {
-      const row = node("div", "net-actions net-pager");
-      const previous = control("◀", () => change(page - 1));
-      const next = control("▶", () => change(page + 1));
+      const row = node("nav", "net-actions net-pager");
+      row.setAttribute("aria-label", screen === "menu" ? "Network tool pages" : "Network result pages");
+      const go = (step) => {
+        const nextPage = page + step;
+        if (nextPage < 0 || nextPage >= total) return false;
+        change(nextPage);
+        // Keep a hardware/keyboard user's focus on a reachable page button.
+        const selected = root.querySelector?.(step < 0 ? ".net-page-prev" : ".net-page-next");
+        const fallback = root.querySelector?.(step < 0 ? ".net-page-next" : ".net-page-prev");
+        (selected && !selected.disabled ? selected : fallback)?.focus?.({ preventScroll: true });
+        return true;
+      };
+      const previous = control("◀ PREV", () => go(-1));
+      const next = control("NEXT ▶", () => go(1));
+      previous.classList.add("net-page-arrow", "net-page-prev");
+      next.classList.add("net-page-arrow", "net-page-next");
       previous.disabled = page === 0;
       next.disabled = page + 1 === total;
       previous.setAttribute("aria-label", "Previous page");
       next.setAttribute("aria-label", "Next page");
-      row.append(previous, node("span", "", (page + 1) + " / " + total), next);
+      const index = node("span", "net-page-index", "PAGE " + (page + 1) + " / " + total);
+      index.setAttribute("aria-label", "Page " + (page + 1) + " of " + total);
+      row.append(previous, index, next);
       target.append(row);
+      activePager = go;
+    }
+
+    function onPageKey(event) {
+      if (destroyed || !compact || document.hidden || root.isConnected === false ||
+          (screen !== "menu" && screen !== "result") ||
+          document.querySelector?.("dialog[open]") ||
+          event.altKey || event.ctrlKey || event.metaKey || event.repeat) return;
+      const target = event.target;
+      if (target?.isContentEditable ||
+          ["INPUT", "SELECT", "TEXTAREA"].includes(String(target?.tagName || "").toUpperCase())) return;
+      const step = event.key === "ArrowLeft" ? -1 : event.key === "ArrowRight" ? 1 : 0;
+      if (step && activePager?.(step)) event.preventDefault();
     }
 
     const toolDescription = Object.freeze({
@@ -104,8 +135,9 @@ window.RustBoyNetwork = (() => {
     function menu() {
       screen = "menu";
       stop();
+      activePager = null;
       root.replaceChildren();
-      const total = Math.max(1, Math.ceil(candidates.length / 6));
+      const total = Math.max(1, Math.ceil(candidates.length / toolsPerPage));
       menuPage = Math.max(0, Math.min(menuPage, total - 1));
       const landing = node("div", "net-landing");
       const heading = node("div", "net-launch-head");
@@ -129,7 +161,7 @@ window.RustBoyNetwork = (() => {
       landing.append(stats);
 
       const grid = node("div", "net-menu");
-      for (const op of candidates.slice(menuPage * 6, menuPage * 6 + 6)) {
+      for (const op of candidates.slice(menuPage * toolsPerPage, (menuPage + 1) * toolsPerPage)) {
         const item = control("", () => {
           operation = op;
           values = { input: op.example, extra: op.extra_example || "", samples: "5" };
@@ -148,7 +180,7 @@ window.RustBoyNetwork = (() => {
       landing.append(grid);
 
       const footer = node("div", "net-launch-footer");
-      footer.append(node("span", "net-page-hint", "SELECT TOOL / CONFIGURE / RUN"));
+      if (!compact) footer.append(node("span", "net-page-hint", "SELECT TOOL / CONFIGURE / RUN"));
       if (total > 1) pager(menuPage, total, (page) => { menuPage = page; menu(); }, footer);
       landing.append(footer);
       root.append(landing);
@@ -250,6 +282,7 @@ window.RustBoyNetwork = (() => {
 
     function result() {
       screen = "result";
+      activePager = null;
       root.replaceChildren();
       header("EDIT", configure, operation.name);
       const data = lastResult;
@@ -359,6 +392,7 @@ window.RustBoyNetwork = (() => {
     }
     function pagehide() { stop(); }
     document.addEventListener("visibilitychange", visibility);
+    document.addEventListener("keydown", onPageKey);
     window.addEventListener("pagehide", pagehide);
     menu();
     return {
@@ -373,6 +407,7 @@ window.RustBoyNetwork = (() => {
         destroyed = true;
         stop();
         document.removeEventListener("visibilitychange", visibility);
+        document.removeEventListener("keydown", onPageKey);
         window.removeEventListener("pagehide", pagehide);
       }
     };
