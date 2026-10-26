@@ -70,9 +70,39 @@ impl ReceiverError {
     }
 }
 
+/// Selecting another OS output is a user action. Running streams may
+/// switch immediately; failed streams may only resume if their failure was
+/// explicitly classified as an output-device failure. Never autoplay a
+/// stopped session or retry unsupported media just from changing speakers.
+pub fn restart_after_output_change(
+    state: crate::radio_controller::PlaybackState,
+    output_failed: bool,
+) -> bool {
+    use crate::radio_controller::PlaybackState;
+    match state {
+        PlaybackState::Stopped => false,
+        PlaybackState::Failed => output_failed,
+        PlaybackState::Connecting
+        | PlaybackState::Buffering
+        | PlaybackState::Playing
+        | PlaybackState::Recovering => true,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn output_selection_never_autoplays_stopped_or_unrelated_failures() {
+        use crate::radio_controller::PlaybackState;
+        assert!(!restart_after_output_change(PlaybackState::Stopped, false));
+        assert!(!restart_after_output_change(PlaybackState::Stopped, true));
+        assert!(!restart_after_output_change(PlaybackState::Failed, false));
+        assert!(restart_after_output_change(PlaybackState::Failed, true));
+        assert!(restart_after_output_change(PlaybackState::Playing, false));
+        assert!(restart_after_output_change(PlaybackState::Recovering, false));
+    }
 
     #[test]
     fn bounded_retry_delays() {
