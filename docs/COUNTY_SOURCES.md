@@ -28,6 +28,12 @@ The host derives `STATEFP` strictly from the first two digits of the validated c
 
 Source CRS is **GCS NAD83**; Rust-Boy displays raw longitude and latitude in a Web Mercator viewer and currently does **not** apply a formal NAD83-to-WGS84 transform. Features are reference cartography, not survey-grade alignment, road condition, or verified safe passage. Water polygons do not by themselves certify coastlines.
 
+## Rendering and layer visibility
+
+The local MAP engine groups source IDs into four display categories: **ROADS** (`tiger-roads`), **WATER** (`tiger-areawater` and `tiger-linearwater`), **LANDMARKS** (`tiger-pointlm`, clipped by verified boundary), and **BORDER** (the independently validated Census county polygon). Toggling only changes canvas visibility. It never edits source ZIPs, county identifiers, attributes, or the boundary cache, and never sends a request. RustGIS and OSM overlay controls remain independent.
+
+A bounded, non-persistent grid index is constructed from the SHP-derived per-feature envelopes after each successful source parse. Viewport lookups use source geometries without approximating their vertices. Very large envelopes, missing bounds, world-spanning and antimeridian views are handled conservatively by scanning originals, never by silently omitting features. The low-zoom road overview selects major Census MTFCC types first, without throwing away local streets. A 20,000-feature synthetic test asserts reduced viewport candidates, toggles, source preservation, landmark-first labels, and no network/GPS side effects; this is **not** an on-device performance benchmark.
+
 ## Offline county-boundary acquisition
 
 The 2025 Census TIGER/Line `COUNTY` shapefile is a **national** 80 MiB archive (`tl_2025_us_county.zip`), unsuitable for direct handheld loading. Rust-Boy instead uses bounded Census TIGERweb **ACS 2025 Counties layer 37**, queried for an exact five-digit county GEOID. No bounding-box approximation replaces real county geometry.
