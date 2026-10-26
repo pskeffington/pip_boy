@@ -348,7 +348,14 @@ fn decode_and_play(
                 if cancelled.load(Ordering::Acquire) {
                     return Ok(());
                 }
-                return Err(PlaybackFailure::Network(format!("Broadcast stream ended or stalled: {err}")));
+                if output.has_failed() {
+                    return Err(PlaybackFailure::Output(
+                        "Native audio output disconnected during radio stream".into(),
+                    ));
+                }
+                return Err(PlaybackFailure::Network(format!(
+                    "Broadcast stream ended or stalled: {err}"
+                )));
             }
             Err(DecodeError::ResetRequired) => {
                 return Err("Broadcast format changed; reconnect required".into());
