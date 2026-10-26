@@ -471,7 +471,7 @@
         ctx.strokeStyle = style.stroke || (shape.kind === "polygon" ? "#6b9f6b" : "#b5db90");
         ctx.stroke();
         // A few named roads are useful on the miniature field display.
-        if (!shape.bostonBase && shape.label && shape.kind === "line" && view.zoom >= 13.5 && labels < 12 &&
+        if (shape.label && shape.kind === "line" && view.zoom >= 13.5 && labels < 12 &&
             shape.paths[0] && shape.paths[0].length >= 2) {
           const mid = shape.paths[0][Math.floor(shape.paths[0].length / 2)];
           const p = screenPoint(view, mid[0], mid[1]);
@@ -571,7 +571,9 @@
       (view.layerName || (view.sitesVisible ? "LOCAL SITES" :
         view.countyShapes.length ? "TIGER COUNTY " + view.countyPackage.geoid :
         "NO REGION / GPS OR CENTER + COUNTY")) +
-      "  |  CENTER " + center;
+      "  |  " + (view.centerSelected || view.fix || view.countyShapes.length ||
+        view.shapes.length || view.onlineShapes.length ? "CENTER " + center :
+        "CENTER UNSET / GRID ONLY");
     view.locate.textContent = view.watchId === null && !view.gpsPending ? "GPS ON" : "GPS OFF";
     view.gpsHelp.hidden = !view.gpsIssue;
     if (view.gpsIssue) {
@@ -626,6 +628,8 @@
           " original vertices / county-wide source").join("\n") +
         (view.countyPackage.errors.length ?
           "\nPARTIAL SOURCES: " + view.countyPackage.errors.join(" | ") : "") +
+        (view.countyPackage.warnings?.length ?
+          "\nRESTRICTIONS: " + view.countyPackage.warnings.join(" | ") : "") +
         "\nWater areas/streams are reference geometry, not surveyed coastline.\n" : "") +
         (view.county ?
         "COUNTY: " + view.county.name + " / GEOID " + view.county.id + "\n" +
@@ -862,6 +866,7 @@
     try {
       const report = await window.RustBoyCounty.load(geoid,{
         cacheOnly,signal:controller.signal,
+        clipRings: view.county?.id === geoid ? view.county.shape.paths : null,
         onStatus: message => {
           if(active===view && view.countyPackageVersion===version) {
             view.countyStatus=message+" / OLD MAP KEPT";refresh(view);
@@ -877,7 +882,8 @@
           view.countyShapes=[
             ...(staged.layers["tiger-areawater"]?.shapes||[]),
             ...(staged.layers["tiger-linearwater"]?.shapes||[]),
-            ...(staged.layers["tiger-roads"]?.shapes||[])
+            ...(staged.layers["tiger-roads"]?.shapes||[]),
+            ...(staged.layers["tiger-pointlm"]?.shapes||[])
           ];
           if(cacheOnly && !view.county && !view.fix)fitCountyPackage(view);
           refresh(view);
@@ -885,9 +891,11 @@
       });
       if(active!==view || view.countyPackageVersion!==version)return;
       staged.errors=report.errors;
+      staged.warnings=report.warnings || [];
       view.countyStatus="COUNTY "+geoid+" / "+report.features+" REAL FEATURES / "+
         (cacheOnly?"LOCAL CACHE":"CENSUS 2025")+
-        (report.errors.length?" / PARTIAL - SEE SOURCES":" / SOURCES LOADED");
+        (report.errors.length?" / PARTIAL - SEE SOURCES":" / SOURCES LOADED") +
+        (staged.warnings.length?" / "+staged.warnings.join("; ").slice(0,90):"");
       refresh(view);
     }catch(error){
       if(active!==view || view.countyPackageVersion!==version ||
@@ -910,7 +918,7 @@
          !view.countyEnabled && !view.sitesVisible && cache.active_geoid &&
          cache.cached_sources.length)
         void loadCountyPackages(view,cache.active_geoid,true);
-    }catch(_){/* Missing cache leaves original offline Boston map untouched. */}
+    }catch(_){/* Missing cache leaves the locally selected grid/map untouched. */}
   }
 
   function disableCounty(view) {
@@ -958,14 +966,10 @@
         // Explicit COUNTY consent permits fixed Census source-list downloads.
         // OSM WEB stays a separate explicit operator choice.
         void loadCountyPackages(view,county.id,false);
-      } else if(!view.webEnabled && view.zoom>=12.5) {
-        view.webEnabled=true;
-        view.countyStatus += " / OSM VIEWPORT REFERENCE";
-        void webFetch(view);
       } else if(view.webEnabled) {
         void webFetch(view);
       } else {
-        view.countyStatus += " / ZOOM 13+ FOR ROAD REFERENCE";
+        view.countyStatus += " / NO CENSUS PACKAGE CLIENT / WEB OPTIONAL";
         refresh(view);
       }
     } catch(error) {
@@ -1352,8 +1356,8 @@
         view.countyStatus="CLOSE SITES BEFORE COUNTY LOOKUP";refresh(view);return;
       }
       view.countyEnabled=true;
-      const location=view.fix ? {lat:view.fix.lat,lon:view.fix.lon} :
-        view.centerSelected ? {...view.center} : null;
+      const location=view.centerSelected ? {...view.center} :
+        view.fix ? {lat:view.fix.lat,lon:view.fix.lon} : null;
       if(location)void loadCounty(view,location);
       else {view.countyStatus="GPS ON OR ENTER CENTER, THEN COUNTY LOADS";refresh(view);}
     },"Allow Census lookup of current manual/GPS location; then opt-in OSM viewport roads");
@@ -1516,7 +1520,7 @@
     view.webReconnect = () => {
       if (active !== view) return;
       if (view.webEnabled) void webFetch(view);
-      else if (!view.sitesVisible) void probeWeb(view);
+      // No automatic external ping on reconnect.
     };
     view.webDisconnect = () => {
       if (active === view && view.webEnabled) {
@@ -1538,7 +1542,7 @@
     window.requestAnimationFrame(() => {
       resize(view);
       if (view.siteAccess && pendingSiteFocus !== null) showLocalSites(view);
-      else void probeWeb(view);
+      // Entering MAP performs no external requests (cache API is loopback-only).
       if (!view.siteAccess) pendingSiteFocus = null;
       if(!view.siteAccess || pendingSiteFocus===null)void restoreCachedCounty(view);
     });
