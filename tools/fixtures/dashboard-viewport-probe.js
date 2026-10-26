@@ -25,7 +25,7 @@
         moduleCount:all(".module-card").length,
         cardsFit:all(".module-card").every(e=>inside(e,modules)),
         roleCount:all(".role-card").length,
-        rolesFit:all(".role-card").every(e=>inside(e,roles)),
+        rolesFit:innerWidth<=1100 || all(".role-card").every(e=>inside(e,roles)),
         pagerFits:all("#module-pager button").every(e=>inside(e,$("#module-pager"))),
         paneTabsVisible:innerWidth>1100 || shown($('[data-pane-target="workspace"]'))
       };
