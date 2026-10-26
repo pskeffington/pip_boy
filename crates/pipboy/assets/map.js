@@ -707,7 +707,21 @@
     }
   }
 
+  function setLayerStatus(view) {
+    const visible=COUNTY_KEYS.filter(key=>view.countyLayerVisible[key]);
+    view.layerSummary.textContent="LAYERS / "+visible.length+" OF 4 VISIBLE";
+    for(const key of COUNTY_KEYS){
+      const button=view.layerButtons[key];
+      const on=view.countyLayerVisible[key];
+      button.textContent=COUNTY_LABELS[key]+" "+(on?"ON":"OFF");
+      button.setAttribute("aria-pressed",String(on));
+      button.className="rb-map-button rb-map-layer-button"+
+        (on?"":" rb-map-layer-muted");
+    }
+  }
+
   function setStatus(view) {
+    setLayerStatus(view);
     if (active !== view) return;
     const center = view.center.lat.toFixed(5) + ", " + view.center.lon.toFixed(5);
     const fix = view.fix
@@ -721,7 +735,10 @@
         "NO REGION / GPS OR CENTER + COUNTY")) +
       "  |  " + (view.centerSelected || view.fix || view.countyShapes.length ||
         view.shapes.length || view.onlineShapes.length ? "CENTER " + center :
-        "CENTER UNSET / GRID ONLY");
+        "CENTER UNSET / GRID ONLY") +
+      (view.countyShapes.length &&
+        !COUNTY_KEYS.some(k=>view.countyLayerVisible[k]) ?
+        " / ALL COUNTY LAYERS HIDDEN" : "");
     view.locate.textContent = view.watchId === null && !view.gpsPending ? "GPS ON" : "GPS OFF";
     view.gpsHelp.hidden = !view.gpsIssue;
     if (view.gpsIssue) {
@@ -780,6 +797,11 @@
           "\nPARTIAL SOURCES: " + view.countyPackage.errors.join(" | ") : "") +
         (view.countyPackage.warnings?.length ?
           "\nRESTRICTIONS: " + view.countyPackage.warnings.join(" | ") : "") +
+        "\nENABLED: " + COUNTY_KEYS.filter(k=>view.countyLayerVisible[k]).join(", ") +
+        (view.renderStats ?
+          "\nVIEWPORT: "+view.renderStats.candidates+" candidates / "+
+          view.renderStats.loaded+" loaded; "+
+          view.renderStats.drawn+" drawn county features" : "") +
         "\nWater areas/streams are reference geometry, not surveyed coastline.\n" : "") +
         (view.county ?
         "COUNTY: " + view.county.name + " / GEOID " + view.county.id + "\n" +
@@ -807,8 +829,8 @@
 
   function refresh(view) {
     if (active !== view) return;
-    setStatus(view);
     draw(view);
+    setStatus(view);
   }
 
 
@@ -988,17 +1010,28 @@
   }
 
   function fitCountyPackage(view) {
-    const data = view.countyPackage &&
-      (view.countyPackage.layers["tiger-roads"] ||
-       view.countyPackage.layers["tiger-areawater"]);
-    if (!data) return;
-    const [west,south,east,north] = data.bounds;
-    const a = project(west,south), b = project(east,north);
-    view.zoom = clamp(Math.floor(Math.log2(Math.min(
-      Math.max(80, view.width - 50) / Math.max(0.001,Math.abs(b[0]-a[0])),
-      Math.max(60, view.height - 45) / Math.max(0.001,Math.abs(b[1]-a[1]))))),MIN_ZOOM,16);
-    view.center = inverse((a[0]+b[0])/2,(a[1]+b[1])/2);
-    view.follow = false;
+    if(!view.countyPackage)return false;
+    const bounds=[Infinity,Infinity,-Infinity,-Infinity];
+    let found=false;
+    for(const id of COUNTY_ORDER){
+      if(!view.countyLayerVisible[countyFilterFor(id)])continue;
+      const b=view.countyPackage.layers[id]?.bounds;
+      if(!validEnvelope(b))continue;
+      bounds[0]=Math.min(bounds[0],b[0]);
+      bounds[1]=Math.min(bounds[1],b[1]);
+      bounds[2]=Math.max(bounds[2],b[2]);
+      bounds[3]=Math.max(bounds[3],b[3]);
+      found=true;
+    }
+    if(!found)return false;
+    const [west,south,east,north]=bounds;
+    const a=project(west,south), b=project(east,north);
+    view.zoom=clamp(Math.floor(Math.log2(Math.min(
+      Math.max(80,view.width-50)/Math.max(0.001,Math.abs(b[0]-a[0])),
+      Math.max(60,view.height-45)/Math.max(0.001,Math.abs(b[1]-a[1]))))),MIN_ZOOM,16);
+    view.center=inverse((a[0]+b[0])/2,(a[1]+b[1])/2);
+    view.follow=false;
+    return true;
   }
 
   async function loadCountyPackages(view, geoid, cacheOnly=false) {
@@ -1025,6 +1058,8 @@
         onLayer: (id,data) => {
           if(active!==view || view.countyPackageVersion!==version ||
               controller.signal.aborted)return;
+          // Index built once on validated ingest, not on every pan/zoom.
+          data.renderIndex=buildCountyIndex(data.shapes);
           staged.layers[id]=data;
           // Hand over after the first validated source; subsequent layers
           // belong to this same GEOID, never a mixture of two counties.
@@ -1213,10 +1248,9 @@
 
   function fitMap(view) {
     if (view.sitesVisible && view.sites.length) fitLocalSites(view);
-    else if (view.countyPackage &&
-        (view.countyPackage.layers["tiger-roads"] ||
-         view.countyPackage.layers["tiger-areawater"])) fitCountyPackage(view);
-    else if (view.county?.shape) fitLayer(view, [view.county.shape]);
+    else if (fitCountyPackage(view)) { /* Only loaded, enabled layers. */ }
+    else if (view.county?.shape && view.countyLayerVisible.boundary)
+      fitLayer(view, [view.county.shape]);
     else if (view.shapes.length) fitLayer(view);
     else if (view.onlineShapes.length) fitLayer(view, view.onlineShapes);
     else {
@@ -1523,6 +1557,8 @@
       webMeta: mapMemory ? mapMemory.webMeta || null : null,
       county: null, countyEnabled: false, countyAbort: null, countyRequest: 0,
       countyLastLookup:null,countyShapes:[],countyPackage:null,
+      countyLayerVisible:{...countyPreferences},layerButtons:null,
+      layerPanel:null,layerSummary:null,renderStats:null,
       countyPackageAbort:null,countyPackageVersion:0,countyCacheReadVersion:0,
 
       countyStatus:"COUNTY OFF / GPS OR CENTER REQUIRED",countyNode,countyButton:null,
@@ -1588,6 +1624,24 @@
       "Zoom out");
     toolbar.append(view.locate, view.followButton, manualButton,
       view.countyButton, view.fitButton, zoomIn, zoomOut);
+    const layerPanel=make("details","rb-map-layers");
+    const layerSummary=make("summary","","LAYERS / 4 OF 4 VISIBLE");
+    const layerGrid=make("div","rb-map-layer-grid");
+    view.layerPanel=layerPanel;
+    view.layerSummary=layerSummary;
+    view.layerButtons=Object.create(null);
+    for(const key of COUNTY_KEYS){
+      const button=control(COUNTY_LABELS[key]+" ON",()=>{
+        const next=!view.countyLayerVisible[key];
+        view.countyLayerVisible[key]=next;
+        countyPreferences={...view.countyLayerVisible};
+        refresh(view);
+      },"Show or hide Census "+COUNTY_LABELS[key].toLowerCase()+
+        " without deleting cached geography or requesting network access");
+      view.layerButtons[key]=button;
+      layerGrid.append(button);
+    }
+    layerPanel.append(layerSummary,layerGrid);
     const tools = make("details", "rb-map-tools");
     const extra = make("div", "rb-map-extra");
     extra.append(importButton, view.siteButton, view.webButton, view.webRefresh);
@@ -1596,7 +1650,7 @@
     }
     tools.append(make("summary", "", "TOOLS / MAP SOURCES"), extra);
     view.tools = tools;
-    root.append(toolbar, tools, manual, stage, webStatusNode, countyNode, status, gpsHelp,
+    root.append(toolbar, layerPanel, tools, manual, stage, webStatusNode, countyNode, status, gpsHelp,
       sitePanel, sourceBox, file);
     host.replaceChildren(root);
 
