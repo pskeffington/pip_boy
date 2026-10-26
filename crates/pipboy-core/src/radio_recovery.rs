@@ -29,11 +29,7 @@ pub enum RecoveryAction {
     Stop,
 }
 
-pub fn decide(
-    class: FailureClass,
-    attempted_retries: u8,
-    stop_requested: bool,
-) -> RecoveryAction {
+pub fn decide(class: FailureClass, attempted_retries: u8, stop_requested: bool) -> RecoveryAction {
     if stop_requested {
         return RecoveryAction::Stop;
     }
