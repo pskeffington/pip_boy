@@ -35,11 +35,15 @@ was tested here. [Build contract](MESSENGER_BUILD_PASSES.md) and
 from remaining field/review gates. Two pre-existing strict-Clippy issues were
 also corrected: a redundant required-text boolean and a constant-emptiness test.
 
+## Handheld viewport geometry CI — 2026-10-26
+
+The next layout pass places STOP REFRESH and status above the inventory and keeps pagers reachable during detail scrolling. The repository's stable Linux CI now invokes `tools/test_network_viewport.cjs` with headless Chrome/Chromium and production handheld CSS/Network Engineer JavaScript. Its fixture is a synthetic, explicitly authorized response with no real network access; the test requires 480×320 menu/result acceptance plus 800×480 and 320×568 menu checks. This is a newly authored test gate, **not** a passing field or browser claim until the exact PR run is green. Real touch calibration, glove use, GPIO buttons and hardware interoperability remain outside this software gate.
+
 ## Network Engineer handheld controls — 2026-10-26
 
 [PR #32](https://github.com/pskeffington/pip_boy/pull/32) merged the four-tool-per-page handheld selector, status strip, labeled PREV/NEXT pager and the first physical-key pager mapping to `main` at `6ece898`. Its exact PR head `e88171d7a616e63dc6d68e67fa0dfe36656d2160` passed [quality run 40268875632](https://github.com/pskeffington/pip_boy/actions/runs/40268875632), with five jobs successful (stable Rust, exact Rust 1.90.0, native macOS, native Windows and source/manifest validation).
 
-The follow-up extends D-pad Up/Down focus traversal, PageUp/PageDown page turns and high-contrast focus/press cues. Dependency-free browser fixture journeys cover tool-page boundaries, focus, no requests while browsing, text input preservation, consent checkbox traversal and safe cancellation. Its exact-head CI must be separately recorded before merge. Neither automated mock DOM journeys nor CI establish glove touch accuracy, physical button wiring, 480×320 screenshot geometry or an authorized network field test.
+The follow-up extends D-pad Up/Down focus traversal, PageUp/PageDown page turns and high-contrast focus/press cues. Dependency-free browser fixture journeys cover tool-page boundaries, focus, no requests while browsing, text input preservation, consent checkbox traversal and safe cancellation. Its exact-head [quality run 40270208005](https://github.com/pskeffington/pip_boy/actions/runs/40270208005) passed all five jobs (stable Rust, 1.90.0, native macOS, native Windows, manifest), and [PR #33](https://github.com/pskeffington/pip_boy/pull/33) merged at `a8fb944`. Neither automated mock DOM journeys nor CI establish glove touch accuracy, physical button wiring, 480×320 screenshot geometry or an authorized network field test.
 
 ## Network mainline and UI consolidation — 2026-10-25
 
