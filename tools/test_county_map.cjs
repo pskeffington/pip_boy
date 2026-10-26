@@ -47,6 +47,8 @@ async function main(){
  assert.equal(view.county.shape.paths.length,1);
  assert.equal(requests.filter(x=>x.url.includes("tigerweb")).length,1);
  assert.match(view.sourceLines.textContent,/Suffolk/);
+ assert.equal(view.webEnabled,false,"COUNTY must not silently enable OSM");
+ view.webButton.listeners.click[0]();
  await until(()=>view.onlineShapes.length===1);
  assert.equal(view.onlineShapes[0].label,"Real Example Road");
  view.countyButton.listeners.click[0]();
