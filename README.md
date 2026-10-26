@@ -46,6 +46,18 @@ git pull --ff-only origin main
 ./scripts/launch-micro.command
 ```
 
+## Native Mac MAP test bench
+
+**Mac-first:** develop and test the single Rust workspace on macOS. The built Rust binary hosts the localhost desktop/micro MAP; the Fallout-style vector renderer remains browser JavaScript. No Raspberry Pi is required for this phase.
+
+```bash
+# In your cloned pip_boy directory, with Rust 1.90+, Python 3 and Node 22+:
+bash scripts/test-map-macos.command --verify
+bash scripts/test-map-macos.command --launch
+```
+
+`--verify` builds and checks real native Rust plus offline map/GPS/ingestion tests against a temporary loopback service; no live Census or OSM requests. `--launch` opens the native Rust micro HUD on a free localhost port with a **separate persistent Mac test home**, so cached counties can be verified after restarting offline without modifying `~/.pipboy`. County download remains an explicit MAP → COUNTY action. Optional Chromium device-emulation verification is available via `--verify --require-chromium`; Safari is supported for manual UI inspection. MAP → DATA SOURCES includes local-only source load and drawing timings. [Mac MAP operator checklist](docs/MAC_MAP_TESTING.md). Actual operator-Mac acceptance is distinct from GitHub's macOS CI runner.
+
 ## Available modules
 
 | Module | Implemented behavior | Field acceptance still open |
@@ -55,7 +67,7 @@ git pull --ff-only origin main
 | Overseer Task Control | Persistent assignments, role queues, status, due dates and revision-safe history | Human/organizational identity beyond local role labels |
 | Peer task transport | Explicit paired-device OpenSSH send and receipt/status retrieval | Real Mac-to-Pi SSH pairing, interruption and key-rotation tests |
 | Reclamation Field Kit | Persistent manual-position survey sites, statuses, selectable offline map markers and GeoJSON export | Field GNSS, RustGIS full renderer, Pi touch acceptance and operational verification |
-| Scout maps | Location-driven offline-first county map; Census TIGER roads, waters and verified-county landmarks; imported RustGIS/GeoJSON, explicit GPS and separately enabled OSM reference | Upstream RustGIS renderer, raster/terrain, native GNSS and Pi display |
+| Scout maps | Mac-local native Rust service + location-driven county map; Census TIGER roads, waters, verified-county landmarks, RustGIS/GeoJSON imports, explicit GPS/OSM | Mac operator/browser/GPS acceptance, upstream RustGIS renderer, raster/terrain and later Pi hardware |
 | Host / Library / Notes | Local telemetry with quality labels, bundled references and offline notes | Production packaging and accessibility acceptance |
 | Fallout 4 companion | Read-only TCP protocol browser, diagnostics and bounded observation | Actual game-build/PlayStation interoperability |
 | Device simulation | Fixed fixtures, bounded queues and mock adapters | Physical GPIO, serial, SDR, BLE, mesh and camera integrations |
