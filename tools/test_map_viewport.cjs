@@ -12,8 +12,16 @@ const files=new Map([
   ["/assets/map.css",[path.join(root,"crates/pipboy/assets/map.css"),"text/css"]],
   ["/assets/map.js",[path.join(root,"crates/pipboy/assets/map.js"),"text/javascript"]]
 ]);
-const browserCandidates=[process.env.CHROME_BIN,"/usr/bin/google-chrome",
-  "/usr/bin/chromium","google-chrome","chromium"].filter(Boolean);
+const browserCandidates=[
+  process.env.CHROME_BIN,
+  "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+  "/Applications/Chromium.app/Contents/MacOS/Chromium",
+  process.env.HOME &&
+    path.join(process.env.HOME,"Applications/Google Chrome.app/Contents/MacOS/Google Chrome"),
+  process.env.HOME &&
+    path.join(process.env.HOME,"Applications/Chromium.app/Contents/MacOS/Chromium"),
+  "/usr/bin/google-chrome","/usr/bin/chromium","google-chrome","chromium"
+].filter(Boolean);
 function chromium(){
   for(const name of browserCandidates){
     if(path.isAbsolute(name)&&fs.existsSync(name))return name;
