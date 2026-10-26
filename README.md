@@ -108,6 +108,8 @@ Switch profiles through the UI or `pipboy workbench use head-engineer --replace`
 
 ## Maps, tasks and diagnostics
 
+**Communications resilience:** a new [PACE redundancy plan and evidence matrix](docs/COMMUNICATIONS_REDUNDANCY_PLAN.md) defines alternate-IP, DTN/store-forward and emergency no-link procedures, security gates and acceptance tests. These alternate transports are research/design only, not deployed.
+
 **Messenger / LINK:** paired-device text chat with strict OpenSSH host authentication, explicit sending and durable receipts; queued retry when offline. Messenger is encrypted **in transit only**, not E2EE or encrypted on disk. [Setup and limitations](docs/MESSENGER.md).
 
 **Reclamation:** load Reclamation Scout and select **SITES** on micro. Add site observations with manual WGS84 coordinates, condition, priority, notes and position uncertainty; update status and export RFC 7946 GeoJSON. Records persist at `PIPBOY_HOME/reclamation.json` (default `~/.pipboy/reclamation.json`). **MAP → SITES** loads saved markers explicitly; selecting **MAP** on a site opens its location on the grid. WEB is blocked while saved sites are displayed, so site coordinates are not sent to Overpass. No background GNSS or uploads. [Field kit guide](docs/RECLAMATION.md).
