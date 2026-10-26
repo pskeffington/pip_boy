@@ -1353,6 +1353,9 @@
   }
   async function loadCounty(view, location) {
     if(active!==view || !view.countyEnabled || !window.RustBoyOnline) return;
+    if(view.county && window.RustBoyCounty?.contains &&
+        window.RustBoyCounty.contains(view.county.shape.paths,
+          location.lon,location.lat))return;
     if(view.county && view.countyLastLookup &&
         Math.abs(view.countyLastLookup.lat-location.lat)<0.012 &&
         Math.abs(view.countyLastLookup.lon-location.lon)<0.012)return;
@@ -1565,7 +1568,8 @@
           view.centerSelected = false;
         }
         refresh(view);
-        if (view.countyEnabled) void loadCounty(view,{lat:c.latitude,lon:c.longitude});
+        if (view.countyEnabled && !view.countyAbort)
+          void loadCounty(view,{lat:c.latitude,lon:c.longitude});
         if (view.webEnabled && (!view.webMeta ||
             !centerInside(view.webMeta.bounds, view.center))) {
           void webFetch(view);
@@ -1875,8 +1879,7 @@
       "Zoom in");
     const zoomOut = control("-", () => { view.zoom = clamp(view.zoom - 1, MIN_ZOOM, MAX_ZOOM); refresh(view); },
       "Zoom out");
-    toolbar.append(view.locate, view.followButton, manualButton,zipButton,
-      view.countyButton, view.fitButton, zoomIn, zoomOut);
+    toolbar.append(view.locate, view.followButton, view.fitButton, zoomIn, zoomOut);
     const layerPanel=make("details","rb-map-layers");
     const layerSummary=make("summary","","LAYERS / 4 OF 4 VISIBLE");
     const layerGrid=make("div","rb-map-layer-grid");
@@ -1905,7 +1908,12 @@
     }
     tools.append(make("summary", "", "TOOLS / MAP SOURCES"), extra);
     view.tools = tools;
-    root.append(toolbar, layerPanel, tools, zipPanel, manual, stage, webStatusNode, countyNode, status, gpsHelp,
+    const mapSetup=make("details","rb-map-setup");
+    const setupControls=make("div","rb-map-setup-controls");
+    setupControls.append(manualButton,zipButton,view.countyButton);
+    mapSetup.append(make("summary","","MAP SETUP / LOCATION & COUNTY"),
+      setupControls,manual,zipPanel,layerPanel,tools);
+    root.append(toolbar, mapSetup, stage, webStatusNode, countyNode, status, gpsHelp,
       sitePanel, sourceBox, file);
     host.replaceChildren(root);
 
