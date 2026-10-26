@@ -58,3 +58,8 @@ id_ecdsa
 id_ecdsa.pub
 id_dsa
 id_dsa.pub
+
+# Private emergency destination, manual location and latch
+**/aid-state.json
+**/aid-state.lock
+**/aid-dispatch.lock

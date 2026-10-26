@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-10-26 — Medic handoff and Motorola-inspired SOS
+
+- Add Medic and MEDICAL COMMS, with a bounded nine-line wizard, explicit paired Doctor destination and readable aid inbox.
+- Give every profile an orange SOS control with guarded activation, persistent latch, manual retries, separate peer-storage/human-ACK states and deliberate cancellation.
+- Snapshot recipient/location per incident; preserve local alarms across restart and journal failure. Keep PACE E local hold distinct from SOS.
+- Reuse pinned SSH and Messenger persistence; no public dispatch, RF beacon, hot mic, automatic outbound retry or physical switch is enabled.
+- Add core, API relay and guarded UI tests; hardware, independent security and emergency-response acceptance remain open.
+
+
 ## 2026-10-26 — Handheld touch paging refinement
 
 - Size tool decks from content height, reserving DATA/Custom action rows on compact screens; retain access to every pinned tool and keep pager focus after navigation.

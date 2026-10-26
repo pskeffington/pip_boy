@@ -49,6 +49,13 @@ pub struct Tool {
 /// Built-in descriptors are navigation/metadata, not automatically executed plugins.
 pub const PALETTE: &[Tool] = &[
     Tool {
+        id: "medical",
+        name: "MEDICAL COMMS",
+        description: "Structured nine-line handoff, Doctor inbox and explicit paired-device emergency messaging.",
+        availability: Availability::ExplicitConnection,
+        command: "pipboy dashboard --micro",
+    },
+    Tool {
         id: "byte-lab",
         name: "BYTE LAB",
         description: "Bounded hexadecimal inspection and UTF-8 to hex conversion. No I/O.",
@@ -212,7 +219,15 @@ pub const PRESETS: &[Preset] = &[
         description: "Scientific reference, research notes and workstation condition; not medical diagnosis.",
         lore_evidence: "VT-01",
         role_fidelity: "canonical_job",
-        tools: &["library", "notes", "host"],
+        tools: &["medical", "library", "notes", "host"],
+    },
+    Preset {
+        id: "medic",
+        title: "Medic Station",
+        description: "Field medical communications: structured nine-line handoff to a paired Doctor device and emergency alerts.",
+        lore_evidence: "RB-01",
+        role_fidelity: "rust_boy_original",
+        tools: &["medical", "notes", "library", "host"],
     },
     Preset {
         id: "university-researcher",

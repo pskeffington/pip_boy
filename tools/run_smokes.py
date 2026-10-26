@@ -32,6 +32,7 @@ NATIVE_SMOKES = (
     "smoke_tasks.py",
     "smoke_peer.py",
     "smoke_messenger_protocol.py",
+    "smoke_aid.py",
 )
 
 # These run in the full Linux job; smoke_runtime also has a separate native

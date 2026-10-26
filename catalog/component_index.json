@@ -249,6 +249,24 @@
         "tools/test_run_smokes.py",
         "tools/validate_repo.py"
       ]
+    },
+    {
+      "id": "medical-emergency",
+      "boundary": "Typed nine-line messages and a durable emergency latch; no implicit RF, GPS, rescue dispatch or background transport.",
+      "hardware_gate": "software_only",
+      "code": [
+        "crates/pipboy-core/src/aid.rs",
+        "crates/pipboy/src/dashboard/aid_routes.rs",
+        "crates/pipboy/assets/aid.js",
+        "crates/pipboy/assets/aid.css"
+      ],
+      "docs": [
+        "docs/MEDIC_EMERGENCY.md"
+      ],
+      "checks": [
+        "tools/test_aid_ui.cjs",
+        "tools/smoke_aid.py"
+      ]
     }
   ]
 }

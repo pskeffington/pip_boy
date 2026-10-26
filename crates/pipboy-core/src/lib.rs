@@ -4,6 +4,7 @@
 //! UniFi read-only HTTPS discovery; it never scans merely by being imported.
 //! Serial port and radio interfaces remain inactive.
 
+pub mod aid;
 pub mod blueprint;
 pub mod branding;
 pub mod buffer;

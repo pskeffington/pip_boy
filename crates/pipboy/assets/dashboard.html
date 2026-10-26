@@ -10,6 +10,7 @@
   <link rel="stylesheet" href="/assets/map.css">
   <link rel="stylesheet" href="/assets/tasks.css">
   <link rel="stylesheet" href="/assets/messenger.css">
+  <link rel="stylesheet" href="/assets/aid.css">
   <link rel="stylesheet" href="/assets/network.css">
   <link rel="stylesheet" href="/assets/reclamation.css">
   <script defer src="/assets/network.js"></script>
@@ -21,6 +22,7 @@
   <script defer src="/assets/map-county.js"></script>
   <script defer src="/assets/map-zip.js"></script>
   <script defer src="/assets/map.js"></script>
+  <script defer src="/assets/aid.js"></script>
   <script defer src="/assets/dashboard.js"></script>
 </head>
 <body>
@@ -35,6 +37,7 @@
         </div>
       </div>
       <div class="masthead-right">
+          <button id="emergency-button" class="emergency-button" type="button" aria-label="Open emergency beacon">SOS</button>
         <span class="status-chip" id="server-status"><span class="live-dot" aria-hidden="true"></span> STARTING</span>
         <a href="/micro" class="mini-button" title="Open handheld view">HANDHELD ↗</a>
         <button type="button" class="icon-button" id="refresh-state" title="Reload saved workspace" aria-label="Reload saved workspace">↻</button>

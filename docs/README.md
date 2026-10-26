@@ -20,6 +20,7 @@ Technical contracts, architecture decisions, research provenance and validation 
 | [DIAG offline ingestion](DIAGNOSTICS.md) | Scoped fault-evidence JSONL intake and local host heuristics |
 | [Peer task transport](PEER_TASK_TRANSPORT.md) | Explicit OpenSSH Mac/Pi enrollment, restricted bridge, delivery and receipt sync |
 | [Overseer Task Control](TASK_CONTROL.md) | Persistent assignments, status, manual handoff and role queues |
+| [Medic and emergency communications](MEDIC_EMERGENCY.md) | Nine-line handoff, Motorola-inspired SOS, persistent latch and explicit delivery/ACK |
 | [Micro handheld shell](MICRO_UI.md) | Six-tab HUD, height-aware tool pages, touch pagers and compact Task Control |
 | [Graphical dashboard](DASHBOARD_UI.md) | Run local browser UI on Mac, load role templates, test offline tools and Custom |
 | [Quick start](../README.md#quick-start) | Clone, build, run the terminal UI and inspect local status |

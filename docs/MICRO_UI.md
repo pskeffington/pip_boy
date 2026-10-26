@@ -118,3 +118,5 @@ and E holds locally. History encryption labels follow the actual queue mode.
 ## Uniform role-independent shell (October 26, 2026)
 
 The top bar is fixed RB / FIELD TERMINAL and is **not a clickable profile selector**. All roles display the same STAT / GEAR / MAP / DATA / LINK / SETUP tab rail, and STAT always begins with TOOLS and MAP. SETUP → CHANGE PROFILE is the only handheld entry to profile selection; its staged selection and explicit LOAD ROLE remain separate from tool execution. GEAR and DATA show tools from the active pinned workbench; DUTIES is reachable through DATA for all roles and follows their allowed task scope. Security camera and Overseer task functionality remain role-specific tools within the same shell. The desktop counterpart uses its fixed MODULES / VIEWPORT / MESSAGES / SETTINGS navigation and the same persisted profile API.
+
+[Medic / Doctor and the shared SOS emergency control](MEDIC_EMERGENCY.md) documents the new paired-device handoff and alarm workflow.

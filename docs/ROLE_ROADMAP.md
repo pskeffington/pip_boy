@@ -4,7 +4,7 @@ Reviewed: **2026-10-25**. Repository: `pip_boy`; product: **Rust-Boy**. This is 
 
 ## Product principles
 
-1. **Ready out of the box:** Seven occupational profiles ship pre-pinned; a clean installation currently selects **Overseer Operations**. **Custom** is the deliberately blank, advanced option.
+1. **Ready out of the box:** Eight occupational profiles ship pre-pinned; a clean installation currently selects **Overseer Operations**. **Custom** is the deliberately blank, advanced option.
 2. **A profile is a workspace, not a privilege:** Selecting or pinning a profile cannot open a camera, discover nearby hardware, use a PlayStation connection, acquire a location, or run an arbitrary program. Each real connector requires a separate user action and OS-enforced grant where appropriate.
 3. **Two real display targets:** Develop initially on macOS (keyboard/Terminal) while defining a future **4-inch handheld** at a proposed 800×480 reference resolution and 480×320 fallback. These are design targets, not selected hardware specifications. Layouts must be readable, responsive, keyboard-first, and have touch targets when touch is available.
 4. **Truthful states:** Distinguish static layout, simulation, real local tools, explicit opt-in connectors, stale data, and entirely unimplemented features. A pinned icon is not proof of a live feed.
@@ -16,11 +16,11 @@ The R1 management board now has an **opt-in SSH peer task transport**. Operators
 
 ## Handheld micro display shell
 
-[Micro terminal UI](MICRO_UI.md) provides the compact visual shell shared by the seven occupational templates and Custom: a top status band, six fixed thumb-sized navigation tabs, one active viewport and the existing confirmed profile save. Scout's geospatial page allows genuine offline waypoint/distance calculations, but a **working RustGIS map is deferred**. Security Chief's four-camera page is a no-video fixture with one-tap focus/back; genuine camera streams are a separate integration gate. The micro shell does not grant physical permissions or claim Pi hardware acceptance.
+[Micro terminal UI](MICRO_UI.md) provides the compact visual shell shared by the eight occupational templates and Custom: a top status band, six fixed thumb-sized navigation tabs, one active viewport and the existing confirmed profile save. Scout's geospatial page allows genuine offline waypoint/distance calculations, but a **working RustGIS map is deferred**. Security Chief's four-camera page is a no-video fixture with one-tap focus/back; genuine camera streams are a separate integration gate. The micro shell does not grant physical permissions or claim Pi hardware acceptance.
 
 ## Base dashboard and template activation
 
-The [graphical dashboard implementation](DASHBOARD_UI.md) provides a shared UI foundation **before** role-specific extensions. Its left rail lists the seven preconfigured roles in canonical order with **Custom last**, offers non-mutating role previews and explicitly confirmed loading, and places pinned modules in a responsive deck. Custom is empty until deliberately populated. Reclamation Scout reserves a viewport for a future **real RustGIS launcher/renderer**; Security Chief currently uses four camera **mock-layout controls**, not network video. The Rust service is local only and uses the established WorkbenchStore, so CLI/TUI/web selections share one source of truth. Browser usability, accessibility and 4-inch hardware acceptance remain independent gates.
+The [graphical dashboard implementation](DASHBOARD_UI.md) provides a shared UI foundation **before** role-specific extensions. Its left rail lists the eight preconfigured roles in canonical order with **Custom last**, offers non-mutating role previews and explicitly confirmed loading, and places pinned modules in a responsive deck. Custom is empty until deliberately populated. Reclamation Scout reserves a viewport for a future **real RustGIS launcher/renderer**; Security Chief currently uses four camera **mock-layout controls**, not network video. The Rust service is local only and uses the established WorkbenchStore, so CLI/TUI/web selections share one source of truth. Browser usability, accessibility and 4-inch hardware acceptance remain independent gates.
 
 ## Shared program gates and prerequisites
 
@@ -40,10 +40,11 @@ The [graphical dashboard implementation](DASHBOARD_UI.md) provides a shared UI f
 | `overseer` | Overseer Operations | canonical job | `mission-board`, `host`, `notes`, `library`, `game` | `alerts`, `reports` |
 | `head-engineer` | Head Engineer Station | canonical job | `net-lab`, `host`, `diag`, `byte-lab`, `simulator`, `notes` | `serial-console`, `sensor-console`, `device-graph` |
 | `security-chief` | Security Chief Station | canonical job | `host`, `diag`, `net-lab`, `byte-lab`, `notes` | `camera-wall`, `camera-health`, `event-log` |
-| `vault-doctor` | Vault Doctor Station | canonical job | `library`, `notes`, `host` | `environment`, `checklists`, `reference-index` |
+| `vault-doctor` | Vault Doctor Station | canonical job | `medical`, `library`, `notes`, `host` | `environment`, `checklists`, `reference-index` |
 | `university-researcher` | University Research Station | role inspired | `byte-lab`, `library`, `notes`, `simulator`, `net-lab` | `data-lab`, `experiment-log`, `graph-view` |
 | `reclamation-scout` | Reclamation Field Kit | role inspired | `geo-lab`, `game`, `net-lab`, `notes`, `host` | `map`, `coordinate-lab`, `gnss`, `track-log`, `tak-bridge`, `rustgis-adapter` |
 | `records-custodian` | Records Custodian Station | role inspired | `library`, `notes`, `byte-lab` | `document-index`, `sha256`, `artifact-bundle` |
+| `medic` | Medic Station | Rust-Boy original | `medical`, `notes`, `library`, `host` | `hardware-sos`, `radio-beacon` |
 | `custom` | Custom Workbench | rust boy original | None (empty by design) | `layout-editor`, `module-sdk`, `sandbox-runtime` |
 
 ## Detailed role plans
@@ -228,3 +229,14 @@ The [graphical dashboard implementation](DASHBOARD_UI.md) provides a shared UI f
 **Lore evidence:** [VAULT_TEC_LORE_MATRIX.md](VAULT_TEC_LORE_MATRIX.md) tags canonical jobs separately from adaptations and cites primary publisher material. Technical standards are cited for camera, geodata, audit records, and accessibility requirements.
 
 **Validation:** `python3 tools/validate_roles.py` checks the role/phase/source/profile IDs, exact preloaded tool order and documentation link coverage. It does not prove Rust compilation, camera streaming or hardware security. See [CI validation](VALIDATION.md).
+
+### Medic Station (`medic`)
+
+Original Rust-Boy role (`RB-01`), with `medical`, `notes`, `library`, `host`. [Medical communications contract](MEDIC_EMERGENCY.md). Profiles do not establish clinical credentials.
+
+| Gate | Deliverable | State |
+| --- | --- | --- |
+| R0 | Medic workspace | code present CI pending |
+| R1 | Paired medical handoff | code present CI pending |
+| R2 | Physical emergency integration | planned |
+| R3 | Emergency field acceptance | planned |

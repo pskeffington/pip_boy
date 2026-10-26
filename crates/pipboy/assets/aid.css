@@ -1,0 +1,38 @@
+/* Original orange emergency control; no proprietary radio graphics or protocol. */
+.emergency-button,.aid-button { font:inherit;cursor:pointer;touch-action:manipulation; }
+.emergency-button { min-width:44px;min-height:44px;border:2px solid #ffba57;border-radius:5px;background:#a33d06;color:#fff6d9;font-weight:800;padding:4px 8px;white-space:nowrap; }
+.emergency-button[data-active="true"] { background:#a81916;border-color:#ffe18a; }
+.aid-dialog { color:#e7f2df;background:#0b180e;border:2px solid #f6ae50;padding:6px;width:min(680px,calc(100vw - 12px));height:min(600px,calc(100dvh - 12px));max-height:calc(100dvh - 12px);max-width:calc(100vw - 12px);font:13px/1.25 ui-monospace,monospace; }
+.aid-dialog[open] { display:grid;grid-template-rows:44px 44px 28px minmax(0,1fr);gap:4px; }
+.aid-dialog::backdrop { background:#000c; }
+.aid-header,.aid-row { display:flex;align-items:center;gap:6px;min-width:0; }
+.aid-header strong { flex:1;white-space:nowrap; }
+.aid-button { min-height:44px;min-width:44px;padding:5px 8px;border:1px solid #79ad72;background:#17341d;color:#e7f2df;font-weight:700; }
+.aid-button:disabled { opacity:.4;cursor:not-allowed; }
+.aid-button:focus-visible,.emergency-button:focus-visible,.aid-field :focus-visible { outline:3px solid #ffe18a;outline-offset:1px; }
+.aid-danger { background:#9c3215;border-color:#ffbe62;color:#fff6de; }
+.aid-tabs { display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px; }
+.aid-tabs [aria-pressed="true"] { background:#b5ee8c;color:#0b210d; }
+.aid-status { font-size:10px;display:flex;align-items:center;color:#b8d3aa;overflow-wrap:anywhere; }
+.aid-error { color:#ffcb86; }
+.aid-body { min-height:0;overflow:auto;overscroll-behavior:contain;display:flex;flex-direction:column;gap:6px;padding:2px; }
+.aid-body p { margin:0;overflow-wrap:anywhere; }
+.aid-muted { color:#b8c5ac;font-size:11px; }
+.aid-row > button { flex:1; }
+.aid-count { flex:none;white-space:nowrap;font-size:11px; }
+.aid-field { display:flex;flex-direction:column;gap:3px;min-width:0;font-size:11px; }
+.aid-field input,.aid-field select { color:#f0ffe8;background:#102714;border:1px solid #6a9765;width:100%;min-width:0;min-height:44px;padding:5px;font:inherit; }
+.aid-line { font-size:12px; }
+@media(max-height:400px) { .aid-body { gap:4px; }.aid-line { font-size:11px; } }
+/* Only actual SOS-equipped shells reserve the larger header; old standalone
+   module fixtures retain their own header geometry. */
+@media(max-width:960px) { .micro-device:has(.emergency-button) { grid-template-rows:44px 28px minmax(0,1fr) 45px; }.micro-device .topbar { gap:4px; } }
+@media(max-width:370px) { .micro-device:has(.emergency-button) #local-clock { display:none; } }
+
+.aid-body > strong { white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex-shrink:0; }
+.aid-row > .aid-field { flex:1; }
+@media(max-height:400px) {
+  .aid-dialog[open] { grid-template-rows:44px 44px 20px minmax(0,1fr); }
+  .aid-body { gap:2px; }
+  .aid-field { font-size:10px;gap:2px; }
+}

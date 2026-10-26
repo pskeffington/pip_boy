@@ -195,4 +195,6 @@ async function main() {
     }
   }finally{await new Promise(resolve=>server.close(resolve));}
 }
-main().catch(e=>{console.error(e);process.exitCode=1;});
+// Share the isolated Chromium process driver with other shell acceptance tests.
+module.exports = {findChrome, chromeRun};
+if (require.main === module) main().catch(e=>{console.error(e);process.exitCode=1;});

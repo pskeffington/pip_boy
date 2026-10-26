@@ -10,7 +10,7 @@ The TUI supports keyboard navigation with static presentation and explicit statu
 | Home/End | First/last source or note; top/bottom text on other panels |
 | R | Reload notes while in NOTES |
 | P on STAT | Revoke/resume local host telemetry and clear its history on pause |
-| P on WORKBENCH | Open the eight-role picker; Enter prepares replacement, Y confirms, N/Esc cancels |
+| P on WORKBENCH | Open the nine-role picker; Enter prepares replacement, Y confirms, N/Esc cancels |
 | A on WORKBENCH | Browse the built-in tool palette; Enter pins a supported tool without running it |
 | X/Delete on WORKBENCH | Unpin selected tool; does not delete notes or permission settings |
 | R on WORKBENCH | Reload pinned layout from local workbench JSON |
@@ -41,3 +41,5 @@ Memory-backed fixtures exercise all six panels at tiny, compact and standard siz
 Ctrl+C is handled as a key press in raw terminal mode and follows the same normal return/terminal guard cleanup as Q and Escape, including on the resize fallback screen. Ctrl+Shift+C also exits if the terminal delivers it; a terminal may reserve that shortcut for copying. Plain C and Ctrl+Alt+C do not exit. This covers keyboard events, not externally delivered SIGTERM, SIGHUP, forced termination or a guarantee of panic recovery. CLI sampling signal cancellation remains a separate open gate.
 
 Regression coverage includes a live Linux/macOS PTY Ctrl+C journey with exact terminal-attribute and alternate-screen restoration, and a Windows ConPTY Ctrl+C journey after pause/resume and shrinking to 20×5. Both require exit code zero and no user-data writes.
+
+[Medic / Doctor and the shared SOS emergency control](MEDIC_EMERGENCY.md) documents the new paired-device handoff and alarm workflow.
