@@ -26,6 +26,7 @@ Technical contracts, architecture decisions, research provenance and validation 
 | [Console controls](CONSOLE.md) | Keyboard navigation, resize behavior and terminal restoration |
 | [Lore naming and tool crosswalk](LORE_NAMING.md) | Six-tab HUD names, role/tool alignment and capability boundaries |
 | [County source acquisition](COUNTY_SOURCES.md) | Allowlisted TIGER county roads/water plus polygon-clipped state landmarks and offline cache |
+| [ZIP/ZCTA ↔ county GIS lookup](ZIP_COUNTY_LOOKUP.md) | Five-digit ZIP lookup, ambiguous counties, reverse county ZIP index, offline and privacy boundaries |
 | [RustGIS-native map and GPS](SCOUT_GPS_MAP.md) | Native RustGIS map import, GPS, optional Overpass road reference, privacy and provenance |
 | [PACE messaging and route setup](PACE_MESSAGING.md) | Manual P/A routes, persistent wait/receipt evidence, blocked C transmission, local E hold and shared failure domains |
 | [Messenger build passes A–C](MESSENGER_BUILD_PASSES.md) | Wire contract, fault simulation, opt-in encrypted queue, local-IP retry and passive USB capture |
