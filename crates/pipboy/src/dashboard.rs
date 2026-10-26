@@ -480,14 +480,19 @@ fn county_boundary(req: &Request, store: &WorkbenchStore) -> Result<Response, Re
     let cache_only = body.get("cache_only").and_then(Value::as_bool) == Some(true);
     let confirm = body.get("confirm").and_then(Value::as_bool) == Some(true);
     if !confirm && !cache_only {
-        return Err(Response::error(403, "Confirm Census county boundary acquisition"));
+        return Err(Response::error(
+            403,
+            "Confirm Census county boundary acquisition",
+        ));
     }
     let boundary = county_cache(store)
         .boundary(geoid, !cache_only && confirm)
         .map_err(|error| match error.kind() {
             io::ErrorKind::NotFound => Response::error(404, "No cached county boundary"),
             io::ErrorKind::InvalidInput => Response::error(422, "Invalid county boundary or GEOID"),
-            io::ErrorKind::WouldBlock => Response::error(409, "County download already in progress"),
+            io::ErrorKind::WouldBlock => {
+                Response::error(409, "County download already in progress")
+            }
             _ => Response::error(409, "Census boundary unavailable; existing cache preserved"),
         })?;
     Ok(Response::json(200, &boundary))
@@ -2051,12 +2056,13 @@ mod tests {
             assert!(!temp.path().join("state/county_cache").exists());
         }
         let mut hostile = request(
-            "POST", "/api/map/boundary",
+            "POST",
+            "/api/map/boundary",
             json!({"geoid":"25025","confirm":true}),
         );
-        hostile.headers.insert(
-            "origin".to_owned(), "https://untrusted.invalid".to_owned()
-        );
+        hostile
+            .headers
+            .insert("origin".to_owned(), "https://untrusted.invalid".to_owned());
         assert_eq!(dispatch(&hostile, &store, 8765).status, 403);
         assert!(!temp.path().join("state/county_cache").exists());
 
@@ -2071,10 +2077,12 @@ mod tests {
                 ]}
             }]
         });
-        std::fs::write(dir.join("boundary_2025_25025.geojson"),
-            fixture.to_string()).unwrap();
-        let cached_req = request("POST", "/api/map/boundary",
-            json!({"geoid":"25025","cache_only":true}));
+        std::fs::write(dir.join("boundary_2025_25025.geojson"), fixture.to_string()).unwrap();
+        let cached_req = request(
+            "POST",
+            "/api/map/boundary",
+            json!({"geoid":"25025","cache_only":true}),
+        );
         let cached = dispatch(&cached_req, &store, 8765);
         assert_eq!(cached.status, 200);
         let data: Value = serde_json::from_slice(&cached.body).unwrap();
@@ -2083,8 +2091,7 @@ mod tests {
         assert_eq!(data["network_used"], false);
         assert_eq!(data["paths"][0].as_array().unwrap().len(), 4);
         assert_eq!(dispatch(&cached_req, &store, 8765).status, 200);
-        let selected = dispatch(
-            &request("GET", "/api/map/cache", Value::Null), &store, 8765);
+        let selected = dispatch(&request("GET", "/api/map/cache", Value::Null), &store, 8765);
         assert_eq!(selected.status, 200);
         // Reading a cached boundary never silently activates a county selection.
         let metadata: Value = serde_json::from_slice(&selected.body).unwrap();
