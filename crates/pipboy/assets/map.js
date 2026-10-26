@@ -625,7 +625,9 @@
         "Source datum: GCS NAD83 (geographic lon/lat); no datum shift applied.\n" +
         Object.entries(view.countyPackage.layers).map(([id,d]) =>
           id + ": " + d.features + " features, " + d.vertices +
-          " original vertices / county-wide source").join("\n") +
+          (id === "tiger-pointlm"
+            ? " in-county named points / STATE archive, verified county clipping"
+            : " original vertices / county-wide source")).join("\n") +
         (view.countyPackage.errors.length ?
           "\nPARTIAL SOURCES: " + view.countyPackage.errors.join(" | ") : "") +
         (view.countyPackage.warnings?.length ?
