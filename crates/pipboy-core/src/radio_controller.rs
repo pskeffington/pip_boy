@@ -125,9 +125,13 @@ impl RadioController {
             }
             (PlaybackState::Buffering, PlaybackEvent::Buffered) => PlaybackState::Buffering,
             (PlaybackState::Buffering, PlaybackEvent::PlaybackStarted) => PlaybackState::Playing,
-            (PlaybackState::Playing | PlaybackState::Buffering | PlaybackState::Connecting | PlaybackState::Recovering, PlaybackEvent::ConnectionLost) => {
-                PlaybackState::Recovering
-            }
+            (
+                PlaybackState::Playing
+                | PlaybackState::Buffering
+                | PlaybackState::Connecting
+                | PlaybackState::Recovering,
+                PlaybackEvent::ConnectionLost,
+            ) => PlaybackState::Recovering,
             (_, PlaybackEvent::Error(_)) => PlaybackState::Failed,
             _ => return false,
         };
@@ -188,7 +192,11 @@ mod tests {
     #[test]
     fn disconnected_stream_reenters_buffering_on_same_generation() {
         let mut radio = RadioController::default();
-        let generation = radio.apply(RadioCommand::PlayInternet { station_id: "skylab".into() }).unwrap();
+        let generation = radio
+            .apply(RadioCommand::PlayInternet {
+                station_id: "skylab".into(),
+            })
+            .unwrap();
         assert!(radio.event(generation, PlaybackEvent::ConnectionLost));
         assert_eq!(radio.state().state, PlaybackState::Recovering);
         assert!(radio.event(generation, PlaybackEvent::Connected));
