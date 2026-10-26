@@ -163,7 +163,8 @@ async function main() {
   assert.equal(menuPager.attributes["aria-label"], "Network tool pages");
   assert.equal(button(env.container, "◀ PREV").disabled, true);
   assert.equal(button(env.container, "NEXT ▶").disabled, false);
-  assert.equal(pageKey(env, "ArrowLeft"), false, "First page has no previous page");
+  assert.equal(pageKey(env, "ArrowLeft"), true, "Menu boundary should consume the key without scrolling");
+  assert.match(env.container.textContent, /PAGE 1 \/ 4/);
   assert.equal(pageKey(env, "ArrowRight", { repeat:true }), false, "Held D-pad should not rapidly skip pages");
   assert.equal(pageKey(env, "ArrowRight",
     { target:env.document.createElement("input") }), false, "Input arrow editing must not turn pages");
@@ -224,7 +225,8 @@ async function main() {
   assert.match(pad.document.activeElement.textContent, /SUBNET SPLIT/);
   assert.equal(pageKey(pad, "PageDown"), true);
   assert.match(pad.container.textContent, /PAGE 4 \/ 4/);
-  assert.equal(pageKey(pad, "PageDown"), false, "Last page is bounded");
+  assert.equal(pageKey(pad, "PageDown"), true, "Last menu page consumes the page key");
+  assert.match(pad.container.textContent, /PAGE 4 \/ 4/);
   assert.equal(pageKey(pad, "PageUp"), true);
   assert.match(pad.container.textContent, /PAGE 3 \/ 4/);
   assert.equal(pageKey(pad, "ArrowDown"), true);
