@@ -27,6 +27,7 @@ NAVIGATION = {
     ),
 }
 LINK = re.compile(r"!?\[[^\]\n]+\]\(([^)\n]+)\)")
+REFERENCE_DEFINITION = re.compile(r"^ {0,3}\[[^\]\n]+\]:\s*(?:<([^>]+)>|(\S+))")
 FENCE = re.compile(r"^\s*(`{3,}|~{3,})")
 INLINE_CODE = re.compile(r"`[^`]*`")
 SCHEME = re.compile(r"^[a-zA-Z][a-zA-Z0-9+.-]*:")
@@ -47,8 +48,15 @@ def markdown_links(source):
         if fence is not None:
             continue
         line = INLINE_CODE.sub("", line)
-        for match in LINK.finditer(line):
-            candidate = match.group(1).strip().split()[0].strip("<>")
+        candidates = [match.group(1) for match in LINK.finditer(line)]
+        definition = REFERENCE_DEFINITION.match(line)
+        if definition and not line.lstrip().startswith("[^"):
+            candidates.append(definition.group(1) or definition.group(2))
+        for raw in candidates:
+            parts = raw.strip().split()
+            if not parts:
+                continue
+            candidate = parts[0].strip("<>")
             if not candidate or candidate.startswith("#"):
                 continue
             if SCHEME.match(candidate) or candidate.startswith("//"):
@@ -93,12 +101,16 @@ def audit_documents(root=ROOT):
     """Audit only checked-in public Markdown locations, never runtime storage."""
     root = Path(root).resolve()
     scanned = links = 0
-    for directory in (root, root / "catalog", root / "docs"):
+    for directory in (root, root / "catalog", root / "docs", root / "data"):
         if not directory.exists():
             continue
         require(directory.is_dir() and not directory.is_symlink(),
                 f"invalid documentation directory: {directory}")
-        for file in sorted(directory.glob("*.md")):
+        files = directory.glob("*.md") if directory == root else directory.rglob("*.md")
+        for file in sorted(files):
+            require(not any(part.is_symlink() for part in file.parents
+                                if part != root and part.is_relative_to(root)),
+                    f"symlinked Markdown directory: {file}")
             require(file.is_file() and not file.is_symlink(),
                     f"linked or invalid Markdown file: {file}")
             for lineno, target in markdown_links(file.read_text(encoding="utf-8")):

@@ -12,7 +12,7 @@ Rust-Boy is an open-source, offline-first Rust console. Contributions are welcom
 
 Place implementation in the owning crate, browser assets in the existing shared dashboard/micro shells, and machine-readable research in `catalog/`. Use the [repository map](docs/REPO_STRUCTURE.md) and avoid moving existing on-disk stores or duplicating role/network catalogs in JavaScript. Keep the root README concise; module contracts belong under `docs/`.
 
-Changes to top-level navigation or local Markdown links must pass `python3 tools/validate_repo.py` and `python3 tools/test_validate_repo.py`. The check is offline and covers local links across the public root, `docs/`, and `catalog/` Markdown, plus required navigation links; it never traverses `PIPBOY_HOME` and does not certify third-party URLs or hardware.
+Changes to top-level navigation or local Markdown links must pass `python3 tools/validate_repo.py` and `python3 tools/test_validate_repo.py`. The check is offline and covers required navigation, reference-style and inline local links, and nested public Markdown under `docs/`, `catalog/` and optional `data/`. It never traverses `PIPBOY_HOME` and does not certify third-party URLs or hardware.
 
 ## Set up
 

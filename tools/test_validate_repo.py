@@ -38,6 +38,46 @@ class NavigationTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "linked or invalid Markdown"):
             audit_documents(self.root)
 
+    def test_reference_style_destinations_are_validated(self):
+        self.main.write_text(
+            "[Documentation][docs]\n\n[docs]: docs/README.md \"Guide\"\n",
+            encoding="utf-8",
+        )
+        self.assertEqual(audit_navigation(self.root, self.navigation), 1)
+        self.main.write_text("[Docs][docs]\n[docs]: docs/MISSING.md\n", encoding="utf-8")
+        with self.assertRaisesRegex(ValueError, "broken local link"):
+            audit_navigation(self.root, self.navigation)
+
+    def test_empty_link_and_footnote_are_not_paths(self):
+        self.main.write_text(
+            "[Documentation](docs/README.md)\n"
+            "[Empty](   )\n"
+            "[^note]: Text belonging to a Markdown footnote.\n",
+            encoding="utf-8",
+        )
+        self.assertEqual(audit_navigation(self.root, self.navigation), 1)
+
+    def test_nested_public_document_is_scanned(self):
+        nested = self.root / "docs" / "research"
+        nested.mkdir()
+        (nested / "README.md").write_text(
+            "[Index](../README.md)\n", encoding="utf-8"
+        )
+        self.assertEqual(audit_documents(self.root), (3, 2))
+        (nested / "README.md").write_text(
+            "[Missing](../NO_SUCH_FILE.md)\n", encoding="utf-8"
+        )
+        with self.assertRaisesRegex(ValueError, "broken local link"):
+            audit_documents(self.root)
+
+    def test_optional_public_data_docs_are_scanned(self):
+        data = self.root / "data"
+        data.mkdir()
+        (data / "README.md").write_text(
+            "[Documentation](../docs/README.md)\n", encoding="utf-8"
+        )
+        self.assertEqual(audit_documents(self.root), (3, 2))
+
     def test_valid_local_link_and_fragment(self):
         self.main.write_text("[Documentation](docs/README.md)\n", encoding="utf-8")
         self.assertEqual(audit_navigation(self.root, self.navigation), 1)
