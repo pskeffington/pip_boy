@@ -23,6 +23,7 @@ const roleIds = [
 ];
 function state(scenario) {
   const custom=scenario==="custom";
+  const activeProfile=custom?"custom":scenario==="scout"?"reclamation-scout":scenario==="security"?"security-chief":"overseer";
   return {
     profiles:roleIds.map((id,index)=>({
       id,title:id.toUpperCase().replace(/-/g," "),
@@ -34,7 +35,7 @@ function state(scenario) {
       description:"Fixture-only "+id,command:"no action",availability:"ready"
     })),
     active:{
-      profile:custom?"custom":"overseer",
+      profile:activeProfile,
       slots:custom?[]:toolIds.map((tool,index)=>({id:"slot-"+index,tool}))
     },
     net_operations:[]
@@ -125,14 +126,16 @@ async function main() {
       const w=Number(url.searchParams.get("w")),h=Number(url.searchParams.get("h"));
       const scenario=url.searchParams.get("scenario");
       if(!Number.isInteger(w)||!Number.isInteger(h)||w<300||w>2000||
-        h<300||h>1200||!["default","custom"].includes(scenario))
+        h<300||h>1200||!["default","custom","scout","security"].includes(scenario))
         return send(400,"Invalid viewport","text/plain");
       return send(200,host(w,h,scenario),"text/html");
     }
     if(url.pathname==="/fixture")return send(200,fixture(),"text/html");
     if(url.pathname==="/probe.js")return send(200,fs.readFileSync(probeFile,"utf8"),"text/javascript");
     if(url.pathname==="/api/state"){
-      const scenario=req.headers.referer?.includes("scenario=custom")?"custom":"default";
+      const ref=req.headers.referer || "";
+      const scenario=ref.includes("scenario=custom")?"custom":
+        ref.includes("scenario=scout")?"scout":ref.includes("scenario=security")?"security":"default";
       return send(200,JSON.stringify(state(scenario)),"application/json");
     }
     if(url.pathname.startsWith("/assets/")){
@@ -150,7 +153,8 @@ async function main() {
   try{
     for(const [width,height,scenario] of [
       [480,320,"default"],[800,480,"default"],[1280,720,"default"],
-      [1920,1080,"default"],[480,320,"custom"],[1280,720,"custom"]
+      [1920,1080,"default"],[480,320,"custom"],[1280,720,"custom"],
+      [480,320,"scout"],[800,480,"security"]
     ]){
       const r=await chromeRun(bin,server.address().port,width,height,scenario);
       console.log("Viewport "+width+"x"+height+" "+scenario+": "+JSON.stringify(r));
@@ -167,11 +171,17 @@ async function main() {
       assert.equal(r.rolePane,true,"Role pane clipped");
       assert.equal(r.viewport,true,"Viewport panel clipped");
       assert.equal(r.messages,true,"Messages panel clipped");
-      if(scenario==="default"){
+      if(scenario!=="custom"){
         assert.equal(r.inspector,true,"No inspector after module selection");
         assert.ok(r.nextModules?.count>0,"Module next page missing");
         assert.equal(r.nextModules?.fit,true,"Paged modules clipped");
-      }else{
+      }
+      if(scenario==="scout" || scenario==="security"){
+        assert.ok(r.focusedViews?.options.length>=2,"Focused viewport tabs missing");
+        assert.equal(r.focusedViews.navFits,true,"Viewport subnavigation clipped");
+        assert.equal(r.focusedViews.visibleBody,true,"Focused viewport body missing");
+      }
+      if(scenario==="custom"){
         assert.equal(r.palette?.visible,true,"Custom tool palette unavailable");
         assert.equal(r.palette?.fit,true,"Custom palette clipped");
         assert.ok(r.palette?.next>0,"Custom palette next page missing");
