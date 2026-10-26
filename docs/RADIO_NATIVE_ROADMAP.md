@@ -110,3 +110,22 @@ RADIO displays an **AUDIO OUTPUT** selector listing CPAL's OS-visible outputs al
 - Each attempt builds a fresh native PCM sink and compressed-byte reader; the parent session remains live while individual network guards are dropped. Session Stop terminates retries and stale status events are rejected by the generation state machine.
 - `radio-ui.js` now describes RECOVERING as a broadcaster reconnect, not as active PCM playback. Deterministic tests cover the reconnect transition, retry budget and cancelling a pending wait.
 - **Remaining limits:** this pass retries only decoded in-stream I/O loss; initial HTTP connect failures and non-I/O demux/codec errors fail rather than retry. Device disappearance still requires explicit output selection. End-to-end fault injection and CI acceptance are gates before merging.
+
+## R4.4 audio-device hotplug and manual recovery (implementation pass)
+
+The RADIO HUD now reports `output_available` separately from `output_failure` and shows a disabled, clearly marked missing selection when Bluetooth/wired output disappears. The **USE DEFAULT OUTPUT** control only enables if the OS reports an available system default. Choosing an output explicitly restarts the previous station at its prior volume when the former session failed *because of audio output*, but changing speakers does not autoplay a stopped or unrelated codec-failed session.
+
+CPAL output IDs are now bounded to the enumerated list index **and a deterministic fingerprint of the observed device name**. If Bluetooth reconnect or device enumeration changes the index/name, Rust-Boy refuses the old ID rather than silently routing to an unrelated speaker. These identifiers are **process-session IDs, not permanent Bluetooth identities**; reselect after hotplug. The decoder worker emits a typed output failure when the native callback fails or stops draining the bounded PCM queue; output loss is not classified as a transient broadcaster error. A five-second stalled-output guard prevents indefinite queue blockage.
+
+**Offline acceptance automation**: `node tools/test_radio_ui.cjs` uses a simulated HUD state sequence (explicit play → Bluetooth selection → device disappearance → manual system fallback → RECOVERING → Stop → no OS speaker available). Rust unit tests cover typed network/output failure separation, stop and retry policy, stable name-bound IDs, and when output selection may resume a session. These are controlled fixtures, **not** physical Bluetooth detach tests.
+
+### Operator fault-injection acceptance checklist (remaining physical gate)
+
+- [ ] While Skylab plays through Bluetooth, disconnect the headset/speaker from the OS. Verify the HUD reports unavailable or failed output, does **not** silently change outputs, and STOP remains responsive.
+- [ ] Reconnect it, refresh the device dropdown, explicitly reselect the connected output, and confirm restored sound at the previous radio volume.
+- [ ] Disconnect Bluetooth again and choose **USE DEFAULT OUTPUT**. Verify audio returns to Mac speakers if the OS reports a valid default. If none exists, the fallback action must be disabled.
+- [ ] Temporarily disable internet during an already-playing stream. Confirm RECOVERING with bounded retry, then either restored audio or FAILED after exhausting three attempts.
+- [ ] Press STOP during a pending retry. Verify no later restart/audio, including after IP connectivity returns.
+- [ ] Re-test no autoplay on opening the RADIO page and no outside media-player processes.
+
+**Known limits:** CPAL may not always report device loss immediately; the PCM queue stall guard detects a non-draining callback only once queue pressure occurs. No pairing UI, universal OS device UID, automatic audio fallback, or physical SDR is claimed.
