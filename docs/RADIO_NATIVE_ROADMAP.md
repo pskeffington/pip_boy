@@ -1,6 +1,6 @@
 # Native Rust RADIO — phased build and evidence matrix
 
-Status (2026-10-26): **R1 controller implemented in Rust, compile/CI acceptance pending; live IP playback and real SDR not yet implemented.** No external VLC, ffplay, browser or OS handler is launched from RADIO.
+Status (2026-10-26): **R1 controller and R2 native HTTPS/stream ingestion code committed; CI and live endpoint acceptance pending. Native audio playback and real SDR not implemented.** No external VLC, ffplay, browser or OS handler is launched from RADIO.
 
 ## Research-to-design matrix
 
@@ -30,7 +30,7 @@ Only the worker can emit playback status. A successful connection must never be 
 
 **R1 / Native core — FIRST PASS**: Remove subprocess launching. Add `radio_controller` with a source-neutral session lifecycle, explicit user commands, volume bounds, and stale-worker event filtering. Unit tests require valid station selection and events before PLAYING. **Acceptance**: no external player path; cargo test/fmt/clippy pass.
 
-**R2 / Native IP ingest**: Add optional, vetted `reqwest` TLS HTTP client; bounded redirect allowlist and response headers; official M3U parsing (small playlist limits, no localhost/private-IP redirects); ICY metadata separator; bounded byte channel; timeouts and cancellation; local HTTP fixtures. Actual published stream endpoints may change. **Acceptance**: valid/invalid/slow/endless/malformed playlist and ICY tests; no SSRF via catalog/redirects.
+**R2 / Native IP ingest (implementation under review)**: Added a pinned `reqwest` blocking Rustls client for explicit short-lived stream probes; publisher-bound HTTPS endpoint validation, redirects disabled in the client, bounded M3U parser and redirect resolution in core, and ICY audio/metadata demux. Tests use in-memory fixture responses. **Outstanding**: review/commit Cargo.lock, Cargo/CI, live endpoint checks, byte-channel backpressure, cancellation and idle-timeout semantics for long-lived streaming. The total-deadline probe client MUST NOT be reused as a continuous playback worker.
 
 **R3 / Native decode and sound**: Symphonia MP3/AAC; channel/rate conversion; CPAL native output device with bounded PCM ring buffer, underflow silence, no allocation/network I/O in callback, volume limiting, user-driven Play/Stop. **Acceptance**: actual audible Skylab and SomaFM field tests on macOS; cross-platform CI and Pi audio acceptance.
 
@@ -50,3 +50,11 @@ Only the worker can emit playback status. A successful connection must never be 
 - Keep local PCM buffering short and bounded, with no unauthorized recording or redistribution.
 - Station list is curated but not guaranteed reachable; track provenance and last actual stream health.
 - Source selector must not mistake simulated hardware for a physical SDR.
+
+## R2 implementation evidence
+
+- `crates/pipboy-core/src/radio_stream.rs`: `ApprovedEndpoint` (station origin allowlist), `RadioHttp` contract, M3U resolution bounded at 16 KiB/16 entries, maximum five request hops, ICY audio separation with at most 4080 bytes of metadata per record and maximum 8192 audio bytes per read. Strict HTTPS is intentional; HTTP-only playlist entries are rejected rather than silently downgraded.
+- `crates/pipboy/src/radio_http.rs`: native Rustls HTTPS request client (`reqwest` pinned) with disabled redirects and proxies, verified TLS, 5-second connect timeout, 18-second total deadline for on-demand probes. Native HTTP handling never launches a subprocess.
+- `pipboy radio probe skylab --confirm`: explicitly requests a small audio byte sample. This is **not playback**, format verification or proof of continuous reception; additional user permission is required to listen.
+- `cargo test -p pipboy-core radio_stream`: offline unit fixtures cover provider allowlist, playlist limits, redirect rejection, ICY metadata and truncation.
+- Future sustained audio needs a worker with read-inactivity timeout, bounded audio ring, cancellation and a CPAL sink. No audio is recorded, stored or redistributed by the probe.
