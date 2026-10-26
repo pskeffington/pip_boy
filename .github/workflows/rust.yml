@@ -150,6 +150,15 @@ jobs:
         if: matrix.os == 'macos-latest'
         shell: bash
         run: python3 tools/smoke_runtime.py
+      - name: Install macOS MAP JavaScript test runtime
+        if: matrix.os == 'macos-latest'
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Mac-first local MAP acceptance
+        if: matrix.os == 'macos-latest'
+        shell: bash
+        run: bash scripts/test-map-macos.command --verify
       - name: Native Windows ConPTY terminal journey
         if: matrix.os == 'windows-latest'
         shell: pwsh

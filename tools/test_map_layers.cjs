@@ -115,6 +115,15 @@ async function main(){
   captured.length=0;
   click(view.layerButtons.boundary); // also forces redraw at zoom 15
   assert.equal(view.renderStats.loaded,20004);
+  assert.ok(Number.isFinite(view.renderStats.drawMs) &&
+    view.renderStats.drawMs>=0,"Local canvas duration must be measured");
+  assert.ok(Number.isFinite(view.renderStats.p95Ms) &&
+    view.renderStats.p95Ms>=0,"Local render p95 must be measured");
+  assert.ok(view.renderStats.drawSamples>0 &&
+    view.renderStats.drawSamples<=60,"Render sample history must be bounded");
+  assert.ok(view.countyLoadTiming &&
+    Number.isFinite(view.countyLoadTiming.ms),"County ingestion duration recorded");
+  assert.ok(view.countyLoadTiming.cacheOnly,"Offline source load identified");
   assert.ok(view.renderStats.candidates<500,
     "Viewport index must limit 20k roads to a few local candidates");
   assert.ok(view.renderStats.byLayer.roads>0);

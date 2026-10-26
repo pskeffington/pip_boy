@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-10-26 — Mac-first native MAP acceptance harness
+
+- Add a dedicated macOS Rust MAP launcher and a repeatable offline verification entrypoint (native Cargo build, county-cache Rust tests, temporary localhost HTTP smoke and map/GPS/source JavaScript regressions).
+- Keep local test data separate from the normal workbench and persistent across operator-controlled restarts; port 0 avoids hardcoded listener conflicts, while all network map ingestion remains explicitly operator-triggered.
+- Surface per-frame local canvas rendering last/p95 (bounded 60-frame ring) separately from client source delivery/decoding time in DATA SOURCES; no analytics uploads or fabricated FPS.
+- Extend browser viewport testing to discover Mac Chrome installations and add macOS CI execution of the Mac-first verification entrypoint. Physical user-Mac, live Census availability and browser GPS acceptance remain open until performed.
+- Clarify Mac-first / Pi-later program sequencing in top-level operator navigation.
+
 ## 2026-10-26 — Dashboard Task Control route separation (CI pending)
 
 - Extract Task Control and explicitly confirmed peer-send/sync HTTP handlers from the monolithic dashboard server to `crates/pipboy/src/dashboard/task_routes.rs`, without changing public URLs, local storage, validation or native SSH boundaries.

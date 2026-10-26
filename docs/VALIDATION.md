@@ -1,5 +1,9 @@
 # Rust-Boy | Validation evidence
 
+## Native Mac MAP operator acceptance — pending local run (2026-10-26)
+
+`scripts/test-map-macos.command` provides a native macOS Rust build, isolated loopback HTTP smoke, offline GIS parser/permission tests, optional real Chrome emulation and a persistent test-home launch. [Mac MAP acceptance matrix](MAC_MAP_TESTING.md) defines cold startup, live Census GEOID resolution, layer toggles, full offline restart, GPS permission behavior and draw/source timing measurements. The GitHub macOS runner may execute the automated portion after CI passes; **no user-Mac field results are recorded yet**. Do not equate CI with a passed GPS, Safari, or physical touch session.
+
 ## Task/peer HTTP route extraction — 2026-10-26 (CI pending)
 
 `crates/pipboy/src/dashboard/task_routes.rs` now contains the Task Control and explicitly confirmed peer handoff route implementations, keeping the same public endpoints and parent same-origin gate. A new Rust regression checks that every POST route in this family rejects hostile origins **before creating local stores**. Existing manager/role scoping, optimistic revision, malformed-store preservation, SSH peer smoke tests and desktop/micro launch checks remain registered in the five-job CI matrix. This is a structural extraction; this entry does **not** claim green CI or physical SSH interoperability. Exact-head workflow results must be recorded before merging.

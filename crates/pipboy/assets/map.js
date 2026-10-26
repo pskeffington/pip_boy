@@ -542,9 +542,15 @@
       Math.min(sw[1],ne[1]) <= view.height + 12;
   }
 
+  function monotonicNow() {
+    return typeof window.performance?.now === "function" ?
+      window.performance.now() : Date.now();
+  }
+
   function draw(view) {
     const ctx = view.canvas.getContext("2d");
     if (!ctx || !view.width || !view.height) return;
+    const started = monotonicNow();
     ctx.setTransform(view.dpr, 0, 0, view.dpr, 0, 0);
     ctx.clearRect(0, 0, view.width, view.height);
     ctx.fillStyle = "#0b1a12";
@@ -715,6 +721,16 @@
         view.width / 2, view.height - 16);
       ctx.textAlign = "start";
     }
+    // Local, volatile profiling only: canvas draw cost, NOT frame rate,
+    // source download time, a GNSS reading or any remotely sent telemetry.
+    const elapsed = Math.max(0,monotonicNow()-started);
+    const samples=view.paintSamples;
+    samples.push(Math.min(10000,elapsed));
+    if(samples.length>60)samples.shift();
+    const ordered=[...samples].sort((a,b)=>a-b);
+    view.renderStats.drawMs=elapsed;
+    view.renderStats.p95Ms=ordered[Math.ceil(ordered.length*0.95)-1];
+    view.renderStats.drawSamples=samples.length;
   }
 
   function setLayerStatus(view) {
@@ -811,7 +827,14 @@
         (view.renderStats ?
           "\nVIEWPORT: "+view.renderStats.candidates+" candidates / "+
           view.renderStats.loaded+" loaded; "+
-          view.renderStats.drawn+" drawn county features" : "") +
+          view.renderStats.drawn+" drawn county features" +
+          "\nLOCAL CANVAS DRAW: "+view.renderStats.drawMs.toFixed(1)+
+          "ms last / "+view.renderStats.p95Ms.toFixed(1)+"ms p95 ("+
+          view.renderStats.drawSamples+" frames; excludes ingestion)" : "") +
+        (view.countyLoadTiming ?
+          "\nSOURCE DECODE + DELIVERY: "+view.countyLoadTiming.ms.toFixed(0)+
+          "ms / "+(view.countyLoadTiming.cacheOnly?"local cache-only":"network permitted")+
+          " / "+view.countyLoadTiming.features+" features" : "") +
         "\nWater areas/streams are reference geometry, not surveyed coastline.\n" : "") +
         (view.county ?
         "COUNTY: " + view.county.name + " / GEOID " + view.county.id + "\n" +
@@ -1023,6 +1046,8 @@
     view.countyPackageAbort = null;
     view.countyShapes = [];
     view.countyPackage = null;
+    view.countyLoadTiming=null;
+    view.paintSamples=[];
   }
 
   function fitCountyPackage(view) {
@@ -1060,6 +1085,7 @@
     const controller = new AbortController();
     view.countyPackageAbort = controller;
     const staged = {geoid,layers:Object.create(null),errors:[]};
+    const ingestStarted=monotonicNow();
     view.countyStatus = "COUNTY "+geoid+" / LOADING / OLD MAP KEPT";
     refresh(view);
     try {
@@ -1075,6 +1101,7 @@
           if(active!==view || view.countyPackageVersion!==version ||
               controller.signal.aborted)return;
           // Index built once on validated ingest, not on every pan/zoom.
+          if(!Object.keys(staged.layers).length)view.paintSamples=[];
           data.renderIndex=buildCountyIndex(data.shapes);
           if(id==="tiger-roads")
             data.majorRenderIndex=buildCountyIndex(
@@ -1098,6 +1125,10 @@
       if(active!==view || view.countyPackageVersion!==version)return;
       staged.errors=report.errors;
       staged.warnings=report.warnings || [];
+      view.countyLoadTiming={
+        ms:Math.max(0,monotonicNow()-ingestStarted),
+        features:report.features,cacheOnly
+      };
       view.countyStatus="COUNTY "+geoid+" / "+report.features+" REAL FEATURES / "+
         (cacheOnly?"LOCAL CACHE":"CENSUS 2025")+
         (report.errors.length?" / PARTIAL - SEE SOURCES":" / SOURCES LOADED") +
@@ -1578,6 +1609,7 @@
       countyLastLookup:null,countyShapes:[],countyPackage:null,
       countyLayerVisible:{...countyPreferences},layerButtons:null,
       layerPanel:null,layerSummary:null,renderStats:null,
+      paintSamples:[],countyLoadTiming:null,
       paintQueued:false,frameCenter:null,frameScale:null,
       countyPackageAbort:null,countyPackageVersion:0,countyCacheReadVersion:0,
 
