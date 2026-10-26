@@ -128,10 +128,9 @@
         mockRequests:calls.length,
         requestsWereOnlyExplicit:calls.every(c=>c.url==="/api/net/scan"&&c.method==="POST")
       };
-      viewport.scrollTop=viewport.scrollHeight;
+      pager?.scrollIntoView({block:"end",inline:"nearest"});
       await new Promise(resolve => requestAnimationFrame(resolve));
-      output.pagerVisibleAfterScroll=visibleWithin(pager,viewport);
-      output.stopVisibleAfterScroll=stop ? visibleWithin(stop,viewport) : null;
+      output.pagerVisibleWhenNavigated=visibleWithin(pager,viewport);
       publish(output);
     } catch(e) {publish({error:String(e.stack||e)});}
   });
