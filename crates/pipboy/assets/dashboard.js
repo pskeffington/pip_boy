@@ -160,7 +160,7 @@ function renderSettingsSelection() {
       : "Selected: " + chosen.title;
   ui.load.disabled = working || (same && !resetCustom) || !chosen;
   ui.load.textContent = resetCustom ? "Reset Custom"
-    : same ? "Loaded" : "Load";
+    : same ? "Loaded" : "LOAD PROFILE";
 }
 
 function toolInfo(id) {
