@@ -36,6 +36,6 @@ The internal page identifiers (stat, gear, map, data, link, conf), tool IDs, sto
 
 ## Map name and verified source rule
 
-The default MAP presentation may evoke the Fallout Commonwealth through original green phosphor graphics, but it identifies the data as **BOSTON / REAL STREETS**. All drawn roads, labels and coordinates must derive from a documented real producer; no made-up Diamond City, Goodneighbor, vaults, paths or game-world distances are allowed in the actual Boston basemap.
+The MAP presentation may evoke the Fallout Commonwealth through original green phosphor graphics, but opens on an **unlocated reference grid** until the operator supplies a location. Real county roads, water and bounded landmarks must come from documented source geometry and display their provenance. No fabricated Diamond City, Goodneighbor, vaults, paths or game-world distances may be presented as real geographic data.
 
 The [lore source matrix](VAULT_TEC_LORE_MATRIX.md) differentiates canonical game occupations, role-inspired adaptations and Rust-Boy-original modules. Use the same distinctions for user documentation. Never bundle official game icons, fonts, music, interface art, map imagery or trademark styling. Keyboard use and text legibility take priority over retro decoration.
