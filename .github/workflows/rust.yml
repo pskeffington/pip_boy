@@ -84,6 +84,8 @@ jobs:
           node --check crates/pipboy/assets/map-import.js
           node --check crates/pipboy/assets/map-online.js
           node --check crates/pipboy/assets/map-county.js
+          node --check crates/pipboy/assets/map-zip.js
+          node tools/test_map_zip.cjs
           node tools/test_rustgis_map_import.cjs
           node tools/test_rustgis_map_view.cjs
           node --check crates/pipboy/assets/messenger.js

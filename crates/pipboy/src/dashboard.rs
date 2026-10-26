@@ -8,6 +8,7 @@ mod network_routes;
 mod task_routes;
 
 use crate::county_cache::{self, CountyCache};
+use crate::zip_index::ZipIndex;
 use pipboy_core::network_health;
 use pipboy_core::network_suite;
 use pipboy_core::reclamation::{NewSite, SiteStatus, SiteStore};
@@ -37,6 +38,7 @@ const MAP_JS: &str = include_str!("../assets/map.js");
 const MAP_IMPORT_JS: &str = include_str!("../assets/map-import.js");
 const MAP_ONLINE_JS: &str = include_str!("../assets/map-online.js");
 const COUNTY_JS: &str = include_str!("../assets/map-county.js");
+const ZIP_JS: &str = include_str!("../assets/map-zip.js");
 const MAP_CSS: &str = include_str!("../assets/map.css");
 const NETWORK_JS: &str = include_str!("../assets/network.js");
 const NETWORK_CSS: &str = include_str!("../assets/network.css");
@@ -502,6 +504,76 @@ fn county_boundary(req: &Request, store: &WorkbenchStore) -> Result<Response, Re
     Ok(Response::json(200, &boundary))
 }
 
+fn zip_index(store: &WorkbenchStore) -> ZipIndex {
+    ZipIndex::new(
+        store
+            .path()
+            .parent()
+            .unwrap_or_else(|| std::path::Path::new("."))
+            .join("geo_index"),
+    )
+}
+
+fn zip_lookup(req: &Request, store: &WorkbenchStore) -> Result<Response, Response> {
+    let body = parse_json_body(req, &["zip", "confirm", "cache_only"])?;
+    let zip = str_field(&body, "zip")?;
+    let cache_only = body.get("cache_only").and_then(Value::as_bool) == Some(true);
+    let confirm = body.get("confirm").and_then(Value::as_bool) == Some(true);
+    if !confirm && !cache_only {
+        return Err(Response::error(
+            403,
+            "ZIP relationship lookup requires confirmation",
+        ));
+    }
+    let result = zip_index(store)
+        .resolve_zip(zip, !cache_only && confirm)
+        .map_err(|error| match error.kind() {
+            io::ErrorKind::NotFound => Response::error(404, "ZCTA index not cached"),
+            io::ErrorKind::InvalidInput => Response::error(422, "Invalid ZIP or Census ZCTA index"),
+            io::ErrorKind::WouldBlock => Response::error(409, "Census lookup download in progress"),
+            _ => Response::error(
+                409,
+                "Census ZCTA source unavailable; existing cache preserved",
+            ),
+        })?;
+    Ok(Response::json(200, &result))
+}
+
+fn county_zips(req: &Request, store: &WorkbenchStore) -> Result<Response, Response> {
+    let body = parse_json_body(req, &["geoid", "offset", "confirm", "cache_only"])?;
+    let geoid = str_field(&body, "geoid")?;
+    let offset = match body.get("offset") {
+        None => 0,
+        Some(value) => value
+            .as_u64()
+            .filter(|offset| *offset <= 80_000)
+            .ok_or_else(|| Response::error(422, "Invalid county ZIP page offset"))?
+            as usize,
+    };
+    let cache_only = body.get("cache_only").and_then(Value::as_bool) == Some(true);
+    let confirm = body.get("confirm").and_then(Value::as_bool) == Some(true);
+    if !confirm && !cache_only {
+        return Err(Response::error(
+            403,
+            "County ZCTA lookup requires confirmation",
+        ));
+    }
+    let result = zip_index(store)
+        .county_zctas(geoid, offset, !cache_only && confirm)
+        .map_err(|error| match error.kind() {
+            io::ErrorKind::NotFound => Response::error(404, "ZCTA index not cached"),
+            io::ErrorKind::InvalidInput => {
+                Response::error(422, "Invalid county or Census ZCTA index")
+            }
+            io::ErrorKind::WouldBlock => Response::error(409, "Census lookup download in progress"),
+            _ => Response::error(
+                409,
+                "Census ZCTA source unavailable; existing cache preserved",
+            ),
+        })?;
+    Ok(Response::json(200, &result))
+}
+
 fn reclamation_store(store: &WorkbenchStore) -> SiteStore {
     SiteStore::new(
         store
@@ -666,6 +738,9 @@ fn dispatch(req: &Request, store: &WorkbenchStore, port: u16) -> Response {
         ("GET", "/assets/map-county.js") => {
             Response::new(200, "text/javascript; charset=utf-8", COUNTY_JS.as_bytes())
         }
+        ("GET", "/assets/map-zip.js") => {
+            Response::new(200, "text/javascript; charset=utf-8", ZIP_JS.as_bytes())
+        }
         ("GET", "/assets/map.js") => {
             Response::new(200, "text/javascript; charset=utf-8", MAP_JS.as_bytes())
         }
@@ -714,6 +789,8 @@ fn dispatch(req: &Request, store: &WorkbenchStore, port: u16) -> Response {
             .unwrap_or_else(|_| Response::error(409, "County cache unavailable")),
         ("POST", "/api/map/package") => county_package(req, store).unwrap_or_else(|error| error),
         ("POST", "/api/map/boundary") => county_boundary(req, store).unwrap_or_else(|error| error),
+        ("POST", "/api/map/zip") => zip_lookup(req, store).unwrap_or_else(|error| error),
+        ("POST", "/api/map/county-zips") => county_zips(req, store).unwrap_or_else(|error| error),
         ("GET", "/api/state") => state(store).unwrap_or_else(|error| error),
         ("GET", "/api/reclamation") => reclamation_read(store, false).unwrap_or_else(|error| error),
         ("GET", "/api/reclamation/map") => {
@@ -1784,6 +1861,52 @@ mod tests {
     }
 
     #[test]
+    fn zip_lookup_api_is_local_consent_gated_and_offline_first() {
+        let tmp = tempfile::tempdir().unwrap();
+        let store = WorkbenchStore::new(tmp.path().join("state/data.json"));
+        let cases = [
+            ("/api/map/zip", json!({"zip":"02360"}), 403),
+            ("/api/map/zip", json!({"zip":"0236","confirm":true}), 422),
+            (
+                "/api/map/zip",
+                json!({"zip":"02360","cache_only":true}),
+                404,
+            ),
+            ("/api/map/county-zips", json!({"geoid":"25023"}), 403),
+            (
+                "/api/map/county-zips",
+                json!({"geoid":"../../","confirm":true}),
+                422,
+            ),
+            (
+                "/api/map/county-zips",
+                json!({"geoid":"25023","offset":-1,"cache_only":true}),
+                422,
+            ),
+            (
+                "/api/map/county-zips",
+                json!({"geoid":"25023","cache_only":true}),
+                404,
+            ),
+        ];
+        for (path, body, expected) in cases {
+            let response = dispatch(&request("POST", path, body), &store, 8765);
+            assert_eq!(response.status, expected, "{path}");
+            assert!(!tmp.path().join("state/geo_index").exists());
+        }
+        let mut bad_origin = request(
+            "POST",
+            "/api/map/zip",
+            json!({"zip":"02360","confirm":true}),
+        );
+        bad_origin
+            .headers
+            .insert("origin".to_owned(), "https://untrusted.invalid".to_owned());
+        assert_eq!(dispatch(&bad_origin, &store, 8765).status, 403);
+        assert!(!tmp.path().join("state/geo_index").exists());
+    }
+
+    #[test]
     fn csp_headers_deny_external_scripts_and_framing() {
         let response = Response::new(200, "text/plain", b"ok".to_vec());
         let header = format!(
@@ -1801,6 +1924,9 @@ mod tests {
         assert!(MAP_ONLINE_JS.contains("https://overpass-api.de/api/interpreter"));
         assert!(MICRO_HTML.contains("/assets/map-online.js"));
         assert!(HTML.contains("/assets/map-online.js"));
+        assert!(HTML.contains("/assets/map-zip.js"));
+        assert!(MICRO_HTML.contains("/assets/map-zip.js"));
+        assert!(ZIP_JS.contains("/api/map/zip"));
         assert!(MAP_IMPORT_JS.contains("parseRustGIS"));
         assert!(MAP_IMPORT_JS.contains("readPackage"));
         assert!(MICRO_HTML.contains("/assets/map-import.js"));

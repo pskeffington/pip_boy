@@ -40,12 +40,20 @@ The **launch** step runs `cargo run --locked -p pipboy -- dashboard --micro --po
 
 Double-click `scripts/launch-micro.command` for the existing normal-profile launcher, or run `bash scripts/test-map-macos.command --launch` for the separate test profile. Both are native Rust processes using a browser UI. Press **Ctrl+C** in the launching Terminal to stop them. Do not expose or forward the loopback server to the public network.
 
+### ZIP-to-county MAP acceptance
+
+The main MAP toolbar now has **ZIP**. Enter a five-digit ZIP (keep leading zeros), choose **FIND COUNTY**, and inspect the 2020 Census relationship result before the 2025 county GIS is displayed. A unique matching county loads directly; multiple intersecting counties need manual selection. The **COUNTY ZIPs** button lists intersecting 2020 ZCTA areas in pages of 12, which are not guaranteed USPS delivery regions. The saved national index allows repeat lookups offline. Verify these separately from manual CENTER and GPS: no coordinate is inferred from ZIP. See [ZIP/County lookups](ZIP_COUNTY_LOOKUP.md).
+
+The first connected lookup downloads a bounded national Census relationship file, not the submitted ZIP; with internet disconnected, ZIP lookups must use only the already-cached crosswalk. Record any ZIP with no ZCTA (e.g. PO Box or special ZIP), ambiguous cross-county results, failure/rollback and any 2020 vs 2025 GEOID mismatch.
+
 ### Live local MAP acceptance sequence
 
 | Gate | Procedure on your Mac | Expected result |
 | --- | --- | --- |
 | M1 — cold start | Launch in an empty test home, select Reclamation Scout → MAP | No default city, no location fix, no third-party map traffic until requested |
 | M2 — manual center | Select CENTER and enter valid latitude/longitude for a location you choose | Center is clearly labeled manual, not a GPS observation |
+| M2b — ZIP→county GIS | Open ZIP, enter a five-digit ZIP, press FIND COUNTY; test both unique and multi-county results | County GIS loads for a unique match; ambiguous ZCTAs require deliberate county selection; no GPS fix invented |
+| M2c — reverse county ZIPs | With county selected, open ZIP → COUNTY ZIPs | A paged list of intersecting 2020 ZCTAs, not an asserted postal ZIP inventory |
 | M3 — county ingestion | Select COUNTY and allow the official Census request | Real county GEOID, matched boundary, TIGER 2025 roads/water and optional county-clipped landmarks; partial source errors are visible |
 | M4 — rendering | Use FIT, +/- zoom, pan with trackpad/pointer; expand LAYERS | ROADS, WATER, LANDMARKS, BORDER independently toggle without redownloading or erasing data; named landmarks are legible |
 | M5 — source inspection | Expand DATA SOURCES | County GEOID/vintage, source counts, partial-source labels, canvas draw timings and source load duration are available |
