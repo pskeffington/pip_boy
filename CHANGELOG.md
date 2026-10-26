@@ -8,6 +8,13 @@
 - Preserve last-good GIS on failed replacement; add Rust and JS tests for ambiguity, offline mode, consent, leading-zero ZIPs, and no ZCTA cases. Crosswalk is not current USPS ZIP validation.
 - Mac operator acceptance and real Census availability remain open field gates.
 
+## 2026-10-26 — NET ENGINEER dashboard route separation (CI pending)
+
+- Extract the opt-in private LAN scan and read-only UniFi HTTP handlers to `crates/pipboy/src/dashboard/network_routes.rs`, retaining original `/api/net/scan` and `/api/net/unifi` paths, JSON responses, parent loopback gate and Rust core network/controller policy.
+- Add offline Rust regressions for cross-origin requests, missing confirmation, unavailable `net-lab`, invalid CIDR and UniFi site inputs, with no unauthorized network activity.
+- Update the ownership index and developer/operator documentation. Keep the focused PR separate from RADIO and Mac MAP work until its full five-job CI passes.
+
+
 ## 2026-10-26 — Privacy and credential-isolation audit (CI pending)
 
 - Review tracked files, local HTTP API, notes/tasks/messages/GIS storage, UniFi credentials, native subprocesses and browser provider requests for leakage paths. Record severity and limitations in the security review.
@@ -30,11 +37,11 @@
 - Extend browser viewport testing to discover Mac Chrome installations and add macOS CI execution of the Mac-first verification entrypoint. Physical user-Mac, live Census availability and browser GPS acceptance remain open until performed.
 - Clarify Mac-first / Pi-later program sequencing in top-level operator navigation.
 
-## 2026-10-26 — Messenger/PACE route ownership extraction (CI pending)
+## 2026-10-26 — Messenger/PACE route ownership extraction (PR #45; five-job CI passed)
 
 - Isolate `GET /api/messages`, `POST /api/messages/send` and `POST /api/messages/retry` in `dashboard/messenger_routes.rs` while retaining the original same-origin loopback router, request bounds, confirmation checks, PACE policy and explicit native SSH transport.
 - Add Rust regression tests for hostile Origin/Host, disabled implicit delivery, invalid tiers/payloads, and unknown outgoing message IDs without creating private stores.
-- Assign the new entrypoint to the Messenger/PACE component index; document code ownership, unchanged API paths and outstanding hardware acceptance. Keep the extraction in a focused PR until exact-head CI passes.
+- Assign the new entrypoint to the Messenger/PACE component index; document code ownership, unchanged API paths and outstanding hardware acceptance. Merged as `c96d3943` after all five CI jobs passed on reconciled head `da650c89`.
 
 
 ## 2026-10-26 — Dashboard Task Control route separation (PR #43; five-job CI passed)
