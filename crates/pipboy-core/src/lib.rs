@@ -28,6 +28,7 @@ pub mod notes;
 pub mod observation;
 pub mod peers;
 pub mod permissions;
+pub mod process_safety;
 pub mod reclamation;
 pub mod registry;
 pub mod runtime;

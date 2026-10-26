@@ -1,5 +1,12 @@
 # Security and privacy
 
+## Public-repository leakage audit (October 26, 2026)
+
+See the [evidence-ranked review](docs/SECURITY_REVIEW_2026-10-26.md) for findings, mitigations, residual risks and acceptance gates. The public checkout now rejects known operator journals, private credential files, strong token signatures and unreviewed external-process constructors during CI. The scan is intentionally offline and reports **file names, line numbers and categories only**, never matched secret values. It is a preventive control for the checked-out tree, **not proof that no secrets exist**, a review of Git history, credential rotation or a dependency advisory scan.
+
+External tools used by the native console (SSH, curl, ping, ARP and browser opening) are constructed with a shared helper that strips recognized API/cloud tokens from each subprocess environment. This prevents unintentional inheritance of a UniFi API key by unrelated child tools; it does not prove the external executable is trustworthy or protect against all possible environment-variable names. Do not run Rust-Boy from a highly privileged shell containing unrelated secrets.
+
+
 ## Unified Network Engineer session ownership
 
 The desktop and micro tool catalogs are metadata; mounting the component starts no request. Active operations use explicit same-origin POSTs after a separate operator assertion. Input edits, role/tool navigation, hidden documents, STOP REFRESH and request failures cancel the view's timer and browser fetch. Refresh is capped at 60 runs with 60 seconds between completed runs. A cancelled fetch cannot terminate a server operation already accepted; its existing sweep, process, timeout and request-worker bounds still apply.
