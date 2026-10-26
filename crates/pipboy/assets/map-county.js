@@ -468,6 +468,9 @@
   }
 
   window.RustBoyCounty=Object.freeze({
-    load,active,boundary,sources,parsePackage,validGeoid,sourceIds:SOURCES
+    load,active,boundary,sources,parsePackage,validGeoid,sourceIds:SOURCES,
+    contains:(rings,lon,lat) => finite(lon) && finite(lat) &&
+      Math.abs(lon)<=180 && Math.abs(lat)<=90 &&
+      insideCounty(lon,lat,countyRings(rings))
   });
 })();
