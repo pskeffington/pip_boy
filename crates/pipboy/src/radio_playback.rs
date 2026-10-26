@@ -350,7 +350,7 @@ fn decode_and_play(
             Err(DecodeError::ResetRequired) => {
                 return Err("Broadcast format changed; reconnect required".into());
             }
-            Err(err) => return Err(format!("Broadcast packet error: {err}")),
+            Err(err) => return Err(PlaybackFailure::Permanent(format!("Broadcast packet error: {err}"))),
         };
         if packet.track_id() != track_id {
             continue;
@@ -358,7 +358,7 @@ fn decode_and_play(
         let decoded = match decoder.decode(&packet) {
             Ok(audio) => audio,
             Err(DecodeError::DecodeError(_)) => continue,
-            Err(err) => return Err(format!("Radio audio decode error: {err}")),
+            Err(err) => return Err(PlaybackFailure::Permanent(format!("Radio audio decode error: {err}"))),
         };
         let spec = *decoded.spec();
         let source_channels = spec.channels.count();
