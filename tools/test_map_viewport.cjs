@@ -103,7 +103,7 @@ function dump(chrome,port,width,height){
     p.on("close",code=>{
       if(finished)return;finished=true;cleanup();
       if(code!==0)return reject(Error("Chrome exited "+code+": "+stderr.slice(-2200)));
-      const match=stdout.match(/<pre id="viewport-report"[^>]*>([A-Za-z0-9+/=]+)<\\/pre>/);
+      const match=stdout.match(/<pre id="viewport-report"[^>]*>([A-Za-z0-9+/=]+)<\/pre>/);
       if(!match)return reject(Error("Chromium map report missing: "+stdout.slice(-1400)));
       try{resolve(JSON.parse(Buffer.from(match[1],"base64").toString("utf8")));}
       catch(e){reject(e);}
