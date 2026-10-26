@@ -5,9 +5,7 @@
 //! Continuous playback requires an independently cancellable worker and a
 //! per-read inactivity timeout; it must not reuse the probe's total deadline.
 
-use pipboy_core::radio_stream::{
-    ApprovedEndpoint, HttpResponse, RadioHttp, StreamError,
-};
+use pipboy_core::radio_stream::{ApprovedEndpoint, HttpResponse, RadioHttp, StreamError};
 use reqwest::blocking::{Client, Response};
 use reqwest::header::{CONTENT_TYPE, LOCATION};
 use reqwest::redirect::Policy;
