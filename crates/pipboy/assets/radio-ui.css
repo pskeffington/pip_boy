@@ -1,30 +1,35 @@
-.rb-radio{display:grid;gap:9px;width:100%;max-width:640px;border:1px solid rgba(114,205,136,.38);background:rgba(4,18,12,.82);color:#c7f6bf;padding:12px;border-radius:8px;font:inherit}
-.rb-radio-top{display:flex;gap:9px;align-items:center;justify-content:space-between;font-size:12px;letter-spacing:.07em}
-.rb-radio-signal{border:1px solid currentColor;border-radius:4px;padding:2px 6px;font-size:10px;white-space:nowrap}
-.rb-radio-signal[data-state="playing"]{color:#78ff91}.rb-radio-signal[data-state="failed"]{color:#ffba78}
-.rb-radio-station{width:100%;min-height:39px;border:1px solid #477a58;background:#07120c;color:#d9ffcf;font:inherit;font-weight:700;padding:5px;border-radius:5px}
-.rb-radio-details{font-size:11px;opacity:.8;min-height:15px;letter-spacing:.06em}
-.rb-radio-controls{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.rb-radio button{font:inherit;font-weight:700;background:#173622;color:#ceffc9;border:1px solid #6eaf7b;border-radius:6px;min-height:43px;cursor:pointer;touch-action:manipulation}
+.rb-radio{display:grid;gap:6px;width:100%;max-width:640px;min-width:0;border:1px solid rgba(114,205,136,.38);background:rgba(4,18,12,.82);color:#c7f6bf;padding:10px;border-radius:8px;font:inherit}
+.rb-radio-top{display:flex;align-items:center;gap:8px;justify-content:space-between;min-width:0;font-size:12px;letter-spacing:.05em}
+.rb-radio-title{white-space:nowrap}
+.rb-radio-count{margin-left:auto;font:700 10px/1.25 inherit;color:#a7ddae;white-space:nowrap}
+.rb-radio-signal{border:1px solid currentColor;border-radius:4px;padding:3px 6px;font-size:10px;white-space:nowrap}
+.rb-radio-signal[data-state="playing"]{color:#78ff91}
+.rb-radio-signal[data-state="failed"]{color:#ffba78}
+.rb-radio-tuner{display:grid;grid-template-columns:42px minmax(0,1fr) 42px;gap:6px;min-width:0}
+.rb-radio-station,.rb-radio-output{min-width:0;width:100%;min-height:42px;border:1px solid #477a58;background:#07120c;color:#d9ffcf;font:inherit;font-weight:700;padding:5px;border-radius:5px}
+.rb-radio-details{font-size:11px;opacity:.85;min-height:15px;letter-spacing:.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rb-radio button{font:inherit;font-weight:700;background:#173622;color:#ceffc9;border:1px solid #6eaf7b;border-radius:6px;min-height:42px;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+.rb-radio .rb-radio-step{font-size:24px;line-height:1;padding:0}
 .rb-radio button:focus-visible,.rb-radio select:focus-visible{outline:3px solid #f1e995;outline-offset:2px}
 .rb-radio button:disabled{opacity:.42;cursor:default}
+.rb-radio-controls{display:grid;grid-template-columns:1fr 1fr;gap:6px;min-width:0}
 .rb-radio .rb-radio-play{background:#285f38;color:#fff}
 .rb-radio .rb-radio-stop{background:#332b1b;border-color:#ac854d}
-.rb-radio-volume{display:grid;grid-template-columns:48px 1fr 48px;align-items:center;text-align:center;gap:8px}
+.rb-radio-volume{display:grid;grid-template-columns:46px minmax(0,1fr) 46px;align-items:center;text-align:center;gap:6px}
 .rb-radio-volume span{font-size:13px;font-weight:700}
-.rb-radio-message{min-height:18px;font-size:11px;line-height:1.35;overflow-wrap:anywhere}
-.rb-radio-compact{padding:8px;gap:6px}
-.rb-radio-compact .rb-radio-station{min-height:36px}
-.rb-radio-compact .rb-radio-controls button{min-height:40px}
-.rb-radio-compact .rb-radio-volume button{min-height:36px}
-@media (max-width:480px){.rb-radio{padding:7px;gap:5px}.rb-radio-top{font-size:11px}.rb-radio-station{font-size:12px}.rb-radio-message{font-size:10px}}
-
+.rb-radio .rb-radio-output-toggle{min-height:40px;text-align:left;font-size:11px;padding:3px 10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rb-radio-output-panel{display:grid;gap:6px;min-width:0}
+.rb-radio-output-panel[hidden]{display:none}
 .rb-radio-output-label{display:grid;gap:4px;font-size:11px;font-weight:700;letter-spacing:.05em}
-.rb-radio-output{width:100%;min-height:39px;border:1px solid #477a58;background:#07120c;color:#d9ffcf;font:inherit;padding:5px;border-radius:5px}
 .rb-radio-output:disabled{opacity:.55}
-.rb-radio-output:focus-visible{outline:3px solid #f1e995;outline-offset:2px}
-.rb-radio-compact .rb-radio-output{min-height:36px}
-
-.rb-radio .rb-radio-fallback{min-height:38px;background:#49331b;border-color:#d1a15d;color:#ffe8bf;font-size:11px;letter-spacing:.04em}
+.rb-radio .rb-radio-fallback{min-height:40px;background:#49331b;border-color:#d1a15d;color:#ffe8bf;font-size:11px;letter-spacing:.04em}
 .rb-radio .rb-radio-fallback[hidden]{display:none}
-.rb-radio-compact .rb-radio-fallback{min-height:36px}
+.rb-radio-message{min-height:17px;font-size:11px;line-height:1.35;overflow-wrap:anywhere}
+.rb-radio-compact{padding:6px;gap:3px}
+.rb-radio-compact .rb-radio-top{font-size:10px}
+.rb-radio-compact .rb-radio-count,.rb-radio-compact .rb-radio-signal{font-size:9px}
+.rb-radio-compact .rb-radio-station{min-height:40px;font-size:12px}
+.rb-radio-compact .rb-radio-controls button,.rb-radio-compact .rb-radio-volume button{min-height:40px}
+.rb-radio-compact .rb-radio-details{display:none}
+.rb-radio-compact .rb-radio-message{font-size:10px;min-height:14px}
+@media (max-width:480px){.rb-radio{padding:6px;gap:3px}.rb-radio-tuner{grid-template-columns:40px minmax(0,1fr) 40px;gap:4px}.rb-radio-top{gap:5px}.rb-radio-station{font-size:12px}.rb-radio-message{font-size:10px}}

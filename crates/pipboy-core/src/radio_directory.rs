@@ -12,6 +12,8 @@ pub struct InternetStation {
     pub id: &'static str,
     pub name: &'static str,
     pub genre: &'static str,
+    /// Short, operator-visible catalog grouping; not a broadcast band.
+    pub category: &'static str,
     pub playlist_url: &'static str,
     pub publisher_reference_url: &'static str,
     pub nominal_kbps: u16,
@@ -19,30 +21,55 @@ pub struct InternetStation {
 }
 
 /// Curated broadcaster links checked against publisher pages 2026-10-26.
-/// Directory inclusion is *not* proof the station is online at runtime.
-pub const CURATED_STATIONS: [InternetStation; 4] = [
+/// Inclusion is not proof a stream is online, licensed for redistribution,
+/// or supported by the local decoder at runtime.
+/// The broadcaster's conditions allow personal listening, not rebroadcasting.
+pub const CURATED_STATIONS: [InternetStation; 10] = [
     InternetStation {
         id: "skylab",
         name: "Skylab Radio (UK)",
         genre: "Chillout / lounge / ambient",
+        category: "CHILL",
         playlist_url: "https://uksoutha.streaming.broadcast.radio:29690/skylab-radio-limited",
         publisher_reference_url: "https://www.skylabradio.com/listen",
-        nominal_kbps: 0, // bitrate not independently verified
+        nominal_kbps: 0,
         format: "Streaming audio (verify at runtime)",
     },
     InternetStation {
         id: "groovesalad",
         name: "Groove Salad",
         genre: "Ambient / downtempo",
+        category: "CHILL",
         playlist_url: "https://somafm.com/m3u/groovesalad.m3u",
         publisher_reference_url: "https://somafm.com/groovesalad/directstreamlinks.html",
         nominal_kbps: 128,
         format: "MP3",
     },
     InternetStation {
+        id: "secretagent",
+        name: "Secret Agent",
+        genre: "Spy jazz / lounge / downtempo",
+        category: "CHILL",
+        playlist_url: "https://somafm.com/m3u/secretagent.m3u",
+        publisher_reference_url: "https://somafm.com/secretagent/directstreamlinks.html",
+        nominal_kbps: 128,
+        format: "MP3",
+    },
+    InternetStation {
+        id: "lush",
+        name: "Lush",
+        genre: "Mellow vocals / electronic",
+        category: "CHILL",
+        playlist_url: "https://somafm.com/m3u/lush.m3u",
+        publisher_reference_url: "https://somafm.com/lush/directstreamlinks.html",
+        nominal_kbps: 128,
+        format: "MP3",
+    },
+    InternetStation {
         id: "dronezone",
         name: "Drone Zone",
-        genre: "Ambient",
+        genre: "Atmospheric / ambient",
+        category: "AMBIENT",
         playlist_url: "https://somafm.com/m3u/dronezone.m3u",
         publisher_reference_url: "https://somafm.com/dronezone/directstreamlinks.html",
         nominal_kbps: 128,
@@ -52,13 +79,53 @@ pub const CURATED_STATIONS: [InternetStation; 4] = [
         id: "deepspaceone",
         name: "Deep Space One",
         genre: "Space / experimental",
+        category: "AMBIENT",
         playlist_url: "https://somafm.com/m3u/deepspaceone.m3u",
         publisher_reference_url: "https://somafm.com/deepspaceone/directstreamlinks.html",
         nominal_kbps: 128,
         format: "MP3",
     },
+    InternetStation {
+        id: "spacestation",
+        name: "Space Station Soma",
+        genre: "Space / midtempo electronica",
+        category: "AMBIENT",
+        playlist_url: "https://somafm.com/m3u/spacestation.m3u",
+        publisher_reference_url: "https://somafm.com/spacestation/directstreamlinks.html",
+        nominal_kbps: 128,
+        format: "MP3",
+    },
+    InternetStation {
+        id: "beatblender",
+        name: "Beat Blender",
+        genre: "Deep house / downtempo",
+        category: "ELECTRONIC",
+        playlist_url: "https://somafm.com/m3u/beatblender.m3u",
+        publisher_reference_url: "https://somafm.com/beatblender/directstreamlinks.html",
+        nominal_kbps: 128,
+        format: "MP3",
+    },
+    InternetStation {
+        id: "defcon",
+        name: "DEF CON Radio",
+        genre: "Electronic / hacker radio",
+        category: "ELECTRONIC",
+        playlist_url: "https://somafm.com/m3u/defcon.m3u",
+        publisher_reference_url: "https://somafm.com/defcon/directstreamlinks.html",
+        nominal_kbps: 128,
+        format: "MP3",
+    },
+    InternetStation {
+        id: "u80s",
+        name: "Underground 80s",
+        genre: "Synthpop / new wave",
+        category: "RETRO",
+        playlist_url: "https://somafm.com/m3u/u80s.m3u",
+        publisher_reference_url: "https://somafm.com/u80s/directstreamlinks.html",
+        nominal_kbps: 128,
+        format: "MP3",
+    },
 ];
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RadioSource {
     HardwareSdr,
@@ -153,7 +220,8 @@ impl RadioConnectivity for PublisherTcpCheck {
 pub fn station_tcp_reachable(id: &str, timeout: Duration) -> Option<IpReachability> {
     let (host, port) = match id {
         "skylab" => ("uksoutha.streaming.broadcast.radio", 29690),
-        "groovesalad" | "dronezone" | "deepspaceone" => ("somafm.com", 443),
+        "groovesalad" | "secretagent" | "lush" | "dronezone" | "deepspaceone"
+        | "spacestation" | "beatblender" | "defcon" | "u80s" => ("somafm.com", 443),
         _ => return None,
     };
     let timeout = timeout.min(Duration::from_secs(3));
@@ -230,7 +298,12 @@ mod tests {
     }
     #[test]
     fn curated_urls_have_publisher_provenance() {
+        assert_eq!(curated_stations().len(), 10);
+        let mut ids = std::collections::BTreeSet::new();
         for station in curated_stations() {
+            assert!(ids.insert(station.id), "duplicate station ID");
+            assert!(["CHILL", "AMBIENT", "ELECTRONIC", "RETRO"].contains(&station.category));
+            assert!(!station.genre.is_empty());
             assert!(station.playlist_url.starts_with("https://"));
             assert!(station.publisher_reference_url.starts_with("https://"));
             if station.id == "skylab" {
@@ -244,6 +317,8 @@ mod tests {
             } else {
                 assert!(station.playlist_url.starts_with("https://somafm.com/m3u/"));
                 assert!(station.playlist_url.ends_with(".m3u"));
+                assert_eq!(station.format, "MP3");
+                assert_eq!(station.nominal_kbps, 128);
             }
             assert!(!station.name.is_empty());
         }

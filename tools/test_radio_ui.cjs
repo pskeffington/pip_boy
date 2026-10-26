@@ -57,9 +57,16 @@ function control(container, className) {
   return found;
 }
 const flush = () => new Promise(setImmediate);
-const stations = [{
-  id: "skylab", name: "Skylab Radio (UK)", genre: "Chillout / lounge / ambient"
-}];
+const stations = [
+  { id: "skylab", name: "Skylab Radio (UK)", genre: "Chillout / lounge / ambient",
+    category: "CHILL", format: "Live", nominal_kbps: 0 },
+  { id: "groovesalad", name: "Groove Salad", genre: "Ambient / downtempo",
+    category: "CHILL", format: "MP3", nominal_kbps: 128 },
+  { id: "dronezone", name: "Drone Zone", genre: "Atmospheric / ambient",
+    category: "AMBIENT", format: "MP3", nominal_kbps: 128 },
+  { id: "defcon", name: "DEF CON Radio", genre: "Electronic / hacker radio",
+    category: "ELECTRONIC", format: "MP3", nominal_kbps: 128 }
+];
 const system = {
   id: "system", name: "System default", default: true, available: true
 };
@@ -131,12 +138,35 @@ async function main() {
   assert.equal(control(rootNode, "rb-radio-play").disabled, false);
   assert.equal(control(rootNode, "rb-radio-fallback").hidden, true);
   assert.ok(poll, "HUD status refresh must be enabled");
+  assert.equal(control(rootNode, "rb-radio-count").textContent, "01 / 04 · CHILL");
+  const tuner = control(rootNode, "rb-radio-station");
+  assert.equal(walk(tuner).filter((item) => item.tagName === "optgroup").length, 3,
+    "Curated stations should be grouped into genres");
+  const next = control(rootNode, "rb-radio-next");
+  const previous = control(rootNode, "rb-radio-prev");
+  next.dispatch("click");
+  assert.equal(tuner.value, "groovesalad");
+  assert.equal(control(rootNode, "rb-radio-count").textContent, "02 / 04 · CHILL");
+  previous.dispatch("click");
+  assert.equal(tuner.value, "skylab");
+  previous.dispatch("click");
+  assert.equal(tuner.value, "defcon", "Station stepping wraps around");
+  next.dispatch("click");
+  assert.equal(tuner.value, "skylab");
+  assert.deepEqual(calls.map((item) => item.action), ["poll"],
+    "Browsing and station stepping must never open a stream");
+  assert.equal(control(rootNode, "rb-radio-output-panel").hidden, true,
+    "Compact HUD defaults to collapsed audio output controls");
+  control(rootNode, "rb-radio-output-toggle").dispatch("click");
+  assert.equal(control(rootNode, "rb-radio-output-panel").hidden, false);
 
   control(rootNode, "rb-radio-play").dispatch("click");
   await flush();
   await flush();
   assert.ok(calls.some((x) => x.action === "play"));
-  assert.equal(control(rootNode, "rb-radio-signal").textContent, "PLAYING");
+  assert.equal(control(rootNode, "rb-radio-signal").textContent, "IP / PLAYING");
+  assert.equal(next.disabled, true, "Changing stations requires Stop");
+  assert.equal(tuner.disabled, true);
 
   const outputs = control(rootNode, "rb-radio-output");
   outputs.value = bluetooth.id;
@@ -145,6 +175,8 @@ async function main() {
   await flush();
   assert.equal(state.output, bluetooth.id);
   assert.equal(state.station, "skylab");
+  assert.equal(control(rootNode, "rb-radio-output-panel").hidden, true,
+    "Successful output change collapses compact output settings");
 
   // Simulate a physical Bluetooth disappearance (changed CPAL enumeration)
   // and decoder-detected output failure; the HUD must not auto-switch.
@@ -157,6 +189,8 @@ async function main() {
   assert.equal(calls.filter((x) => x.action !== "poll").length, priorCommands,
     "Device disappearance must not automatically switch audio");
   assert.equal(control(rootNode, "rb-radio-signal").textContent, "OUTPUT FAILED");
+  assert.equal(control(rootNode, "rb-radio-output-panel").hidden, false,
+    "Output failure opens manual recovery controls");
   assert.equal(control(rootNode, "rb-radio-fallback").hidden, false);
   assert.equal(control(rootNode, "rb-radio-fallback").disabled, false);
   assert.match(control(rootNode, "rb-radio-message").textContent, /OUTPUT FAILED/);
@@ -193,8 +227,10 @@ async function main() {
   mounted.destroy();
   assert.equal(poll, null, "Unmount must release status polling");
   assert.match(css, /\.rb-radio \.rb-radio-fallback/);
-  assert.match(css, /min-height:\s*38px/);
-  console.log("RADIO HUD: native playback consent, Bluetooth hotplug, manual recovery, stop OK");
+  assert.match(css, /\.rb-radio-tuner/);
+  assert.match(css, /\.rb-radio-compact \.rb-radio-details\{display:none\}/);
+  assert.match(css, /min-height:\s*40px/);
+  console.log("RADIO HUD: curated navigation, no autoplay, output recovery, Stop OK");
 }
 main().catch((error) => {
   console.error(error);

@@ -42,6 +42,14 @@ Only the worker can emit playback status. A successful connection must never be 
 
 **R7 / Release**: code audit, audio stream permissions/terms, battery/CPU measurements, telemetry privacy, retry budgets, output routing, CI matrix, packaging.
 
+## R4.5 / R4.6 first station-directory and micro-layout pass (2026-10-26)
+
+- Expanded the opt-in directory from four to ten publisher-referenced stations (Skylab plus nine verified SomaFM MP3 M3U URLs); the registry supplies short operator categories and optional documented bitrate to the native JSON route.
+- Grouped the station picker by genre, added non-networking previous/next buttons, wrap-around stepping, and a count/category badge. Playback is still explicit; a running station must be stopped before selecting another.
+- Kept Play, Stop, volume and OS-visible Bluetooth audio selection on the native Rust engine. On a compact HUD, output choices stay collapsed until tapped or a device failure forces manual recovery controls open.
+- Offline UI regression covers browsing without autoplay, genre grouping, disabled tuning during playback, Bluetooth failure and no silent default fallback. Existing native receiver/retry semantics are unchanged.
+- Preset persistence / favorites and ordered user-specific stations are **not** added in this pass; do not claim R4.5 is complete. All ten streams still require real on-air decoder/audio testing and broadcaster usage review before product release; 480x320 screenshot, touch and physical Pi gates remain open.
+
 ## Rules
 
 - Rust-Boy owns the audio lifecycle; **no external player or browser launches**.

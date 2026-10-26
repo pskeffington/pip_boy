@@ -1186,7 +1186,9 @@ fn radio_snapshot(engine: Option<&NativeRadioEngine>) -> Value {
         .collect();
     let stations: Vec<Value> = curated_stations()
         .iter()
-        .map(|s| json!({"id": s.id, "name": s.name, "genre": s.genre}))
+        .map(|s| json!({"id": s.id, "name": s.name, "genre": s.genre,
+            "category": s.category, "format": s.format,
+            "nominal_kbps": s.nominal_kbps}))
         .collect();
     match engine {
         Some(player) => {
@@ -1667,6 +1669,12 @@ mod tests {
         let state = dispatch(&request("GET", "/api/radio", Value::Null), &store, 8765);
         assert_eq!(state.status, 200);
         let json: Value = serde_json::from_slice(&state.body).unwrap();
+        let station_list = json["stations"].as_array().expect("radio directory");
+        assert_eq!(station_list.len(), 10);
+        assert_eq!(station_list[0]["id"], "skylab");
+        assert_eq!(station_list[0]["category"], "CHILL");
+        assert_eq!(station_list[8]["id"], "defcon");
+        assert_eq!(station_list[8]["nominal_kbps"], 128);
         assert!(json["stations"].as_array().unwrap().len() >= 4);
         assert_eq!(json["sdr"], "not_connected");
         assert_eq!(json["output"], "system");

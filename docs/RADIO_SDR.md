@@ -42,25 +42,29 @@ cargo test -p pipboy-core radio
 - Simulator never represented as real RF.
 - Real hardware adapter, DSP, audio, waterfall and micro HUD integration remain separate gates.
 
-## IP fallback and curated stations (2026-10-26)
+## IP radio / curated directory (2026-10-26)
 
-When a real SDR is enumerated and authorized, prefer it. Otherwise test whether an approved publisher can be reached over IP and offer the internet station list. The resolver is interface-based (`RadioDiscovery` and `RadioConnectivity`) so the same logic can be used by the CLI or micro HUD. **The current implementation has no physical SDR enumerator, no live audio/playlist decoder, and no micro radio view.** It must not claim to have checked hardware just because `NoHardwareEnumerator` returns false.
+The native Rust/Symphonia/CPAL player is implemented on `feat/radio-sdr-core`; Skylab sound, Play/Stop, volume and OS-managed Bluetooth output selection were operator-confirmed on macOS. Physical SDR enumeration, RF demodulation, Raspberry Pi hardware acceptance and full reconnect/fault validation remain unimplemented or pending. Opening the Radio HUD reads only the local state; **no stream begins until Play is pressed**.
 
-The list contains Skylab Radio UK plus three SomaFM stations (Groove Salad, Drone Zone and Deep Space One), whose MP3 M3U playlist URLs were cross-checked against the publisher's official direct-stream documentation on 2026-10-26. Station metadata is published, but runtime availability is not certified. SomaFM states its streams are provided for individual personal listening; do not rebroadcast, relay or embed them into commercial/game distributions without permission.
+The fixed 10-station directory contains Skylab Radio (UK), plus nine SomaFM channels: Groove Salad, Secret Agent, Lush, Drone Zone, Deep Space One, Space Station Soma, Beat Blender, DEF CON Radio and Underground 80s. Categories are CHILL, AMBIENT, ELECTRONIC and RETRO. The desktop list is genre-grouped; the handheld uses the same catalog with previous/next buttons and a station counter. The output picker is collapsible on handheld and opens automatically when audio hardware fails.
 
-- https://somafm.com/groovesalad/directstreamlinks.html
-- https://somafm.com/dronezone/directstreamlinks.html
-- https://somafm.com/deepspaceone/directstreamlinks.html
+SomaFM publishes permanent MP3 M3U playlist endpoints and notes that **streams are for individual personal listening**, not relaying, rebroadcasting, embedding in video games or redistribution without authorization. Do not present these entries as licensed for a public/game distribution. The directory and license conditions must be reviewed before packaging. Publisher references are retained per entry in `radio_directory.rs`; their mere presence is not runtime stream verification.
+
+Publisher channel pages:
+- [Groove Salad](https://somafm.com/groovesalad/directstreamlinks.html), [Secret Agent](https://somafm.com/secretagent/directstreamlinks.html), [Lush](https://somafm.com/lush/directstreamlinks.html)
+- [Drone Zone](https://somafm.com/dronezone/directstreamlinks.html), [Deep Space One](https://somafm.com/deepspaceone/directstreamlinks.html), [Space Station Soma](https://somafm.com/spacestation/directstreamlinks.html)
+- [Beat Blender](https://somafm.com/beatblender/directstreamlinks.html), [DEF CON Radio](https://somafm.com/defcon/directstreamlinks.html), [Underground 80s](https://somafm.com/u80s/directstreamlinks.html)
+- [Skylab Radio](https://www.skylabradio.com/listen)
 
 ```bash
-cargo run -p pipboy -- radio stations             # offline directory, no IP probe
-cargo run -p pipboy -- radio stations --check-ip  # explicit bounded TCP check to somafm.com:443
-cargo run -p pipboy -- radio source               # pure source selection, no probe
+cargo run --locked -p pipboy -- radio stations
+cargo run --locked -p pipboy -- radio stations --check-ip
+cargo run --locked -p pipboy -- radio probe skylab --confirm
+cargo run --locked -p pipboy -- radio listen skylab --confirm --seconds 30
+node tools/test_radio_ui.cjs
 ```
 
-A successful TCP connection proves only routability to the station publisher's HTTPS server; it does not verify HTTP/TLS, playlist resolution, station audio, or decode compatibility. The future player must validate the actual HTTPS playlist/stream on demand and report `checking`, `ready`, `playing`, `unavailable`, `error` separately. Never start playing or download audio merely because the user opened RADIO. Keep playlists cached with source provenance but never cache copyrighted audio without explicit permission. Do not conflate LAN IP with internet availability.
-
-**Next:** integrate a real hardware enumerator, bounded asynchronous HTTPS validation, a decoder with user-controlled start/stop, and the 480x320 radio station selector. On hardware disconnect, stop capture and offer IP fallback; on network loss retain SDR when available and show the last-curated directory as offline/unavailable rather than active stations.
+`stations` is a network-free listing. `stations --check-ip` is an explicit TCP reachability probe, not evidence of decodable audio; `probe` checks bytes at an approved HTTPS endpoint only. Live playback on new channels and actual 480x320 physical touch/scroll acceptance have not yet been proven. No arbitrary URL input or automatic connection is permitted; the runtime TLS/redirect allowlist remains authoritative.
 
 
 ## Native playback implementation policy

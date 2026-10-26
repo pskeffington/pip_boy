@@ -1,14 +1,16 @@
 "use strict";
 
-// Native Rust radio controller. This UI never starts browser audio or external
-// applications. Polling only reads state; all playback requires a button press.
+// Radio UI is a control panel for the same-origin native Rust singleton.
+// Browsing is local: no stream requests, audio or device scans are triggered.
 (function () {
-  const $ = (parent, sel) => parent.querySelector(sel);
-  const node = (name, cls, text) => {
-    const element = document.createElement(name);
-    if (cls) element.className = cls;
+  const node = (tag, className, text) => {
+    const element = document.createElement(tag);
+    if (className) element.className = className;
     if (text !== undefined) element.textContent = String(text);
     return element;
+  };
+  const setText = (element, text) => {
+    if (element.textContent !== text) element.textContent = text;
   };
   const request = async (data) => {
     const options = { cache: "no-store", credentials: "omit" };
@@ -25,14 +27,46 @@
   function mount(root, options = {}) {
     root.replaceChildren();
     root.classList.add("rb-radio");
-    if (options.compact) root.classList.add("rb-radio-compact");
+    const compact = options.compact === true;
+    if (compact) root.classList.add("rb-radio-compact");
+
     const top = node("div", "rb-radio-top");
-    const label = node("strong", "", "RUST-BOY / RADIO");
-    const indicator = node("span", "rb-radio-signal", "LOCAL / OFF");
-    top.append(label, indicator);
+    const label = node("strong", "rb-radio-title", "RADIO / IP");
+    const count = node("span", "rb-radio-count", "-- / --");
+    const indicator = node("span", "rb-radio-signal", "OFF");
+    top.append(label, count, indicator);
+
+    const tuner = node("div", "rb-radio-tuner");
+    const previous = node("button", "rb-radio-prev rb-radio-step", "‹");
+    previous.type = "button";
+    previous.setAttribute("aria-label", "Previous curated station");
     const selector = node("select", "rb-radio-station");
-    selector.setAttribute("aria-label", "Choose curated radio station");
+    selector.setAttribute("aria-label", "Curated radio stations grouped by genre");
+    const next = node("button", "rb-radio-next rb-radio-step", "›");
+    next.type = "button";
+    next.setAttribute("aria-label", "Next curated station");
+    tuner.append(previous, selector, next);
     const details = node("div", "rb-radio-details", "SELECT STATION");
+
+    const controls = node("div", "rb-radio-controls");
+    const play = node("button", "rb-radio-play", "▶ PLAY");
+    const stop = node("button", "rb-radio-stop", "■ STOP");
+    play.type = stop.type = "button";
+    controls.append(play, stop);
+
+    const volumeControls = node("div", "rb-radio-volume");
+    const minus = node("button", "rb-radio-volume-down", "−");
+    const plus = node("button", "rb-radio-volume-up", "+");
+    minus.type = plus.type = "button";
+    minus.setAttribute("aria-label", "Decrease radio volume");
+    plus.setAttribute("aria-label", "Increase radio volume");
+    const volume = node("span", "rb-radio-volume-value", "VOL --");
+    volumeControls.append(minus, volume, plus);
+
+    const outputToggle = node("button", "rb-radio-output-toggle", "OUT / SYSTEM ▾");
+    outputToggle.type = "button";
+    outputToggle.setAttribute("aria-label", "Show or hide audio output devices");
+    const outputPanel = node("div", "rb-radio-output-panel");
     const outputLabel = node("label", "rb-radio-output-label", "AUDIO OUTPUT");
     const outputSelector = node("select", "rb-radio-output");
     outputSelector.setAttribute("aria-label", "Audio output device including connected Bluetooth");
@@ -40,55 +74,92 @@
     const fallback = node("button", "rb-radio-fallback", "USE DEFAULT OUTPUT");
     fallback.type = "button";
     fallback.hidden = true;
-    fallback.setAttribute("aria-label", "Choose system audio output and retry after audio device failure");
-    const controls = node("div", "rb-radio-controls");
-    const play = node("button", "rb-radio-play", "▶ PLAY");
-    play.type = "button";
-    const stop = node("button", "rb-radio-stop", "■ STOP");
-    stop.type = "button";
-    controls.append(play, stop);
-    const gain = node("div", "rb-radio-volume");
-    const minus = node("button", "", "−");
-    const plus = node("button", "", "+");
-    minus.type = plus.type = "button";
-    minus.setAttribute("aria-label", "Decrease radio volume");
-    plus.setAttribute("aria-label", "Increase radio volume");
-    const volume = node("span", "", "VOL --");
-    gain.append(minus, volume, plus);
-    const message = node("div", "rb-radio-message", "No receiver connected. IP radio is opt-in.");
+    fallback.setAttribute("aria-label", "Choose system output after audio device failure");
+    outputPanel.append(outputLabel, fallback);
+
+    const message = node("div", "rb-radio-message", "Ready. Select a station and press Play.");
     message.setAttribute("role", "status");
     message.setAttribute("aria-live", "polite");
-    root.append(top, selector, details, outputLabel, fallback, controls, gain, message);
+    root.append(top, tuner, details, controls, volumeControls, outputToggle, outputPanel, message);
+
     let current = null;
     let busy = false;
     let alive = true;
     let serial = 0;
     let selected = null;
     let requestedOutput = null;
+    let outputExpanded = !compact;
+
+    const showOutput = (expanded) => {
+      outputExpanded = expanded;
+      outputPanel.hidden = !expanded;
+      outputToggle.setAttribute("aria-expanded", String(expanded));
+    };
+    showOutput(outputExpanded);
+
+    const stationInfo = (list) => {
+      const index = list.findIndex((item) => item.id === selected);
+      const chosen = index < 0 ? null : list[index];
+      setText(count, chosen ? String(index + 1).padStart(2, "0") +
+        " / " + String(list.length).padStart(2, "0") + " · " +
+        (chosen.category || "IP") : "00 / " + list.length);
+      const quality = chosen && chosen.nominal_kbps > 0
+        ? " · " + chosen.nominal_kbps + "K " + chosen.format : " · LIVE IP";
+      const line = chosen ? chosen.genre + quality : "NO STATIONS AVAILABLE";
+      setText(details, line);
+      details.title = line;
+    };
+    const setStation = (id) => {
+      if (!current || busy || !["stopped", "failed"].includes(current.status)) return;
+      const list = Array.isArray(current.stations) ? current.stations : [];
+      if (!list.some((item) => item.id === id)) return;
+      selected = id;
+      selector.value = id;
+      stationInfo(list);
+    };
+    const stepStation = (delta) => {
+      if (!current || busy) return;
+      const list = Array.isArray(current.stations) ? current.stations : [];
+      if (!list.length) return;
+      const index = list.findIndex((item) => item.id === selected);
+      setStation(list[((index < 0 ? 0 : index) + delta + list.length) % list.length].id);
+    };
     const apply = (data) => {
       if (!alive) return;
       current = data;
       const list = Array.isArray(data.stations) ? data.stations : [];
-      const previous = selected || selector.value || data.station;
+      const preferred = selected || selector.value || data.station;
       selector.replaceChildren();
+      const groups = new Map();
       for (const station of list) {
-        const option = node("option", "", station.name);
-        option.value = station.id;
-        selector.append(option);
+        const groupName = station.category || "OTHER";
+        let group = groups.get(groupName);
+        if (!group) {
+          group = node("optgroup");
+          group.setAttribute("label", groupName);
+          groups.set(groupName, group);
+          selector.append(group);
+        }
+        const item = node("option", "", station.name);
+        item.value = station.id;
+        group.append(item);
       }
-      selector.value = list.some((station) => station.id === previous)
-        ? previous : (data.station || list[0]?.id || "");
-      selected = selector.value;
+      selected = list.some((item) => item.id === preferred) ? preferred
+        : (list.some((item) => item.id === data.station) ? data.station : (list[0]?.id || ""));
+      selector.value = selected;
+      stationInfo(list);
+
       const outputs = Array.isArray(data.outputs) ? data.outputs : [];
       const chosenOutput = requestedOutput || data.output || "system";
       outputSelector.replaceChildren();
       for (const device of outputs) {
-        const option = node("option", "", device.name);
-        option.value = device.id;
-        outputSelector.append(option);
+        const item = node("option", "", device.name);
+        item.value = device.id;
+        item.disabled = device.available === false;
+        outputSelector.append(item);
       }
-      const availableChoice = outputs.find((device) => device.id === chosenOutput);
-      if (!availableChoice) {
+      const selectedDevice = outputs.find((device) => device.id === chosenOutput);
+      if (!selectedDevice) {
         const missing = node("option", "", "OUTPUT DISCONNECTED — SELECT DEVICE");
         missing.value = chosenOutput;
         missing.disabled = true;
@@ -96,36 +167,43 @@
       }
       outputSelector.value = chosenOutput;
       requestedOutput = null;
+      const outputName = selectedDevice ? selectedDevice.name : "DISCONNECTED";
+      setText(outputToggle, "OUT / " + outputName + (outputExpanded ? " ▴" : " ▾"));
+      outputToggle.title = "Select output device; Bluetooth pairing happens in the OS";
+      const outputFailed = data.output_failure || data.output_available === false;
+      if (outputFailed) showOutput(true);
       outputSelector.disabled = busy || !outputs.some((device) => device.available !== false);
       const defaultOutput = outputs.find((device) => device.id === "system");
-      fallback.hidden = !(data.output_failure || data.output_available === false);
+      fallback.hidden = !outputFailed;
       fallback.disabled = busy || !defaultOutput || defaultOutput.available === false;
-      const station = list.find((item) => item.id === selected);
-      details.textContent = station ? station.genre.toUpperCase() + " / IP STREAM" : "NO STATIONS";
-      indicator.textContent = data.output_failure ? "OUTPUT FAILED"
-        : data.output_available === false ? "NO OUTPUT" : data.status.toUpperCase();
-      indicator.dataset.state = data.output_failure || data.output_available === false
-        ? "failed" : data.status;
-      volume.textContent = "VOL " + data.volume + "%";
-      const running = !["stopped", "failed"].includes(data.status);
-      play.disabled = busy || running || !station || data.output_available === false;
-      stop.disabled = busy || !running;
-      selector.disabled = busy || running;
+
+      const status = data.status || "stopped";
+      const running = !["stopped", "failed"].includes(status);
+      const failed = status === "failed";
+      setText(indicator, data.output_failure ? "OUTPUT FAILED" :
+        data.output_available === false ? "NO OUTPUT" : "IP / " + status.toUpperCase());
+      indicator.dataset.state = outputFailed ? "failed" : status;
+      setText(volume, "VOL " + data.volume + "%");
+      const canTune = !busy && !running && list.length > 0;
+      selector.disabled = !canTune;
+      previous.disabled = next.disabled = !canTune || list.length < 2;
+      play.disabled = !canTune || data.output_available === false;
+      stop.disabled = busy || (status === "stopped" && !data.station);
       minus.disabled = busy || !running || data.volume === 0;
       plus.disabled = busy || !running || data.volume === 100;
-      if (data.output_failure) message.textContent =
-        "AUDIO OUTPUT FAILED — choose a connected device to retry.";
-      else if (data.output_available === false) message.textContent =
-        "SELECTED OUTPUT DISCONNECTED — reselect it or use system default.";
-      else if (data.error) message.textContent = data.error;
-      else if (running) message.textContent =
-        data.status === "playing" ? "Native PCM output active" :
-          data.status === "connecting" ? "Connecting to broadcaster..." :
-            data.status === "buffering" ? "Buffering audio..." :
-            data.status === "recovering" ? "Reconnecting to approved broadcast..." :
-              "Receiver: " + data.status;
-      else message.textContent = data.status === "failed"
-        ? "Stream failed. Select PLAY to retry." : "OFFLINE / READY";
+      if (data.output_failure) setText(message,
+        "OUTPUT FAILED / Select a connected device to retry.");
+      else if (data.output_available === false) setText(message,
+        "NO OUTPUT / Connect audio or select System default.");
+      else if (data.error) setText(message, data.error);
+      else if (running) setText(message,
+        status === "playing" ? "NATIVE AUDIO / PLAYING" :
+        status === "connecting" ? "CONNECTING TO BROADCASTER" :
+        status === "buffering" ? "BUFFERING AUDIO" :
+        status === "recovering" ? "Reconnecting to approved broadcast..." :
+        "RECEIVER / " + status.toUpperCase());
+      else setText(message, failed ? "STREAM FAILED / Press PLAY to retry." :
+        "READY / SELECT STATION, PRESS PLAY");
     };
     const refresh = async () => {
       const sequence = ++serial;
@@ -133,28 +211,46 @@
         const data = await request();
         if (alive && !busy && sequence === serial) apply(data);
       } catch (error) {
-        if (alive && !busy) message.textContent = error.message;
+        if (alive && !busy) setText(message, error.message);
       }
     };
     const command = async (data) => {
       if (busy) return;
       busy = true;
       play.disabled = stop.disabled = true;
-      outputSelector.disabled = true;
-      fallback.disabled = true;
+      previous.disabled = next.disabled = selector.disabled = true;
+      outputSelector.disabled = outputToggle.disabled = fallback.disabled = true;
       minus.disabled = plus.disabled = true;
-      message.textContent = "Applying native radio command...";
+      setText(message, "APPLYING RADIO COMMAND");
       try {
         const result = await request(data);
-        if (alive) apply(result);
+        if (alive) {
+          apply(result);
+          if (data.action === "output" && !result.output_failure &&
+              result.output_available !== false && compact) showOutput(false);
+        }
       } catch (error) {
-        if (alive) message.textContent = error.message;
+        if (alive) {
+          requestedOutput = null;
+          setText(message, error.message);
+        }
       } finally {
         busy = false;
-        if (alive) refresh();
+        if (alive) {
+          outputToggle.disabled = false;
+          refresh();
+        }
       }
     };
-    selector.addEventListener("change", () => { selected = selector.value; });
+    selector.addEventListener("change", () => setStation(selector.value));
+    previous.addEventListener("click", () => stepStation(-1));
+    next.addEventListener("click", () => stepStation(1));
+    outputToggle.addEventListener("click", () => {
+      if (!busy) showOutput(!outputExpanded);
+      setText(outputToggle, "OUT / " +
+        (current?.outputs?.find((device) => device.id === (current.output || "system"))?.name
+          || "DISCONNECTED") + (outputExpanded ? " ▴" : " ▾"));
+    });
     outputSelector.addEventListener("change", () => {
       requestedOutput = outputSelector.value;
       command({ action: "output", output: requestedOutput });
@@ -164,7 +260,7 @@
       command({ action: "output", output: "system" });
     });
     play.addEventListener("click", () => command({
-      action: "play", station: selector.value, confirm: true
+      action: "play", station: selected, confirm: true
     }));
     stop.addEventListener("click", () => command({ action: "stop" }));
     minus.addEventListener("click", () => {
