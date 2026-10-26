@@ -18,9 +18,18 @@ pub struct InternetStation {
     pub format: &'static str,
 }
 
-/// Sources checked against SomaFM official direct stream pages 2026-10-26.
+/// Curated broadcaster links checked against publisher pages 2026-10-26.
 /// Directory inclusion is *not* proof the station is online at runtime.
-pub const CURATED_STATIONS: [InternetStation; 3] = [
+pub const CURATED_STATIONS: [InternetStation; 4] = [
+    InternetStation {
+        id: "skylab",
+        name: "Skylab Radio (UK)",
+        genre: "Chillout / lounge / ambient",
+        playlist_url: "https://uksoutha.streaming.broadcast.radio:29690/skylab-radio-limited",
+        publisher_reference_url: "https://www.skylabradio.com/listen",
+        nominal_kbps: 0, // bitrate not independently verified
+        format: "Streaming audio (verify at runtime)",
+    },
     InternetStation {
         id: "groovesalad",
         name: "Groove Salad",
@@ -138,6 +147,10 @@ pub fn curated_stations() -> &'static [InternetStation] {
     &CURATED_STATIONS
 }
 
+pub fn station_by_id(id: &str) -> Option<&'static InternetStation> {
+    curated_stations().iter().find(|station| station.id == id)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -151,6 +164,11 @@ mod tests {
     }
 
     #[test]
+    fn lookup_is_exact_and_allowlisted() {
+        assert_eq!(station_by_id("skylab").map(|s| s.name), Some("Skylab Radio (UK)"));
+        assert!(station_by_id("https://attacker.test").is_none());
+    }
+    #[test]
     fn sdr_precedes_network() {
         assert_eq!(select_source(&MockHardware(true), &MockIp(IpReachability::Unreachable)), RadioSource::HardwareSdr);
     }
@@ -163,9 +181,15 @@ mod tests {
     #[test]
     fn curated_urls_have_publisher_provenance() {
         for station in curated_stations() {
-            assert!(station.playlist_url.starts_with("https://somafm.com/m3u/"));
-            assert!(station.playlist_url.ends_with(".m3u"));
-            assert!(station.publisher_reference_url.starts_with("https://somafm.com/"));
+            assert!(station.playlist_url.starts_with("https://"));
+            assert!(station.publisher_reference_url.starts_with("https://"));
+            if station.id == "skylab" {
+                assert!(station.playlist_url.starts_with("https://uksoutha.streaming.broadcast.radio:29690/"));
+                assert_eq!(station.publisher_reference_url, "https://www.skylabradio.com/listen");
+            } else {
+                assert!(station.playlist_url.starts_with("https://somafm.com/m3u/"));
+                assert!(station.playlist_url.ends_with(".m3u"));
+            }
             assert!(!station.name.is_empty());
         }
     }
