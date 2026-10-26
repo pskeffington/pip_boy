@@ -25,9 +25,7 @@ impl PcmConverter {
         source_channels: usize,
         output_channels: usize,
     ) -> Result<Self, PcmError> {
-        if !(8_000..=192_000).contains(&source_rate)
-            || !(8_000..=192_000).contains(&output_rate)
-        {
+        if !(8_000..=192_000).contains(&source_rate) || !(8_000..=192_000).contains(&output_rate) {
             return Err(PcmError::UnsupportedRate);
         }
         if !(1..=8).contains(&source_channels) || !(1..=8).contains(&output_channels) {
