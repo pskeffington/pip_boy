@@ -1,0 +1,23 @@
+name: Generate Radio Lockfile
+on:
+  push:
+    branches: ["feat/radio-sdr-core"]
+    paths: [".github/workflows/radio-lock.yml"]
+
+permissions:
+  contents: read
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust 1.90 minimum compiler
+        run: rustup toolchain install 1.90.0 --profile minimal
+      - name: Resolve new HTTPS dependency with minimum compiler
+        run: cargo +1.90.0 generate-lockfile
+      - name: Print generated lockfile for reviewed manual commit
+        run: |
+          echo RADIO_LOCK_BEGIN
+          cat Cargo.lock
+          echo RADIO_LOCK_END
