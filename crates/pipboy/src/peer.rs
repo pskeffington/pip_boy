@@ -3,6 +3,8 @@
 //! This deliberately delegates transport encryption and host authentication to
 //! mature OpenSSH instead of claiming home-grown TLS or unprotected LAN sockets.
 //! It opens no listening port and sends nothing when merely loading a profile.
+use pipboy_core::message_pace::{PaceStore, Route, Tier};
+use pipboy_core::message_protocol::{transmit, Envelope, MessageTransport, StoredReceipt};
 use pipboy_core::messenger::{Delivery, Message, MessageStore, RemoteMessage, MAX_TEXT_BYTES};
 use pipboy_core::peers::{Peer, PeerConfig, PeerStore};
 use pipboy_core::tasks::{
@@ -11,6 +13,7 @@ use pipboy_core::tasks::{
 use serde_json::{json, Value};
 use std::error::Error;
 use std::io::{self, Read, Write};
+use std::net::Ipv4Addr;
 use std::process::{Command, Stdio};
 use std::thread;
 use std::time::{Duration, Instant};
@@ -42,7 +45,23 @@ fn own_device(config: &PeerConfig) -> io::Result<&str> {
 /// No shell is launched on the local machine; an SSH server runs a fixed
 /// 'pipboy peer' subcommand in its configured account.
 fn ssh_command(peer: &Peer, remote: &str) -> Command {
+    ssh_command_at(peer, remote, None)
+}
+
+fn private_local_ip(text: &str) -> io::Result<Ipv4Addr> {
+    pipboy_core::message_pace::private_ipv4(text)
+}
+
+fn ssh_command_at(peer: &Peer, remote: &str, local_ip: Option<Ipv4Addr>) -> Command {
     let mut command = Command::new("ssh");
+    command.arg("-F").arg("none");
+    if let Some(ip) = local_ip {
+        // Change routing only; the enrolled hostname remains the trust identity.
+        let host = peer.target.split_once('@').map(|(_, h)| h).unwrap_or("");
+        command.arg("-o").arg(format!("Hostname={ip}"));
+        command.arg("-o").arg(format!("HostKeyAlias={host}"));
+        command.arg("-o").arg("CheckHostIP=no");
+    }
     for option in [
         "BatchMode=yes",
         "StrictHostKeyChecking=yes",
@@ -84,10 +103,25 @@ fn ssh_command(peer: &Peer, remote: &str) -> Command {
 }
 
 fn run_ssh(peer: &Peer, command: &str, payload: Option<&[u8]>) -> io::Result<Value> {
+    run_ssh_at(peer, command, payload, None)
+}
+
+fn run_ssh_at(
+    peer: &Peer,
+    command: &str,
+    payload: Option<&[u8]>,
+    local_ip: Option<Ipv4Addr>,
+) -> io::Result<Value> {
     if payload.is_some_and(|data| data.len() as u64 > MAX_REQUEST) {
         return Err(invalid("Assignment packet exceeds 8 KiB"));
     }
-    let mut child = ssh_command(peer, command).spawn().map_err(|_| {
+    let mut child = (if local_ip.is_none() {
+        ssh_command(peer, command)
+    } else {
+        ssh_command_at(peer, command, local_ip)
+    })
+    .spawn()
+    .map_err(|_| {
         io::Error::new(
             io::ErrorKind::NotFound,
             "OpenSSH client unavailable or unable to start",
@@ -283,6 +317,36 @@ pub fn send_message_from_store(
     id: u64,
     alias: &str,
 ) -> io::Result<Message> {
+    send_message_at(journal, peers, id, alias, None)
+}
+
+struct SshMessageTransport<'a> {
+    peer: &'a Peer,
+    local_ip: Option<Ipv4Addr>,
+}
+impl MessageTransport for SshMessageTransport<'_> {
+    fn exchange(&mut self, frame: &Envelope) -> io::Result<StoredReceipt> {
+        if frame.to_device != self.peer.alias {
+            return Err(invalid("Transport peer mismatch"));
+        }
+        let bytes = frame.encode()?;
+        let response = run_ssh_at(
+            self.peer,
+            "pipboy peer message-receive",
+            Some(&bytes),
+            self.local_ip,
+        )?;
+        serde_json::from_value(response).map_err(|_| invalid("Malformed Messenger receipt"))
+    }
+}
+
+fn send_message_at(
+    journal: &MessageStore,
+    peers: &PeerStore,
+    id: u64,
+    alias: &str,
+    local_ip: Option<Ipv4Addr>,
+) -> io::Result<Message> {
     if !valid_device_id(alias) || id == 0 {
         return Err(invalid("Invalid Messenger peer or message ID"));
     }
@@ -307,19 +371,32 @@ pub fn send_message_from_store(
         body: message.body,
         sent_at: message.created_at,
     };
-    let bytes = serde_json::to_vec(&packet)?;
-    let response = run_ssh(&destination, "pipboy peer message-receive", Some(&bytes))?;
-    if response.get("schema_version").and_then(Value::as_u64) != Some(1)
-        || get_id(&response, "kind")? != "message_stored"
-        || get_id(&response, "receiver_device")? != alias
-        || get_id(&response, "from_device")? != source
-        || get_num(&response, "origin_id")? != id
-    {
-        return Err(invalid(
-            "Peer returned a mismatched Messenger storage receipt",
-        ));
+    let mut transport = SshMessageTransport {
+        peer: &destination,
+        local_ip,
+    };
+    transmit(&mut transport, journal, &packet)?;
+    journal.outgoing(id, alias)
+}
+
+pub fn send_message_pace_from_store(
+    journal: &MessageStore,
+    peers: &PeerStore,
+    pace: &PaceStore,
+    id: u64,
+    alias: &str,
+    tier: Tier,
+) -> io::Result<Message> {
+    peers.get(alias)?;
+    let pending = journal.outgoing(id, alias)?;
+    if pending.delivery != Delivery::Queued {
+        return Err(invalid("Message already stored on peer"));
     }
-    journal.mark_stored(id, alias, get_num(&response, "remote_id")?)
+    match pace.resolve(alias, tier, true)? {
+        Route::PairedSsh => send_message_from_store(journal, peers, id, alias),
+        Route::LocalSsh(ip) => send_message_at(journal, peers, id, alias, Some(ip)),
+        Route::Hold => Ok(pending),
+    }
 }
 
 pub fn queue_message_from_store(
@@ -327,6 +404,17 @@ pub fn queue_message_from_store(
     peers: &PeerStore,
     alias: &str,
     body: &str,
+) -> io::Result<(Message, bool)> {
+    queue_message_pace_from_store(journal, peers, None, alias, body, Tier::Primary)
+}
+
+pub fn queue_message_pace_from_store(
+    journal: &MessageStore,
+    peers: &PeerStore,
+    pace: Option<&PaceStore>,
+    alias: &str,
+    body: &str,
+    tier: Tier,
 ) -> io::Result<(Message, bool)> {
     if !valid_device_id(alias) {
         return Err(invalid("Invalid Messenger peer"));
@@ -336,12 +424,21 @@ pub fn queue_message_from_store(
     if source == alias {
         return Err(invalid("Cannot message the local device"));
     }
-    // Prove the destination was explicitly paired BEFORE retaining the body.
     peers.get(alias)?;
+    let route = match pace {
+        Some(pace) => pace.resolve(alias, tier, true)?,
+        None if tier == Tier::Primary => Route::PairedSsh,
+        None => return Err(invalid("PACE configuration required")),
+    };
     let pending = journal.queue(alias, body)?;
-    match send_message_from_store(journal, peers, pending.id, alias) {
+    let result = match route {
+        Route::PairedSsh => send_message_from_store(journal, peers, pending.id, alias),
+        Route::LocalSsh(ip) => send_message_at(journal, peers, pending.id, alias, Some(ip)),
+        Route::Hold => return Ok((pending, false)),
+    };
+    match result {
         Ok(stored) => Ok((stored, true)),
-        Err(_) => Ok((pending, false)), // explicit retry; never claim delivery
+        Err(_) => Ok((pending, false)),
     }
 }
 
@@ -355,8 +452,7 @@ fn message_receive(expected_sender: Option<&str>) -> io::Result<()> {
     if bytes.len() as u64 > MAX_REQUEST {
         return Err(invalid("Messenger frame exceeds transport limit"));
     }
-    let frame: RemoteMessage =
-        serde_json::from_slice(&bytes).map_err(|_| invalid("Unrecognized Messenger frame"))?;
+    let frame = Envelope::decode(&bytes)?;
     if !frame.valid()
         || frame.to_device != local
         || expected_sender.is_some_and(|sender| frame.from_device != sender)
@@ -478,9 +574,109 @@ fn bridge(source: &str) -> io::Result<()> {
 }
 
 pub fn run(args: Vec<String>) -> Result<(), Box<dyn Error>> {
-    let use_text = "usage: pipboy peer <init DEVICE --confirm|trust SENDER --confirm|add ALIAS USER@HOST ABSOLUTE_KEY ABSOLUTE_KNOWN_HOSTS --confirm|list [--json]|send TASK_ID ALIAS --confirm|sync ALIAS --confirm|message-send ALIAS --confirm (text on stdin)|message-retry ID ALIAS --confirm>";
+    let use_text = "usage: pipboy peer <init DEVICE --confirm|trust SENDER --confirm|add ALIAS USER@HOST ABSOLUTE_KEY ABSOLUTE_KNOWN_HOSTS --confirm|list [--json]|send TASK_ID ALIAS --confirm|sync ALIAS --confirm|message-send ALIAS --confirm (text on stdin)|message-retry ID ALIAS --confirm|message-retry-local ID ALIAS PRIVATE_IPV4 --confirm|message-key-init --confirm|meshtastic-capture CAPTURE_FILE --confirm|pace-show ALIAS --json|pace-local ALIAS PRIVATE_IPV4_OR_clear --confirm|message-pace ID ALIAS TIER --confirm>";
     let (config, peers, _) = setup()?;
     match args.as_slice() {
+        [command, alias, flag] if command == "pace-show" && flag == "--json" => {
+            let home = pipboy_core::notes::NoteStore::from_environment()?;
+            let root = home
+                .path()
+                .parent()
+                .ok_or_else(|| invalid("Missing data directory"))?;
+            let view = PaceStore::new(root.into()).view(alias, peers.get(alias).is_ok())?;
+            println!("{}", serde_json::to_string(&view)?);
+        }
+        [command, alias, ip, flag] if command == "pace-local" && flag == "--confirm" => {
+            peers.get(alias)?;
+            let address = if ip == "clear" {
+                None
+            } else {
+                Some(private_local_ip(ip)?)
+            };
+            let home = pipboy_core::notes::NoteStore::from_environment()?;
+            let root = home
+                .path()
+                .parent()
+                .ok_or_else(|| invalid("Missing data directory"))?;
+            PaceStore::new(root.into()).set_alternate(alias, address)?;
+            println!("PACE alternate updated / no connection opened");
+        }
+        [command, id, alias, tier, flag] if command == "message-pace" && flag == "--confirm" => {
+            let tier = Tier::parse(tier)?;
+            let home = pipboy_core::notes::NoteStore::from_environment()?;
+            let root = home
+                .path()
+                .parent()
+                .ok_or_else(|| invalid("Missing data directory"))?;
+            let journal = MessageStore::from_environment()?;
+            let result = send_message_pace_from_store(
+                &journal,
+                &peers,
+                &PaceStore::new(root.into()),
+                id.parse()?,
+                alias,
+                tier,
+            )?;
+            println!(
+                "MESSAGE #{} / {}",
+                result.id,
+                if result.delivery == Delivery::Stored {
+                    "STORED ON RECEIVER"
+                } else {
+                    "HELD LOCALLY / NOT DELIVERED"
+                }
+            );
+        }
+        [command, flag] if command == "message-key-init" && flag == "--confirm" => {
+            let recipient = MessageStore::from_environment()?.enroll_encryption()?;
+            println!("Encrypted queue enrolled / public recipient {recipient}");
+        }
+        [command, id, alias, ip, flag]
+            if command == "message-retry-local" && flag == "--confirm" =>
+        {
+            let address = private_local_ip(ip)?;
+            let journal = MessageStore::from_environment()?;
+            let result = send_message_at(&journal, &peers, id.parse()?, alias, Some(address))?;
+            println!(
+                "MESSAGE #{} / STORED ON RECEIVER VIA PINNED LOCAL SSH",
+                result.id
+            );
+        }
+        [command, capture, flag] if command == "meshtastic-capture" && flag == "--confirm" => {
+            // Recorded capture only. A device path cannot bypass the deny-only broker.
+            if !std::fs::symlink_metadata(capture)?.is_file() {
+                return Err(
+                    invalid("Expected a regular USB capture file; no devices or symlinks").into(),
+                );
+            }
+            let mut file = std::fs::File::open(capture)?;
+            if !file.metadata()?.is_file() {
+                return Err(invalid(
+                    "Expected a regular USB capture file; live serial requires the OS broker",
+                )
+                .into());
+            }
+            if file.metadata()?.len() > 1024 * 1024 {
+                return Err(invalid("USB capture exceeds 1 MiB").into());
+            }
+            let mut decoder = pipboy_core::meshtastic_passive::PassiveDecoder::default();
+            let mut count = 0;
+            let mut bytes = [0; 516];
+            let mut limited = (&mut file).take(1024 * 1024 + 1);
+            let mut total = 0;
+            loop {
+                let n = limited.read(&mut bytes)?;
+                if n == 0 {
+                    break;
+                }
+                total += n;
+                if total > 1024 * 1024 {
+                    return Err(invalid("USB capture exceeds 1 MiB").into());
+                }
+                count += decoder.feed(&bytes[..n]).len();
+            }
+            println!("RECORDED USB / {count} untrusted FromRadio frames / no device opened");
+        }
         [command, id, flag] if command == "init" && flag == "--confirm" => {
             peers.init(id)?;
             println!("Rust-Boy device enrolled: {id} / no connection opened");
@@ -566,6 +762,88 @@ pub fn run(args: Vec<String>) -> Result<(), Box<dyn Error>> {
 mod tests {
     use super::*;
     use pipboy_core::peers::Peer;
+
+    #[test]
+    fn local_fallback_retains_enrolled_host_identity_and_rejects_public_routes() {
+        for ip in [
+            "8.8.8.8",
+            "127.0.0.1",
+            "169.254.1.1",
+            "224.0.0.1",
+            "0.0.0.0",
+            "scout.local",
+            "10.0.0.1;whoami",
+        ] {
+            assert!(private_local_ip(ip).is_err());
+        }
+        let peer = Peer {
+            alias: "scout".into(),
+            target: "pi@scout.local".into(),
+            identity_file: "/key".into(),
+            known_hosts_file: "/hosts".into(),
+        };
+        let cmd = ssh_command_at(
+            &peer,
+            "pipboy peer message-receive",
+            Some(private_local_ip("192.168.1.20").unwrap()),
+        );
+        let args = cmd
+            .get_args()
+            .map(|s| s.to_string_lossy().into_owned())
+            .collect::<Vec<_>>();
+        for expected in [
+            "Hostname=192.168.1.20",
+            "HostKeyAlias=scout.local",
+            "StrictHostKeyChecking=yes",
+            "pi@scout.local",
+            "none",
+        ] {
+            assert!(args.contains(&expected.to_string()));
+        }
+    }
+
+    #[test]
+    fn openssh_independently_resolves_fallback_without_changing_trust_identity() {
+        let peer = Peer {
+            alias: "scout".into(),
+            target: "pi@scout.local".into(),
+            identity_file: "/key".into(),
+            known_hosts_file: "/hosts".into(),
+        };
+        let command = ssh_command_at(
+            &peer,
+            "pipboy peer message-receive",
+            Some("192.168.1.20".parse().unwrap()),
+        );
+        let result = Command::new("ssh")
+            .arg("-G")
+            .args(command.get_args())
+            .output();
+        let output = match result {
+            Err(e) if e.kind() == io::ErrorKind::NotFound => return, // native host without OpenSSH
+            other => other.unwrap(),
+        };
+        assert!(output.status.success(), "OpenSSH config evaluation failed");
+        let config = String::from_utf8(output.stdout).unwrap();
+        for expected in [
+            "hostname 192.168.1.20",
+            "hostkeyalias scout.local",
+            "user pi",
+            "identityagent none",
+            "userknownhostsfile /hosts",
+        ] {
+            assert!(
+                config
+                    .lines()
+                    .any(|line| line.trim_end_matches('\r') == expected),
+                "Missing effective setting: {expected}"
+            );
+        }
+        assert!(config.lines().any(|line| matches!(
+            line.trim_end_matches('\r'),
+            "stricthostkeychecking true" | "stricthostkeychecking yes"
+        )));
+    }
 
     #[test]
     fn forced_bridge_rejects_missing_ssh_original_command() {

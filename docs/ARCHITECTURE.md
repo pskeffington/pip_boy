@@ -134,3 +134,16 @@ No release marked production-ready until CI, hardware simulation, terminal resto
 ## Console rendering
 
 `console.rs` owns pure navigation and frame rendering; it opens no files or collectors. `tui.rs` maps terminal events to actions and manages telemetry and explicit note reloads. Collections use an item selector and a separately scrollable detail pane. Notes load on entering NOTES or pressing R; ordinary redraws reuse the in-memory list. See [console controls and size behavior](CONSOLE.md).
+
+## Messenger canonical transport and encrypted queue
+
+`message_protocol` defines the v1 envelope, typed storage receipt and one-attempt
+`MessageTransport`; the existing explicit OpenSSH path implements that interface.
+The deterministic virtual-clock simulator runs without real transports.
+`message_keys` delegates queue encryption to age and private identity persistence
+to native OS credential storage. Fresh journals enroll explicitly; plaintext
+legacy journals are preserved. Local-IP fallback changes SSH routing while
+retaining the enrolled host identity. `meshtastic_passive` takes only a borrowed
+`Read` stream/recorded capture and cannot acquire a physical port or send ToRadio.
+The deny-only OS broker remains unchanged. See the [canonical contract and
+remaining gates](MESSENGER_BUILD_PASSES.md).

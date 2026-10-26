@@ -13,6 +13,29 @@ Rust-Boy is the public product name. The existing `pip_boy` repository, `pipboy`
 
 > **Verified integration baseline:** [Five-job Linux/macOS/Windows CI](https://github.com/pskeffington/pip_boy/actions/runs/40164915215) passed at `e7d1090`, including macOS PTY, Windows ConPTY, and the strict deny-all broker suite. **This does not complete a packaged release or enable physical devices.** The catalog's `implemented_unverified` status denotes a pending module acceptance review, not an absence of CI execution.
 
+## PACE message routing
+
+[PACE routing](PACE_MESSAGING.md) now exposes per-peer plans and an explicit LINK
+selector. Primary uses paired SSH, Alternate uses a saved private-IP route with
+the same pinned identity, Contingency remains receive-only and Emergency is a
+local queue hold. There is no automatic failover or claim of four independent
+bearers. Local route changes/holds are verified without transport calls; actual
+hardware, independent review and key-lifecycle gates remain open.
+
+## Messenger immediate build passes A–C
+
+The [canonical build contract](MESSENGER_BUILD_PASSES.md) now governs message
+envelopes, transport receipts and deterministic loss/delay/duplication/reordering
+simulations. The existing SSH path uses the shared interface. Fresh journals can
+opt into age encryption with an OS-stored queue key. Explicit local-IP retry
+preserves the enrolled SSH host identity. Passive Meshtastic framing operates on
+recorded captures; the physical serial broker remains deny-only.
+
+**Open gates:** independent crypto/integration review, native key lifecycle and
+plaintext migration, actual two-host local-IP validation, OS-enforced serial
+access and [physical interoperability evidence](MESSENGER_INTEROPERABILITY.md).
+These implementations do not complete E2EE or physical mesh messaging.
+
 ## G1 compact micro HUD — four-inch acceptance
 
 The handheld primary dashboard, role selection and tool lists now use concise, paginated screens rather than scrollable long-form panels. Task Control has staged entry, two-task pages, and separate detail actions. Local lab input/results are distinct. Peer send/sync remain explicitly confirmed actions; camera and RustGIS renderers remain disconnected placeholders. [Micro UI guide](MICRO_UI.md).

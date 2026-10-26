@@ -1,5 +1,40 @@
 # Rust-Boy | Validation evidence
 
+## PACE routing local validation — 2026-10-25
+
+Exact Rust 1.90.0 passes 239 workspace tests (52 CLI/dashboard, 175 core,
+12 deny-only broker), strict Clippy and formatting. The Messenger browser test
+covers manual P/A selection, disabled C, local E holds/retries and actual queue
+storage labels. The expanded two-store relay records SSH invocation counts:
+saving/showing a PACE route and holding a message invoke no SSH; C is refused;
+one A retry delivers the original held message ID and obtains a stored receipt.
+The protocol/capture, dashboard and micro smoke checks also pass locally.
+
+This is implementation evidence, not independent security sign-off, native
+key-store lifecycle acceptance or physical bearer/radio interoperability.
+See [PACE contract](PACE_MESSAGING.md). Publication/hosted CI status must be
+recorded separately from these local results.
+
+## Messenger A–C local validation — 2026-10-25
+
+On Linux with exact Rust 1.90.0, this pass passes 237 workspace tests
+(52 CLI/dashboard, 173 core, 12 deny-only broker), strict Clippy, formatting,
+manifest/role/MSRV validators, Messenger browser tests, the existing two-store
+fake-SSH relay smoke and `tools/smoke_messenger_protocol.py`. OpenSSH `-G`
+independently evaluates the fallback configuration without opening a connection.
+Queue tests use an injected age identity rather than claiming native credential
+store acceptance; they cover restart, wrong key, modified ciphertext, preserved
+corrupt originals, failed enrollment on existing data and invalid-marker denial.
+Protocol tests cover golden encoding, malformed frames, source authorization,
+virtual-clock faults, lost receipts, idempotent retries and forged receipts.
+
+Native CI at this exact revision is recorded separately when available. No real
+private LAN, physical USB hardware or independently reviewed crypto integration
+was tested here. [Build contract](MESSENGER_BUILD_PASSES.md) and
+[hardware acceptance](MESSENGER_INTEROPERABILITY.md) distinguish software evidence
+from remaining field/review gates. Two pre-existing strict-Clippy issues were
+also corrected: a redundant required-text boolean and a constant-emptiness test.
+
 ## Network mainline and UI consolidation — 2026-10-25
 
 Baseline [PR #15](https://github.com/pskeffington/pip_boy/pull/15) merged LAN scan/watch, read-only UniFi connected-client reconciliation and DIAG ingestion to `main` at `15c9500`. [Quality run 40216528470](https://github.com/pskeffington/pip_boy/actions/runs/40216528470) passed all five jobs at `badabc523df585e31de20337f79d03dad8298139`: Linux stable, Rust 1.90.0, native macOS, native Windows and manifest validation.
