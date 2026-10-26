@@ -26,6 +26,8 @@ jobs:
           python3 tools/validate_rust_version.py
           python3 tools/validate_repo.py
           python3 tools/test_validate_repo.py
+          python3 tools/validate_component_index.py
+          python3 tools/test_component_index.py
           python3 tools/run_smokes.py --check
           python3 tools/test_run_smokes.py
 

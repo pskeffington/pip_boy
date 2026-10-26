@@ -10,7 +10,7 @@ Rust-Boy is an open-source, offline-first Rust console. Contributions are welcom
 
 ## Repository and documentation hygiene
 
-Place implementation in the owning crate, browser assets in the existing shared dashboard/micro shells, and machine-readable research in `catalog/`. Use the [repository map](docs/REPO_STRUCTURE.md) and avoid moving existing on-disk stores or duplicating role/network catalogs in JavaScript. Keep the root README concise; module contracts belong under `docs/`.
+Place implementation in the owning crate, browser assets in the existing shared dashboard/micro shells, and machine-readable research in `catalog/`. Use the [repository map](docs/REPO_STRUCTURE.md) and avoid moving existing on-disk stores or duplicating role/network catalogs in JavaScript. For new externally visible subsystem entrypoints, update the [component index](catalog/component_index.json), name the related validation tests and retain separate hardware acceptance status. Keep the root README concise; module contracts belong under `docs/`.
 
 Changes to top-level navigation or local Markdown links must pass `python3 tools/validate_repo.py` and `python3 tools/test_validate_repo.py`. The check is offline and covers required navigation, reference-style and inline local links, and nested public Markdown under `docs/`, `catalog/` and optional `data/`. It never traverses `PIPBOY_HOME` and does not certify third-party URLs or hardware.
 
@@ -51,6 +51,8 @@ Start with `cargo run --locked -p pipboy -- dashboard --open` on Mac; run `pytho
 
 ```bash
 python3 tools/validate_catalog.py
+python3 tools/validate_component_index.py
+python3 tools/test_component_index.py
 cargo fmt --all -- --check
 cargo check --workspace --all-targets --locked
 cargo test --workspace --locked

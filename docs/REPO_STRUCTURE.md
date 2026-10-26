@@ -22,6 +22,12 @@ Operator state belongs under **`PIPBOY_HOME`**, not in source control. This incl
 
 Start at the [project README](../README.md), then the [documentation index](README.md), [architecture](ARCHITECTURE.md), [storage contract](STORAGE.md), and [validation evidence](VALIDATION.md). Keep the root README as a concise operator-oriented landing page; put module internals and research matrices under `docs/` or `catalog/` instead of appending extensive technical content to the repository root.
 
+## Machine-readable component responsibility map
+
+The [component ownership and acceptance index](../catalog/component_index.json) tracks mainline subsystem entrypoints, their engineering guides, tests, responsibility boundaries and physical-hardware gates. It is intentionally **not** an exhaustive inventory of every source file or a license/permissions roster. The [organizational optimization research](ORGANIZATIONAL_OPTIMIZATION.md) explains the evidence and proposed sequencing; [ADR 0001](adr/0001-mac-first-portable-core.md) records the Mac-first/Pi-later decision.
+
+Run `python3 tools/validate_component_index.py` and `python3 tools/test_component_index.py` when an externally visible component entrypoint, guide, test or hardware-gate label changes. CI validates both using standard-library-only, offline checks. Keep Raspberry Pi acceptance distinct from portable code compilation; `field_pending` identifies open device acceptance and `deny_only` is not a grant. Avoid unreviewed duplicate ownership of the same source entrypoint.
+
 ## Change and cleanup controls
 
 1. **Avoid duplicate authority.** Rust core owns module catalogs and permissions; desktop and micro shells consume the same APIs. Never fork another independent JavaScript roster of roles or network tools.

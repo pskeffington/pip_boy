@@ -10,6 +10,9 @@ Rust-Boy is the public name of the modular console. The repository, executable, 
 
 ## Engineering navigation
 
+- [Organizational optimization research](ORGANIZATIONAL_OPTIMIZATION.md): evidence matrix, code concentration, component accountability and Mac-to-Pi sequencing.
+- [Architecture decision 0001](adr/0001-mac-first-portable-core.md): single portable Rust workspace with separately accepted hardware adapters.
+
 - [Object model](OBJECT_MODEL.md): traits, runtime registry, permission policy, typed data proposals and lifecycle.
 - [Module catalog](MODULE_CATALOG.md): 27 scoped modules and their dependency/acceptance gates.
 - [Literature matrix](LITERATURE_MATRIX.md): 37 references tied to engineering decisions and test criteria.
