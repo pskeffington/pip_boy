@@ -52,10 +52,12 @@ const document = {
 document.body = document.createElement("body");
 const events = new Map(), requests = [];
 const window = {innerHeight:320, addEventListener:(key, callback) => events.set(key, callback)};
-const toolIds = ["notes", "library", "byte-lab", "simulator", "geo-lab", "reclamation", "net-lab", "diag"];
+const roleIds = ["byte-lab", "simulator", "geo-lab", "reclamation", "net-lab", "gpio", "ble", "nfc"];
+const dataIds = ["notes", "library", "game"];
+const toolIds = [...roleIds, ...dataIds, "host", "diag"];
 const fixture = {
   profiles: Array.from({length:8}, (_, i) => ({id:i === 7 ? "custom" : "role-" + i, title:"Fixture role " + i, tools:toolIds})),
-  palette:toolIds.map(id => ({id, name:id.toUpperCase(), availability:"ready", description:"Invented test tool"})),
+  palette:toolIds.map(id => ({id, section:roleIds.includes(id) ? "role" : dataIds.includes(id) ? "data" : "stat", name:id.toUpperCase(), availability:"ready", description:"Invented test tool"})),
   active:{profile:"role-0", slots:toolIds.map((tool, id) => ({id, tool}))}
 };
 const context = vm.createContext({document, window, Element, console, Intl, Date,
@@ -72,28 +74,41 @@ const tiles = () => content.querySelectorAll(".tile");
   await new Promise(setImmediate);
   assert.deepEqual(requests, ["/api/state"], "Startup must only read local state");
   assert.equal(run("toastTimer"), null, "Startup toast should not obscure tools");
-  run('setTab("gear")');
+  run('setTab("role")');
   assert.equal(tiles().length, 4);
   assert.equal(buttons()[0].disabled, true);
   buttons()[1].click();
-  assert.equal(tiles()[0].textContent.includes("GEO-LAB"), true);
+  assert.equal(tiles()[0].textContent.includes("NET-LAB"), true);
   assert.equal(document.activeElement, buttons()[0], "Last page must retain focus on an enabled arrow");
   // Enlarging the screen retains the first visible tool's containing page.
   document.getElementById("micro-viewport").clientHeight = 330;
   events.get("resize")();
   assert.equal(tiles().length, 6);
-  assert.equal(run("viewPage.gear"), 0);
+  assert.equal(run("viewPage.role"), 0);
   document.getElementById("micro-viewport").clientHeight = 210;
   run('setTab("data")');
-  assert.equal(tiles().length, 2, "Duties must have a reserved action row");
+  assert.equal(tiles().length, 4, "DATA has a paged deck including shared actions");
   const seen = new Set();
   do {
-    tiles().forEach(x => seen.add(x.attributes["aria-label"]));
+    tiles().forEach(x => seen.add(x.attributes["aria-label"] || x.textContent));
     const next = buttons()[1];
     if (!next || next.disabled) break;
     next.click();
   } while (true);
-  assert.equal(seen.size, toolIds.length, "Every data tool must remain reachable");
+  assert.equal(seen.size, dataIds.length + 2, "DATA tools, Messenger and duties must remain reachable");
+  assert.deepEqual(Array.from(run("pages")), ["stat", "role", "data", "map", "radio"]);
+  const categorized = ["stat", "role", "data", "radio"].flatMap(key => Array.from(run(`sectionTools("${key}")`)));
+  assert.equal(categorized.length, toolIds.length, "Every pinned module belongs to exactly one section");
+  assert.equal(new Set(categorized).size, toolIds.length, "Sections must not duplicate module tiles");
+  let radioMounted = 0, radioDestroyed = 0;
+  window.RustBoyRadio = {mount:() => {radioMounted++; return {destroy:() => radioDestroyed++};}};
+  run('setTab("radio")');
+  assert.equal(radioMounted, 1, "RADIO directly mounts native playback controls");
+  run('setTab("stat")');
+  assert.equal(radioDestroyed, 1, "Leaving RADIO cleans up its view controller");
+  assert.equal(tiles().length, 2, "System tools belong under STATUS");
+  document.getElementById("micro-settings").click();
+  assert.equal(run("tab"), "conf", "Settings stays reachable outside the five-section rail");
   run('setTab("conf"); openRoles()');
   const roles = document.getElementById("roles-list");
   assert.equal(roles.children.length, 2);

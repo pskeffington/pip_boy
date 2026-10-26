@@ -1,12 +1,22 @@
 # Rust-Boy | Micro handheld shell
 
-## Height-aware tool pages
+## Universal sections
 
-GEAR, DATA and the Custom palette size their pages from the available viewport height. Below 260 CSS pixels of content space, GEAR shows four tools; DATA and the palette show two so their leading action and pager fit alongside the tiles. Larger screens show six tools (four for the palette). Tool tiles, launcher actions and pagers retain a 44px minimum height. Resizing keeps the page containing the first visible tool and does not rebuild an open tool editor. Accessibility overflow recovery remains available.
+The bottom rail always has **STATUS / [active role] / DATA / MAP / RADIO**, in that order. The second tab uses the active role title from the Rust API; long titles truncate in the rail and remain available in the page heading. **⚙ Settings** in the header holds role selection, CRT effects, Reload and Custom pin editing. Settings does not take a sixth rail slot.
 
-SETUP profile selection shows two profiles per page on screens at most 400 CSS pixels tall and four otherwise, with 44px role/action targets. Paging does not change the staged selection or apply a profile. Back/Escape from the Custom palette returns to Settings. Startup reads local state without a success popup covering the controls; explicit Reload still reports completion.
+| Section | Modules and actions |
+| --- | --- |
+| Status | System Stat, System Diag and local task summary |
+| Active role | Mission Log, Network Engineer, Byte Lab, Sim Bay, Survey GIS, Field Log and future specialist pins; Security Chief camera placeholders |
+| Data | Journal, Archives, Game Link, Messenger and assigned duties |
+| Map | Shared county/vector map, location and map-layer controls |
+| Radio | Direct shared native Rust radio controls and output settings |
 
-`node tools/test_micro_ui.cjs` exercises production JavaScript with synthetic DOM/API fixtures: complete paged tool access, focus retention at page boundaries, staged profile selection, resize preservation and Back. It does not measure rendered geometry or certify physical touch behavior.
+Each palette descriptor has a Rust-owned `section` field. Only pinned modules appear, each in one launcher category; shared Messenger, duties, Map and Radio remain available to every role. Unknown future section metadata defaults to the role deck. Browsing categories never starts a probe, playback, peer delivery or a hardware connection.
+
+Role and Data decks show four tools below 260 CSS pixels of content height and six on larger screens. Status reserves space for two system tools and the task summary. The Custom palette shows two tools on the small screen and four otherwise. Settings role selection shows two profiles per page on screens at most 400 CSS pixels tall and four otherwise. Paging retains focus and staged selection. Resizing does not rebuild an open editor or active Radio view. Tool targets retain a 44px minimum height; accessibility overflow recovery remains available.
+
+`node tools/test_micro_ui.cjs` covers section ordering, complete and exclusive module grouping, direct Radio mounting/cleanup, Settings access, paging and editor preservation with invented local fixtures. Rendered viewport and physical touch acceptance remain separate gates.
 
 ## Back navigation and temporary drafts
 
@@ -14,7 +24,7 @@ Back/Escape returns from a result to its inputs before leaving a tool. Network i
 
 ## Micro readability pass
 
-**STAT, GEAR, MAP, DATA, LINK, SETUP** are the lore-aligned six-tab micro labels. Internal route identifiers are unchanged. The heading has one consistent Back control, including return from non-home tabs; Escape follows the same route. Head Engineer opens NETWORK, which presents the available operations rather than implying a scan has already started. Local tools show results separately with EDIT INPUTS preserving the entered values. Root pages retain overflow access at accessibility zoom.
+**STATUS, [active role], DATA, MAP, RADIO** are the universal five-section labels. Settings is accessed from the header. The heading has one consistent Back control, including return from non-home tabs; Escape follows the same route. Head Engineer opens NETWORK, which presents the available operations rather than implying a scan has already started. Local tools show results separately with EDIT INPUTS preserving the entered values. Root pages retain overflow access at accessibility zoom.
 
 ## Unified Network Engineer
 
@@ -42,12 +52,12 @@ The Mac launcher opens **http://127.0.0.1:8765/micro** and stops when the Termin
 
 ### Hardware-oriented layout
 
-This is an independent phosphor-style renderer, not a collapsed desktop sidebar. Its main six pages use a fixed tab rail, short labels and a **no-scroll viewport** at 480×320. Tool grids and profile selection have visible Previous/Next pages; a short toast replaces the extra visible footer. Unusually long results or accessibility zoom may scroll in the detail view rather than conceal controls. CRT effects can be disabled. No original game artwork is used.
+This is an independent phosphor-style renderer, not a collapsed desktop sidebar. Its main five sections use a fixed tab rail, short labels and a **no-scroll viewport** at 480×320. Tool grids and profile selection have visible Previous/Next pages; a short toast replaces the extra visible footer. Unusually long results or accessibility zoom may scroll in the detail view rather than conceal controls. CRT effects can be disabled. No original game artwork is used.
 
 | Display | Intended adaptation | Current verification |
 | --- | --- | --- |
 | Desktop browser | Centered simulated handheld housing (up to 900×520) | Rust HTTP/assets and JS syntax tests |
-| 800×480 | Compact six-tab HUD, paged role/task selectors | Manual browser acceptance pending |
+| 800×480 | Compact five-section HUD, paged role/task selectors | Manual browser acceptance pending |
 | 480×320 | Short primary screens without scroll; task list and tools paginated | Manual browser acceptance pending |
 | 320px width/portrait | Reduced chrome, detail scroll fallback for accessibility | Manual browser acceptance pending |
 
@@ -55,11 +65,11 @@ No physical screen, Raspberry Pi graphics stack, battery sensor or refresh-rate 
 
 ## Minimal screen contract
 
-**STAT:** the same TOOLS / MAP quick actions and real Open/Late/Blocked counts for every profile. Profile identity lives under SETUP; no top-bar role selector or repeated job name. **GEAR/DATA:** up to six tools per page. **SETUP:** change role, switch CRT effects, reload; Custom's palette has four modules per page. **Role picker:** four options per page, Custom last. **TASK CONTROL:** two assignments per page, two-step creation, Info/Text (when present)/Status/Device/Log tabs and an Assign tab when allowed. **MAP:** an unlocated offline reference grid, explicitly loaded county TIGER geometry, cached county layers, imported RustGIS vectors, Reclamation markers, opt-in GPS and a separately labeled WEB ON reference. **LINK:** disconnected Security camera screens still show NO SIGNAL; no fabricated feeds. **Local labs:** input and result on separate screens. The primary frame normally does not vertically scroll at 480×320; the renderer restores scrolling if browser zoom, larger fonts, or unexpected content would clip controls. Deep results can also scroll.
+The five sections follow the category table above. All module editors open within their owning section and Back returns to its launcher. Map and Radio use the available page area. Security Chief cameras live in the role deck and show NO SIGNAL until an actual integration exists. Inputs/results remain separate screens; accessibility zoom restores overflow access when needed.
 
-## LINK Messenger
+## Data Messenger
 
-Handheld LINK hosts a dedicated device-to-device message view for all non-Security-Chief profiles; Security Chief retains its four-camera fixture with a **MESSENGER / SSH** action. Peer selection, three-message paging, short UTF-8 text, explicit SEND/RETRY, and manual local REFRESH operate entirely through the loopback Rust API. The transport uses pinned OpenSSH and forced-command enrollment, not an Internet chat gateway. **Transport is encrypted; default journals are plaintext. Fresh journals may explicitly enroll age encryption with OS-backed keys. The protocol is not E2EE.** No messages are sent or fetched from peers by entering LINK. See [Messenger security, pairing, and threat model](MESSENGER.md).
+Handheld DATA → MESSENGER hosts a dedicated device-to-device message view for all non-Security-Chief profiles; Security Chief retains its four-camera fixture with a **MESSENGER / SSH** action. Peer selection, three-message paging, short UTF-8 text, explicit SEND/RETRY, and manual local REFRESH operate entirely through the loopback Rust API. The transport uses pinned OpenSSH and forced-command enrollment, not an Internet chat gateway. **Transport is encrypted; default journals are plaintext. Fresh journals may explicitly enroll age encryption with OS-backed keys. The protocol is not E2EE.** No messages are sent or fetched from peers by opening Messenger. See [Messenger security, pairing, and threat model](MESSENGER.md).
 
 ## Direct device task delivery
 
@@ -67,21 +77,21 @@ The Task Control detail now offers **SEND TO SELECTED DEVICE** only for explicit
 
 ## Overseer and role duty displays
 
-On a new install, Overseer begins with **TASK CONTROL** pre-pinned. STAT summarizes actual locally recorded open/overdue/blocked tasks and provides direct access to the task board; GEAR opens the same management module. Creation, reassignment, manual handoff and acknowledgement take explicit clicks. The other job HUDs show their **assigned duties**, filtering by their job ID, rather than a generic management control panel. Older saved Overseer boards need an explicit profile reload to receive the new Task Control pin without resetting task data.
+On a new install, Overseer begins with **TASK CONTROL** pre-pinned. STAT summarizes actual locally recorded open/overdue/blocked tasks and provides direct access to the task board; the role section opens the management module. Creation, reassignment, manual handoff and acknowledgement take explicit clicks. The other job HUDs show their **assigned duties**, filtering by their job ID, rather than a generic management control panel. Older saved Overseer boards need an explicit profile reload to receive the new Task Control pin without resetting task data.
 
 See [Task Control and manual dispatch](TASK_CONTROL.md). Neither the task HUD nor the screen's green styling implies live network delivery or authenticated operators.
 
 ## Operation
 
-**Tabs** (large bottom controls): **STAT** universal quick access, local status, and duties; **GEAR** pins and tool launcher; **MAP** local WGS84 map viewport with imported RustGIS vector layers and explicit browser geolocation (GIS waypoint/distance lab available when pinned); **DATA** local reference and research tools; **LINK** disconnected transport summary, or Security Chief's four-camera mock interaction; **SETUP** role switch, CRT effects toggle, reload and Custom tool palette.
+**Tabs:** STATUS, active role, DATA, MAP, RADIO. The header Settings button opens device configuration.
 
-**Keyboard:** 1–6 jumps directly to pages when not editing a text field; **Escape** exits a focused module or camera, then returns to STAT. In Network Engineer only, Up/Down changes focus, Left/Right or PageUp/PageDown turns tool/result pages, and Enter/Space activates the focused control. Standard Tab/Shift+Tab focus and Enter/Space activate controls. Security Chief LINK uses **1–4** for camera placeholder focus; Escape returns to the four-tile grid. The role selector uses a four-at-a-time pager for all seven presets with **Custom last**.
+**Keyboard:** 1–5 selects the corresponding section when not editing; Escape closes a module, then returns to Status. Standard Tab/Shift+Tab and Enter/Space remain available. Network Engineer retains its internal directional navigation. Profile selection remains staged until LOAD ROLE.
 
 **Profile state:** Selecting a job in the modal is only a preview. **LOAD ROLE** activates it and replaces only pinned module tiles. The change is persisted to the same workbench file used by desktop and TUI; no tools are executed and no extra permissions are granted. Custom begins empty, and only tools supported by the palette can be pinned. A documented "RESET CUSTOM" action clears Custom's pins after explicit confirmation.
 
 **Active local tools:** NET ENGINEER performs real, explicitly authorized private-LAN ICMP/TCP sweeps (with detected-device counts, RTT and optional 60-second refresh while open). It never scans just because the user opens a role or tab. The same tool supports controller-connected client counts, UniFi site IDs and probe-versus-controller comparison when the server is explicitly configured with local TLS credentials. Other labs remain offline. See [network diagnostics](NETWORK_ENGINEERING.md).
 
-**Active offline labs:** For a profile containing the relevant tool, tap **GEAR** → **SURVEY GIS**, **NET ENGINEER**, **BYTE LAB** or **SYSTEM STAT**. The result is computed locally when **RUN** is pressed, using the existing Rust `/api/experiment` endpoint. The browser never auto-fetches host telemetry. Notes/library/simulator/game display safe manual handoffs, not arbitrary command execution. Scout's MAP page can open **WAYPOINT** or **DISTANCE** directly.
+**Active offline labs:** For a profile containing the relevant tool, tap **ROLE** → **SURVEY GIS**, **NET ENGINEER**, **BYTE LAB** or **SYSTEM STAT** (under STATUS). The result is computed locally when **RUN** is pressed, using the existing Rust `/api/experiment` endpoint. The browser never auto-fetches host telemetry. Notes/library/simulator/game display safe manual handoffs, not arbitrary command execution. Scout's MAP page can open **WAYPOINT** or **DISTANCE** directly.
 
 **Security Chief fixture:** LINK displays four clearly disconnected camera tiles. Tap a tile to focus; tap it again, press BACK or Escape to return to the 2×2 wall. No stream URLs, snapshots, IP probing, video decoding, recording or camera sessions are present.
 
@@ -101,7 +111,7 @@ python3 tools/smoke_micro.py
 python3 tools/smoke_tasks.py
 ```
 
-The new smoke script starts an actual Rust loopback server with `--micro --port 0`, confirms both desktop and micro routes, verifies the six-page markup, responsive breakpoints and no external JS URLs, then exercises profile persistence, Scout GIS, Custom pinning and denial of unauthorized requests. It is part of Linux and native macOS/Windows CI. **A passing static/HTTP test is not a visual certification.** Follow up by checking rendered browser screenshots and touch/keyboard usage at 800×480 and 480×320, including focus order, text legibility, scroll clipping, and modal operation.
+The new smoke script starts an actual Rust loopback server with `--micro --port 0`, confirms both desktop and micro routes, verifies the five-section markup, responsive breakpoints and no external JS URLs, then exercises profile persistence, Scout GIS, Custom pinning and denial of unauthorized requests. It is part of Linux and native macOS/Windows CI. **A passing static/HTTP test is not a visual certification.** Follow up by checking rendered browser screenshots and touch/keyboard usage at 800×480 and 480×320, including focus order, text legibility, scroll clipping, and modal operation.
 
 **Next:** verify RustGIS vector import, GPS consent and online OSM reference at handheld size; native RustGIS raster rendering, hardware GNSS and TAK/camera transport remain separately gated.
 
@@ -117,14 +127,4 @@ and E holds locally. History encryption labels follow the actual queue mode.
 
 ## Uniform role-independent shell (October 26, 2026)
 
-The top bar is fixed RB / FIELD TERMINAL and is **not a clickable profile selector**. All roles display the same STAT / GEAR / MAP / DATA / LINK / SETUP tab rail, and STAT always begins with TOOLS and MAP. SETUP → CHANGE PROFILE is the only handheld entry to profile selection; its staged selection and explicit LOAD ROLE remain separate from tool execution. GEAR and DATA show tools from the active pinned workbench; DUTIES is reachable through DATA for all roles and follows their allowed task scope. Security camera and Overseer task functionality remain role-specific tools within the same shell. The desktop counterpart uses its fixed MODULES / VIEWPORT / MESSAGES / SETTINGS navigation and the same persisted profile API.
-
-## Native RADIO in the handheld HUD
-
-From `./scripts/launch-micro.command`, open **LINK → RADIO / IP**. The panel lists curated Skylab Radio UK and SomaFM stations, Play/Stop, 10-point volume buttons, native status and errors. The Rust-Boy process—not the browser—owns the receiver and CPAL speaker output. The same session is visible in the desktop RADIO dock. RADIO does not autoplay, launch another application, or require a particular workbench profile; selecting a station alone never contacts a broadcaster. **STOP** ends playback even after returning to the LINK page. Verify on actual Mac/Pi audio hardware; browser/CI checks alone cannot certify sound.
-
-**RADIO R4.5:** The compact RADIO/ IP widget includes ☆/★ favorites, ALL/★ ONLY filtering, local ordered presets and last-selected restoration. SETTINGS exposes native output selection and favorite-order controls in an overlay. These actions are local and do not autoplay. Radio presets are stored only in the application data root; audio remains native. Physical 480×320 touch acceptance is pending.
-
-## Native output routing (Bluetooth-ready)
-
-RADIO displays an **AUDIO OUTPUT** selector listing CPAL's OS-visible outputs alongside **System default**. A Bluetooth headset or speaker appears after it has been paired and connected in the operating system; Rust-Boy does not initiate Bluetooth pairing, perform unauthorized scans, or claim control of device pairing. Selecting an output explicitly restarts the current station at the prior volume on the new native output. If the selected device disconnects, the error is exposed in RADIO; choose System default or a connected device to recover. The selector is also available when playback is stopped. User field validation is required for a Mac Bluetooth headset and for speaker handoff.
+The top bar is fixed RB / FIELD TERMINAL with a Settings button. Role selection remains under Settings → Change Profile. All roles share the same five sections; only their specialist pins change. Desktop keeps its existing navigation and shares profile storage with micro.

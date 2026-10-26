@@ -120,6 +120,9 @@ jobs:
         run: |
           node --check tools/test_map_viewport.cjs
           node tools/test_map_viewport.cjs
+      - name: Universal micro sections Chromium acceptance
+        if: matrix.toolchain == 'stable'
+        run: node tools/test_micro_viewport.cjs
       - name: RADIO micro real Chromium viewport acceptance
         if: matrix.toolchain == 'stable'
         run: node tools/test_radio_viewport.cjs

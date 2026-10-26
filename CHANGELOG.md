@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-10-26 — Universal micro sections
+
+- Replace six crowded tabs with Status, active role, Data, Map and direct Radio.
+- Group pinned modules using Rust palette section metadata; move Settings to the header and shared Messenger/duties to Data.
+- Preserve paged touch targets, explicit tool actions, role selection and controller cleanup; add category/navigation regression coverage.
+
 ## 2026-10-26 — RADIO R4.5 merge to main (PR #35)
 
 - Expand the approved HTTPS station directory to ten Skylab/SomaFM channels with provenance, categories and no claim of live broadcast availability or redistribution rights.
