@@ -14,6 +14,7 @@ use pipboy_core::network_probe;
 use pipboy_core::network_suite;
 use pipboy_core::peers::PeerStore;
 use pipboy_core::radio_directory::curated_stations;
+use pipboy_core::radio_presets::{MoveDirection, RadioPresetStore, RadioPresets};
 use pipboy_core::reclamation::{NewSite, SiteStatus, SiteStore};
 use pipboy_core::scout_gis::{distance_meters, waypoint, Point};
 use pipboy_core::tasks::{NewTask, Status, TaskStore};
@@ -1164,7 +1165,16 @@ fn unifi_request(req: &Request, store: &WorkbenchStore) -> Result<Response, Resp
     }
 }
 
-fn radio_snapshot(engine: Option<&NativeRadioEngine>) -> Value {
+fn radio_preset_store(store: &WorkbenchStore) -> RadioPresetStore {
+    RadioPresetStore::new(
+        store.path()
+            .parent()
+            .unwrap_or_else(|| std::path::Path::new("."))
+            .to_path_buf(),
+    )
+}
+
+fn radio_snapshot(engine: Option<&NativeRadioEngine>, presets: &RadioPresets) -> Value {
     let selected_output = RADIO_OUTPUT
         .lock()
         .map(|id| id.clone())
@@ -1202,6 +1212,7 @@ fn radio_snapshot(engine: Option<&NativeRadioEngine>) -> Value {
                 "volume": state.volume_percent,
                 "error": state.last_error,
                 "stations": stations,
+                "presets": presets,
                 "sdr": "not_connected",
                 "outputs": devices,
                 "output": selected_output,
@@ -1212,27 +1223,81 @@ fn radio_snapshot(engine: Option<&NativeRadioEngine>) -> Value {
         None => json!({
             "source": "none", "status": "stopped",
             "station": null, "volume": 60, "error": null,
-            "stations": stations, "sdr": "not_connected",
+            "stations": stations, "presets": presets,
+            "sdr": "not_connected",
             "outputs": devices, "output": selected_output,
             "output_available": output_available, "output_failure": false
         }),
     }
 }
 
-fn radio_state() -> Response {
+fn radio_state(store: &WorkbenchStore) -> Response {
+    let presets = match radio_preset_store(store).load() {
+        Ok(presets) => presets,
+        Err(_) => return Response::error(409, "Local radio presets unavailable; file preserved"),
+    };
     match RADIO_ENGINE.lock() {
-        Ok(lock) => Response::json(200, &radio_snapshot(lock.as_ref())),
+        Ok(lock) => Response::json(200, &radio_snapshot(lock.as_ref(), &presets)),
         Err(_) => Response::error(500, "Radio controller unavailable"),
     }
 }
 
-fn radio_command(req: &Request) -> Result<Response, Response> {
-    let body = parse_json_body(req, &["action", "station", "volume", "confirm", "output"])?;
+fn radio_command(req: &Request, store: &WorkbenchStore) -> Result<Response, Response> {
+    let body = parse_json_body(
+        req,
+        &["action", "station", "volume", "confirm", "output", "enabled", "direction"],
+    )?;
     let action = str_field(&body, "action")?;
+    let presets = radio_preset_store(store);
     let mut engine = RADIO_ENGINE
         .lock()
         .map_err(|_| Response::error(500, "Radio controller unavailable"))?;
     match action {
+        "select" => {
+            let station = str_field(&body, "station")?;
+            if engine.as_ref().is_some_and(|current| {
+                !matches!(
+                    current.status().state,
+                    pipboy_core::radio_controller::PlaybackState::Failed
+                        | pipboy_core::radio_controller::PlaybackState::Stopped
+                )
+            }) {
+                return Err(Response::error(409, "Stop the active station before selecting"));
+            }
+            presets
+                .select(station)
+                .map_err(|error| match error.kind() {
+                    io::ErrorKind::InvalidInput => Response::error(422, "Unknown curated station"),
+                    _ => Response::error(409, "Cannot save radio selection"),
+                })?;
+        }
+        "favorite" => {
+            let station = str_field(&body, "station")?;
+            let enabled = body
+                .get("enabled")
+                .and_then(Value::as_bool)
+                .ok_or_else(|| Response::error(422, "Favorite requires boolean enabled"))?;
+            presets
+                .favorite(station, enabled)
+                .map_err(|error| match error.kind() {
+                    io::ErrorKind::InvalidInput => Response::error(422, "Invalid radio favorite"),
+                    _ => Response::error(409, "Cannot save radio favorite"),
+                })?;
+        }
+        "move_favorite" => {
+            let station = str_field(&body, "station")?;
+            let direction = match str_field(&body, "direction")? {
+                "earlier" => MoveDirection::Earlier,
+                "later" => MoveDirection::Later,
+                _ => return Err(Response::error(422, "Direction must be earlier or later")),
+            };
+            presets
+                .move_favorite(station, direction)
+                .map_err(|error| match error.kind() {
+                    io::ErrorKind::InvalidInput => Response::error(422, "Invalid radio favorite"),
+                    _ => Response::error(409, "Cannot reorder radio favorites"),
+                })?;
+        }
         "play" => {
             if body.get("confirm").and_then(Value::as_bool) != Some(true) {
                 return Err(Response::error(
@@ -1256,6 +1321,11 @@ fn radio_command(req: &Request) -> Result<Response, Response> {
                     "Stop the active station before switching",
                 ));
             }
+            // Save last selected *before* starting native I/O. A corrupt or
+            // unavailable preferences file must not be silently overwritten.
+            presets
+                .select(station)
+                .map_err(|_| Response::error(409, "Cannot save radio selection"))?;
             // Stop old failed session before opening a replacement. The native
             // decoder owns audio; no external player or web media element.
             if let Some(mut old) = engine.take() {
@@ -1337,7 +1407,10 @@ fn radio_command(req: &Request) -> Result<Response, Response> {
         }
         _ => return Err(Response::error(422, "Unknown radio command")),
     }
-    Ok(Response::json(200, &radio_snapshot(engine.as_ref())))
+    let saved = presets
+        .load()
+        .map_err(|_| Response::error(409, "Local radio presets unavailable; file preserved"))?;
+    Ok(Response::json(200, &radio_snapshot(engine.as_ref(), &saved)))
 }
 
 fn dispatch(req: &Request, store: &WorkbenchStore, port: u16) -> Response {
@@ -1441,8 +1514,8 @@ fn dispatch(req: &Request, store: &WorkbenchStore, port: u16) -> Response {
             .unwrap_or_else(|_| Response::error(409, "County cache unavailable")),
         ("POST", "/api/map/package") => county_package(req, store).unwrap_or_else(|error| error),
         ("GET", "/api/state") => state(store).unwrap_or_else(|error| error),
-        ("GET", "/api/radio") => radio_state(),
-        ("POST", "/api/radio") => radio_command(req).unwrap_or_else(|error| error),
+        ("GET", "/api/radio") => radio_state(store),
+        ("POST", "/api/radio") => radio_command(req, store).unwrap_or_else(|error| error),
         ("GET", "/api/reclamation") => reclamation_read(store, false).unwrap_or_else(|error| error),
         ("GET", "/api/reclamation/map") => {
             reclamation_map_read(store).unwrap_or_else(|error| error)
