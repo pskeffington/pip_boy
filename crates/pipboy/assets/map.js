@@ -153,12 +153,12 @@
   }
 
   function screenPoint(view, lon, lat) {
-    const p = project(lon, lat);
-    const c = project(view.center.lon, view.center.lat);
-    let dx = p[0] - c[0];
-    dx -= Math.round(dx / TILE) * TILE;
-    const scale = Math.pow(2, view.zoom);
-    return [view.width / 2 + dx * scale, view.height / 2 + (p[1] - c[1]) * scale];
+    const p=project(lon,lat);
+    const c=view.frameCenter||project(view.center.lon,view.center.lat);
+    let dx=p[0]-c[0];
+    dx-=Math.round(dx/TILE)*TILE;
+    const scale=view.frameScale||Math.pow(2,view.zoom);
+    return [view.width/2+dx*scale,view.height/2+(p[1]-c[1])*scale];
   }
 
 
@@ -546,6 +546,9 @@
     ctx.clearRect(0, 0, view.width, view.height);
     ctx.fillStyle = "#0b1a12";
     ctx.fillRect(0, 0, view.width, view.height);
+    // Reuse the center transform for every plotted vertex in this frame.
+    view.frameCenter=project(view.center.lon,view.center.lat);
+    view.frameScale=Math.pow(2,view.zoom);
     drawGrid(ctx, view);
     ctx.lineJoin = "round";
     ctx.lineCap = "round";
@@ -615,8 +618,11 @@
       const category=countyFilterFor(id);
       if(!view.countyLayerVisible[category])continue;
       const layer=view.countyPackage?.layers[id];
-      if(!layer)continue;
-      const index=layer.renderIndex||(layer.renderIndex=buildCountyIndex(layer.shapes));
+      if(!layer || (id==="tiger-pointlm" && view.zoom<11.5))continue;
+      const index=id==="tiger-roads" && view.zoom<11.4 ?
+        (layer.majorRenderIndex||=buildCountyIndex(
+          layer.shapes.filter(shape=>shape.countyMajor))) :
+        (layer.renderIndex||=buildCountyIndex(layer.shapes));
       const candidates=indexedCountyShapes(index,viewport);
       stats.candidates+=candidates.length;
       if(index.cells && viewport)stats.indexedLayers++;
@@ -828,9 +834,15 @@
   }
 
   function refresh(view) {
-    if (active !== view) return;
-    draw(view);
-    setStatus(view);
+    if(active!==view || view.paintQueued)return;
+    view.paintQueued=true;
+    // Pointer-move storms resolve to one frame, keeping touch panning smooth.
+    window.requestAnimationFrame(()=>{
+      view.paintQueued=false;
+      if(active!==view)return;
+      draw(view);
+      setStatus(view);
+    });
   }
 
 
@@ -1060,6 +1072,9 @@
               controller.signal.aborted)return;
           // Index built once on validated ingest, not on every pan/zoom.
           data.renderIndex=buildCountyIndex(data.shapes);
+          if(id==="tiger-roads")
+            data.majorRenderIndex=buildCountyIndex(
+              data.shapes.filter(shape=>shape.countyMajor));
           staged.layers[id]=data;
           // Hand over after the first validated source; subsequent layers
           // belong to this same GEOID, never a mixture of two counties.
@@ -1559,6 +1574,7 @@
       countyLastLookup:null,countyShapes:[],countyPackage:null,
       countyLayerVisible:{...countyPreferences},layerButtons:null,
       layerPanel:null,layerSummary:null,renderStats:null,
+      paintQueued:false,frameCenter:null,frameScale:null,
       countyPackageAbort:null,countyPackageVersion:0,countyCacheReadVersion:0,
 
       countyStatus:"COUNTY OFF / GPS OR CENTER REQUIRED",countyNode,countyButton:null,
