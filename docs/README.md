@@ -15,6 +15,7 @@ Technical contracts, architecture decisions, research provenance and validation 
 | [Overseer Task Control](TASK_CONTROL.md) | Persistent assignments, status, manual handoff and role queues |
 | [Micro handheld shell](MICRO_UI.md) | Minimalist paged six-tab HUD, 480×320 test and compact Task Control |
 | [Graphical dashboard](DASHBOARD_UI.md) | Run local browser UI on Mac, load role templates, test offline tools and Custom |
+| [Native RADIO and station presets](RADIO_NATIVE_ROADMAP.md) | In-process IP playback, favorites, output selection, 480×320 screen checks and hardware release gates |
 | [Quick start](../README.md#quick-start) | Clone, build, run the terminal UI and inspect local status |
 | [Console controls](CONSOLE.md) | Keyboard navigation, resize behavior and terminal restoration |
 | [Boston offline real-street basemap](BOSTON_BASEMAP.md) | Pinned City SAM geometry, provenance, coverage and licensing |
@@ -43,6 +44,7 @@ Technical contracts, architecture decisions, research provenance and validation 
 | Reclamation Scout GIS | [RustGIS and Raspberry Pi / TAK architecture](SCOUT_GIS_TAK.md) |
 | Fallout 4 | [Game mode setup and protocol](GAME_MODE.md) |
 | Task management | [Task Control, local persistence and manual dispatch](TASK_CONTROL.md) |
+| RADIO / SDR | [Receiver and curated stations](RADIO_SDR.md) · [Native player and acceptance passes](RADIO_NATIVE_ROADMAP.md) |
 | Micro handheld | [Launch, controls, themes, safety and acceptance](MICRO_UI.md) |
 | Graphical UI | [Dashboard launcher, API, responsive viewport and test plan](DASHBOARD_UI.md) |
 | Local host and UI | [Host telemetry and field quality](HOST_TELEMETRY.md) · [Object model](OBJECT_MODEL.md) · [Scoped local operations](LOCAL_OPERATIONS.md) · [Console](CONSOLE.md) |

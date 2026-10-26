@@ -42,6 +42,12 @@ Only the worker can emit playback status. A successful connection must never be 
 
 **R7 / Release**: code audit, audio stream permissions/terms, battery/CPU measurements, telemetry privacy, retry budgets, output routing, CI matrix, packaging.
 
+## R4.6 / synthetic Chromium geometry gate (2026-10-26)
+
+- `tools/test_radio_viewport.cjs` serves actual micro.css, radio-ui.css and radio-ui.js to a local headless Chromium browser without live audio/Internet. A same-origin iframe gives precise 480×320 dimensions despite Chromium minimum top-level width.
+- Cases: standby, favorites-only list, playing status, settings overlay and missing Bluetooth output at 480×320, plus 320×568 and 800×480 standby. Checks all ten primary targets are at least 40×40, remain in view, and require no scrolling; asserts the automatic requests are local GET-only.
+- Registered as a separate Rust-stable CI step. This is a software geometry regression, **not** a physical Pi button/display or Bluetooth acceptance result.
+
 ## R4.5 / persisted favorites implementation (2026-10-26)
 
 - A new versioned `RadioPresetStore` writes only directory-approved IDs, up to 12 favorites in user-defined order, plus the last selected station. Reads are side-effect free; writes are short, validated, locked and atomic under the same application-owned data root as the workbench.
