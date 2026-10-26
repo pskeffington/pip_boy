@@ -24,6 +24,7 @@ mod game_discovery;
 mod game_view;
 mod network;
 mod peer;
+mod radio;
 mod sampling;
 mod scout;
 mod status;
@@ -32,7 +33,7 @@ mod workbench;
 
 fn help() {
     println!("{PRODUCT_NAME} | {PRODUCT_DESCRIPTOR}");
-    println!("usage: {CLI_COMMAND} [dashboard [--port PORT] [--open] [--micro]|peer <init|trust|add|list|send|sync|message-send|message-status|message-retry|message-retry-local|message-key-init|meshtastic-capture|pace-show|pace-local|message-pace>|scout geo <waypoint|distance|inspect>|workbench <list|profiles|use|palette|add|remove|rename|clear|bytes|net>|game (--discover-ps4 --confirm [--json] | (--connect IP:PORT | --playstation IP | --ps4 IP) --confirm [--snapshot|--diagnose|--observe-seconds N])|tui|status [--details] [--json]|sample [--count N --interval-ms MS --details]|sources [query]|modules|plan [G0..G4]|evidence [query]|doctor|net <scan|watch> <local|PRIVATE_CIDR> --confirm [--json] | net unifi <sites|clients SITE|compare SITE CIDR> --confirm [--json]|diag <host [--json]|ingest FILE --asset ID --confirm-authorized [--json]>|permissions <list|request KEY|deny KEY|clear KEY>|simulate <list|run ID [--confirm]|replay ID SCENARIO [--confirm]|transport ID --count N --capacity N [--confirm]|adapter <input|display|serial> [--confirm]>|notes <list|add TEXT|search QUERY|export|import FILE>|help]");
+    println!("usage: {CLI_COMMAND} [dashboard [--port PORT] [--open] [--micro]|peer <init|trust|add|list|send|sync|message-send|message-status|message-retry|message-retry-local|message-key-init|meshtastic-capture|pace-show|pace-local|message-pace>|scout geo <waypoint|distance|inspect>|workbench <list|profiles|use|palette|add|remove|rename|clear|bytes|net>|radio <capabilities|simulate FREQ_HZ MODE>|game (--discover-ps4 --confirm [--json] | (--connect IP:PORT | --playstation IP | --ps4 IP) --confirm [--snapshot|--diagnose|--observe-seconds N])|tui|status [--details] [--json]|sample [--count N --interval-ms MS --details]|sources [query]|modules|plan [G0..G4]|evidence [query]|doctor|net <scan|watch> <local|PRIVATE_CIDR> --confirm [--json] | net unifi <sites|clients SITE|compare SITE CIDR> --confirm [--json]|diag <host [--json]|ingest FILE --asset ID --confirm-authorized [--json]>|permissions <list|request KEY|deny KEY|clear KEY>|simulate <list|run ID [--confirm]|replay ID SCENARIO [--confirm]|transport ID --count N --capacity N [--confirm]|adapter <input|display|serial> [--confirm]>|notes <list|add TEXT|search QUERY|export|import FILE>|help]");
 }
 
 fn main() {
@@ -94,6 +95,7 @@ fn run() -> Result<(), Box<dyn Error>> {
         Some("diag") => diagnostics::run(args.collect()),
         Some("net") => network::run(args.collect()),
         Some("peer") => peer::run(args.collect()),
+        Some("radio") => radio::run(args.collect()),
         Some("scout") => scout::run(args.collect()),
         Some("dashboard") => dashboard::run(args.collect()),
         Some("workbench" | "bench") => workbench::run(args.collect()),
