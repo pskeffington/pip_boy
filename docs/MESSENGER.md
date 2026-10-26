@@ -59,3 +59,7 @@ Before use for sensitive content: design and independently evaluate an E2EE prot
 ## Verification
 
 Cargo unit tests cover strict text/journal constraints, receipt states, stored-message replay, corruption preservation and invalid destinations. The integration smoke in tools/smoke_peer.py exercises two isolated devices through a **fake local SSH relay** enforcing the restricted remote command. Its success tests protocol and state, **not real network cryptography**. tools/test_messenger_ui.cjs covers explicit browser sends, safe display, queued retries and zero automatic remote contact. Live macOS-to-Raspberry-Pi SSH enrollment, host-key verification, Windows ACLs, data retention, and field delivery still require real hardware validation.
+
+## Contingency link options
+
+Research on Meshtastic, MeshCore, Reticulum/LXMF and independent local-IP bearer options is documented in [Contingency network core](CONTINGENCY_NETWORK_CORE.md). The code registry is fail-closed: no RF adapter, automatic failover, E2EE or mesh transport has been released.
