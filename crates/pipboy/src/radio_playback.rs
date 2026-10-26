@@ -33,7 +33,11 @@ pub struct NativeRadioEngine {
 }
 
 impl NativeRadioEngine {
-    pub fn start_internet(station_id: &str, volume_percent: u8, output_id: &str) -> Result<Self, String> {
+    pub fn start_internet(
+        station_id: &str,
+        volume_percent: u8,
+        output_id: &str,
+    ) -> Result<Self, String> {
         if station_by_id(station_id).is_none() {
             return Err("Unknown curated internet radio station".into());
         }
