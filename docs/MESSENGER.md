@@ -1,5 +1,7 @@
 # Rust-Boy Messenger | LINK
 
+**Future communications resilience:** [PACE fallback architecture and source matrix](COMMUNICATIONS_REDUNDANCY_PLAN.md). Alternate IP, DTN/mesh, emergency transfer and E2EE are planned, not current Messenger capabilities.
+
 ## Released secure-transport scope
 
 Messenger v1 provides peer-to-peer text conversations in handheld LINK and the desktop dashboard, using the **existing pinned OpenSSH device-to-device channel**. There is no cloud chat provider, direct Internet chat service, automatic background connection, discovery, inbound web listener, or remote message poll. A paired peer must be chosen and an operator must explicitly press SEND or RETRY.
