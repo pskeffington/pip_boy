@@ -545,7 +545,7 @@ function toggleGeoMode() {
 function renderAll() {
   const current = profile();
   if (!current) return;
-  ui.status.innerHTML = '<span class="live-dot" aria-hidden="true"></span> LOCAL';
+  ui.status.innerHTML = '<span class="live-dot" aria-hidden="true"></span> READY';
   ui.title.textContent = current.title;
   ui.subtitle.textContent = current.description;
   ui.viewMode.textContent = selectedAvailable() ? "ACTIVE" : "PREVIEW";
