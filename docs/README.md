@@ -8,6 +8,7 @@ Technical contracts, architecture decisions, research provenance and validation 
 
 | Guide | Focus |
 | --- | --- |
+| [Repository structure and maintenance](REPO_STRUCTURE.md) | Canonical file ownership, code boundaries, documentation navigation and cleanup gates |
 | [Network health and UniFi setup](NETWORK_HEALTH_UNIFI.md) | Unified 16-tool catalog, bounded ICMP/TCP tests, controller configuration and view-owned refresh |
 | [NET ENGINEER LAN diagnostics](NETWORK_ENGINEERING.md) | Explicit private-subnet scan, ICMP/TCP RTT, bounded monitor and device-count limitations |
 | [DIAG offline ingestion](DIAGNOSTICS.md) | Scoped fault-evidence JSONL intake and local host heuristics |

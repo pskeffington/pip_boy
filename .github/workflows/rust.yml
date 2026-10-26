@@ -2,7 +2,7 @@ name: Rust-Boy quality gates
 
 on:
   push:
-    branches: [main, "feat/**"]
+    branches: [main, "feat/**", "chore/**"]
   pull_request:
   workflow_dispatch:
 
@@ -24,6 +24,8 @@ jobs:
           python3 tools/validate_catalog.py
           python3 tools/validate_roles.py
           python3 tools/validate_rust_version.py
+          python3 tools/validate_repo.py
+          python3 tools/test_validate_repo.py
 
   rust:
     name: Rust ${{ matrix.toolchain }}

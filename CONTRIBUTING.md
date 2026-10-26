@@ -8,6 +8,12 @@ The shared Network Engineer view uses Rust `network_suite::OPERATIONS`. Keep con
 
 Rust-Boy is an open-source, offline-first Rust console. Contributions are welcome when they preserve clear provenance, stable commands and the boundary between **tested local features**, **simulators** and **future physical devices**.
 
+## Repository and documentation hygiene
+
+Place implementation in the owning crate, browser assets in the existing shared dashboard/micro shells, and machine-readable research in `catalog/`. Use the [repository map](docs/REPO_STRUCTURE.md) and avoid moving existing on-disk stores or duplicating role/network catalogs in JavaScript. Keep the root README concise; module contracts belong under `docs/`.
+
+Changes to top-level navigation or local Markdown links must pass `python3 tools/validate_repo.py` and `python3 tools/test_validate_repo.py`. The check is offline and covers required navigation, reference-style and inline local links, and nested public Markdown under `docs/`, `catalog/` and optional `data/`. It never traverses `PIPBOY_HOME` and does not certify third-party URLs or hardware.
+
 ## Set up
 
 Install Rust (minimum 1.90), Git and Python 3 for the optional validation scripts. The checked-in `Cargo.lock` is authoritative.

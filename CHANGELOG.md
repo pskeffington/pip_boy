@@ -10,6 +10,21 @@
 - Gate real headless Chromium layout at 480x320, 800x480 and 320x568 with collapsed/expanded layer controls, canvas height, touch-target size, accessible button state and zero implicit provider calls.
 
 
+## 2026-10-26 — Recursive documentation integrity (CI pending)
+
+- Extend the public Markdown auditor to nested guides in `docs/` and `catalog/` and optional `data/` index documentation, without crawling operator files.
+- Check reference-style link definitions as well as ordinary inline links; ignore footnotes, empty links, and fenced examples.
+- Add four offline regressions for nested guides, future public data folders, reference definitions, and empty/footnote input (13 total).
+
+
+## 2026-10-26 — Repository/code hygiene (PR #37; five CI jobs passed)
+
+- Add explicit repository ownership and maintenance guidance, link root documentation, and apply editor/line-ending conventions without relocating runtime data.
+- Consolidate Python validation assertions, make native CLI help navigable by functional group, and add offline public-Markdown link auditing (including directory containment, symlink, stale-reference, and mandatory-link checks) with nine regression tests.
+- Repair retired Boston-basemap references in branding and field/lore guides; preserve the county-first MAP and official offline county-boundary cache.
+- Keep standalone radio, communications, and public-data-index feature branches isolated.
+
+
 ## 2026-10-26 — Offline county-boundary and landmark ingestion
 
 - Add a fixed-host, GEOID-only TIGERweb boundary fetch, bound to an explicit COUNTY action and strict geographic/JSON limits; atomically cache and revalidate raw Census GeoJSON.
