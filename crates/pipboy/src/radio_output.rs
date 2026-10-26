@@ -11,6 +11,56 @@ use std::sync::{
 use std::thread;
 use std::time::Duration;
 
+/// CPAL exposes OS-managed audio endpoints. Connected Bluetooth speakers
+/// and headsets appear here after pairing in macOS/Windows/Linux settings.
+#[derive(Clone, Debug)]
+pub struct OutputDeviceInfo {
+    pub id: String,
+    pub name: String,
+    pub is_default: bool,
+}
+
+pub fn available_outputs() -> Result<Vec<OutputDeviceInfo>, String> {
+    let host = cpal::default_host();
+    let default_name = host.default_output_device().and_then(|device| device.name().ok());
+    let devices = host
+        .output_devices()
+        .map_err(|error| format!("Cannot list audio outputs: {error}"))?;
+    let mut result = vec![OutputDeviceInfo {
+        id: "system".into(),
+        name: "System default".into(),
+        is_default: true,
+    }];
+    for (index, device) in devices.enumerate() {
+        let name = device.name().unwrap_or_else(|_| "Unnamed audio output".into());
+        let label = if default_name.as_deref() == Some(name.as_str()) {
+            format!("{name} (default)")
+        } else {
+            name
+        };
+        result.push(OutputDeviceInfo {
+            id: format!("output-{index}"),
+            name: label,
+            is_default: false,
+        });
+    }
+    Ok(result)
+}
+
+fn resolve_output(host: &cpal::Host, output_id: &str) -> Result<cpal::Device, String> {
+    if output_id == "system" {
+        return host.default_output_device().ok_or_else(|| "No default audio output".into());
+    }
+    let index = output_id
+        .strip_prefix("output-")
+        .and_then(|value| value.parse::<usize>().ok())
+        .ok_or("Invalid audio output identifier")?;
+    host.output_devices()
+        .map_err(|error| format!("Cannot enumerate audio outputs: {error}"))?
+        .nth(index)
+        .ok_or_else(|| "Audio output disconnected; refresh the device list".into())
+}
+
 pub struct NativeAudioOutput {
     producer: HeapProd<f32>,
     stream: cpal::Stream,
@@ -21,11 +71,9 @@ pub struct NativeAudioOutput {
 }
 
 impl NativeAudioOutput {
-    pub fn open(volume: Arc<AtomicU8>) -> Result<Self, String> {
+    pub fn open(volume: Arc<AtomicU8>, output_id: &str) -> Result<Self, String> {
         let host = cpal::default_host();
-        let device = host
-            .default_output_device()
-            .ok_or("No native audio output device detected")?;
+        let device = resolve_output(&host, output_id)?;
         let supported = device
             .default_output_config()
             .map_err(|e| format!("Audio output unavailable: {e}"))?;
