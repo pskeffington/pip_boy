@@ -1566,6 +1566,34 @@ mod tests {
     }
 
     #[test]
+    fn radio_hud_endpoints_require_same_origin_and_valid_commands() {
+        let temp = tempfile::tempdir().unwrap();
+        let store = WorkbenchStore::new(temp.path().join("radio-hud"));
+        for asset in ["/assets/radio-ui.js", "/assets/radio-ui.css"] {
+            assert_eq!(dispatch(&request("GET", asset, Value::Null), &store, 8765).status, 200);
+        }
+        let state = dispatch(&request("GET", "/api/radio", Value::Null), &store, 8765);
+        assert_eq!(state.status, 200);
+        let json: Value = serde_json::from_slice(&state.body).unwrap();
+        assert!(json["stations"].as_array().unwrap().len() >= 4);
+        assert_eq!(json["sdr"], "not_connected");
+        let invalid = request("POST", "/api/radio", json!({"action":"play", "station":"unknown", "confirm":true}));
+        assert_eq!(dispatch(&invalid, &store, 8765).status, 422);
+        let absent = request("POST", "/api/radio", json!({"action":"play", "station":"skylab"}));
+        assert_eq!(dispatch(&absent, &store, 8765).status, 422);
+        let unsafe_volume = request("POST", "/api/radio", json!({"action":"volume", "volume":101}));
+        assert_eq!(dispatch(&unsafe_volume, &store, 8765).status, 422);
+        let mut cross_origin = request("POST", "/api/radio", json!({"action":"stop"}));
+        cross_origin.headers.insert("origin".into(), "http://evil.example".into());
+        assert_eq!(dispatch(&cross_origin, &store, 8765).status, 403);
+        let stop = request("POST", "/api/radio", json!({"action":"stop"}));
+        assert_eq!(dispatch(&stop, &store, 8765).status, 200);
+        assert!(RADIO_UI_JS.contains("/api/radio"));
+        assert!(MICRO_JS.contains("native-radio"));
+        assert!(HTML.contains("radio-dock"));
+    }
+
+    #[test]
     fn all_profiles_are_loaded_from_rust_templates_and_custom_is_last() {
         let temp = tempfile::tempdir().unwrap();
         let store = WorkbenchStore::new(temp.path().join("fresh"));
