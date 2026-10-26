@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-10-26 — Network Engineer touch and D-pad field controls (unreleased)
+
+- Merge the first 2×2 handheld tool deck, standby status strip and 48px PREV/NEXT touch targets through [PR #32](https://github.com/pskeffington/pip_boy/pull/32) after all five quality checks passed.
+- Extend the Network Engineer keyboard-emulated hardware contract: D-pad up/down traverses focusable controls, left/right or PageUp/PageDown turns tool/result pages, and native Enter/Space remains the only button activation.
+- Strengthen high-contrast focus/pressed states and preserve the no-autoscan, no-repeat and no-implicit-authorization behavior. Restrict the handler to the mounted tool, outside any open dialog and away from text-field editing.
+- Add regression cases for focus order, four-page boundaries, consent checkbox traversal, physical page keys and no network traffic from focus alone. Real touch, gloves, hardware switches and 480×320 browser visual acceptance remain open.
+
 ## 2026-10-25 — Persistent PACE delivery progress
 
 - Persist tracked attempt counts, last P/A route and exchange/receipt outcomes inside the existing message journal, including its opt-in age encryption. Preserve local holds across restart.
