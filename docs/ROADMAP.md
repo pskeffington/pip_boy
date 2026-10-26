@@ -20,7 +20,10 @@ selector. Primary uses paired SSH, Alternate uses a saved private-IP route with
 the same pinned identity, Contingency remains receive-only and Emergency is a
 local queue hold. There is no automatic failover or claim of four independent
 bearers. Local route changes/holds are verified without transport calls; actual
-hardware, independent review and key-lifecycle gates remain open.
+hardware, independent review and key-lifecycle gates remain open. Queued delivery
+now persists tracked attempt counts, last P/A route, local holds and unconfirmed
+exchange/rejected receipt evidence. Interrupted attempts remain unknown until an
+explicit retry; local status inspection never resumes delivery automatically.
 
 ## Messenger immediate build passes A–C
 

@@ -11,6 +11,7 @@ use std::collections::HashSet;
 use std::env;
 use std::fs::{self, File};
 use std::io::{self, Read, Write};
+use std::net::Ipv4Addr;
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 use zeroize::Zeroizing;
@@ -58,6 +59,50 @@ pub enum Delivery {
     Received,
 }
 
+/// Local delivery evidence only; never serialized onto the wire.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum AttemptOutcome {
+    Started,
+    ExchangeUnconfirmed,
+    ReceiptRejected,
+    Stored,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "tier", rename_all = "snake_case", deny_unknown_fields)]
+pub enum AttemptRoute {
+    Primary,
+    Alternate { ipv4: Ipv4Addr },
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct LastAttempt {
+    pub route: AttemptRoute,
+    pub started_at: u64,
+    pub outcome: AttemptOutcome,
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct DeliveryProgress {
+    pub attempts: u32,
+    pub held_locally: bool,
+    pub last_attempt: Option<LastAttempt>,
+}
+
+impl DeliveryProgress {
+    fn valid(&self, delivery: Delivery) -> bool {
+        (self.attempts == 0) == self.last_attempt.is_none()
+            && self.last_attempt.as_ref().is_none_or(|attempt| {
+                !matches!(attempt.route, AttemptRoute::Alternate { ipv4 } if !ipv4.is_private())
+                    && (attempt.outcome == AttemptOutcome::Stored) == (delivery == Delivery::Stored)
+            })
+            && (delivery != Delivery::Stored || (!self.held_locally && self.attempts > 0))
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Message {
@@ -71,6 +116,8 @@ pub struct Message {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub remote_sent_at: Option<u64>,
     pub remote_stored_id: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub progress: Option<DeliveryProgress>,
 }
 
 impl Message {
@@ -78,6 +125,9 @@ impl Message {
         self.id > 0
             && valid_device_id(&self.peer)
             && valid_text(&self.body)
+            && self.progress.as_ref().is_none_or(|progress| {
+                self.direction == Direction::Outgoing && progress.valid(self.delivery)
+            })
             && match (self.direction, self.delivery) {
                 (Direction::Incoming, Delivery::Received) => {
                     self.remote_origin_id.is_some_and(|id| id > 0)
@@ -251,6 +301,16 @@ impl MessageStore {
     }
 
     fn lock(&self) -> io::Result<File> {
+        self.lock_named("messages.lock")
+    }
+
+    /// Serializes cooperative outbound dispatches and holds across processes.
+    /// Separate from the journal lock so inbound persistence can still proceed.
+    pub(crate) fn dispatch_lock(&self) -> io::Result<File> {
+        self.lock_named("message-dispatch.lock")
+    }
+
+    fn lock_named(&self, name: &str) -> io::Result<File> {
         #[cfg(unix)]
         {
             use std::os::unix::fs::DirBuilderExt;
@@ -268,7 +328,7 @@ impl MessageStore {
             use std::os::unix::fs::OpenOptionsExt;
             options.mode(0o600);
         }
-        let file = options.open(self.directory().join("messages.lock"))?;
+        let file = options.open(self.directory().join(name))?;
         fs2::FileExt::try_lock_exclusive(&file)?;
         Ok(file)
     }
@@ -295,6 +355,15 @@ impl MessageStore {
     }
 
     pub fn queue(&self, peer: &str, body: &str) -> io::Result<Message> {
+        self.queue_with_hold(peer, body, false)
+    }
+
+    /// Initial hold and new record commit together, without a transport attempt.
+    pub fn queue_held(&self, peer: &str, body: &str) -> io::Result<Message> {
+        self.queue_with_hold(peer, body, true)
+    }
+
+    fn queue_with_hold(&self, peer: &str, body: &str, held_locally: bool) -> io::Result<Message> {
         if !valid_device_id(peer) || !valid_text(body) {
             return Err(invalid("Invalid message recipient or text"));
         }
@@ -315,6 +384,10 @@ impl MessageStore {
             remote_origin_id: None,
             remote_sent_at: None,
             remote_stored_id: None,
+            progress: Some(DeliveryProgress {
+                held_locally,
+                ..DeliveryProgress::default()
+            }),
         };
         book.next_id += 1;
         book.messages.push(message.clone());
@@ -359,9 +432,102 @@ impl MessageStore {
         }
         message.delivery = Delivery::Stored;
         message.remote_stored_id = Some(remote_id);
+        // Untracked callers retain legacy receipt behavior without inventing an attempt.
+        if let Some(progress) = &mut message.progress {
+            if let Some(last) = &mut progress.last_attempt {
+                progress.held_locally = false;
+                last.outcome = AttemptOutcome::Stored;
+            } else {
+                message.progress = None;
+            }
+        }
         let result = message.clone();
         self.save(&book)?;
         Ok(result)
+    }
+
+    fn update_pending(
+        &self,
+        id: u64,
+        peer: &str,
+        update: impl FnOnce(&mut DeliveryProgress) -> io::Result<()>,
+    ) -> io::Result<Message> {
+        let _guard = self.lock()?;
+        let mut book = self.load()?;
+        let message = book
+            .messages
+            .iter_mut()
+            .find(|message| {
+                message.id == id && message.peer == peer && message.direction == Direction::Outgoing
+            })
+            .ok_or_else(|| invalid("Outgoing message not found"))?;
+        if message.delivery != Delivery::Queued {
+            return Err(invalid("Message already stored on peer"));
+        }
+        update(
+            message
+                .progress
+                .get_or_insert_with(DeliveryProgress::default),
+        )?;
+        let result = message.clone();
+        self.save(&book)?;
+        Ok(result)
+    }
+
+    pub fn hold(&self, id: u64, peer: &str) -> io::Result<Message> {
+        let _dispatch = self.dispatch_lock()?;
+        self.update_pending(id, peer, |progress| {
+            progress.held_locally = true;
+            Ok(())
+        })
+    }
+
+    pub(crate) fn start_attempt(
+        &self,
+        id: u64,
+        peer: &str,
+        route: AttemptRoute,
+    ) -> io::Result<Message> {
+        self.update_pending(id, peer, |progress| {
+            progress.attempts = progress
+                .attempts
+                .checked_add(1)
+                .ok_or_else(|| invalid("Attempt counter exhausted"))?;
+            progress.held_locally = false;
+            progress.last_attempt = Some(LastAttempt {
+                route,
+                started_at: unix_time()?,
+                outcome: AttemptOutcome::Started,
+            });
+            Ok(())
+        })
+    }
+
+    pub(crate) fn fail_attempt(
+        &self,
+        id: u64,
+        peer: &str,
+        attempts: u32,
+        outcome: AttemptOutcome,
+    ) -> io::Result<Message> {
+        if !matches!(
+            outcome,
+            AttemptOutcome::ExchangeUnconfirmed | AttemptOutcome::ReceiptRejected
+        ) {
+            return Err(invalid("Expected an unconfirmed attempt outcome"));
+        }
+        self.update_pending(id, peer, |progress| {
+            if progress.attempts != attempts {
+                return Err(invalid("Stale Messenger attempt result"));
+            }
+            let last = progress
+                .last_attempt
+                .as_mut()
+                .filter(|last| last.outcome == AttemptOutcome::Started)
+                .ok_or_else(|| invalid("No unresolved Messenger attempt"))?;
+            last.outcome = outcome;
+            Ok(())
+        })
     }
 
     pub fn receive(
@@ -403,6 +569,7 @@ impl MessageStore {
             remote_origin_id: Some(frame.origin_id),
             remote_sent_at: Some(frame.sent_at),
             remote_stored_id: None,
+            progress: None,
         };
         book.next_id += 1;
         book.messages.push(message.clone());
@@ -536,5 +703,62 @@ mod tests {
         packet.body = "\u{1b}bad".into();
         assert!(store.receive(&packet, "scout-one").is_err());
         assert!(!dir.path().join("vault/messages.json").exists());
+    }
+
+    #[test]
+    fn legacy_journals_load_without_inventing_attempt_evidence() {
+        let dir = tempfile::tempdir().unwrap();
+        let store = MessageStore::new(dir.path().into());
+        let pending = store.queue("scout", "old report").unwrap();
+        let mut book = serde_json::to_value(store.load().unwrap()).unwrap();
+        book["messages"][0]
+            .as_object_mut()
+            .unwrap()
+            .remove("progress");
+        fs::write(&store.path, serde_json::to_vec(&book).unwrap()).unwrap();
+        assert!(store
+            .outgoing(pending.id, "scout")
+            .unwrap()
+            .progress
+            .is_none());
+        let held = store.hold(pending.id, "scout").unwrap();
+        let progress = held.progress.unwrap();
+        assert!(progress.held_locally);
+        assert_eq!(progress.attempts, 0);
+        assert!(progress.last_attempt.is_none());
+        assert_eq!(held.created_at, pending.created_at);
+    }
+
+    #[test]
+    fn invalid_progress_preserves_journal_and_attempt_counter_cannot_wrap() {
+        let dir = tempfile::tempdir().unwrap();
+        let store = MessageStore::new(dir.path().into());
+        let pending = store.queue("scout", "report").unwrap();
+        store
+            .start_attempt(pending.id, "scout", AttemptRoute::Primary)
+            .unwrap();
+        let mut book = store.load().unwrap();
+        book.messages[0].progress.as_mut().unwrap().attempts = u32::MAX;
+        store.save(&book).unwrap();
+        let original = fs::read(&store.path).unwrap();
+        assert!(store
+            .start_attempt(pending.id, "scout", AttemptRoute::Primary)
+            .is_err());
+        assert_eq!(fs::read(&store.path).unwrap(), original);
+        let valid = serde_json::to_value(&book).unwrap();
+        for bad_progress in [
+            serde_json::json!({"attempts":1,"held_locally":false,"last_attempt":null}),
+            serde_json::json!({"attempts":0,"held_locally":false,"last_attempt":null,"unknown":true}),
+            serde_json::json!({"attempts":1,"held_locally":false,"last_attempt":{"route":{"tier":"alternate","ipv4":"8.8.8.8"},"started_at":1,"outcome":"started"}}),
+            serde_json::json!({"attempts":1,"held_locally":false,"last_attempt":{"route":{"tier":"primary"},"started_at":1,"outcome":"stored"}}),
+        ] {
+            let mut invalid = valid.clone();
+            invalid["messages"][0]["progress"] = bad_progress;
+            let bytes = serde_json::to_vec(&invalid).unwrap();
+            fs::write(&store.path, &bytes).unwrap();
+            assert!(store.load().is_err());
+            assert!(store.hold(pending.id, "scout").is_err());
+            assert_eq!(fs::read(&store.path).unwrap(), bytes);
+        }
     }
 }

@@ -4,8 +4,10 @@
 //! mature OpenSSH instead of claiming home-grown TLS or unprotected LAN sockets.
 //! It opens no listening port and sends nothing when merely loading a profile.
 use pipboy_core::message_pace::{PaceStore, Route, Tier};
-use pipboy_core::message_protocol::{transmit, Envelope, MessageTransport, StoredReceipt};
-use pipboy_core::messenger::{Delivery, Message, MessageStore, RemoteMessage, MAX_TEXT_BYTES};
+use pipboy_core::message_protocol::{transmit_on_route, Envelope, MessageTransport, StoredReceipt};
+use pipboy_core::messenger::{
+    AttemptRoute, Delivery, Message, MessageStore, RemoteMessage, MAX_TEXT_BYTES,
+};
 use pipboy_core::peers::{Peer, PeerConfig, PeerStore};
 use pipboy_core::tasks::{
     valid_device_id, NewTask, RemoteAssignment, RemoteReport, Task, TaskStore,
@@ -176,10 +178,17 @@ fn run_ssh_at(
             "Peer rejected SSH session or remote command; verify pinned host key, SSH key, and remote Rust-Boy setup"));
     }
     if bytes.len() as u64 > MAX_RESPONSE {
-        return Err(invalid("Peer response exceeded 64 KiB"));
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            "Peer response exceeded 64 KiB",
+        ));
     }
-    serde_json::from_slice(&bytes)
-        .map_err(|_| invalid("Peer response is not a single valid JSON receipt"))
+    serde_json::from_slice(&bytes).map_err(|_| {
+        io::Error::new(
+            io::ErrorKind::InvalidData,
+            "Peer response is not a single valid JSON receipt",
+        )
+    })
 }
 
 fn get_id<'a>(value: &'a Value, field: &str) -> io::Result<&'a str> {
@@ -336,7 +345,8 @@ impl MessageTransport for SshMessageTransport<'_> {
             Some(&bytes),
             self.local_ip,
         )?;
-        serde_json::from_value(response).map_err(|_| invalid("Malformed Messenger receipt"))
+        serde_json::from_value(response)
+            .map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "Malformed Messenger receipt"))
     }
 }
 
@@ -375,7 +385,11 @@ fn send_message_at(
         peer: &destination,
         local_ip,
     };
-    transmit(&mut transport, journal, &packet)?;
+    let route = match local_ip {
+        Some(ipv4) => AttemptRoute::Alternate { ipv4 },
+        None => AttemptRoute::Primary,
+    };
+    transmit_on_route(&mut transport, journal, &packet, route)?;
     journal.outgoing(id, alias)
 }
 
@@ -395,7 +409,7 @@ pub fn send_message_pace_from_store(
     match pace.resolve(alias, tier, true)? {
         Route::PairedSsh => send_message_from_store(journal, peers, id, alias),
         Route::LocalSsh(ip) => send_message_at(journal, peers, id, alias, Some(ip)),
-        Route::Hold => Ok(pending),
+        Route::Hold => journal.hold(id, alias),
     }
 }
 
@@ -430,7 +444,11 @@ pub fn queue_message_pace_from_store(
         None if tier == Tier::Primary => Route::PairedSsh,
         None => return Err(invalid("PACE configuration required")),
     };
-    let pending = journal.queue(alias, body)?;
+    let pending = if route == Route::Hold {
+        journal.queue_held(alias, body)?
+    } else {
+        journal.queue(alias, body)?
+    };
     let result = match route {
         Route::PairedSsh => send_message_from_store(journal, peers, pending.id, alias),
         Route::LocalSsh(ip) => send_message_at(journal, peers, pending.id, alias, Some(ip)),
@@ -438,7 +456,8 @@ pub fn queue_message_pace_from_store(
     };
     match result {
         Ok(stored) => Ok((stored, true)),
-        Err(_) => Ok((pending, false)),
+        // Reload persisted failure evidence; do not return the pre-attempt snapshot.
+        Err(_) => Ok((journal.outgoing(pending.id, alias)?, false)),
     }
 }
 
@@ -574,9 +593,16 @@ fn bridge(source: &str) -> io::Result<()> {
 }
 
 pub fn run(args: Vec<String>) -> Result<(), Box<dyn Error>> {
-    let use_text = "usage: pipboy peer <init DEVICE --confirm|trust SENDER --confirm|add ALIAS USER@HOST ABSOLUTE_KEY ABSOLUTE_KNOWN_HOSTS --confirm|list [--json]|send TASK_ID ALIAS --confirm|sync ALIAS --confirm|message-send ALIAS --confirm (text on stdin)|message-retry ID ALIAS --confirm|message-retry-local ID ALIAS PRIVATE_IPV4 --confirm|message-key-init --confirm|meshtastic-capture CAPTURE_FILE --confirm|pace-show ALIAS --json|pace-local ALIAS PRIVATE_IPV4_OR_clear --confirm|message-pace ID ALIAS TIER --confirm>";
+    let use_text = "usage: pipboy peer <init DEVICE --confirm|trust SENDER --confirm|add ALIAS USER@HOST ABSOLUTE_KEY ABSOLUTE_KNOWN_HOSTS --confirm|list [--json]|send TASK_ID ALIAS --confirm|sync ALIAS --confirm|message-send ALIAS --confirm (text on stdin)|message-retry ID ALIAS --confirm|message-status ID ALIAS --json|message-retry-local ID ALIAS PRIVATE_IPV4 --confirm|message-key-init --confirm|meshtastic-capture CAPTURE_FILE --confirm|pace-show ALIAS --json|pace-local ALIAS PRIVATE_IPV4_OR_clear --confirm|message-pace ID ALIAS TIER --confirm>";
     let (config, peers, _) = setup()?;
     match args.as_slice() {
+        [command, id, alias, flag] if command == "message-status" && flag == "--json" => {
+            let message = MessageStore::from_environment()?.outgoing(id.parse()?, alias)?;
+            println!(
+                "{}",
+                json!({"message": message, "automatic_connections": false, "read_by_human": false})
+            );
+        }
         [command, alias, flag] if command == "pace-show" && flag == "--json" => {
             let home = pipboy_core::notes::NoteStore::from_environment()?;
             let root = home

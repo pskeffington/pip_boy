@@ -17,7 +17,7 @@ let state={schema_version:1,device_id:"head-engineer",peers:["scout-one"],
   conversations:["scout-one"],transport:"pinned_openssh_explicit",storage:"plaintext_local_only",e2ee:false,
   messages:[]};
 const calls=[];
-let failSend=false;
+let failSend=false,failRetry=false;
 function pace(){return [{peer:"scout-one",lanes:[
   {tier:"primary",selectable:true},{tier:"alternate",selectable:true},
   {tier:"contingency",selectable:false},{tier:"emergency",selectable:true}]}]}
@@ -33,7 +33,10 @@ async function fakeFetch(url,options={}){
     const id=state.messages.length+1;
     state.messages.push({id,peer:"scout-one",body:frame.body,
       direction:"outgoing",delivery:failSend||frame.tier==="emergency"?"queued":"stored",
-      created_at:10,remote_origin_id:null,remote_stored_id:failSend?null:id});
+      created_at:10,remote_origin_id:null,remote_stored_id:failSend?null:id,
+      progress:{attempts:frame.tier==="emergency"?0:1,held_locally:frame.tier==="emergency",
+        last_attempt:frame.tier==="emergency"?null:{route:{tier:frame.tier},started_at:10,
+          outcome:failSend?"exchange_unconfirmed":"stored"}}});
     return {ok:true,json:async()=>({
       stored_on_receiver:!failSend&&frame.tier!=="emergency",held_locally:frame.tier==="emergency",message:state.messages.at(-1),
       read_by_human:false
@@ -44,6 +47,13 @@ async function fakeFetch(url,options={}){
     const m=state.messages.find(x=>x.id===frame.id);
     assert.ok(m&&m.delivery==="queued");
     assert.ok(["primary","alternate","emergency"].includes(frame.tier));
+    if(frame.tier==="emergency")m.progress.held_locally=true;
+    else{
+      m.progress.attempts++;m.progress.held_locally=false;
+      m.progress.last_attempt={route:{tier:frame.tier},started_at:11,
+        outcome:failRetry?"receipt_rejected":"stored"};
+    }
+    if(failRetry)return {ok:false,json:async()=>({error:"retry unconfirmed"})};
     m.delivery=frame.tier==="emergency"?"queued":"stored";m.remote_stored_id=frame.tier==="emergency"?null:90;
     return {ok:true,json:async()=>({stored_on_receiver:frame.tier!=="emergency",held_locally:frame.tier==="emergency",message:m})};
   }
@@ -84,11 +94,20 @@ async function main(){
   press(form,"submit");await tick();
   assert.equal(state.messages[1].delivery,"queued");
   assert.ok(walk(root).some(x=>x.textContent.includes("QUEUED LOCALLY")));
+  assert.ok(walk(root).some(x=>x.textContent.includes("EXCHANGE UNCONFIRMED / DELIVERY UNKNOWN · 1 TRY · LAST P")));
   const retry=find(root,x=>x.tag==="button"&&x.textContent==="RETRY");
   assert.ok(retry,"queued message offers explicit retry");
+  assert.equal(retry.disabled,false,"queued retry re-enables after send reload");
+  failRetry=true;
   press(retry);await tick();
+  assert.equal(state.messages[1].delivery,"queued");
+  assert.ok(walk(root).some(x=>x.textContent.includes("RECEIPT REJECTED / DELIVERY UNKNOWN · 2 TRIES")),
+    "failed retry reloads durable attempt evidence");
+  failRetry=false;
+  press(find(root,x=>x.tag==="button"&&x.textContent==="RETRY"));await tick();
   assert.equal(state.messages[1].delivery,"stored");
-  assert.equal(calls.filter(x=>x.url==="/api/messages/retry").length,1);
+  assert.equal(calls.filter(x=>x.url==="/api/messages/retry").length,2);
+  assert.ok(walk(root).some(x=>x.textContent.includes("RECEIPT VERIFIED / NOT READ · 3 TRIES")));
   assert.ok(!find(root,x=>x.tag==="button"&&x.textContent==="RETRY"));
   const route=find(root,x=>x.attrs["aria-label"]==="PACE delivery route");
   assert.ok(route);
@@ -103,9 +122,18 @@ async function main(){
   input.value="Hold this report";press(form,"submit");await tick();
   assert.equal(state.messages.at(-1).delivery,"queued");
   assert.ok(walk(root).some(x=>x.textContent.includes("HELD LOCALLY / NOT DELIVERED")));
+  assert.ok(walk(root).some(x=>x.textContent.includes("LOCAL HOLD / MANUAL RETRY · 0 TRIES")));
   const heldRetry=find(root,x=>x.tag==="button"&&x.textContent==="RETRY");
   press(heldRetry);await tick();
   assert.equal(state.messages.at(-1).delivery,"queued","hold retry cannot claim remote delivery");
+  assert.equal(state.messages.at(-1).progress.attempts,0,"hold is not a network attempt");
+  const held=state.messages.at(-1);
+  held.progress={attempts:1,held_locally:false,last_attempt:{route:{tier:"primary"},started_at:10,outcome:"started"}};
+  await app.refresh();await tick();
+  assert.ok(walk(root).some(x=>x.textContent.includes("ATTEMPT OUTCOME UNKNOWN")));
+  delete held.progress;
+  await app.refresh();await tick();
+  assert.ok(walk(root).some(x=>x.textContent==="PRIOR ATTEMPT DETAILS UNAVAILABLE"));
   const before=calls.length;
   app.destroy();
   assert.equal(root.children.length,0);
