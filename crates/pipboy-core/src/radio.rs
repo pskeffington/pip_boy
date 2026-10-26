@@ -131,11 +131,11 @@ impl<D: RadioDevice> RadioTuner<D> {
         if self.active.is_none() {
             return Err(RadioError::NotConfigured);
         }
-        if buffer.len() % 2 != 0 {
+        if !buffer.len().is_multiple_of(2) {
             return Err(RadioError::Device("I/Q buffer length must be even".into()));
         }
         let count = self.device.read_iq(buffer)?;
-        if count > buffer.len() || count % 2 != 0 {
+        if count > buffer.len() || !count.is_multiple_of(2) {
             return Err(RadioError::Device(
                 "driver returned invalid I/Q count".into(),
             ));
