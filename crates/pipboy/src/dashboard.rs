@@ -1202,7 +1202,8 @@ fn radio_snapshot(engine: Option<&NativeRadioEngine>) -> Value {
         None => json!({
             "source": "none", "status": "stopped",
             "station": null, "volume": 60, "error": null,
-            "stations": stations, "sdr": "not_connected"
+            "stations": stations, "sdr": "not_connected",
+            "outputs": devices, "output": selected_output
         }),
     }
 }
