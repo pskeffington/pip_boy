@@ -22,6 +22,10 @@ Operator state belongs under **`PIPBOY_HOME`**, not in source control. This incl
 
 Start at the [project README](../README.md), then the [documentation index](README.md), [architecture](ARCHITECTURE.md), [storage contract](STORAGE.md), and [validation evidence](VALIDATION.md). Keep the root README as a concise operator-oriented landing page; put module internals and research matrices under `docs/` or `catalog/` instead of appending extensive technical content to the repository root.
 
+## HTTP route ownership
+
+`crates/pipboy/src/dashboard.rs` is the single loopback HTTP entrypoint and remains responsible for request bounds, host/origin validation and route dispatch. Task Control CRUD, manual handoff and explicit peer-send/receipt-sync implementations live in [`../crates/pipboy/src/dashboard/task_routes.rs`](../crates/pipboy/src/dashboard/task_routes.rs). This is a **source-module extraction**, not a new API server: callers still use the same `/api/tasks`, `/api/tasks/*`, `/api/peers` and `/api/peer/*` URLs. Other route families remain in the parent until a separate contract-preserving extraction passes tests.
+
 ## Machine-readable component responsibility map
 
 The [component ownership and acceptance index](../catalog/component_index.json) tracks mainline subsystem entrypoints, their engineering guides, tests, responsibility boundaries and physical-hardware gates. It is intentionally **not** an exhaustive inventory of every source file or a license/permissions roster. The [organizational optimization research](ORGANIZATIONAL_OPTIMIZATION.md) explains the evidence and proposed sequencing; [ADR 0001](adr/0001-mac-first-portable-core.md) records the Mac-first/Pi-later decision.

@@ -141,6 +141,7 @@
       "hardware_gate": "software_only",
       "code": [
         "crates/pipboy-core/src/tasks.rs",
+        "crates/pipboy/src/dashboard/task_routes.rs",
         "crates/pipboy/assets/tasks.js"
       ],
       "docs": [
