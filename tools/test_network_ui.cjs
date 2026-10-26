@@ -40,6 +40,20 @@ function button(item, text) {
 }
 function form(item) { return find(item, (element) => element.tagName === "form"); }
 const flush = () => new Promise(setImmediate);
+function pageKey(env, key, options = {}) {
+  let prevented = false;
+  const handler = env.document.events.get("keydown");
+  assert.ok(handler, "Missing scoped physical-button / arrow handler");
+  handler({ key, repeat:false, altKey:false, ctrlKey:false, metaKey:false,
+    ...options, preventDefault() { prevented = true; } });
+  return prevented;
+}
+
+const styles = fs.readFileSync(path.join(root, "crates/pipboy/assets/network.css"), "utf8");
+assert.match(styles, /\.net-pager \.net-page-arrow\s*\{[^}]*min-height:48px/s,
+  "Paging buttons must offer at least 48px height");
+assert.match(styles, /\.net-compact \.net-button\s*\{[^}]*min-height:44px/s,
+  "Handheld tool controls must retain a usable touch target");
 
 const source = fs.readFileSync(path.join(root, "crates/pipboy-core/src/network_suite.rs"), "utf8");
 const operations = [...source.matchAll(/Operation \{\s+id: "([^"]+)",\s+name: "([^"]+)",\s+input_label: "([^"]*)",\s+example: "([^"]*)",\s+extra_label: (None|Some\("[^"]*"\)),\s+extra_example: (None|Some\("[^"]*"\)),\s+active: (true|false),/g)].map((match) => ({
@@ -120,6 +134,22 @@ async function main() {
   assert.match(env.container.textContent, /LAST RESULT \/ NOT LIVE NONE/);
   assert.match(env.container.textContent, /PRIVATE LAN DISCOVERY/);
   assert.match(env.container.textContent, /AUTHORIZATION REQUIRED/);
+  assert.match(env.container.textContent, /PAGE 1 \/ 4/);
+  const menuPager = find(env.container, (item) => item.tagName === "nav");
+  assert.equal(menuPager.attributes["aria-label"], "Network tool pages");
+  assert.equal(button(env.container, "◀ PREV").disabled, true);
+  assert.equal(button(env.container, "NEXT ▶").disabled, false);
+  assert.equal(pageKey(env, "ArrowLeft"), false, "First page has no previous page");
+  assert.equal(pageKey(env, "ArrowRight", { repeat:true }), false, "Held D-pad should not rapidly skip pages");
+  assert.equal(pageKey(env, "ArrowRight",
+    { target:env.document.createElement("input") }), false, "Input arrow editing must not turn pages");
+  assert.equal(pageKey(env, "ArrowRight"), true);
+  assert.match(env.container.textContent, /PAGE 2 \/ 4/);
+  assert.match(env.container.textContent, /PING \/ JITTER/);
+  assert.equal(env.calls.length, 0, "Physical-button paging must not issue a network request");
+  assert.equal(pageKey(env, "ArrowLeft"), true);
+  assert.match(env.container.textContent, /PAGE 1 \/ 4/);
+  assert.equal(env.calls.length, 0);
 
   choose(env, "SCAN LAN");
   authorize(env, true);
@@ -129,7 +159,11 @@ async function main() {
   assert.deepEqual(env.calls[0].body, { cidr: "local", confirm: true });
   assert.match(env.container.textContent, /4 RESPONDING \/ 1 CACHED/);
   assert.ok(!env.container.textContent.includes("192.168.1.3"));
-  button(env.container, "▶").dispatch("click");
+  button(env.container, "NEXT ▶").dispatch("click");
+  assert.match(env.container.textContent, /192\.168\.1\.3/);
+  assert.equal(pageKey(env, "ArrowLeft"), true);
+  assert.ok(!env.container.textContent.includes("192.168.1.3"));
+  assert.equal(pageKey(env, "ArrowRight"), true);
   assert.match(env.container.textContent, /192\.168\.1\.3/);
   assert.equal(env.calls.length, 1, "Paging generated a new network request");
   assert.equal(env.timers.size, 1);
@@ -177,7 +211,7 @@ async function main() {
   assert.ok(!stale.container.textContent.includes("4 RESPONDING"), "Late response repainted destroyed view");
 
   const offline = environment();
-  button(offline.container, "▶").dispatch("click");
+  button(offline.container, "NEXT ▶").dispatch("click");
   choose(offline, "IPv6 CIDR");
   form(offline.container).dispatch("submit");
   await flush();
@@ -210,6 +244,6 @@ async function main() {
   assert.match(failed.container.textContent, /Controller unavailable/);
   assert.equal(failed.timers.size, 0, "Failed request kept auto-retrying");
   failed.ui.destroy();
-  console.log("PASS: unified network UI consent, paging, refresh, visibility, cancellation, stale results and safe labels");
+  console.log("PASS: touch-sized paging, keyboard D-pad, consent, refresh, visibility, cancellation and safe labels");
 }
 main().catch((error) => { console.error(error); process.exitCode = 1; });
