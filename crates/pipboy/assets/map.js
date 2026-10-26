@@ -1184,6 +1184,7 @@
 
   function invalidateZipLookup(view) {
     view.zipVersion++;
+    view.zipChoiceVersion++;
     if(view.zipAbort)view.zipAbort.abort();
     view.zipAbort=null;
     view.zipPageVersion++;
@@ -1193,6 +1194,7 @@
   // verified county polygon rather than inventing a postal ZIP centroid.
   async function selectZipCounty(view,choice,zip,version,controller) {
     if(active!==view||view.zipVersion!==version||controller.signal.aborted)return;
+    const choiceVersion=++view.zipChoiceVersion;
     if(view.sitesVisible||view.siteCentered){
       view.zipStatus.textContent="CLOSE SITES BEFORE ZIP COUNTY GIS";return;
     }
@@ -1203,7 +1205,7 @@
       const county=await window.RustBoyCounty.boundary(geoid,{
         cacheOnly,signal:controller.signal
       });
-      if(active!==view||view.zipVersion!==version||controller.signal.aborted)return;
+      if(active!==view||view.zipVersion!==version||view.zipChoiceVersion!==choiceVersion||controller.signal.aborted)return;
       if(county.id!==geoid)throw new Error("COUNTY GEOID MISMATCH");
       const old={county:view.county,enabled:view.countyEnabled,
         package:view.countyPackage,shapes:view.countyShapes,
@@ -1219,7 +1221,7 @@
       view.countyStatus="ZIP "+zip+" / 2020 ZCTA → 2025 COUNTY "+geoid;
       refresh(view);
       const loaded=await loadCountyPackages(view,geoid,cacheOnly);
-      if(active!==view||view.zipVersion!==version||controller.signal.aborted)return;
+      if(active!==view||view.zipVersion!==version||view.zipChoiceVersion!==choiceVersion||controller.signal.aborted)return;
       if(!loaded){
         view.county=old.county;view.countyEnabled=old.enabled;
         view.countyPackage=old.package;view.countyShapes=old.shapes;
@@ -1233,7 +1235,7 @@
       }
       refresh(view);
     }catch(error){
-      if(active!==view||view.zipVersion!==version||controller.signal.aborted)return;
+      if(active!==view||view.zipVersion!==version||view.zipChoiceVersion!==choiceVersion||controller.signal.aborted)return;
       view.zipStatus.textContent="ZCTA "+zip+" / "+
         (error instanceof Error?error.message:"COUNTY UNAVAILABLE").slice(0,90);
     }
@@ -1241,6 +1243,8 @@
 
   async function submitZip(view) {
     if(active!==view)return;
+    invalidateZipLookup(view);
+    view.zipCandidates.replaceChildren();
     const zip=view.zipInput.value.trim();
     if(!window.RustBoyZip||!window.RustBoyCounty){
       view.zipStatus.textContent="ZIP LOOKUP MODULE UNAVAILABLE";return;
@@ -1251,7 +1255,6 @@
     if(view.sitesVisible||view.siteCentered){
       view.zipStatus.textContent="CLOSE SITES BEFORE ZIP LOOKUP";return;
     }
-    invalidateZipLookup(view);
     const version=view.zipVersion,controller=new AbortController();
     view.zipAbort=controller;
     view.zipCandidates.replaceChildren();
@@ -1767,7 +1770,7 @@
       manual, latitude, longitude,
       zipPanel,zipForm,zipInput,zipStatus,zipCandidates,zipCountyButton,
       zipList,zipListPrev,zipListNext,zipOffset:0,zipVersion:0,
-      zipAbort:null,zipPageVersion:0,
+      zipAbort:null,zipPageVersion:0,zipChoiceVersion:0,
       width: 0, height: 0, dpr: 1,
       center: mapMemory ? { ...mapMemory.center } : { lat: 0, lon: 0 },
       zoom: mapMemory ? mapMemory.zoom : 2,
