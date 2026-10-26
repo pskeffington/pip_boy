@@ -173,6 +173,11 @@ async function main(){
   await until(()=>view.county.id==="25023"&&view.zipStatus.textContent.includes("GIS READY"));
   assert.equal(ingestions.at(-1).geoid,"25023");
   assert.equal(view.countyPackage.geoid,"25023");
+  assert.equal(view.zipList.children.length,0,
+    "Switching counties clears the previous county ZIP list");
+  assert.equal(view.zipOffset,0);
+  assert.equal(view.zipListPrev.disabled,true);
+  assert.equal(view.zipListNext.disabled,true);
 
   view.zipInput.value="00501";
   view.zipForm.listeners.submit[0]({preventDefault(){}});
