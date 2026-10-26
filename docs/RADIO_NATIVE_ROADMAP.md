@@ -1,6 +1,6 @@
 # Native Rust RADIO — phased build and evidence matrix
 
-Status (2026-10-26): **R1/R2 passed five-job CI; R3 native playback code committed, pending CI and real-device acceptance. Physical SDR and micro-screen RADIO controls are not implemented.** No external VLC, ffplay, browser or OS handler is launched from RADIO.
+Status (2026-10-26): **R1–R4 HUD integration and native Skylab playback field-validated by the operator; Play/Stop, volume and OS/Bluetooth output selection working.** CI and device-change edge cases are tracked separately. Hardware SDR, recovery hardening and final micro touch certification remain open. No external media application is launched.
 
 ## Research-to-design matrix
 
@@ -32,9 +32,9 @@ Only the worker can emit playback status. A successful connection must never be 
 
 **R2 / Native IP ingest (implementation under review)**: Added a pinned `reqwest` blocking Rustls client for explicit short-lived stream probes; publisher-bound HTTPS endpoint validation, redirects disabled in the client, bounded M3U parser and redirect resolution in core, and ICY audio/metadata demux. Tests use in-memory fixture responses. **Outstanding**: review/commit Cargo.lock, Cargo/CI, live endpoint checks, byte-channel backpressure, cancellation and idle-timeout semantics for long-lived streaming. The total-deadline probe client MUST NOT be reused as a continuous playback worker.
 
-**R3 / Native decode and sound (implementation staged)**: Symphonia MP3/AAC decoding on a dedicated worker; separate no-seek ICY audio source; pure PCM channel mapping and streaming resampler; CPAL hardware sink backed by a two-second lock-free float ring. Native output callback uses no network I/O, locks or allocations; volume via atomic 0–100% control; session stop uses bounded blocking HTTP read timeout. **Acceptance pending**: all five CI jobs, actual audible Skylab/SomaFM field tests on macOS, and Raspberry Pi speaker/touch integration.
+**R3 / Native decode and sound (implemented; Mac field-confirmed)**: Symphonia MP3/AAC decoding on a dedicated worker; separate no-seek ICY audio source; pure PCM channel mapping and streaming resampler; CPAL hardware sink backed by a two-second lock-free float ring. Native output callback uses no network I/O, locks or allocations; volume via atomic 0–100% control; session stop cancels a bounded asynchronous HTTPS receiver. **Acceptance pending**: all five CI jobs, actual audible Skylab/SomaFM field tests on macOS, and Raspberry Pi speaker/touch integration.
 
-**R4 / Micro RADIO**: Station list, source selector, status, Play/Stop, large touch controls, volume, no page scroll at 480×320; explicit network permission and no autoplay. Commands call local Rust radio manager, not URL navigation. **Acceptance**: browser UI tests, on-device touch, stop during reconnect.
+**R4 / Micro RADIO (implemented; user field-confirmed)**: Station list, source selector, status, Play/Stop, large touch controls, volume, no page scroll at 480×320; explicit network permission and no autoplay. Commands call local Rust radio manager, not URL navigation. **Acceptance**: browser UI tests, on-device touch, stop during reconnect.
 
 **R5 / Hardware SDR**: Optional SoapySDR enumeration feature; explicit owned USB device selection and receive-only IQ; sample rate and frequency validation, detach/reattach. **Acceptance**: real RTL-SDR plus another supported SDR on Pi and Mac; no TX capability.
 
@@ -79,4 +79,25 @@ Only the worker can emit playback status. A successful connection must never be 
 
 ## Native output routing (Bluetooth-ready)
 
-RADIO displays an **AUDIO OUTPUT** selector listing CPAL's OS-visible outputs alongside **System default**. A Bluetooth headset or speaker appears after it has been paired and connected in the operating system; Rust-Boy does not initiate Bluetooth pairing, perform unauthorized scans, or claim control of device pairing. Selecting an output explicitly restarts the current station at the prior volume on the new native output. If the selected device disconnects, the error is exposed in RADIO; choose System default or a connected device to recover. The selector is also available when playback is stopped. User field validation is required for a Mac Bluetooth headset and for speaker handoff.
+RADIO displays an **AUDIO OUTPUT** selector listing CPAL's OS-visible outputs alongside **System default**. A Bluetooth headset or speaker appears after it has been paired and connected in the operating system; Rust-Boy does not initiate Bluetooth pairing, perform unauthorized scans, or claim control of device pairing. Selecting an output explicitly restarts the current station at the prior volume on the new native output. If the selected device disconnects, the error is exposed in RADIO; choose System default or a connected device to recover. The selector is also available when playback is stopped. User has confirmed working device-output controls, including Bluetooth routing. Automatic recovery after a device disappears is a separate acceptance gate.
+
+## Operational roadmap — following Skylab + Bluetooth acceptance
+
+| Pass | Priority | Work package | Concrete code/actions | Release gate |
+| --- | --- | --- | --- | --- |
+| R4.1 | P0 | Capture working baseline | Preserve publisher allowlist, current HUD APIs, device routing, and the successful Skylab/Bluetooth operator report; run five-job CI on the exact commit | All current Rust, JS, desktop and micro tests green; no regressions |
+| R4.2 | P0 | Recovery contract | Pure classified failure/retry policy with a fixed attempt budget; keep Stop and generation invalidation authoritative; deterministic tests for temporary network failure, permanent unsupported codec, Bluetooth unplug and cancel | No infinite retries, no unapproved host redirects, no reconnect after Stop |
+| R4.3 | P0 | Network reconnect implementation | Worker-owned bounded retries with interruptible 1s/2s/4s delays; re-establish an approved stream only; explicitly surface RECOVERING, attempt count and final FAILED; reconnection stops instantly on user Stop | Fault-injection fixture: bounded recovery, no duplicate CPAL streams, clean Stop |
+| R4.4 | P0 | Output-device resilience | Distinguish selected output disappearing vs. network outage; show DISCONNECTED and refresh output inventory; offer manual Default restore before any automatic switching | Disconnect Bluetooth during stream and recover on a selected, OS-present output |
+| R4.5 | P1 | Presets and favorites | Persist up to 12 trusted station IDs (not arbitrary URLs); user ordering; startup shows last-selected station but never autoplays; stations validated against curated directory on read | Restart app: user presets persist, no untrusted endpoints/autoplay |
+| R4.6 | P1 | Micro refinement | Fit RADIO at 480×320 with Play/Stop, station, output, small retry status and volume controls; keyboard and touch; avoid forced scrolling and misleading signal strength | Real hardware screenshots, mouse/touch/keyboard acceptance at 480×320 |
+| R4.7 | P1 | Quality and observability | Bounded PCM underrun counters, conservative bitrate/read metrics, stream uptime and device identity; no private network addresses in logging | Offline fixtures plus CPU/memory/battery field sampling |
+| R5 | P2 | Receive-only SDR adapters | SoapySDR/RTL-SDR optional backend, hardware enumeration, FM demod and source selection; IP fallback stays available | Two real receiver types and hardware detach; zero TX capabilities |
+| R6 | P2 | Advanced receiver modes | AM/NFM/WFM, squelch, filtering and fully documented source selection; no silent internet usage | IQ fixtures, RF bench and poor-network tests |
+| R7 | P2 | Release acceptance | Security and licensing reviews, accessibility and privacy audit, packaging, signed binaries, release checklist | All platform CI + real Mac and handheld speaker/Bluetooth acceptance |
+
+**Ordering:** R4.1 → R4.2 → R4.3 → R4.4; station presets and layout follow only after safe recovery. User-confirmed functions must not be replaced by nonworking UI scaffolds.
+
+**Product constraints:** Native Rust, OS-managed Bluetooth pairing, source HTTPS allowlisting, no external media application, no autoplay, bounded retry, no radio transmission, and no merge to `main` while the current PR is draft or CI has failing gates.
+
+**Acceptance evidence:** Operator field report (Skylab Play/Stop/Volume and Bluetooth output working on Mac, 2026-10-26). This is distinct from formal fault-injection recovery tests and future physical SDR verification.
