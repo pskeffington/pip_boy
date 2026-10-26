@@ -37,6 +37,10 @@
     const outputSelector = node("select", "rb-radio-output");
     outputSelector.setAttribute("aria-label", "Audio output device including connected Bluetooth");
     outputLabel.append(outputSelector);
+    const fallback = node("button", "rb-radio-fallback", "USE DEFAULT OUTPUT");
+    fallback.type = "button";
+    fallback.hidden = true;
+    fallback.setAttribute("aria-label", "Choose system audio output and retry after audio device failure");
     const controls = node("div", "rb-radio-controls");
     const play = node("button", "rb-radio-play", "▶ PLAY");
     play.type = "button";
@@ -54,7 +58,7 @@
     const message = node("div", "rb-radio-message", "No receiver connected. IP radio is opt-in.");
     message.setAttribute("role", "status");
     message.setAttribute("aria-live", "polite");
-    root.append(top, selector, details, outputLabel, controls, gain, message);
+    root.append(top, selector, details, outputLabel, fallback, controls, gain, message);
     let current = null;
     let busy = false;
     let alive = true;
@@ -83,22 +87,37 @@
         option.value = device.id;
         outputSelector.append(option);
       }
-      outputSelector.value = outputs.some((d) => d.id === chosenOutput)
-        ? chosenOutput : (data.output || "system");
+      const availableChoice = outputs.find((device) => device.id === chosenOutput);
+      if (!availableChoice) {
+        const missing = node("option", "", "OUTPUT DISCONNECTED — SELECT DEVICE");
+        missing.value = chosenOutput;
+        missing.disabled = true;
+        outputSelector.prepend(missing);
+      }
+      outputSelector.value = chosenOutput;
       requestedOutput = null;
-      outputSelector.disabled = busy || outputs.length === 0;
+      outputSelector.disabled = busy || !outputs.some((device) => device.available !== false);
+      const defaultOutput = outputs.find((device) => device.id === "system");
+      fallback.hidden = !(data.output_failure || data.output_available === false);
+      fallback.disabled = busy || !defaultOutput || defaultOutput.available === false;
       const station = list.find((item) => item.id === selected);
       details.textContent = station ? station.genre.toUpperCase() + " / IP STREAM" : "NO STATIONS";
-      indicator.textContent = data.status.toUpperCase();
-      indicator.dataset.state = data.status;
+      indicator.textContent = data.output_failure ? "OUTPUT FAILED"
+        : data.output_available === false ? "NO OUTPUT" : data.status.toUpperCase();
+      indicator.dataset.state = data.output_failure || data.output_available === false
+        ? "failed" : data.status;
       volume.textContent = "VOL " + data.volume + "%";
       const running = !["stopped", "failed"].includes(data.status);
-      play.disabled = busy || running || !station;
+      play.disabled = busy || running || !station || data.output_available === false;
       stop.disabled = busy || !running;
       selector.disabled = busy || running;
       minus.disabled = busy || !running || data.volume === 0;
       plus.disabled = busy || !running || data.volume === 100;
-      if (data.error) message.textContent = data.error;
+      if (data.output_failure) message.textContent =
+        "AUDIO OUTPUT FAILED — choose a connected device to retry.";
+      else if (data.output_available === false) message.textContent =
+        "SELECTED OUTPUT DISCONNECTED — reselect it or use system default.";
+      else if (data.error) message.textContent = data.error;
       else if (running) message.textContent =
         data.status === "playing" ? "Native PCM output active" :
           data.status === "connecting" ? "Connecting to broadcaster..." :
@@ -136,6 +155,10 @@
     outputSelector.addEventListener("change", () => {
       requestedOutput = outputSelector.value;
       command({ action: "output", output: requestedOutput });
+    });
+    fallback.addEventListener("click", () => {
+      requestedOutput = "system";
+      command({ action: "output", output: "system" });
     });
     play.addEventListener("click", () => command({
       action: "play", station: selector.value, confirm: true
