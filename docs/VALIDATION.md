@@ -1,5 +1,9 @@
 # Rust-Boy | Validation evidence
 
+## Native Mac MAP operator acceptance — pending local run (2026-10-26)
+
+`scripts/test-map-macos.command` provides a native macOS Rust build, isolated loopback HTTP smoke, offline GIS parser/permission tests, optional real Chrome emulation and a persistent test-home launch. [Mac MAP acceptance matrix](MAC_MAP_TESTING.md) defines cold startup, live Census GEOID resolution, layer toggles, full offline restart, GPS permission behavior and draw/source timing measurements. The GitHub macOS runner may execute the automated portion after CI passes; **no user-Mac field results are recorded yet**. Do not equate CI with a passed GPS, Safari, or physical touch session.
+
 ## Messenger/PACE HTTP route separation — 2026-10-26 (CI pending)
 
 The source-only Messenger handler extraction on `chore/dashboard-messenger-boundary` moves `GET /api/messages`, `POST /api/messages/send` and `POST /api/messages/retry` into `crates/pipboy/src/dashboard/messenger_routes.rs`. The sole parent Host/Origin validation and JSON parser remain unchanged. New offline Rust dashboard tests check denial of cross-origin mutations and invalid GET Host **before touching private stores**, explicit SEND/RETRY confirmation, invalid PACE tiers/text, unknown outgoing message IDs and unsupported content type. Existing desktop/micro, Messenger/PACE, SSH and workspace tests remain part of the five-job CI suite. **Pass status is pending exact-head CI; no live SSH, independent radio bearer or Raspberry Pi hardware test is claimed.**

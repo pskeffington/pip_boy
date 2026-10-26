@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-10-26 — Mac-first native MAP acceptance harness
+
+- Add a dedicated macOS Rust MAP launcher and a repeatable offline verification entrypoint (native Cargo build, county-cache Rust tests, temporary localhost HTTP smoke and map/GPS/source JavaScript regressions).
+- Keep local test data separate from the normal workbench and persistent across operator-controlled restarts; port 0 avoids hardcoded listener conflicts, while all network map ingestion remains explicitly operator-triggered.
+- Surface per-frame local canvas rendering last/p95 (bounded 60-frame ring) separately from client source delivery/decoding time in DATA SOURCES; no analytics uploads or fabricated FPS.
+- Extend browser viewport testing to discover Mac Chrome installations and add macOS CI execution of the Mac-first verification entrypoint. Physical user-Mac, live Census availability and browser GPS acceptance remain open until performed.
+- Clarify Mac-first / Pi-later program sequencing in top-level operator navigation.
+
 ## 2026-10-26 — Messenger/PACE route ownership extraction (CI pending)
 
 - Isolate `GET /api/messages`, `POST /api/messages/send` and `POST /api/messages/retry` in `dashboard/messenger_routes.rs` while retaining the original same-origin loopback router, request bounds, confirmation checks, PACE policy and explicit native SSH transport.
