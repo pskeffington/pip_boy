@@ -9,7 +9,6 @@ const ui = {
   title: byId("workspace-title"),
   subtitle: byId("workspace-subtitle"),
   viewMode: byId("view-mode"),
-  activeLabel: byId("active-label"),
   load: byId("load-role"),
   roleStat: byId("status-role"),
   moduleStat: byId("status-modules"),
@@ -74,10 +73,14 @@ function pager(id, total, current, setter, pageSize = PAGE_SIZE) {
 }
 function activateStage(stage) {
   if (stage === "palette" && !(previewId === "custom" && selectedAvailable())) stage = "modules";
+  if (!["modules", "viewport", "messages", "settings", "palette"].includes(stage)) return;
   const previous = activeStage;
+  if (!["settings", "palette"].includes(stage) && previewId !== snapshot?.active.profile) {
+    previewId = snapshot.active.profile;
+    renderRoles();
+  }
   activeStage = stage;
   for (const button of document.querySelectorAll("[data-stage-target]")) {
-    button.hidden = button.dataset.stageTarget === "palette" && !(previewId === "custom" && selectedAvailable());
     button.setAttribute("aria-pressed", String(button.dataset.stageTarget === stage));
   }
   for (const section of document.querySelectorAll(".stage-surface")) section.hidden = section.dataset.stage !== stage;
@@ -127,11 +130,31 @@ async function api(path, data) {
 }
 
 function profile() {
+  return snapshot?.profiles.find((entry) => entry.id === snapshot.active.profile) || null;
+}
+
+function pendingProfile() {
   return snapshot?.profiles.find((entry) => entry.id === previewId) || null;
 }
 
 function selectedAvailable() {
-  return previewId === snapshot?.active.profile;
+  return Boolean(profile());
+}
+
+function renderSettingsSelection() {
+  if (!snapshot) return;
+  const chosen = pendingProfile();
+  const active = profile();
+  byId("settings-current-role").textContent = active?.title || "UNKNOWN";
+  byId("open-palette").hidden = snapshot.active.profile !== "custom";
+  const same = chosen?.id === snapshot.active.profile;
+  const resetCustom = same && chosen?.id === "custom" && snapshot.active.slots.length > 0;
+  byId("settings-selection").textContent = !chosen ? "Choose a profile."
+    : same ? "CURRENT: " + chosen.title
+      : "SELECTED: " + chosen.title + " / NOT LOADED";
+  ui.load.disabled = working || (same && !resetCustom) || !chosen;
+  ui.load.textContent = resetCustom ? "RESET CUSTOM"
+    : same ? "ACTIVE PROFILE" : "LOAD PROFILE";
 }
 
 function toolInfo(id) {
@@ -139,11 +162,7 @@ function toolInfo(id) {
 }
 
 function visibleModuleIds() {
-  const selected = profile();
-  if (!selected) return [];
-  return selectedAvailable()
-    ? snapshot.active.slots.map((entry) => entry.tool)
-    : selected.tools.slice();
+  return snapshot ? snapshot.active.slots.map((entry) => entry.tool) : [];
 }
 
 function renderRoles() {
@@ -166,22 +185,14 @@ function renderRoles() {
       button.append(el("span", "role-activated", "SAVED"));
     }
     button.addEventListener("click", () => {
+      // Preview remains inside Settings; active role, pins, and live tools do not change.
       previewId = role.id;
-      selectedTool = null;
-      selectedCamera = null;
-      lastOutput = "";
-      modulePage = 0;
-      palettePage = 0;
-      extensionMode = "map";
-      renderAll();
-      if (window.matchMedia("(max-width: 1100px)").matches) {
-        activateStage("modules");
-        activatePane("workspace");
-      }
+      renderRoles();
     });
     ui.roles.append(button);
   }
   pager("role-pager", roles.length, rolePage, (page) => { rolePage = page; renderRoles(); }, size);
+  renderSettingsSelection();
 }
 
 function renderModules() {
@@ -241,7 +252,7 @@ function renderModules() {
 }
 
 function renderCustomPalette() {
-  const activeCustom = previewId === "custom" && selectedAvailable();
+  const activeCustom = snapshot.active.profile === "custom";
   ui.paletteGrid.replaceChildren();
   if (!activeCustom) return;
   const pinned = new Set(snapshot.active.slots.map((slot) => slot.tool));
@@ -534,18 +545,10 @@ function renderAll() {
   const current = profile();
   if (!current) return;
   ui.status.innerHTML = '<span class="live-dot" aria-hidden="true"></span> LOCAL / READY';
-  ui.title.textContent = current.title;
-  ui.subtitle.textContent = current.description;
-  ui.viewMode.textContent = selectedAvailable() ? "ACTIVE STATION" : "TEMPLATE PREVIEW";
-  ui.activeLabel.textContent = selectedAvailable() ? "ACTIVE / SAVED" : "PREVIEW / NOT LOADED";
-  ui.activeLabel.className = "active-pill " + (selectedAvailable() ? "loaded" : "preview");
-  ui.roleStat.textContent = current.id.toUpperCase().replace(/-/g, " ");
-  const isSame = selectedAvailable();
-  const customReset = current.id === "custom" && snapshot.active.slots.length > 0;
-  ui.load.disabled = working || (isSame && !customReset);
-  ui.load.textContent = isSame
-    ? (customReset ? "Reset Custom" : "Active template")
-    : (current.id === "custom" ? "Load Custom" : "Load station");
+  ui.title.textContent = "FIELD WORKBENCH";
+  ui.subtitle.textContent = "Shared workspace for local modules.";
+  ui.viewMode.textContent = "ACTIVE STATION";
+  ui.roleStat.textContent = current.title.toUpperCase();
   renderRoles();
   renderModules();
   renderDetail();
@@ -556,9 +559,7 @@ function renderAll() {
 async function reload() {
   try {
     snapshot = await api("/api/state");
-    if (!previewId || !snapshot.profiles.some((p) => p.id === previewId)) {
-      previewId = snapshot.active.profile;
-    }
+    previewId = snapshot.active.profile;
     if (!selectedTool) selectedTool = visibleModuleIds()[0] || null;
     rolePage = Math.floor(Math.max(0, snapshot.profiles.findIndex(p => p.id === previewId)) / rolesPerPage());
     renderAll();
@@ -582,6 +583,8 @@ async function changeProfile(id) {
     modulePage = 0;
     extensionMode = "map";
     notify("Loaded " + profile().title + ". No tools executed.");
+    activeStage = "modules";
+    activePane = "workspace";
     renderAll();
   } catch (error) {
     notify(error.message, true);
@@ -593,7 +596,7 @@ async function changeProfile(id) {
 
 function loadSelected() {
   if (!snapshot || working || ui.load.disabled) return;
-  const current = profile();
+  const current = pendingProfile();
   if (!current) return;
   ui.confirmText.textContent = "Replace the current pinned modules with " + current.title +
     "? This changes only the local workspace layout. Notes, game sessions, camera connections and saved permissions are not touched.";
@@ -686,6 +689,8 @@ async function copyOutput() {
 }
 
 document.querySelectorAll("[data-stage-target]").forEach(button => button.addEventListener("click", () => activateStage(button.dataset.stageTarget)));
+byId("open-palette").addEventListener("click", () => activateStage("palette"));
+byId("palette-back").addEventListener("click", () => activateStage("settings"));
 byId("inspector-return").addEventListener("click", () => { activateStage("modules"); activatePane("workspace"); });
 window.addEventListener("resize", () => { if (!snapshot) return; renderRoles(); renderModules(); });
 document.querySelectorAll("[data-pane-target]").forEach(button => button.addEventListener("click", () => activatePane(button.dataset.paneTarget)));
@@ -694,7 +699,7 @@ ui.refresh.addEventListener("click", reload);
 ui.form.addEventListener("submit", runLab);
 ui.copy.addEventListener("click", copyOutput);
 ui.confirm.addEventListener("close", () => {
-  if (ui.confirm.returnValue === "replace" && profile()) changeProfile(previewId);
+  if (ui.confirm.returnValue === "replace" && pendingProfile()) changeProfile(previewId);
 });
 document.addEventListener("keydown", (event) => {
   if (!snapshot) return;
@@ -710,6 +715,10 @@ document.addEventListener("keydown", (event) => {
       activatePane("workspace");
       return;
     }
+    if (activeStage === "palette") {
+      activateStage("settings");
+      return;
+    }
     if (activeStage !== "modules") {
       activateStage("modules");
       return;
@@ -718,27 +727,20 @@ document.addEventListener("keydown", (event) => {
   if (!event.altKey || event.ctrlKey || event.metaKey) return;
   if (event.key === "ArrowUp" || event.key === "ArrowDown") {
     event.preventDefault();
+    if (activeStage !== "settings") return;
     const i = snapshot.profiles.findIndex((p) => p.id === previewId);
     const delta = event.key === "ArrowUp" ? -1 : 1;
     const nextIndex = (i + delta + snapshot.profiles.length) % snapshot.profiles.length;
     previewId = snapshot.profiles[nextIndex].id;
     rolePage = Math.floor(nextIndex / rolesPerPage());
-    modulePage = 0;
-    selectedTool = null;
-    selectedCamera = null;
-    extensionMode = "map";
-    lastOutput = "";
-    renderAll();
-    if (window.matchMedia("(max-width: 1100px)").matches) {
-      activateStage("modules");
-      activatePane("workspace");
-    }
-  } else if (event.key === "Enter") {
+    renderRoles();
+  } else if (event.key === "Enter" && activeStage === "settings") {
     event.preventDefault();
     loadSelected();
   }
 });
 
+// Messenger remains in the same workspace tab for every occupational profile.
 if (window.RustBoyMessenger && document.getElementById("messenger-dock")) {
   window.RustBoyMessenger.mount(document.getElementById("messenger-dock"));
 }
