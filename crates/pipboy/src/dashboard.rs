@@ -39,6 +39,7 @@ const MAP_JS: &str = include_str!("../assets/map.js");
 const MAP_IMPORT_JS: &str = include_str!("../assets/map-import.js");
 const MAP_ONLINE_JS: &str = include_str!("../assets/map-online.js");
 const COUNTY_JS: &str = include_str!("../assets/map-county.js");
+const ZIP_JS: &str = include_str!("../assets/map-zip.js");
 const MAP_CSS: &str = include_str!("../assets/map.css");
 const NETWORK_JS: &str = include_str!("../assets/network.js");
 const NETWORK_CSS: &str = include_str!("../assets/network.css");
@@ -879,6 +880,9 @@ fn dispatch(req: &Request, store: &WorkbenchStore, port: u16) -> Response {
         ),
         ("GET", "/assets/map-county.js") => {
             Response::new(200, "text/javascript; charset=utf-8", COUNTY_JS.as_bytes())
+        }
+        ("GET", "/assets/map-zip.js") => {
+            Response::new(200, "text/javascript; charset=utf-8", ZIP_JS.as_bytes())
         }
         ("GET", "/assets/map.js") => {
             Response::new(200, "text/javascript; charset=utf-8", MAP_JS.as_bytes())
