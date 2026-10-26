@@ -6,7 +6,7 @@ The Medic profile adds **MEDICAL COMMS** to the existing common shell. Vault Doc
 
 Pair the intended Doctor and emergency recipient using [the existing SSH enrollment procedure](PEER_TASK_TRANSPORT.md). Pair the reverse direction if the recipient must acknowledge an alarm. A profile or alias is not proof of clinical credentials or a person's identity. Choose the actual Doctor device explicitly in **SOS → SETUP**, then select an emergency destination, manual location and P/A route. Saving configuration never transmits. The destination is one paired device in this pass, not a broadcast/talkgroup.
 
-Medic → MEDICAL COMMS opens a nine-line wizard. Doctor opens its received aid inbox. Nine fields are collected, each 1–48 UTF-8 bytes; UNKNOWN must be entered explicitly for unknown information. The operator selects peacetime or wartime. There is no clinical diagnosis, automatic priority assignment, invented location or default claim of no contamination.
+Medic → MEDICAL COMMS opens a nine-line wizard. Doctor opens its received aid inbox. Nine fields are collected, each 1–48 UTF-8 bytes; UNKNOWN must be entered explicitly for unknown information. The operator selects peacetime or wartime; changing the format clears lines 6 and 9 because their meanings change. There is no clinical diagnosis, automatic priority assignment, invented location or default claim of no contamination.
 
 | Line | Peacetime | Wartime |
 | --- | --- | --- |

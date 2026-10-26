@@ -85,6 +85,11 @@ const fireTimers=()=>{for(const [id,fn] of [...timers]){timers.delete(id);fn();}
   const report=posts().at(-1);assert.equal(report.url,"/api/aid/nine-line");
   assert.equal(report.body.packet.lines.length,9);assert.equal(report.body.packet.mode,"peacetime");
   assert.ok(report.body.packet.lines.every(x=>x==="UNKNOWN"));
+  find("EDIT").click();
+  const format=walk(document.body).find(n=>n.tagName==="select");
+  format.value="wartime";format.dispatch("change");
+  for(let i=0;i<5;i++)find("NEXT ▶").click();
+  assert.equal(walk(document.body).find(n=>n.tagName==="input").value,"","Mode change clears line 6's changed meaning");
   trigger.dispatch("pointerdown");fireTimers();await flush();
   assert.equal(posts().at(-1).url,"/api/aid/activate","Dedicated header hold activates directly");
   window.RustBoyAid.destroy();

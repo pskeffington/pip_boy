@@ -161,6 +161,16 @@ sys.exit(result.returncode)
         assert post(port, 'transmit', {'id': incident})['delivery']['stored_on_receiver']
         view = api(remote, 'GET', '/api/aid')[1]
         incoming = next(r for r in view['records'] if r['packet']['kind'] == 'alarm')
+        # A matching incident number from a different device is not this responder's ACK.
+        journal_path = medic / 'messages.json'
+        book = json.loads(journal_path.read_text())
+        book['messages'].append(dict(id=book['next_id'], peer='wrong-responder', direction='incoming',
+                                     body='RB-AID/1 ' + json.dumps(dict(kind='ack', incident=incident)),
+                                     created_at=1, delivery='received', remote_origin_id=9901,
+                                     remote_stored_id=None))
+        book['next_id'] += 1
+        journal_path.write_text(json.dumps(book))
+        assert api(port, 'GET', '/api/aid')[1]['human_acknowledged'] is False
         assert post(remote, 'ack', {'message_id': incoming['id']})['stored_on_receiver']
         assert api(port, 'GET', '/api/aid')[1]['human_acknowledged'] is True
         assert api(port, 'GET', '/api/aid')[1]['state']['beacon']['active']

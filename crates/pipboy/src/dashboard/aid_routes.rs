@@ -1,5 +1,5 @@
 //! Explicit aid actions share the parent Host/Origin gate and pinned SSH path.
-use super::{parse_json_body, positive_integer, str_field, Request, Response};
+use super::{parse_json_body, positive_integer, Request, Response};
 use crate::peer;
 use pipboy_core::aid::{AidStore, Beacon, Config, Packet};
 use pipboy_core::message_pace::{PaceStore, Tier};

@@ -148,7 +148,7 @@
   function showNine(){
     if(!state?.medical_allowed){body.append(make("p","","Load Medic or Doctor to use nine-line medical communications."));return;}
     if(step<9){
-      const format=step===0?field("FORMAT",mode,value=>{mode=value;}, {options:[["peacetime","PEACETIME"],["wartime","WARTIME"]]}):null;
+      const format=step===0?field("FORMAT",mode,value=>{if(mode!==value){mode=value;draft[5]="";draft[8]="";}}, {options:[["peacetime","PEACETIME"],["wartime","WARTIME"]]}):null;
       const title=step===5 && mode==="wartime"?"Pickup site security":step===8 && mode==="wartime"?"NBC / CBRN contamination":labels[step];
       const entry=field("LINE "+(step+1)+" · "+title,draft[step],value=>{draft[step]=value;});
       body.append(format?row(format,entry):entry);
@@ -159,7 +159,7 @@
         step++;review=0;render();body.querySelector("input")?.focus();
       })));
     }else{
-      body.append(make("strong","","TO DOCTOR: "+(state.state.config.doctor_peer || "NOT CONFIGURED")));
+      body.append(make("strong","",mode.toUpperCase()+" → "+(state.state.config.doctor_peer || "DOCTOR NOT CONFIGURED")));
       for(let i=review*3;i<review*3+3;i++)body.append(make("p","aid-line",(i+1)+" · "+draft[i]));
       body.append(pager(review,3,value=>{review=value;render();}));
       body.append(row(button("EDIT",()=>{step=review*3;render();}),button("SEND 9 LINE",()=>{
@@ -186,6 +186,7 @@
     body.append(pager(inbox,records.length,value=>{inbox=value;detail=0;render();}));
   }
   function showSetup(){
+    notice("SETTINGS ARE PLAINTEXT / SAVE DOES NOT SEND");
     if(!configDraft)configDraft={...state.state.config};
     const choices=[["","NOT CONFIGURED"],...state.peers.map(alias=>[alias,alias])];
     if(setupStep===0){
