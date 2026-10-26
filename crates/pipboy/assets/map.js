@@ -496,7 +496,9 @@
         for(const id of index.cells.get(y*index.cols+x)||[]) found.add(id);
       }
     }
-    // Maintain deterministic Census record order even across spatial buckets.
+    // A wide view is cheaper as a full sequential scan than sorting an
+    // almost-complete set of cells. Both paths retain original record order.
+    if(found.size>index.shapes.length*0.6)return index.shapes;
     return [...found].sort((a,b)=>a-b).map(i=>index.shapes[i]);
   }
 
@@ -530,7 +532,8 @@
       if (shape.countyLayer === "pointlm" && view.zoom < 11.5)
         return false;
     }
-    if (!Array.isArray(shape.bounds)) return true;
+    if (!validEnvelope(shape.bounds) || shape.bounds[2]-shape.bounds[0]>180)
+      return true; // Dateline/ambiguous envelopes cannot safely be culled.
     const sw = screenPoint(view, shape.bounds[0], shape.bounds[1]);
     const ne = screenPoint(view, shape.bounds[2], shape.bounds[3]);
     return Math.max(sw[0],ne[0]) >= -12 &&
@@ -638,6 +641,7 @@
     labelCandidates.points.sort((a,b)=>
       ((a.x-view.width/2)**2+(a.y-view.height/2)**2)-
       ((b.x-view.width/2)**2+(b.y-view.height/2)**2));
+    ctx.globalAlpha=1;
     drawMapLabels(view,ctx,labelCandidates,stats);
     view.renderStats=stats;
 
