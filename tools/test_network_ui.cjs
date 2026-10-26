@@ -22,7 +22,23 @@ class Element {
   set textContent(value) { this.text = String(value); this.children = []; }
   get textContent() { return this.text + this.children.map((item) => item.textContent).join(" "); }
   append(...items) { this.children.push(...items); }
-  replaceChildren(...items) { this.text = ""; this.children = [...items]; }
+  replaceChildren(...items) {
+    if (this.ownerDocument && walk(this).includes(this.ownerDocument.activeElement)) {
+      this.ownerDocument.activeElement = this.ownerDocument.body;
+    }
+    this.text = "";
+    this.children = [...items];
+  }
+  contains(item) { return walk(this).includes(item); }
+  querySelector(selector) {
+    if (!selector.startsWith(".")) return null;
+    const className = selector.slice(1);
+    return walk(this).find((item) => item.className.split(/\\s+/).includes(className)) || null;
+  }
+  querySelectorAll(selector) {
+    const tags = new Set(selector.split(",").map((item) => item.trim().toLowerCase()));
+    return walk(this).filter((item) => tags.has(item.tagName));
+  }
   setAttribute(key, value) { this.attributes[key] = value; }
   addEventListener(name, callback) { this.events.set(name, callback); }
   removeEventListener(name) { this.events.delete(name); }
@@ -44,7 +60,8 @@ function pageKey(env, key, options = {}) {
   let prevented = false;
   const handler = env.document.events.get("keydown");
   assert.ok(handler, "Missing scoped physical-button / arrow handler");
-  handler({ key, repeat:false, altKey:false, ctrlKey:false, metaKey:false,
+  handler({ key, target:env.document.activeElement,
+    repeat:false, altKey:false, ctrlKey:false, metaKey:false,
     ...options, preventDefault() { prevented = true; } });
   return prevented;
 }
@@ -81,7 +98,14 @@ function environment() {
   const timers = new Map();
   const calls = [];
   const document = new Element("document");
-  document.createElement = (tag) => new Element(tag);
+  document.createElement = (tag) => {
+    const element = new Element(tag);
+    element.ownerDocument = document;
+    element.focus = () => { document.activeElement = element; };
+    return element;
+  };
+  document.body = document.createElement("body");
+  document.activeElement = document.body;
   document.hidden = false;
   const window = new Element("window");
   let timerId = 0;
@@ -180,6 +204,57 @@ async function main() {
   assert.equal(env.document.events.size, 0);
   assert.equal(env.window.events.size, 0);
 
+  const pad = environment();
+  assert.equal(pageKey(pad, "ArrowDown"), true, "D-pad down should focus first tool");
+  assert.match(pad.document.activeElement.textContent, /SCAN LAN/);
+  assert.equal(pageKey(pad, "ArrowDown"), true);
+  assert.match(pad.document.activeElement.textContent, /UNIFI SITES/);
+  assert.equal(pageKey(pad, "ArrowDown"), true);
+  assert.match(pad.document.activeElement.textContent, /UNIFI CLIENTS/);
+  assert.equal(pageKey(pad, "ArrowUp"), true);
+  assert.match(pad.document.activeElement.textContent, /UNIFI SITES/);
+  assert.equal(pageKey(pad, "ArrowRight"), true, "D-pad right should turn the page");
+  assert.match(pad.container.textContent, /PAGE 2 \/ 4/);
+  assert.match(pad.document.activeElement.textContent, /PING \/ JITTER/);
+  assert.equal(pageKey(pad, "PageDown"), true, "Hardware page-down should turn page");
+  assert.match(pad.container.textContent, /PAGE 3 \/ 4/);
+  assert.match(pad.document.activeElement.textContent, /SUBNET SPLIT/);
+  assert.equal(pageKey(pad, "PageDown"), true);
+  assert.match(pad.container.textContent, /PAGE 4 \/ 4/);
+  assert.equal(pageKey(pad, "PageDown"), false, "Last page is bounded");
+  assert.equal(pageKey(pad, "PageUp"), true);
+  assert.match(pad.container.textContent, /PAGE 3 \/ 4/);
+  assert.equal(pageKey(pad, "ArrowDown"), true);
+  assert.match(pad.document.activeElement.textContent, /ROUTE MATCH/);
+  assert.equal(pad.calls.length, 0, "D-pad should never execute an active network operation");
+  // Native Enter activates a focused button. The fixture simulates that click.
+  pad.document.activeElement.dispatch("click");
+  assert.equal(pad.calls.length, 0, "Opening a tool should not run it");
+  assert.equal(pageKey(pad, "ArrowDown"), true);
+  assert.match(pad.document.activeElement.textContent, /^TOOLS$/);
+  assert.equal(pageKey(pad, "ArrowDown"), true);
+  assert.equal(pad.document.activeElement.tagName, "input");
+  assert.equal(pageKey(pad, "ArrowDown"), false, "D-pad must not steal text input editing");
+  assert.equal(pageKey(pad, "PageDown"), false, "Input must not be paged");
+  pad.ui.destroy();
+
+  const confirmation = environment();
+  choose(confirmation, "SCAN LAN");
+  form(confirmation.container).dispatch("submit");
+  assert.equal(confirmation.calls.length, 0);
+  assert.equal(pageKey(confirmation, "ArrowDown"), true);
+  assert.match(confirmation.document.activeElement.textContent, /^EDIT$/);
+  assert.equal(pageKey(confirmation, "ArrowDown"), true);
+  assert.equal(confirmation.document.activeElement.type, "checkbox");
+  assert.equal(pageKey(confirmation, "ArrowDown"), true,
+    "Checkbox does not trap navigation toward RUN");
+  assert.equal(pageKey(confirmation, "ArrowDown"), true);
+  assert.match(confirmation.document.activeElement.textContent, /RUN SCAN LAN/);
+  assert.equal(confirmation.calls.length, 0, "Moving focus across consent cannot scan");
+  form(confirmation.container).dispatch("submit");
+  assert.equal(confirmation.calls.length, 0, "Focus is not authorization");
+  confirmation.ui.destroy();
+
   const refresh = environment();
   choose(refresh, "SCAN LAN");
   authorize(refresh, true);
@@ -244,6 +319,6 @@ async function main() {
   assert.match(failed.container.textContent, /Controller unavailable/);
   assert.equal(failed.timers.size, 0, "Failed request kept auto-retrying");
   failed.ui.destroy();
-  console.log("PASS: touch-sized paging, keyboard D-pad, consent, refresh, visibility, cancellation and safe labels");
+  console.log("PASS: touch targets, D-pad focus and page keys, consent, refresh, visibility, cancellation and safe labels");
 }
 main().catch((error) => { console.error(error); process.exitCode = 1; });
