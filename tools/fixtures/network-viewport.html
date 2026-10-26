@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Network Engineer viewport acceptance fixture</title>
+  <link rel="stylesheet" href="/assets/micro.css">
+  <link rel="stylesheet" href="/assets/network.css">
+  <script defer src="/assets/network.js"></script>
+</head>
+<body class="micro-phosphor">
+  <!-- Same micro shell classes/structure and production styles; synthetic operations only. -->
+  <div class="hardware-wrap">
+    <div class="micro-device" id="micro-device" data-depth="detail">
+      <header class="topbar">
+        <button class="role-switch" type="button"><span class="rb-mark">RB/</span><span>HEAD ENGINEER</span></button>
+        <div class="right-status"><time>00:00</time><a class="desk-link" href="#" tabindex="-1">DESK</a></div>
+      </header>
+      <div class="view-heading">
+        <button class="micro-back" type="button">‹ BACK</button>
+        <div class="heading-left"><h1>NET ENGINEER</h1></div>
+        <span class="mode-indicator">LOCAL</span>
+      </div>
+      <main id="micro-viewport" class="micro-viewport" tabindex="-1">
+        <section class="micro-content"><div class="micro-panel"><div id="network-mount"></div></div></section>
+      </main>
+      <nav class="tab-rail" aria-label="Handheld tabs">
+        <button class="tab" type="button">STAT</button>
+        <button class="tab" type="button">GEAR</button>
+        <button class="tab" type="button">MAP</button>
+        <button class="tab" type="button">DATA</button>
+        <button class="tab" type="button">LINK</button>
+        <button class="tab" type="button">SETUP</button>
+      </nav>
+      <div class="micro-bottom" aria-hidden="true">LOCAL</div>
+    </div>
+  </div>
+  <pre id="viewport-report" hidden></pre>
+  <script>
+  "use strict";
+  // No live endpoint is contacted; intentionally synthetic inventory and status.
+  const operations = [
+    ["scan","SCAN LAN",true],
+    ["unifi-sites","UNIFI SITES",true],
+    ["unifi-clients","UNIFI CLIENTS",true],
+    ["unifi-compare","UNIFI / LAN",true],
+    ["icmp","PING / JITTER",true],
+    ["health","NETWORK HEALTH",true],
+    ["cidr4","IPv4 CIDR",false],
+    ["cidr6","IPv6 CIDR",false],
+    ["split4","SUBNET SPLIT",false],
+    ["route","ROUTE MATCH",false],
+    ["aggregate4","CIDR MERGE",false],
+    ["overlap4","OVERLAP",false],
+    ["mac","MAC / EUI-64",false],
+    ["vlan","802.1Q VLAN",false],
+    ["mtu","MTU / MSS",false],
+    ["tcp","TCP CHECK",true]
+  ].map(([id,name,active]) => ({
+    id,name,active,input_label:"PRIVATE CIDR / LOCAL",example:"local",
+    extra_label:null,extra_example:null
+  }));
+  const calls = [];
+  window.fetch = async (url,opts) => {
+    calls.push({url,method:opts?.method});
+    if (url !== "/api/net/scan") throw new Error("Unexpected network request: " + url);
+    return {ok:true,json:async()=>({
+      kind:"network_scan",output:"Synthetic fixture only",
+      report:{responding_devices:4,cached_only_devices:1,devices:[
+        {address:"10.0.0.1",evidence:"icmp_echo",latency_ms:2.5},
+        {address:"10.0.0.2",evidence:"icmp_echo",latency_ms:3.5},
+        {address:"10.0.0.3",evidence:"tcp_open",latency_ms:4.2},
+        {address:"10.0.0.4",evidence:"icmp_echo",latency_ms:5.0},
+        {address:"10.0.0.5",evidence:"neighbor_cache",latency_ms:null}
+      ]}
+    })};
+  };
+  function rectOf(item) {
+    const r = item?.getBoundingClientRect();
+    return r ? {left:r.left,top:r.top,right:r.right,bottom:r.bottom,
+      width:r.width,height:r.height} : null;
+  }
+  function visibleWithin(item,clip) {
+    if (!item || !clip) return false;
+    const a=item.getBoundingClientRect(), b=clip.getBoundingClientRect();
+    return a.width>0 && a.height>0 && a.top>=b.top-1 && a.bottom<=b.bottom+1 &&
+      a.left>=b.left-1 && a.right<=b.right+1;
+  }
+  function publish(report) {
+    const bytes = new TextEncoder().encode(JSON.stringify(report));
+    document.getElementById("viewport-report").textContent =
+      btoa(String.fromCharCode(...bytes));
+    if (parent !== window) parent.postMessage({type:"rustboy-layout-report",value:report},location.origin);
+  }
+  window.addEventListener("load",async()=>{
+    try {
+      const view = new URLSearchParams(location.search).get("view") || "menu";
+      window.RustBoyNetwork.mount(document.getElementById("network-mount"),
+        {operations,compact:true});
+      if (view === "result") {
+        document.querySelector(".net-tile").click();
+        document.querySelector(".net-form").dispatchEvent(new Event("submit",{bubbles:true,cancelable:true}));
+        const checkboxes=Array.from(document.querySelectorAll(".net-check input"));
+        checkboxes.forEach(c=>c.checked=true);
+        document.querySelector(".net-form").dispatchEvent(new Event("submit",{bubbles:true,cancelable:true}));
+        await Promise.resolve();
+        await Promise.resolve();
+      }
+      await new Promise(resolve => setTimeout(resolve,35));
+      const viewport=document.getElementById("micro-viewport");
+      const footer=document.querySelector(".net-launch-footer");
+      const pager=document.querySelector(".net-pager");
+      const arrows=Array.from(document.querySelectorAll(".net-page-arrow"));
+      const tiles=Array.from(document.querySelectorAll(".net-tile"));
+      const stop=document.querySelector(".net-runbar button");
+      const output={
+        view, window:{width:innerWidth,height:innerHeight},
+        viewport:rectOf(viewport),
+        device:rectOf(document.getElementById("micro-device")),
+        menuTileCount:tiles.length,
+        allTilesVisible:tiles.every(tile=>visibleWithin(tile,viewport)),
+        pagerVisibleInitially:visibleWithin(pager,viewport),
+        footerVisibleInitially:footer ? visibleWithin(footer,viewport) : null,
+        pagerSizes:arrows.map(rectOf),
+        pagerCount:arrows.length,
+        stopVisibleInitially:stop ? visibleWithin(stop,viewport) : null,
+        scrollHeight:viewport.scrollHeight,
+        clientHeight:viewport.clientHeight,
+        mockRequests:calls.length,
+        requestsWereOnlyExplicit:calls.every(c=>c.url==="/api/net/scan"&&c.method==="POST")
+      };
+      pager?.scrollIntoView({block:"end",inline:"nearest"});
+      await new Promise(resolve => setTimeout(resolve,35));
+      output.pagerVisibleWhenNavigated=visibleWithin(pager,viewport);
+      publish(output);
+    } catch(e) {publish({error:String(e.stack||e)});}
+  });
+  </script>
+</body>
+</html>

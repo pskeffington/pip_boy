@@ -344,6 +344,17 @@ window.RustBoyNetwork = (() => {
       } else if (inventory?.sites) summary = inventory.sites.length + " UNIFI SITES";
       if (metrics) summary = metrics.connected + " / " + metrics.attempts + " REPLIES / MEAN " + ms(metrics.mean_ms);
       root.append(node("div", "net-summary", summary));
+      // Critical stop/monitor controls remain above the scrollable inventory.
+      const runbar = node("div", "net-runbar");
+      status = node("div", "net-caption");
+      status.setAttribute("role", "status");
+      status.textContent = watch ? "REFRESH IN 60 SEC / RUN " + refreshes + " OF 60" : "COMPLETE / MANUAL RUN";
+      runbar.append(status);
+      if (watch) runbar.append(control("STOP REFRESH", () => {
+        stop();
+        status.textContent = "REFRESH STOPPED";
+      }));
+      root.append(runbar);
       if (report) rows = report.devices.map((d) => [d.address,
         d.evidence.replaceAll("_", " ") + " / " + ms(d.latency_ms)]);
       else if (inventory?.clients) rows = inventory.clients.map((c) => [c.name,
@@ -373,14 +384,6 @@ window.RustBoyNetwork = (() => {
         detail.append(node("summary", "", "DETAILS"), node("pre", "net-output", data.output));
         root.append(detail);
       }
-      status = node("div", "net-caption");
-      status.setAttribute("role", "status");
-      status.textContent = watch ? "REFRESH IN 60 SEC / RUN " + refreshes + " OF 60" : "COMPLETE / MANUAL RUN";
-      root.append(status);
-      if (watch) root.append(control("STOP REFRESH", () => {
-        stop();
-        status.textContent = "REFRESH STOPPED";
-      }));
     }
 
     async function execute() {

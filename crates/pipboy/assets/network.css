@@ -130,3 +130,24 @@
   .net-compact .net-page-hint { display:none; }
   .net-compact .net-launch-footer .net-pager { max-width:none; width:100%; }
 }
+
+/* The operator must be able to stop an approved watch without searching a long result. */
+.net-runbar { display:flex; align-items:center; justify-content:space-between; gap:8px; min-width:0; }
+.net-runbar [role="status"] { min-width:0; flex:1; }
+.net-runbar .net-button { flex:0 0 auto; white-space:nowrap; }
+.net-compact .net-runbar .net-button { min-height:44px; }
+.net-compact .net-runbar .net-caption { font-size:9px; }
+/* Keep the large paging controls reachable when a long inventory needs scrolling. */
+.net-compact > .net-pager,
+.net-compact .net-launch-footer {
+  position:sticky;
+  bottom:0;
+  z-index:2;
+  background:#091d0f;
+  box-shadow:0 -3px 10px #050d08ba;
+}
+.net-compact .net-launch-footer { padding-top:3px; }
+.net-compact > .net-pager { padding-block:3px; }
+@media (max-width:440px) {
+  .net-compact .net-runbar .net-button { font-size:10px; padding-inline:8px; }
+}
