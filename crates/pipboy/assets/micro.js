@@ -309,7 +309,7 @@ function showMap() {
 function showData() {
   const root = panel();
   const tools = allPinned().filter((id) =>
-    ["notes", "library", "byte-lab", "simulator", "geo-lab", "reclamation", "net-lab", "diag"].includes(id));
+    ["medical", "notes", "library", "byte-lab", "simulator", "geo-lab", "reclamation", "net-lab", "diag"].includes(id));
   root.append(sectionTop("DATA", String(tools.length) + " TOOLS"));
   root.append(button("DUTIES", () => {
     if (snapshot.active.profile === "overseer" && hasTool("mission-board")) openTool("mission-board");
@@ -416,6 +416,10 @@ function showConf() {
 function openTool(id, mode = "distance") {
   if (!hasTool(id)) {
     notify("This module is not pinned. Choose a profile containing it.", true);
+    return;
+  }
+  if (id === "medical" && window.RustBoyAid) {
+    window.RustBoyAid.open(snapshot.active.profile === "vault-doctor" ? "inbox" : "nine");
     return;
   }
   openedTool = id;

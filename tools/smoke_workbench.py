@@ -42,7 +42,7 @@ with tempfile.TemporaryDirectory() as temporary:
     ]
     profiles = json.loads(call(env, "profiles", "--json"))
     assert [item["id"] for item in profiles] == [
-        "overseer", "head-engineer", "security-chief", "vault-doctor",
+        "overseer", "head-engineer", "security-chief", "vault-doctor", "medic",
         "university-researcher", "reclamation-scout",
         "records-custodian", "custom"
     ]

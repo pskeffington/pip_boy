@@ -82,7 +82,7 @@ with tempfile.TemporaryDirectory() as temporary:
         assert code == 200, state
         assert state["active"]["profile"] == "overseer"
         assert [item["id"] for item in state["profiles"]] == [
-            "overseer", "head-engineer", "security-chief", "vault-doctor",
+            "overseer", "head-engineer", "security-chief", "vault-doctor", "medic",
             "university-researcher", "reclamation-scout",
             "records-custodian", "custom"
         ]

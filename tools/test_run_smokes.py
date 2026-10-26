@@ -23,9 +23,9 @@ class SmokeRosterTests(unittest.TestCase):
             (self.tools / name).write_text("# test fixture\n", encoding="utf-8")
 
     def test_all_known_smokes_classified_without_duplicates(self):
-        self.assertEqual(validate_manifest(self.tools), 20)
-        self.assertEqual(len(SUITES["linux"]), 19)
-        self.assertEqual(len(SUITES["native"]), 17)
+        self.assertEqual(validate_manifest(self.tools), 21)
+        self.assertEqual(len(SUITES["linux"]), 20)
+        self.assertEqual(len(SUITES["native"]), 18)
         self.assertEqual(SUITES["linux"][:2], LINUX_EXTRA)
         self.assertEqual(SUITES["linux"][2:], SUITES["native"])
         self.assertNotIn("smoke_windows_conpty.py", SUITES["native"])

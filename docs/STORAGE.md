@@ -52,3 +52,7 @@ queue identity. `messages.recipient` contains only the public recipient;
 automatically migrated. Other stores remain plaintext. Losing the OS credential
 can make the queue unrecoverable; backup/rotation and independent review remain
 release gates. See [full contract and limitations](MESSENGER_BUILD_PASSES.md).
+
+## Emergency state
+
+The independent plaintext `aid-state.json` latch and configuration survive profile changes and restarts. Its local incident counter must be preserved. Aid messages use the Messenger journal and its configured encryption mode. See [emergency storage and recovery](MEDIC_EMERGENCY.md).

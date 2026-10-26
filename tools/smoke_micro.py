@@ -121,7 +121,7 @@ with tempfile.TemporaryDirectory() as work:
         assert status == 200
         assert state["active"]["profile"] == "overseer"
         assert [entry["id"] for entry in state["profiles"]] == [
-            "overseer", "head-engineer", "security-chief", "vault-doctor",
+            "overseer", "head-engineer", "security-chief", "vault-doctor", "medic",
             "university-researcher", "reclamation-scout",
             "records-custodian", "custom"
         ]
@@ -218,7 +218,7 @@ with tempfile.TemporaryDirectory() as work:
         assert not (root / "notes.json").exists()
         if os.name != "nt":
             assert (root / "workbench.json").stat().st_mode & 0o777 == 0o600
-        print("PASS: micro HTML/CSS/JS on loopback, six tabs, seven roles + Custom, "
+        print("PASS: micro HTML/CSS/JS on loopback, six tabs, eight roles + Custom, "
               "scope-safe switching, RustGIS MAP assets, Custom lab, CSP, offline defaults "
               "and no implicit network/device activity")
     finally:

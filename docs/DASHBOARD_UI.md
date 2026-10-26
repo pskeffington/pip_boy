@@ -54,7 +54,7 @@ The desktop Overseer Module Viewport now hosts the same task board as the handhe
 
 1. **Modules:** Start in the same FIELD WORKBENCH regardless of active occupation. The module deck displays only active pinned tools from Rust `PRESETS`/`PALETTE` and the persisted workbench.
 2. **Inspector and viewport:** Select a tool to inspect/execute its allowlisted offline operation. Use VIEWPORT for its dedicated map, task, or camera panel, and MESSAGES for the same manually operated messenger entrypoint. At narrow widths, WORKSPACE and INSPECTOR switch without page scrolling.
-3. **Settings → profiles:** Open SETTINGS to see the active profile and a paginated list of seven occupational presets plus Custom. Choosing a profile only stages a selection in Settings; **neither the active module deck nor live tool capabilities change** until LOAD PROFILE and the confirmation are completed. Canceling has no effect.
+3. **Settings → profiles:** Open SETTINGS to see the active profile and a paginated list of eight occupational presets plus Custom. Choosing a profile only stages a selection in Settings; **neither the active module deck nor live tool capabilities change** until LOAD PROFILE and the confirmation are completed. Canceling has no effect.
 4. **Custom tools:** Once Custom is the active profile, SETTINGS → MANAGE CUSTOM TOOLS opens the paged module palette, with a dedicated SETTINGS return action. Planned hardware modules remain disabled.
 5. **Safety:** Selecting a profile or a tool never grants permissions or initiates a network, camera, or hardware connection. Backend profile changes continue through the explicitly confirmed `POST /api/profile` contract.
 
@@ -89,7 +89,7 @@ cargo build --workspace --locked
 python3 tools/smoke_dashboard.py
 ```
 
-The smoke script launches the **actual Rust server** on an ephemeral loopback port, fetches embedded CSS/JS/HTML, checks exact-eight template ordering and Custom blankness, performs role replacement and offline Scout/NET/byte computations, verifies persisted state, and rejects cross-origin/invalid input attempts. It runs in Linux stable CI and in native macOS/Windows smoke jobs. **Manual browser testing remains required** for Safari, Firefox/Chrome, accessible keyboard/touch operation, focus behavior, 800×480 and 480×320 breakpoints. Physical Pi touch/GPU tests and real RustGIS embedding are future gates.
+The smoke script launches the **actual Rust server** on an ephemeral loopback port, fetches embedded CSS/JS/HTML, checks exact-nine template ordering and Custom blankness, performs role replacement and offline Scout/NET/byte computations, verifies persisted state, and rejects cross-origin/invalid input attempts. It runs in Linux stable CI and in native macOS/Windows smoke jobs. **Manual browser testing remains required** for Safari, Firefox/Chrome, accessible keyboard/touch operation, focus behavior, 800×480 and 480×320 breakpoints. Physical Pi touch/GPU tests and real RustGIS embedding are future gates.
 
 ## Later: embed or launch RustGIS in Scout
 
@@ -119,6 +119,8 @@ The new `node tools/test_dashboard_viewport.cjs` Chromium gate is run by GitHub 
 The operator's occupation is **configuration, not navigation**. Desktop uses the same four workspace tabs in all roles, while micro keeps the same six hardware-oriented tabs (STAT / GEAR / MAP / DATA / LINK / SETUP). The active Rust profile determines pinned tools, assignment scope, and optional role-specific VIEWPORT contents, without changing the universal shell. Desktop and handheld both store changes through the shared workbench API. Desktop role selection is exclusively in SETTINGS; on micro it is exclusively in SETUP's CHANGE PROFILE dialog. The micro top bar always reads FIELD TERMINAL.
 
 Previewing a new role must never cause a profile mutation, change active tool pins, or launch a device connector. A confirmation remains mandatory before replacing the active template. New acceptance assertions verify SETTINGS-only role discovery, active-module stability during preview, four-tab desktop consistency, and the SETUP-only micro selector.
+
+[Medic / Doctor and the shared SOS emergency control](MEDIC_EMERGENCY.md) documents the new paired-device handoff and alarm workflow.
 
 ## RADIO native dock within VIEWPORT (October 26, 2026)
 

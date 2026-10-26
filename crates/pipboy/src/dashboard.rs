@@ -3,6 +3,7 @@
 //! This is a local companion window, not an external web service. Profiles are
 //! declarative. No hardware, camera, console, GNSS or TAK transport is opened
 //! by browsing the dashboard or selecting a role.
+mod aid_routes;
 mod messenger_routes;
 mod network_routes;
 mod task_routes;
@@ -1029,6 +1030,16 @@ fn dispatch(req: &Request, store: &WorkbenchStore, port: u16) -> Response {
         ("GET", "/assets/map.css") => {
             Response::new(200, "text/css; charset=utf-8", MAP_CSS.as_bytes())
         }
+        ("GET", "/assets/aid.js") => Response::new(
+            200,
+            "text/javascript; charset=utf-8",
+            include_str!("../assets/aid.js").as_bytes().to_vec(),
+        ),
+        ("GET", "/assets/aid.css") => Response::new(
+            200,
+            "text/css; charset=utf-8",
+            include_str!("../assets/aid.css").as_bytes().to_vec(),
+        ),
         ("GET", "/assets/messenger.js") => Response::new(
             200,
             "text/javascript; charset=utf-8",
@@ -1091,6 +1102,25 @@ fn dispatch(req: &Request, store: &WorkbenchStore, port: u16) -> Response {
         }
         ("GET", "/api/tasks") => task_routes::tasks_read(store).unwrap_or_else(|error| error),
         ("GET", "/api/peers") => task_routes::peers_read(store).unwrap_or_else(|error| error),
+        ("GET", "/api/aid") => aid_routes::read(store).unwrap_or_else(|error| error),
+        ("POST", "/api/aid/config") => {
+            aid_routes::configure(req, store).unwrap_or_else(|error| error)
+        }
+        ("POST", "/api/aid/nine-line") => {
+            aid_routes::nine_line(req, store).unwrap_or_else(|error| error)
+        }
+        ("POST", "/api/aid/ack") => {
+            aid_routes::acknowledge(req, store).unwrap_or_else(|error| error)
+        }
+        ("POST", "/api/aid/activate") => {
+            aid_routes::beacon_action(req, store, "activate").unwrap_or_else(|error| error)
+        }
+        ("POST", "/api/aid/cancel") => {
+            aid_routes::beacon_action(req, store, "cancel").unwrap_or_else(|error| error)
+        }
+        ("POST", "/api/aid/transmit") => {
+            aid_routes::beacon_action(req, store, "transmit").unwrap_or_else(|error| error)
+        }
         ("GET", "/api/messages") => {
             messenger_routes::messages_read(store).unwrap_or_else(|error| error)
         }
@@ -1453,9 +1483,9 @@ mod tests {
         assert_eq!(response.status, 200);
         let state: Value = serde_json::from_slice(&response.body).unwrap();
         assert_eq!(state["active"]["profile"], "overseer");
-        assert_eq!(state["profiles"].as_array().unwrap().len(), 8);
-        assert_eq!(state["profiles"][7]["id"], "custom");
-        assert_eq!(state["profiles"][7]["tools"], json!([]));
+        assert_eq!(state["profiles"].as_array().unwrap().len(), 9);
+        assert_eq!(state["profiles"][8]["id"], "custom");
+        assert_eq!(state["profiles"][8]["tools"], json!([]));
         assert_eq!(state["engine"]["rustgis"], "not_integrated");
         assert!(!temp.path().join("fresh").exists());
         for endpoint in [

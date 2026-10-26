@@ -6,7 +6,7 @@
 
 **Offline first. Native by design.**
 
-Rust-Boy is a Rust workbench for local diagnostics, field maps, network engineering and device-to-device task assignments. It has a desktop dashboard, a phosphor-style micro HUD and a terminal console. Seven occupational profiles come preloaded; Custom starts empty.
+Rust-Boy is a Rust workbench for local diagnostics, field maps, network engineering and device-to-device task assignments. It has a desktop dashboard, a phosphor-style micro HUD and a terminal console. Eight occupational profiles come preloaded; Custom starts empty.
 
 **Development preview on `main`.** Implemented modules are merged after software checks pass. Physical Raspberry Pi touchscreen, actual UniFi controller, Mac-to-Pi SSH and PlayStation game acceptance remain separate field tests. There is no packaged production release.
 
@@ -139,13 +139,18 @@ Responders, cache sightings and controller-connected clients are different count
 | Overseer | Assign, delegate and track work in Task Control |
 | Head Engineer | Network Engineer, byte tools and host diagnostics |
 | Security Chief | Network/host diagnostics and disconnected four-camera layout |
-| Vault Doctor | Research references, observations and notes |
+| Vault Doctor | Nine-line aid inbox, research references and notes |
+| Medic | Structured nine-line handoff to a paired Doctor device |
 | University Researcher | Reproducible local inspection and research tools |
 | Reclamation Scout | Site register, field maps, waypoints and WGS84 distance |
 | Records Custodian | Local notes and archive references |
 | Custom | Empty workspace with explicit tool pinning |
 
 Switch profiles through the UI or `pipboy workbench use head-engineer --replace`. Profile replacement changes pinned layout; each active operation still has its own Run/authorization step. [Role roadmap](docs/ROLE_ROADMAP.md) · [Lore/source matrix](docs/VAULT_TEC_LORE_MATRIX.md) · [Lore-aligned names](docs/LORE_NAMING.md) · [Camera-wall contract](docs/SECURITY_CAMERA_WALL.md).
+
+## Medic and emergency button
+
+**MEDICAL COMMS** gives Medic a structured nine-line wizard and Doctor a received-report inbox. Every profile has an orange **SOS** control: guarded hold/tap confirmation, durable local alarm, one explicit paired-SSH attempt, responder acknowledgment and deliberate cancellation. Configure the actual paired Doctor/emergency destination first. Unknown location stays unknown; no public rescue dispatch or RF beacon is enabled. [Setup, sources and delivery limits](docs/MEDIC_EMERGENCY.md).
 
 ## Maps, tasks and diagnostics
 

@@ -10,6 +10,7 @@
   <link rel="stylesheet" href="/assets/map.css">
   <link rel="stylesheet" href="/assets/tasks.css">
   <link rel="stylesheet" href="/assets/messenger.css">
+  <link rel="stylesheet" href="/assets/aid.css">
   <link rel="stylesheet" href="/assets/network.css">
   <link rel="stylesheet" href="/assets/reclamation.css">
   <link rel="stylesheet" href="/assets/radio-ui.css">
@@ -22,6 +23,8 @@
   <script src="/assets/map-county.js" defer></script>
   <script src="/assets/map-zip.js" defer></script>
   <script src="/assets/map.js" defer></script>
+  <script src="/assets/aid.js" defer></script>
+
   <script src="/assets/radio-ui.js" defer></script>
   <script src="/assets/micro.js" defer></script>
 </head>
@@ -35,6 +38,7 @@
           <span>FIELD TERMINAL</span>
         </div>
         <div class="right-status">
+          <button id="emergency-button" class="emergency-button" type="button" aria-label="Open emergency beacon">SOS</button>
           <span class="status-local"><span class="tiny-led" aria-hidden="true"></span>LOCAL</span>
           <time id="local-clock" aria-label="Device local time">--:--</time>
           <a class="desk-link" href="/" aria-label="Return to desktop dashboard">DESK</a>

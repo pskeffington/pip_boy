@@ -528,6 +528,14 @@ function renderDetail() {
     ui.manual.textContent = "Not implemented: no hardware access";
     return;
   }
+  if (selectedTool === "medical" && window.RustBoyAid) {
+    ui.handoff.hidden = false;
+    const launch = el("button", "mini-button", "OPEN MEDICAL COMMS");
+    launch.type = "button";
+    launch.addEventListener("click", () => window.RustBoyAid.open(snapshot.active.profile === "vault-doctor" ? "inbox" : "nine"));
+    ui.manual.replaceChildren(launch);
+    return;
+  }
   if (selectedTool === "reclamation") {
     ui.handoff.hidden = false;
     ui.manual.textContent = "Site register is available in the Reclamation profile viewport and handheld TOOL screen.";

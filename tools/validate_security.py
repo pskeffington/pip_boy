@@ -19,7 +19,7 @@ OPERATOR_FILES = frozenset({
     "peers.json", "messages.json", "messages.recipient", "message-pace.json",
     "reclamation.json", "notes.lock", "permissions.lock", "workbench.lock",
     "tasks.lock", "peers.lock", "messages.lock", "message-dispatch.lock",
-    "message-pace.lock", "reclamation.lock",
+    "message-pace.lock", "reclamation.lock", "aid-state.json", "aid-state.lock", "aid-dispatch.lock",
 })
 PRIVATE_DIRECTORIES = frozenset({
     ".pipboy", "county_cache", "local-state", "node_modules", "target",

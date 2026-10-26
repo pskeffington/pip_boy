@@ -14,6 +14,7 @@ const fixture = path.join(__dirname, "fixtures", "radio-viewport.html");
 const allowed = new Map([
   ["/fixture", [fixture, "text/html; charset=utf-8"]],
   ["/assets/micro.css", [path.join(root, "crates/pipboy/assets/micro.css"), "text/css; charset=utf-8"]],
+  ["/assets/aid.css", [path.join(root, "crates/pipboy/assets/aid.css"), "text/css; charset=utf-8"]],
   ["/assets/radio-ui.css", [path.join(root, "crates/pipboy/assets/radio-ui.css"), "text/css; charset=utf-8"]],
   ["/assets/radio-ui.js", [path.join(root, "crates/pipboy/assets/radio-ui.js"), "text/javascript; charset=utf-8"]]
 ]);

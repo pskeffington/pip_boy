@@ -82,6 +82,8 @@ jobs:
           node tools/test_radio_ui.cjs
           node --check crates/pipboy/assets/micro.js
           node tools/test_micro_ui.cjs
+          node --check crates/pipboy/assets/aid.js
+          node tools/test_aid_ui.cjs
           node --check crates/pipboy/assets/tasks.js
           node --check crates/pipboy/assets/map.js
           node --check crates/pipboy/assets/map-import.js
@@ -109,6 +111,7 @@ jobs:
           node --check tools/fixtures/dashboard-viewport-probe.js
           node --check tools/test_dashboard_viewport.cjs
           node tools/test_dashboard_viewport.cjs
+          node tools/test_aid_viewport.cjs
       - name: Desktop concise focus Chromium acceptance
         if: matrix.toolchain == 'stable'
         run: node tools/test_desktop_viewport.cjs

@@ -119,6 +119,8 @@ and E holds locally. History encryption labels follow the actual queue mode.
 
 The top bar is fixed RB / FIELD TERMINAL and is **not a clickable profile selector**. All roles display the same STAT / GEAR / MAP / DATA / LINK / SETUP tab rail, and STAT always begins with TOOLS and MAP. SETUP → CHANGE PROFILE is the only handheld entry to profile selection; its staged selection and explicit LOAD ROLE remain separate from tool execution. GEAR and DATA show tools from the active pinned workbench; DUTIES is reachable through DATA for all roles and follows their allowed task scope. Security camera and Overseer task functionality remain role-specific tools within the same shell. The desktop counterpart uses its fixed MODULES / VIEWPORT / MESSAGES / SETTINGS navigation and the same persisted profile API.
 
+[Medic / Doctor and the shared SOS emergency control](MEDIC_EMERGENCY.md) documents the new paired-device handoff and alarm workflow.
+
 ## Native RADIO in the handheld HUD
 
 From `./scripts/launch-micro.command`, open **LINK → RADIO / IP**. The panel lists curated Skylab Radio UK and SomaFM stations, Play/Stop, 10-point volume buttons, native status and errors. The Rust-Boy process—not the browser—owns the receiver and CPAL speaker output. The same session is visible in the desktop RADIO dock. RADIO does not autoplay, launch another application, or require a particular workbench profile; selecting a station alone never contacts a broadcaster. **STOP** ends playback even after returning to the LINK page. Verify on actual Mac/Pi audio hardware; browser/CI checks alone cannot certify sound.
