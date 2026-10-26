@@ -130,6 +130,12 @@ async function main(){
   map.latitude.value="41.8";map.longitude.value="-70.7";
   map.manual.listeners.submit[0]({preventDefault(){}});
   assert.equal(map.center.lon,-70.7);
+  assert.equal(map.centerSelected,true,"Manual center is an explicit county target");
+  assert.ok(map.tools && map.tools.tag==="details","Advanced tools stay accessible but collapsed");
+  assert.ok(map.fitButton && map.fitButton.listeners.click?.length,
+    "MAP has an accessible fit-to-geography action");
+  assert.ok(map.tools.children[1].children.some(node=>node.textContent==="RUSTGIS"),
+    "RustGIS source import remains available in tools");
   positions[2].success(position(10,10));
   assert.equal(map.fix,null);
   assert.equal(map.center.lon,-70.7,"Late callbacks cannot overwrite manual center");
