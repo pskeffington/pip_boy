@@ -111,9 +111,11 @@ window.RustBoyNetwork = (() => {
           target !== document.body && target !== document.documentElement) return;
       if (target?.isContentEditable) return;
       const tag = String(target?.tagName || "").toUpperCase();
-      // Do not steal arrows from text editing, selection or number inputs.
+      // On one-line inputs, Up/Down advances hardware focus between fields;
+      // Left/Right still edits the caret. Native selects/textareas keep their arrows.
       if (["TEXTAREA", "SELECT"].includes(tag) ||
-          (tag === "INPUT" && target.type !== "checkbox")) return;
+          (tag === "INPUT" && target.type !== "checkbox" &&
+           event.key !== "ArrowUp" && event.key !== "ArrowDown")) return;
       if (event.key === "ArrowUp" || event.key === "ArrowDown") {
         const moved = focusWithPad(event.key === "ArrowUp" ? -1 : 1);
         // Avoid accidental document scrolling at the ends of the tool deck.
