@@ -1,7 +1,5 @@
 # Rust-Boy
 
-Micro navigation uses STAT / GEAR / MAP / DATA / LINK / SETUP, a consistent header Back button and separate local-tool input/results screens. Back returns through inputs before leaving a tool; temporary local drafts survive navigation until reload.
-
 [![Rust-Boy quality gates](https://github.com/pskeffington/pip_boy/actions/workflows/rust.yml/badge.svg?branch=main)](https://github.com/pskeffington/pip_boy/actions/workflows/rust.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-informational)](LICENSE)
 [![Rust: 1.90+](https://img.shields.io/badge/Rust-1.90%2B-informational)](Cargo.toml)
@@ -11,6 +9,10 @@ Micro navigation uses STAT / GEAR / MAP / DATA / LINK / SETUP, a consistent head
 Rust-Boy is a Rust workbench for local diagnostics, field maps, network engineering and device-to-device task assignments. It has a desktop dashboard, a phosphor-style micro HUD and a terminal console. Seven occupational profiles come preloaded; Custom starts empty.
 
 **Development preview on `main`.** Implemented modules are merged after software checks pass. Physical Raspberry Pi touchscreen, actual UniFi controller, Mac-to-Pi SSH and PlayStation game acceptance remain separate field tests. There is no packaged production release.
+
+## Project navigation
+
+[Documentation index](docs/README.md) · [Repository structure](docs/REPO_STRUCTURE.md) · [Architecture](docs/ARCHITECTURE.md) · [Validation](docs/VALIDATION.md) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md).
 
 ## Quick start
 
@@ -31,6 +33,8 @@ cargo run --locked -p pipboy -- dashboard
 # Terminal UI:
 cargo run --locked -p pipboy -- tui
 ```
+
+Micro navigation uses STAT / GEAR / MAP / DATA / LINK / SETUP, a consistent Back button and separate local-tool input/results screens. Back returns through inputs before leaving a tool; temporary drafts survive navigation until reload.
 
 Open the printed loopback URL in a browser. The dashboard binds only to 127.0.0.1. Keep it local.
 

@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-10-26 — Repository/code hygiene (CI pending)
+
+- Add explicit repository ownership and maintenance guidance, link root documentation, and apply editor/line-ending conventions without relocating runtime data.
+- Consolidate Python validation assertions, make native CLI help navigable by functional group, and add offline public-Markdown link auditing (including directory containment, symlink, stale-reference, and mandatory-link checks) with nine regression tests.
+- Repair retired Boston-basemap references in branding and field/lore guides; preserve the county-first MAP and official offline county-boundary cache.
+- Keep standalone radio, communications, and public-data-index feature branches isolated.
+
+
 ## 2026-10-26 — Offline county-boundary and landmark ingestion
 
 - Add a fixed-host, GEOID-only TIGERweb boundary fetch, bound to an explicit COUNTY action and strict geographic/JSON limits; atomically cache and revalidate raw Census GeoJSON.
