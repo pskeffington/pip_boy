@@ -115,6 +115,12 @@ function authorize(env, repeat) {
 async function main() {
   const env = environment();
   assert.equal(env.calls.length, 0, "Mounting made an unsolicited request");
+  assert.match(env.container.textContent, /SESSION STANDBY/);
+  assert.match(env.container.textContent, /REQUESTS MANUAL ONLY/);
+  assert.match(env.container.textContent, /LAST RESULT \/ NOT LIVE NONE/);
+  assert.match(env.container.textContent, /PRIVATE LAN DISCOVERY/);
+  assert.match(env.container.textContent, /AUTHORIZATION REQUIRED/);
+
   choose(env, "SCAN LAN");
   authorize(env, true);
   await flush();
