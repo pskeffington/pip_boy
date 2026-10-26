@@ -16,7 +16,6 @@ use pipboy_core::virtual_transport::VirtualTransport;
 use std::error::Error;
 mod console;
 mod county_cache;
-mod zip_index;
 mod dashboard;
 mod diagnostics;
 mod endpoint_probe;
@@ -30,6 +29,7 @@ mod scout;
 mod status;
 mod tui;
 mod workbench;
+mod zip_index;
 
 fn help() {
     println!("{PRODUCT_NAME} | {PRODUCT_DESCRIPTOR}");
