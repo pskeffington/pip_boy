@@ -29,6 +29,14 @@ const inside=(node,box)=>{
           throw Error("Map must not show any buttons");
       }
       const box=ui.viewport.getBoundingClientRect();
+      if(id === "map") {
+        const canvas=ui.content.querySelector(".rb-map-canvas");
+        if(!canvas)throw Error("Map canvas did not mount");
+        const rect=canvas.getBoundingClientRect();
+        if(rect.width < box.width-2 || rect.height < box.height-2)
+          throw Error("Map must fill its viewport: " + rect.width + "x" + rect.height +
+            " vs " + box.width + "x" + box.height);
+      }
       const header=document.querySelector(".topbar").getBoundingClientRect();
       if(header.height > 45 || Math.abs(box.top-header.bottom)>1)
         throw Error("Extra header row or gap above " + id);
