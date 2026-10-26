@@ -87,6 +87,34 @@
 .net-compact .net-launch-footer { gap:6px; min-height:48px; }
 .net-compact .net-page-hint { font-size:9px; }
 .net-compact .net-launch-footer .net-pager { max-width:none; width:100%; }
+
+/* Ruggedized control feedback: visible without hover, with hardware focus. */
+.net-workspace button { touch-action:manipulation; -webkit-tap-highlight-color:transparent; }
+.net-workspace .net-button:focus-visible,
+.net-workspace .net-field input:focus-visible,
+.net-workspace .net-details summary:focus-visible,
+.net-workspace .net-check input:focus-visible {
+  outline:3px solid #f6d47d;
+  outline-offset:2px;
+  box-shadow:0 0 0 1px #132917;
+}
+.net-workspace .net-button:active:not(:disabled):not(.net-primary) {
+  background:#326239;
+  color:#ebffe0;
+}
+.net-workspace .net-primary:active:not(:disabled) {
+  background:#dbfdbd;
+  color:#122516;
+}
+.net-workspace .net-check:focus-within {
+  background:#1b3820;
+  outline:1px solid #7eae79;
+}
+@media (max-height:360px) {
+  .net-compact .net-landing .net-tile-mode { display:none; }
+  .net-compact .net-launch-head .net-count { font-size:8px; }
+}
+
 @media (max-width:440px) {
   .net-landing .net-tile { min-height:62px; }
   .net-compact .net-landing .net-tile { min-height:57px; }
