@@ -1885,6 +1885,35 @@ mod tests {
     }
 
     #[test]
+    fn zip_lookup_api_is_local_consent_gated_and_offline_first() {
+        let tmp = tempfile::tempdir().unwrap();
+        let store = WorkbenchStore::new(tmp.path().join("state/data.json"));
+        let cases = [
+            ("/api/map/zip", json!({"zip":"02360"}), 403),
+            ("/api/map/zip", json!({"zip":"0236","confirm":true}), 422),
+            ("/api/map/zip", json!({"zip":"02360","cache_only":true}), 404),
+            ("/api/map/county-zips", json!({"geoid":"25023"}), 403),
+            ("/api/map/county-zips", json!({"geoid":"../../","confirm":true}), 422),
+            ("/api/map/county-zips", json!({"geoid":"25023","offset":-1,"cache_only":true}), 422),
+            ("/api/map/county-zips", json!({"geoid":"25023","cache_only":true}), 404),
+        ];
+        for (path, body, expected) in cases {
+            let response = dispatch(&request("POST", path, body), &store, 8765);
+            assert_eq!(response.status, expected, "{path}");
+            assert!(!tmp.path().join("state/geo_index").exists());
+        }
+        let mut bad_origin = request(
+            "POST", "/api/map/zip",
+            json!({"zip":"02360","confirm":true}),
+        );
+        bad_origin.headers.insert(
+            "origin".to_owned(), "https://untrusted.invalid".to_owned()
+        );
+        assert_eq!(dispatch(&bad_origin, &store, 8765).status, 403);
+        assert!(!tmp.path().join("state/geo_index").exists());
+    }
+
+    #[test]
     fn csp_headers_deny_external_scripts_and_framing() {
         let response = Response::new(200, "text/plain", b"ok".to_vec());
         let header = format!(
@@ -1902,6 +1931,9 @@ mod tests {
         assert!(MAP_ONLINE_JS.contains("https://overpass-api.de/api/interpreter"));
         assert!(MICRO_HTML.contains("/assets/map-online.js"));
         assert!(HTML.contains("/assets/map-online.js"));
+        assert!(HTML.contains("/assets/map-zip.js"));
+        assert!(MICRO_HTML.contains("/assets/map-zip.js"));
+        assert!(ZIP_JS.contains("/api/map/zip"));
         assert!(MAP_IMPORT_JS.contains("parseRustGIS"));
         assert!(MAP_IMPORT_JS.contains("readPackage"));
         assert!(MICRO_HTML.contains("/assets/map-import.js"));
