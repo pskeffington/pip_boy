@@ -265,7 +265,8 @@
       ],
       "checks": [
         "tools/test_aid_ui.cjs",
-        "tools/smoke_aid.py"
+        "tools/smoke_aid.py",
+        "tools/test_aid_viewport.cjs"
       ]
     }
   ]

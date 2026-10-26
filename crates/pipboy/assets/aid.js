@@ -99,12 +99,14 @@
   }
   // Touch/key hold is guarded against release, pointer loss, hidden tabs and
   // key repeat. A tap/click offers an explicit two-step accessible alternative.
-  function guarded(label,fn,delay=2000){
+  function guarded(label,fn,delay=2000,existing=null,onTap=null){
     let fired=false;
-    const node=button(label,()=>{
+    const click=()=>{
       if(fired){fired=false;return;}
-      confirmAction(label,fn);
-    },"aid-danger");
+      if(onTap)onTap();else confirmAction(label,fn);
+    };
+    const node=existing || button(label,click,"aid-danger");
+    if(existing)node.addEventListener("click",click);
     const start=()=>{if(busy || hold!==null)return;fired=false;notice("KEEP HOLDING / RELEASE TO ABORT");
       hold=setTimeout(()=>{hold=null;fired=true;void fn();},delay);};
     node.addEventListener("pointerdown",event=>{if(event.button!==0)return;node.setPointerCapture?.(event.pointerId);start();});
@@ -119,7 +121,7 @@
     });
     node.addEventListener("keyup",event=>{
       if(![" ","Enter"].includes(event.key))return;
-      event.preventDefault();stopHold();if(!fired)confirmAction(label,fn);
+      event.preventDefault();stopHold();if(!fired){if(onTap)onTap();else confirmAction(label,fn);}
     });
     return node;
   }
@@ -208,7 +210,15 @@
     screen=next;configDraft=null;
     if(!dialog.open)dialog.showModal();render();void load(true);
   }
-  trigger?.addEventListener("click",()=>open(trigger.textContent.startsWith("ALERT")?"inbox":"beacon"));
+  if(trigger){
+    trigger.title="Hold 2 seconds for SOS; tap for controls";
+    guarded("ACTIVATE EMERGENCY",()=>{
+      if(state?.state?.beacon?.active){open("beacon");return;}
+      screen="beacon";
+      if(!dialog.open)dialog.showModal();
+      return action("/api/aid/activate");
+    },2000,trigger,()=>open(trigger.textContent.startsWith("ALERT")?"inbox":"beacon"));
+  }
   dialog.addEventListener("close",stopHold);dialog.addEventListener("cancel",stopHold);
   document.addEventListener("visibilitychange",()=>{stopHold();});
   window.addEventListener("blur",stopHold);

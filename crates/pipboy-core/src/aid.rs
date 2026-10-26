@@ -98,7 +98,10 @@ pub struct Beacon {
 impl Beacon {
     pub fn packet(&self) -> Packet {
         if self.active {
-            Packet::Alarm { incident: self.id, location: self.location.clone() }
+            Packet::Alarm {
+                incident: self.id,
+                location: self.location.clone(),
+            }
         } else {
             Packet::Cancel { incident: self.id }
         }
@@ -115,7 +118,12 @@ pub struct AidState {
 }
 impl Default for AidState {
     fn default() -> Self {
-        Self { schema_version: 1, next_id: 1, config: Config::default(), beacon: None }
+        Self {
+            schema_version: 1,
+            next_id: 1,
+            config: Config::default(),
+            beacon: None,
+        }
     }
 }
 impl AidState {
@@ -124,7 +132,9 @@ impl AidState {
             return Err(invalid("Unsupported aid state; original preserved"));
         }
         if let Some(beacon) = &self.beacon {
-            if beacon.id == 0 || beacon.id >= self.next_id || !optional_peer(&beacon.peer)
+            if beacon.id == 0
+                || beacon.id >= self.next_id
+                || !optional_peer(&beacon.peer)
                 || !text(&beacon.location, 80)
                 || !matches!(beacon.tier, Tier::Primary | Tier::Alternate)
             {
@@ -162,7 +172,10 @@ impl AidStore {
         #[cfg(unix)]
         {
             use std::os::unix::fs::DirBuilderExt;
-            fs::DirBuilder::new().recursive(true).mode(0o700).create(&self.root)?;
+            fs::DirBuilder::new()
+                .recursive(true)
+                .mode(0o700)
+                .create(&self.root)?;
         }
         #[cfg(not(unix))]
         fs::create_dir_all(&self.root)?;
@@ -193,7 +206,9 @@ impl AidStore {
         let mut staging = tempfile::NamedTempFile::new_in(&self.root)?;
         staging.write_all(&bytes)?;
         staging.as_file().sync_all()?;
-        staging.persist(self.root.join("aid-state.json")).map_err(|e| e.error)?;
+        staging
+            .persist(self.root.join("aid-state.json"))
+            .map_err(|e| e.error)?;
         #[cfg(unix)]
         File::open(&self.root)?.sync_all()?;
         Ok(state)
@@ -203,7 +218,11 @@ impl AidStore {
             return Err(invalid("Invalid aid configuration"));
         }
         self.update(|state| {
-            if let Some(beacon) = state.beacon.as_mut().filter(|b| b.active && b.peer.is_empty()) {
+            if let Some(beacon) = state
+                .beacon
+                .as_mut()
+                .filter(|b| b.active && b.peer.is_empty())
+            {
                 beacon.peer = config.emergency_peer.clone();
                 beacon.tier = config.tier;
             }
@@ -217,12 +236,19 @@ impl AidStore {
                 return Ok(());
             }
             let id = state.next_id;
-            state.next_id = id.checked_add(1).ok_or_else(|| invalid("Incident IDs exhausted"))?;
+            state.next_id = id
+                .checked_add(1)
+                .ok_or_else(|| invalid("Incident IDs exhausted"))?;
             state.beacon = Some(Beacon {
-                id, active: true, created_at: unix_time()?,
+                id,
+                active: true,
+                created_at: unix_time()?,
                 peer: state.config.emergency_peer.clone(),
-                location: if state.config.location.is_empty() { "UNKNOWN / NOT PROVIDED".into() }
-                    else { state.config.location.clone() },
+                location: if state.config.location.is_empty() {
+                    "UNKNOWN / NOT PROVIDED".into()
+                } else {
+                    state.config.location.clone()
+                },
                 tier: state.config.tier,
             });
             Ok(())
@@ -230,7 +256,10 @@ impl AidStore {
     }
     pub fn cancel(&self, id: u64) -> io::Result<AidState> {
         self.update(|state| {
-            let beacon = state.beacon.as_mut().filter(|b| b.id == id)
+            let beacon = state
+                .beacon
+                .as_mut()
+                .filter(|b| b.id == id)
                 .ok_or_else(|| invalid("Emergency incident changed; refresh before cancelling"))?;
             beacon.active = false;
             Ok(())
@@ -243,15 +272,29 @@ mod tests {
     use super::*;
     #[test]
     fn packets_are_typed_bounded_and_not_clinical_inferences() {
-        let packet = Packet::NineLine { mode: Mode::Peacetime, lines: std::array::from_fn(|_| "UNKNOWN".into()) };
+        let packet = Packet::NineLine {
+            mode: Mode::Peacetime,
+            lines: std::array::from_fn(|_| "UNKNOWN".into()),
+        };
         assert_eq!(Packet::decode(&packet.encode().unwrap()).unwrap(), packet);
-        for body in ["RB-AID/2 {}", "RB-AID/1 {\"kind\":\"ack\",\"incident\":0}",
-            "RB-AID/1 {\"kind\":\"ack\",\"incident\":1,\"extra\":true}"] {
+        for body in [
+            "RB-AID/2 {}",
+            "RB-AID/1 {\"kind\":\"ack\",\"incident\":0}",
+            "RB-AID/1 {\"kind\":\"ack\",\"incident\":1,\"extra\":true}",
+        ] {
             assert!(Packet::decode(body).is_err());
         }
-        let bad = Packet::NineLine { mode: Mode::Wartime, lines: std::array::from_fn(|_| "é".repeat(25)) };
+        let bad = Packet::NineLine {
+            mode: Mode::Wartime,
+            lines: std::array::from_fn(|_| "é".repeat(25)),
+        };
         assert!(bad.encode().is_err());
-        assert!(Packet::Alarm { incident: 1, location: "\u{202e}unknown".into() }.encode().is_err());
+        assert!(Packet::Alarm {
+            incident: 1,
+            location: "\u{202e}unknown".into()
+        }
+        .encode()
+        .is_err());
     }
     #[test]
     fn latch_survives_restart_and_configuration_changes_without_retargeting() {
@@ -260,12 +303,21 @@ mod tests {
         let store = AidStore::new(root.clone());
         assert!(store.load().unwrap().beacon.is_none());
         assert!(!root.exists());
-        store.configure(Config { emergency_peer: "responder-one".into(), location: "Training site".into(), ..Config::default() }).unwrap();
+        store
+            .configure(Config {
+                emergency_peer: "responder-one".into(),
+                location: "Training site".into(),
+                ..Config::default()
+            })
+            .unwrap();
         let first = store.activate().unwrap().beacon.unwrap();
         assert_eq!(store.activate().unwrap().beacon.unwrap(), first);
         store.configure(Config::default()).unwrap();
         let restarted = AidStore::new(root);
-        assert_eq!(restarted.load().unwrap().beacon.unwrap().peer, "responder-one");
+        assert_eq!(
+            restarted.load().unwrap().beacon.unwrap().peer,
+            "responder-one"
+        );
         assert!(restarted.cancel(first.id + 1).is_err());
         assert!(!restarted.cancel(first.id).unwrap().beacon.unwrap().active);
         assert!(restarted.activate().unwrap().beacon.unwrap().id > first.id);

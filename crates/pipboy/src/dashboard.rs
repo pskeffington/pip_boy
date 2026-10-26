@@ -748,8 +748,16 @@ fn dispatch(req: &Request, store: &WorkbenchStore, port: u16) -> Response {
         ("GET", "/assets/map.css") => {
             Response::new(200, "text/css; charset=utf-8", MAP_CSS.as_bytes())
         }
-        ("GET", "/assets/aid.js") => Response::new(200, "text/javascript; charset=utf-8", include_str!("../assets/aid.js").as_bytes().to_vec()),
-        ("GET", "/assets/aid.css") => Response::new(200, "text/css; charset=utf-8", include_str!("../assets/aid.css").as_bytes().to_vec()),
+        ("GET", "/assets/aid.js") => Response::new(
+            200,
+            "text/javascript; charset=utf-8",
+            include_str!("../assets/aid.js").as_bytes().to_vec(),
+        ),
+        ("GET", "/assets/aid.css") => Response::new(
+            200,
+            "text/css; charset=utf-8",
+            include_str!("../assets/aid.css").as_bytes().to_vec(),
+        ),
         ("GET", "/assets/messenger.js") => Response::new(
             200,
             "text/javascript; charset=utf-8",
@@ -811,12 +819,24 @@ fn dispatch(req: &Request, store: &WorkbenchStore, port: u16) -> Response {
         ("GET", "/api/tasks") => task_routes::tasks_read(store).unwrap_or_else(|error| error),
         ("GET", "/api/peers") => task_routes::peers_read(store).unwrap_or_else(|error| error),
         ("GET", "/api/aid") => aid_routes::read(store).unwrap_or_else(|error| error),
-        ("POST", "/api/aid/config") => aid_routes::configure(req, store).unwrap_or_else(|error| error),
-        ("POST", "/api/aid/nine-line") => aid_routes::nine_line(req, store).unwrap_or_else(|error| error),
-        ("POST", "/api/aid/ack") => aid_routes::acknowledge(req, store).unwrap_or_else(|error| error),
-        ("POST", "/api/aid/activate") => aid_routes::beacon_action(req, store, "activate").unwrap_or_else(|error| error),
-        ("POST", "/api/aid/cancel") => aid_routes::beacon_action(req, store, "cancel").unwrap_or_else(|error| error),
-        ("POST", "/api/aid/transmit") => aid_routes::beacon_action(req, store, "transmit").unwrap_or_else(|error| error),
+        ("POST", "/api/aid/config") => {
+            aid_routes::configure(req, store).unwrap_or_else(|error| error)
+        }
+        ("POST", "/api/aid/nine-line") => {
+            aid_routes::nine_line(req, store).unwrap_or_else(|error| error)
+        }
+        ("POST", "/api/aid/ack") => {
+            aid_routes::acknowledge(req, store).unwrap_or_else(|error| error)
+        }
+        ("POST", "/api/aid/activate") => {
+            aid_routes::beacon_action(req, store, "activate").unwrap_or_else(|error| error)
+        }
+        ("POST", "/api/aid/cancel") => {
+            aid_routes::beacon_action(req, store, "cancel").unwrap_or_else(|error| error)
+        }
+        ("POST", "/api/aid/transmit") => {
+            aid_routes::beacon_action(req, store, "transmit").unwrap_or_else(|error| error)
+        }
         ("GET", "/api/messages") => {
             messenger_routes::messages_read(store).unwrap_or_else(|error| error)
         }

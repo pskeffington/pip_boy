@@ -83,6 +83,8 @@ const fireTimers=()=>{for(const [id,fn] of [...timers]){timers.delete(id);fn();}
   const report=posts().at(-1);assert.equal(report.url,"/api/aid/nine-line");
   assert.equal(report.body.packet.lines.length,9);assert.equal(report.body.packet.mode,"peacetime");
   assert.ok(report.body.packet.lines.every(x=>x==="UNKNOWN"));
+  trigger.dispatch("pointerdown");fireTimers();await flush();
+  assert.equal(posts().at(-1).url,"/api/aid/activate","Dedicated header hold activates directly");
   window.RustBoyAid.destroy();
   console.log("PASS aid UI: hold/release/cancel/blur/visibility, explicit tap confirmation, local-only reads, truthful status and nine-line wizard");
 })().catch(error=>{console.error(error);process.exitCode=1;});
