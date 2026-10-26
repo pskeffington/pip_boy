@@ -289,20 +289,28 @@ fn decode_and_play(
     Ok(())
 }
 
+fn validate_demo_duration(seconds: Option<u64>) -> Result<(), String> {
+    if seconds.is_some_and(|value| !(1..=300).contains(&value)) {
+        return Err("Demo duration must be 1..300 seconds".into());
+    }
+    Ok(())
+}
+
 /// Interactive operator demo. A non-interactive caller should pass a duration,
 /// otherwise standard input supports 'volume N', 'status' and 'stop'.
 pub fn run_demo(station_id: &str, duration_seconds: Option<u64>) -> Result<(), String> {
+    validate_demo_duration(duration_seconds)?;
     let mut player = NativeRadioEngine::start_internet(station_id, 60)?;
+    let mut played_audio = false;
     println!("RUST-BOY RADIO / {station_id} / native Rust audio / 60% volume");
     if let Some(seconds) = duration_seconds {
-        if !(1..=300).contains(&seconds) {
-            player.stop();
-            return Err("Demo duration must be 1..300 seconds".into());
-        }
         let started_at = Instant::now();
         while started_at.elapsed() < Duration::from_secs(seconds) {
             thread::sleep(Duration::from_millis(100));
             let snapshot = player.status();
+            if snapshot.state == PlaybackState::Playing {
+                played_audio = true;
+            }
             if snapshot.state == PlaybackState::Failed {
                 let error = snapshot
                     .last_error
@@ -352,6 +360,9 @@ pub fn run_demo(station_id: &str, duration_seconds: Option<u64>) -> Result<(), S
             .last_error
             .unwrap_or_else(|| "Radio playback failed".into()));
     }
+    if duration_seconds.is_some() && !played_audio {
+        return Err("No decoded PCM reached the audio callback during the demo".into());
+    }
     println!("RUST-BOY RADIO / STOPPED");
     Ok(())
 }
@@ -364,6 +375,15 @@ mod tests {
     fn refuses_unapproved_stream_without_opening_audio() {
         assert!(NativeRadioEngine::start_internet("untrusted", 50).is_err());
         assert!(NativeRadioEngine::start_internet("skylab", 101).is_err());
+    }
+
+    #[test]
+    fn invalid_duration_is_rejected_before_device_or_network_access() {
+        assert!(validate_demo_duration(Some(0)).is_err());
+        assert!(validate_demo_duration(Some(301)).is_err());
+        assert!(validate_demo_duration(Some(30)).is_ok());
+        assert!(validate_demo_duration(None).is_ok());
+        assert!(run_demo("skylab", Some(0)).is_err());
     }
 
     #[test]
