@@ -240,4 +240,3 @@ pub(super) fn device_sync(req: &Request, store: &WorkbenchStore) -> Result<Respo
         &json!({"updated": changed, "source": "openssh_explicit_sync"}),
     ))
 }
-

@@ -1051,11 +1051,21 @@ fn dispatch(req: &Request, store: &WorkbenchStore, port: u16) -> Response {
         ("POST", "/api/messages/retry") => messages_retry(req, store).unwrap_or_else(|error| error),
         ("POST", "/api/net/scan") => scan_network(req, store).unwrap_or_else(|error| error),
         ("POST", "/api/net/unifi") => unifi_request(req, store).unwrap_or_else(|error| error),
-        ("POST", "/api/peer/send") => task_routes::device_send(req, store).unwrap_or_else(|error| error),
-        ("POST", "/api/peer/sync") => task_routes::device_sync(req, store).unwrap_or_else(|error| error),
-        ("POST", "/api/tasks/create") => task_routes::tasks_create(req, store).unwrap_or_else(|error| error),
-        ("POST", "/api/tasks/change") => task_routes::tasks_change(req, store).unwrap_or_else(|error| error),
-        ("POST", "/api/tasks/handoff") => task_routes::tasks_handoff(req, store).unwrap_or_else(|error| error),
+        ("POST", "/api/peer/send") => {
+            task_routes::device_send(req, store).unwrap_or_else(|error| error)
+        }
+        ("POST", "/api/peer/sync") => {
+            task_routes::device_sync(req, store).unwrap_or_else(|error| error)
+        }
+        ("POST", "/api/tasks/create") => {
+            task_routes::tasks_create(req, store).unwrap_or_else(|error| error)
+        }
+        ("POST", "/api/tasks/change") => {
+            task_routes::tasks_change(req, store).unwrap_or_else(|error| error)
+        }
+        ("POST", "/api/tasks/handoff") => {
+            task_routes::tasks_handoff(req, store).unwrap_or_else(|error| error)
+        }
         ("POST", "/api/profile") => {
             let result = (|| {
                 let body = parse_json_body(req, &["id", "confirm"])?;
@@ -1224,8 +1234,8 @@ pub fn run(args: Vec<String>) -> Result<(), Box<dyn Error>> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::task_routes::task_store;
+    use super::*;
     use pipboy_core::tasks::Status;
     use std::fs;
 
@@ -1710,7 +1720,8 @@ mod tests {
             "/api/peer/sync",
         ] {
             let mut req = request("POST", path, json!({}));
-            req.headers.insert("origin".into(), "http://untrusted.invalid".into());
+            req.headers
+                .insert("origin".into(), "http://untrusted.invalid".into());
             let response = dispatch(&req, &store, 8765);
             assert_eq!(response.status, 403, "cross-origin route {path}");
             assert!(!dir.path().join("private").exists());
