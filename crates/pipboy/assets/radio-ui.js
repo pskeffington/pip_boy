@@ -163,8 +163,10 @@
       const running = !["stopped", "failed"].includes(status);
       const list = stationList(data);
       const saved = favorites(data);
-      const active = running && data.station && list.some((s) => s.id === data.station)
-        ? data.station : null;
+      // A failed native session still has a station identity. Prefer it over
+      // an older saved selection so RETRY cannot target the wrong broadcaster.
+      const active = status !== "stopped" && data.station &&
+        list.some((s) => s.id === data.station) ? data.station : null;
       const desired = active || selected || data.presets?.last_selected || data.station;
       selected = list.some((s) => s.id === desired) ? desired : (list[0]?.id || "");
       selector.replaceChildren();
@@ -202,8 +204,11 @@
       setText(filter, favoritesOnly ? "★ ONLY" : "ALL");
       filter.setAttribute("aria-pressed", String(favoritesOnly));
       filter.disabled = busy || running;
+      const outputFailed = data.output_failure || data.output_available === false;
       const favIndex = saved.indexOf(selected);
-      order.hidden = favIndex < 0;
+      // When hardware is missing, keep the recovery overlay small enough for
+      // 480×320 and remove nonessential reordering buttons from this view.
+      order.hidden = outputFailed || favIndex < 0;
       orderEarlier.disabled = busy || favIndex <= 0;
       orderLater.disabled = busy || favIndex < 0 || favIndex >= saved.length - 1;
 
@@ -225,7 +230,6 @@
       }
       outputSelector.value = chosenOutput;
       requestedOutput = null;
-      const outputFailed = data.output_failure || data.output_available === false;
       if (outputFailed) showOutput(true);
       else showOutput(outputExpanded);
       outputSelector.disabled = busy || !outputs.some((device) => device.available !== false);

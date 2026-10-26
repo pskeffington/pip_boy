@@ -114,6 +114,7 @@
         favoriteMode:document.querySelector(".rb-radio-filter")?.getAttribute("aria-pressed"),
         controls:touch,primaryVisible:touch.every(control=>control.visible),
         settingsExpanded:panel&&!panel.hidden,
+        panel:geometry(panel),
         settingsVisible:within(panel,viewport),
         fallbackVisible:!document.querySelector(".rb-radio-fallback")?.hidden,
         requests:calls

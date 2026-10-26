@@ -136,10 +136,15 @@ function check(data, width, height, scenario) {
   }
   if (scenario === "settings" || scenario === "output-lost") {
     assert.equal(data.settingsExpanded, true);
-    assert.equal(data.settingsVisible, true, "Settings overlay exceeds viewport");
+    assert.equal(data.settingsVisible, true,
+      "Settings overlay exceeds viewport: " + JSON.stringify(data.panel) +
+      " vs " + JSON.stringify(data.viewport));
   }
-  if (scenario === "output-lost")
+  if (scenario === "output-lost") {
     assert.equal(data.fallbackVisible, true, "Lost output must show manual recovery");
+    assert.equal(data.station, "skylab",
+      "The failed station should remain the selected native retry target");
+  }
 }
 
 async function main() {
