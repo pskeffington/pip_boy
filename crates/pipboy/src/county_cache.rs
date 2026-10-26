@@ -12,10 +12,11 @@ use std::sync::{Mutex, OnceLock};
 pub const MAX_ARCHIVE: u64 = 12 * 1024 * 1024;
 const MAX_COUNTIES: usize = 4;
 const VINTAGE: &str = "2025";
-const SOURCE_LIST: [(&str, &str, &str); 3] = [
+const SOURCE_LIST: [(&str, &str, &str); 4] = [
     ("tiger-roads", "ROADS", "roads"),
     ("tiger-areawater", "AREAWATER", "areawater"),
     ("tiger-linearwater", "LINEARWATER", "linearwater"),
+    ("tiger-pointlm", "POINTLM", "pointlm"),
 ];
 
 fn invalid(message: &'static str) -> io::Error {
@@ -50,7 +51,10 @@ pub fn sources() -> Value {
             {"id":"tiger-areawater","layer":"water","kind":"polygon","origin":"www2.census.gov",
              "description":"County-wide TIGER areal water polygons; not a surveyed shoreline"},
             {"id":"tiger-linearwater","layer":"waterways","kind":"line","origin":"www2.census.gov",
-             "description":"County-wide TIGER linear rivers, streams and hydrography"}
+             "description":"County-wide TIGER linear rivers, streams and hydrography"},
+            {"id":"tiger-pointlm","layer":"landmarks","kind":"point","origin":"www2.census.gov",
+             "scope":"state","display_scope":"verified county polygon only",
+             "description":"State point landmarks clipped to verified county geometry"}
         ],
         "limits": {"max_zip_bytes":MAX_ARCHIVE,"max_cached_counties":MAX_COUNTIES,
                    "position":"resolved county GEOID only","network":"explicit COUNTY action"}
@@ -69,7 +73,17 @@ impl CountyCache {
     }
 
     fn name(geoid: &str, layer: &str) -> String {
+        // Cache filenames remain county-isolated even when origin is state-based.
         format!("tl_{VINTAGE}_{geoid}_{layer}.zip")
+    }
+
+    fn remote_name(geoid: &str, layer: &str) -> String {
+        // Census publishes POINTLM by state, not by county.
+        if layer == "pointlm" {
+            format!("tl_{VINTAGE}_{}_pointlm.zip", &geoid[..2])
+        } else {
+            Self::name(geoid, layer)
+        }
     }
 
     fn path(&self, geoid: &str, layer: &str) -> PathBuf {
@@ -213,7 +227,7 @@ impl CountyCache {
         self.ensure_root()?;
         let url = format!(
             "https://www2.census.gov/geo/tiger/TIGER{VINTAGE}/{folder}/{}",
-            Self::name(geoid, layer)
+            Self::remote_name(geoid, layer)
         );
         let tmp = tempfile::Builder::new()
             .prefix(".county-download-")
@@ -320,9 +334,12 @@ mod tests {
     #[test]
     fn source_catalog_is_a_strict_pair() {
         let data = sources();
-        assert_eq!(data["sources"].as_array().unwrap().len(), 3);
+        assert_eq!(data["sources"].as_array().unwrap().len(), 4);
         assert_eq!(source("tiger-roads").unwrap().1, "roads");
         assert_eq!(source("tiger-areawater").unwrap().1, "areawater");
         assert_eq!(source("tiger-linearwater").unwrap().1, "linearwater");
+        assert_eq!(source("tiger-pointlm").unwrap().1, "pointlm");
+        assert_eq!(CountyCache::remote_name("25025", "pointlm"), "tl_2025_25_pointlm.zip");
+        assert_eq!(CountyCache::name("25025", "pointlm"), "tl_2025_25025_pointlm.zip");
     }
 }
