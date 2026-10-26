@@ -175,3 +175,29 @@
 .rb-map-setup-controls { display:flex; gap:4px; flex-wrap:wrap; padding:4px 0; }
 .rb-map-setup-controls .rb-map-button { flex:1 1 90px; }
 .rb-map-setup:not([open]) { max-height:30px; }
+
+/* Handheld MAP is a full-bleed working canvas, not a forms dashboard. */
+.rb-map { gap:3px; overflow:hidden; }
+.rb-map-stage { min-height:0; flex:1 1 0; }
+.rb-map-stage > .rb-map-web-state,
+.rb-map-stage > .rb-map-status {
+  position:absolute; z-index:4; pointer-events:none;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  background:rgba(6,22,12,.85); padding:2px 4px; border-radius:2px;
+}
+.rb-map-stage > .rb-map-web-state:nth-last-child(3) {
+  top:3px; right:4px; max-width:calc(100% - 8px);
+}
+.rb-map-stage > .rb-map-web-state:nth-last-child(2) {
+  top:19px; right:4px; max-width:calc(100% - 8px);
+}
+.rb-map-stage > .rb-map-status {
+  bottom:20px; left:4px; right:4px; font-size:9px;
+}
+.rb-map-setup > summary { min-height:27px; box-sizing:border-box; }
+.rb-map-setup[open] { max-height:150px; overflow:auto; }
+@media (max-height:360px) {
+  .rb-map-stage { min-height:0; }
+  .rb-map-toolbar { flex-wrap:nowrap; }
+  .rb-map-setup > summary { min-height:24px; padding:3px 5px; }
+}
