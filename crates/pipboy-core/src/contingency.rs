@@ -50,35 +50,77 @@ pub fn catalog() -> Vec<BearerSpec> {
     use PaceTier::*;
     use Readiness::*;
     vec![
-        BearerSpec { bearer: PinnedSsh, tier: Primary, readiness: CodeAvailable,
-            estimated_payload_max: Some(1024), supports_ip: true,
-            needs_explicit_peer_enrollment: true, requires_separate_e2ee: true,
-            default_enabled: false },
-        BearerSpec { bearer: AlternateIpSsh, tier: Alternate, readiness: Proposed,
-            estimated_payload_max: Some(1024), supports_ip: true,
-            needs_explicit_peer_enrollment: true, requires_separate_e2ee: true,
-            default_enabled: false },
-        BearerSpec { bearer: MeshtasticUsb, tier: Contingency, readiness: Research,
+        BearerSpec {
+            bearer: PinnedSsh,
+            tier: Primary,
+            readiness: CodeAvailable,
+            estimated_payload_max: Some(1024),
+            supports_ip: true,
+            needs_explicit_peer_enrollment: true,
+            requires_separate_e2ee: true,
+            default_enabled: false,
+        },
+        BearerSpec {
+            bearer: AlternateIpSsh,
+            tier: Alternate,
+            readiness: Proposed,
+            estimated_payload_max: Some(1024),
+            supports_ip: true,
+            needs_explicit_peer_enrollment: true,
+            requires_separate_e2ee: true,
+            default_enabled: false,
+        },
+        BearerSpec {
+            bearer: MeshtasticUsb,
+            tier: Contingency,
+            readiness: Research,
             // Planning budget, NOT a claimed Meshtastic protobuf data ceiling.
-            estimated_payload_max: Some(128), supports_ip: false,
-            needs_explicit_peer_enrollment: true, requires_separate_e2ee: true,
-            default_enabled: false },
-        BearerSpec { bearer: MeshcoreUsb, tier: Contingency, readiness: Research,
-            estimated_payload_max: Some(100), supports_ip: false,
-            needs_explicit_peer_enrollment: true, requires_separate_e2ee: true,
-            default_enabled: false },
-        BearerSpec { bearer: ReticulumBridge, tier: Contingency, readiness: Research,
-            estimated_payload_max: None, supports_ip: false,
-            needs_explicit_peer_enrollment: true, requires_separate_e2ee: true,
-            default_enabled: false },
-        BearerSpec { bearer: LocalMeshIp, tier: Alternate, readiness: Proposed,
-            estimated_payload_max: None, supports_ip: true,
-            needs_explicit_peer_enrollment: true, requires_separate_e2ee: true,
-            default_enabled: false },
-        BearerSpec { bearer: OfflineHandoff, tier: Emergency,
-            readiness: ProcedureOnly, estimated_payload_max: None, supports_ip: false,
-            needs_explicit_peer_enrollment: true, requires_separate_e2ee: true,
-            default_enabled: false },
+            estimated_payload_max: Some(128),
+            supports_ip: false,
+            needs_explicit_peer_enrollment: true,
+            requires_separate_e2ee: true,
+            default_enabled: false,
+        },
+        BearerSpec {
+            bearer: MeshcoreUsb,
+            tier: Contingency,
+            readiness: Research,
+            estimated_payload_max: Some(100),
+            supports_ip: false,
+            needs_explicit_peer_enrollment: true,
+            requires_separate_e2ee: true,
+            default_enabled: false,
+        },
+        BearerSpec {
+            bearer: ReticulumBridge,
+            tier: Contingency,
+            readiness: Research,
+            estimated_payload_max: None,
+            supports_ip: false,
+            needs_explicit_peer_enrollment: true,
+            requires_separate_e2ee: true,
+            default_enabled: false,
+        },
+        BearerSpec {
+            bearer: LocalMeshIp,
+            tier: Alternate,
+            readiness: Proposed,
+            estimated_payload_max: None,
+            supports_ip: true,
+            needs_explicit_peer_enrollment: true,
+            requires_separate_e2ee: true,
+            default_enabled: false,
+        },
+        BearerSpec {
+            bearer: OfflineHandoff,
+            tier: Emergency,
+            readiness: ProcedureOnly,
+            estimated_payload_max: None,
+            supports_ip: false,
+            needs_explicit_peer_enrollment: true,
+            requires_separate_e2ee: true,
+            default_enabled: false,
+        },
     ]
 }
 
@@ -124,10 +166,16 @@ mod tests {
         let list = catalog();
         assert_eq!(list.len(), 7);
         assert!(list.iter().all(|item| !item.default_enabled));
-        assert!(list.iter().filter(|item| item.bearer != Bearer::PinnedSsh)
+        assert!(list
+            .iter()
+            .filter(|item| item.bearer != Bearer::PinnedSsh)
             .all(|item| item.readiness != Readiness::CodeAvailable));
-        assert!(list.iter().all(|item| !eligible(item, true, true, false, true)));
-        assert!(list.iter().filter(|item| item.bearer != Bearer::PinnedSsh)
+        assert!(list
+            .iter()
+            .all(|item| !eligible(item, true, true, false, true)));
+        assert!(list
+            .iter()
+            .filter(|item| item.bearer != Bearer::PinnedSsh)
             .all(|item| !eligible(item, true, true, true, true)));
     }
 
@@ -142,8 +190,11 @@ mod tests {
 
     #[test]
     fn relay_or_radio_ack_does_not_imply_delivery() {
-        for evidence in [DeliveryEvidence::LocalQueued, DeliveryEvidence::LinkAccepted,
-            DeliveryEvidence::RelayObserved] {
+        for evidence in [
+            DeliveryEvidence::LocalQueued,
+            DeliveryEvidence::LinkAccepted,
+            DeliveryEvidence::RelayObserved,
+        ] {
             assert!(!evidence.may_mark_stored());
         }
         assert!(DeliveryEvidence::RecipientStored.may_mark_stored());
