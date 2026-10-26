@@ -73,7 +73,9 @@ pub struct RadioController {
 
 impl Default for RadioController {
     fn default() -> Self {
-        Self { session: RadioSession::default() }
+        Self {
+            session: RadioSession::default(),
+        }
     }
 }
 
@@ -125,10 +127,14 @@ impl RadioController {
             return false;
         }
         let next = match (&self.session.state, &event) {
-            (PlaybackState::Connecting | PlaybackState::Recovering, PlaybackEvent::Connected) => PlaybackState::Buffering,
+            (PlaybackState::Connecting | PlaybackState::Recovering, PlaybackEvent::Connected) => {
+                PlaybackState::Buffering
+            }
             (PlaybackState::Buffering, PlaybackEvent::Buffered) => PlaybackState::Buffering,
             (PlaybackState::Buffering, PlaybackEvent::PlaybackStarted) => PlaybackState::Playing,
-            (PlaybackState::Playing | PlaybackState::Buffering, PlaybackEvent::ConnectionLost) => PlaybackState::Recovering,
+            (PlaybackState::Playing | PlaybackState::Buffering, PlaybackEvent::ConnectionLost) => {
+                PlaybackState::Recovering
+            }
             (_, PlaybackEvent::Error(_)) => PlaybackState::Failed,
             _ => return false,
         };
@@ -147,7 +153,11 @@ mod tests {
     #[test]
     fn known_station_starts_only_connecting_not_playing() {
         let mut radio = RadioController::default();
-        radio.apply(RadioCommand::PlayInternet { station_id: "skylab".into() }).unwrap();
+        radio
+            .apply(RadioCommand::PlayInternet {
+                station_id: "skylab".into(),
+            })
+            .unwrap();
         assert_eq!(radio.state().state, PlaybackState::Connecting);
         assert_eq!(radio.state().input, Some(InputKind::Internet));
     }
@@ -155,15 +165,27 @@ mod tests {
     #[test]
     fn no_untrusted_station_or_invalid_gain() {
         let mut radio = RadioController::default();
-        assert_eq!(radio.apply(RadioCommand::PlayInternet { station_id: "bad".into() }), Err(ControlError::UnknownStation));
-        assert_eq!(radio.apply(RadioCommand::SetVolume(101)), Err(ControlError::InvalidVolume));
+        assert_eq!(
+            radio.apply(RadioCommand::PlayInternet {
+                station_id: "bad".into()
+            }),
+            Err(ControlError::UnknownStation)
+        );
+        assert_eq!(
+            radio.apply(RadioCommand::SetVolume(101)),
+            Err(ControlError::InvalidVolume)
+        );
         assert_eq!(radio.state().generation, 0);
     }
 
     #[test]
     fn stale_worker_cannot_restart_after_stop() {
         let mut radio = RadioController::default();
-        let old = radio.apply(RadioCommand::PlayInternet { station_id: "skylab".into() }).unwrap();
+        let old = radio
+            .apply(RadioCommand::PlayInternet {
+                station_id: "skylab".into(),
+            })
+            .unwrap();
         assert!(radio.event(old, PlaybackEvent::Connected));
         radio.apply(RadioCommand::Stop).unwrap();
         assert!(!radio.event(old, PlaybackEvent::PlaybackStarted));
@@ -173,7 +195,11 @@ mod tests {
     #[test]
     fn playback_needs_actual_worker_events() {
         let mut radio = RadioController::default();
-        let gen = radio.apply(RadioCommand::PlayInternet { station_id: "dronezone".into() }).unwrap();
+        let gen = radio
+            .apply(RadioCommand::PlayInternet {
+                station_id: "dronezone".into(),
+            })
+            .unwrap();
         assert!(!radio.event(gen, PlaybackEvent::PlaybackStarted));
         assert!(radio.event(gen, PlaybackEvent::Connected));
         assert!(radio.event(gen, PlaybackEvent::Buffered));
