@@ -34,7 +34,9 @@ window.RustBoyNetwork = (() => {
     let refreshes = 0;
     let status = null;
     let screen = "menu";
+    let activePager = null;
     const candidates = Array.isArray(operations) ? operations : [];
+    const toolsPerPage = compact ? 4 : 6;
 
     function stop() {
       generation++;
@@ -51,40 +53,139 @@ window.RustBoyNetwork = (() => {
       root.append(row);
     }
 
-    function pager(page, total, change) {
-      const row = node("div", "net-actions net-pager");
-      const previous = control("◀", () => change(page - 1));
-      const next = control("▶", () => change(page + 1));
+    // Both touch taps and keyboard-emulated physical D-pads use this pager.
+    function pager(page, total, change, target = root) {
+      const row = node("nav", "net-actions net-pager");
+      row.setAttribute("aria-label", screen === "menu" ? "Network tool pages" : "Network result pages");
+      const go = (step) => {
+        const nextPage = page + step;
+        if (nextPage < 0 || nextPage >= total) return false;
+        change(nextPage);
+        // Keep a hardware/keyboard user's focus on a reachable page button.
+        const selected = root.querySelector?.(step < 0 ? ".net-page-prev" : ".net-page-next");
+        const fallback = root.querySelector?.(step < 0 ? ".net-page-next" : ".net-page-prev");
+        (selected && !selected.disabled ? selected : fallback)?.focus?.({ preventScroll: true });
+        return true;
+      };
+      const previous = control("◀ PREV", () => go(-1));
+      const next = control("NEXT ▶", () => go(1));
+      previous.classList.add("net-page-arrow");
+      previous.classList.add("net-page-prev");
+      next.classList.add("net-page-arrow");
+      next.classList.add("net-page-next");
       previous.disabled = page === 0;
       next.disabled = page + 1 === total;
       previous.setAttribute("aria-label", "Previous page");
       next.setAttribute("aria-label", "Next page");
-      row.append(previous, node("span", "", (page + 1) + " / " + total), next);
-      root.append(row);
+      const index = node("span", "net-page-index", "PAGE " + (page + 1) + " / " + total);
+      index.setAttribute("aria-label", "Page " + (page + 1) + " of " + total);
+      row.append(previous, index, next);
+      target.append(row);
+      activePager = go;
+    }
+
+    function onPageKey(event) {
+      if (destroyed || !compact || document.hidden || root.isConnected === false ||
+          (screen !== "menu" && screen !== "result") ||
+          document.querySelector?.("dialog[open]") ||
+          event.altKey || event.ctrlKey || event.metaKey || event.repeat) return;
+      const target = event.target;
+      if (target?.isContentEditable ||
+          ["INPUT", "SELECT", "TEXTAREA"].includes(String(target?.tagName || "").toUpperCase())) return;
+      const step = event.key === "ArrowLeft" ? -1 : event.key === "ArrowRight" ? 1 : 0;
+      if (step && activePager?.(step)) event.preventDefault();
+    }
+
+    const toolDescription = Object.freeze({
+      scan: "PRIVATE LAN DISCOVERY",
+      "unifi-sites": "CONTROLLER SITE ROSTER",
+      "unifi-clients": "CONNECTED DEVICE ROSTER",
+      "unifi-compare": "CONTROLLER / PROBE MATCH",
+      icmp: "LATENCY / RESPONSE LOSS",
+      health: "TCP CONNECT TIMINGS",
+      cidr4: "IPv4 RANGE / HOSTS",
+      cidr6: "IPv6 NETWORK PREFIX",
+      split4: "ADDRESS PLAN / SUBNETS",
+      route: "LONGEST PREFIX MATCH",
+      aggregate4: "MERGE IPv4 BLOCKS",
+      overlap4: "INTERSECT IPv4 RANGES",
+      mac: "MAC / INTERFACE ID",
+      vlan: "802.1Q TAG DECODE",
+      mtu: "PACKET SIZE BUDGET",
+      tcp: "SINGLE PORT CHECK"
+    });
+
+    // This is a snapshot of the last explicit request, not a live link indicator.
+    function lastReadout() {
+      if (!lastResult) return "NONE";
+      const data = lastResult;
+      const report = data.report || data.probe;
+      const inventory = data.inventory || data.controller;
+      if (data.comparison) {
+        return data.comparison.controller_clients + " UNIFI / " +
+          data.comparison.matched_active_probe + " MATCH";
+      }
+      if (report) {
+        return report.responding_devices + " RESP / " + report.cached_only_devices + " CACHE";
+      }
+      if (inventory?.clients) return inventory.connected_clients + " CLIENTS";
+      if (inventory?.sites) return inventory.sites.length + " SITES";
+      if (data.metrics) return data.metrics.connected + " / " + data.metrics.attempts + " REPLIES";
+      return data.kind === "computed" ? "CALCULATED" : "COMPLETE";
     }
 
     function menu() {
       screen = "menu";
       stop();
+      activePager = null;
       root.replaceChildren();
-      root.append(node("div", "net-caption", "NETWORK ENGINEER / SELECT TOOL"));
-      const grid = node("div", "net-menu");
-      const total = Math.max(1, Math.ceil(candidates.length / 6));
+      const total = Math.max(1, Math.ceil(candidates.length / toolsPerPage));
       menuPage = Math.max(0, Math.min(menuPage, total - 1));
-      for (const op of candidates.slice(menuPage * 6, menuPage * 6 + 6)) {
-        const item = control(op.name, () => {
+      const landing = node("div", "net-landing");
+      const heading = node("div", "net-launch-head");
+      heading.append(
+        node("strong", "net-caption", "NETWORK ENGINEER / SELECT TOOL"),
+        node("span", "net-count", candidates.length + " TOOLS / " + total + " PAGES")
+      );
+      landing.append(heading);
+
+      const stats = node("div", "net-status-strip");
+      for (const [label, value] of [
+        ["SESSION", "STANDBY"],
+        ["REQUESTS", "MANUAL ONLY"],
+        ["LAST RESULT / NOT LIVE", lastReadout()]
+      ]) {
+        const cell = node("div", "net-status-cell");
+        cell.append(node("span", "net-status-label", label),
+          node("strong", "net-status-value", value));
+        stats.append(cell);
+      }
+      landing.append(stats);
+
+      const grid = node("div", "net-menu");
+      for (const op of candidates.slice(menuPage * toolsPerPage, (menuPage + 1) * toolsPerPage)) {
+        const item = control("", () => {
           operation = op;
           values = { input: op.example, extra: op.extra_example || "", samples: "5" };
           lastResult = null;
           configure();
         });
         item.classList.add("net-tile");
-        item.append(node("small", "", op.active ? "MANUAL" : "OFFLINE"));
+        item.append(
+          node("strong", "net-tile-title", op.name),
+          node("span", "net-tile-detail", toolDescription[op.id] || "NETWORK TOOL"),
+          node("small", "net-tile-mode", op.active ? "AUTHORIZATION REQUIRED" : "OFFLINE CALCULATION")
+        );
         grid.append(item);
       }
       if (!candidates.length) grid.append(node("p", "", "Tool catalog unavailable. Reload the dashboard."));
-      root.append(grid);
-      if (total > 1) pager(menuPage, total, (page) => { menuPage = page; menu(); });
+      landing.append(grid);
+
+      const footer = node("div", "net-launch-footer");
+      if (!compact) footer.append(node("span", "net-page-hint", "SELECT TOOL / CONFIGURE / RUN"));
+      if (total > 1) pager(menuPage, total, (page) => { menuPage = page; menu(); }, footer);
+      landing.append(footer);
+      root.append(landing);
     }
 
     function field(form, key, label, value) {
@@ -183,6 +284,7 @@ window.RustBoyNetwork = (() => {
 
     function result() {
       screen = "result";
+      activePager = null;
       root.replaceChildren();
       header("EDIT", configure, operation.name);
       const data = lastResult;
@@ -292,6 +394,7 @@ window.RustBoyNetwork = (() => {
     }
     function pagehide() { stop(); }
     document.addEventListener("visibilitychange", visibility);
+    document.addEventListener("keydown", onPageKey);
     window.addEventListener("pagehide", pagehide);
     menu();
     return {
@@ -306,6 +409,7 @@ window.RustBoyNetwork = (() => {
         destroyed = true;
         stop();
         document.removeEventListener("visibilitychange", visibility);
+        document.removeEventListener("keydown", onPageKey);
         window.removeEventListener("pagehide", pagehide);
       }
     };
