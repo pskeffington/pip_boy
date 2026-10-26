@@ -1170,6 +1170,9 @@ fn radio_snapshot(engine: Option<&NativeRadioEngine>) -> Value {
         .map(|id| id.clone())
         .unwrap_or_else(|_| "system".into());
     let outputs = available_outputs().unwrap_or_default();
+    let output_available = outputs
+        .iter()
+        .any(|device| device.id == selected_output && device.available);
     let devices: Vec<Value> = outputs
         .iter()
         .map(|device| {
@@ -1177,6 +1180,7 @@ fn radio_snapshot(engine: Option<&NativeRadioEngine>) -> Value {
                 "id": device.id,
                 "name": device.name,
                 "default": device.is_default,
+                "available": device.available,
             })
         })
         .collect();
@@ -1196,14 +1200,17 @@ fn radio_snapshot(engine: Option<&NativeRadioEngine>) -> Value {
                 "stations": stations,
                 "sdr": "not_connected",
                 "outputs": devices,
-                "output": selected_output
+                "output": selected_output,
+                "output_available": output_available,
+                "output_failure": player.output_failed()
             })
         }
         None => json!({
             "source": "none", "status": "stopped",
             "station": null, "volume": 60, "error": null,
             "stations": stations, "sdr": "not_connected",
-            "outputs": devices, "output": selected_output
+            "outputs": devices, "output": selected_output,
+            "output_available": output_available, "output_failure": false
         }),
     }
 }
@@ -1271,7 +1278,7 @@ fn radio_command(req: &Request) -> Result<Response, Response> {
             if !available_outputs()
                 .map_err(|_| Response::error(409, "Audio outputs unavailable"))?
                 .iter()
-                .any(|device| device.id == output_id)
+                .any(|device| device.id == output_id && device.available)
             {
                 return Err(Response::error(
                     422,
@@ -1281,6 +1288,9 @@ fn radio_command(req: &Request) -> Result<Response, Response> {
             // Changing hardware output must be explicitly requested. Restart
             // the same stream/volume using the newly selected native endpoint.
             let previous = engine.as_ref().map(|player| player.status());
+            let recover_failed_output = engine
+                .as_ref()
+                .is_some_and(NativeRadioEngine::output_failed);
             if let Some(mut active) = engine.take() {
                 active.stop();
             }
@@ -1292,8 +1302,9 @@ fn radio_command(req: &Request) -> Result<Response, Response> {
                 if !matches!(
                     state.state,
                     pipboy_core::radio_controller::PlaybackState::Stopped
-                        | pipboy_core::radio_controller::PlaybackState::Failed
-                ) {
+                ) && (state.state != pipboy_core::radio_controller::PlaybackState::Failed
+                    || recover_failed_output)
+                {
                     if let Some(station) = state.station_id {
                         *engine = Some(
                             NativeRadioEngine::start_internet(
@@ -1662,6 +1673,8 @@ mod tests {
         assert_eq!(json["sdr"], "not_connected");
         assert_eq!(json["output"], "system");
         assert!(json["outputs"].is_array());
+        assert!(json["output_available"].is_boolean());
+        assert_eq!(json["output_failure"], false);
         let invalid = request(
             "POST",
             "/api/radio",
