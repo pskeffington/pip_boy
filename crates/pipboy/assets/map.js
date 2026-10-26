@@ -1230,6 +1230,14 @@
         view.zipStatus.textContent="ZCTA "+zip+" / GIS FAILED / PREVIOUS MAP KEPT";
         view.countyStatus="COUNTY GIS UNAVAILABLE / PREVIOUS MAP KEPT";
       }else{
+        // The reverse list belongs to the previously selected county.
+        // Clear it only after a successful replacement; on failure the
+        // previous county and its ZIP list remain valid.
+        view.zipPageVersion++;
+        view.zipOffset=0;
+        view.zipList.replaceChildren();
+        view.zipListPrev.disabled=true;
+        view.zipListNext.disabled=true;
         view.zipStatus.textContent="ZCTA "+zip+" → "+county.name.toUpperCase()+
           " / "+geoid+" / GIS READY";
       }
