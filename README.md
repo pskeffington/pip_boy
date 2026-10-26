@@ -54,12 +54,11 @@ git pull --ff-only origin main
 | Scout maps | Default offline central-Boston real City SAM street geometry; imported RustGIS/GeoJSON layers, opt-in GPS and separately enabled web reference | Upstream RustGIS renderer, raster/terrain, native GNSS and Pi display |
 | Host / Library / Notes | Local telemetry with quality labels, bundled references and offline notes | Production packaging and accessibility acceptance |
 | Fallout 4 companion | Read-only TCP protocol browser, diagnostics and bounded observation | Actual game-build/PlayStation interoperability |
-| Device simulation | Fixed fixtures, bounded queues and mock adapters | Physical GPIO, serial, SDR, BLE, mesh and camera integrations |
+| Radio / SDR (feature branch) | Typed receive-only tuner contract, capability validation, deterministic simulated IQ, and explicit CLI simulation | Physical SDR adapter, DSP/audio decoding and micro tuner UI |\n| Device simulation | Fixed fixtures, bounded queues and mock adapters | Physical GPIO, serial, SDR, BLE, mesh and camera integrations |
 
 The separate `rust-boy-broker` prototype denies every physical-device request. Simulated success does not grant peripheral access.
 
-## Network Engineer
-
+## Radio / SDR development\n\nThe new `pipboy-core::radio` receiver contract supports interchangeable radio drivers with explicit frequency/sample-rate/gain validation. The CLI currently uses a **simulated** SDR (no real radio receive, demodulation or audio):\n\n```bash\ncargo run -p pipboy -- radio capabilities\ncargo run -p pipboy -- radio simulate 100100000 wfm\n```\n\nSee [RADIO/SDR engineering contract](docs/RADIO_SDR.md). The real SoapySDR hardware backend and micro tuner UI are acceptance-gated follow-on development.\n\n## Network Engineer\n
 Load **Head Engineer → NET ENGINEER** on desktop or micro. Both views use the same Rust operation catalog and shared tool component. The handheld separates tool selection, inputs, authorization and results; large inventories have pages.
 
 **Handheld controls:** Network Engineer uses four tool tiles per page. Touch PREV/NEXT or use physical D-pad left/right (also PageUp/PageDown) to turn pages; up/down focuses controls in reading order. The browser's normal Enter/Space activates a focused control. Escape/Back returns to the prior screen. The focus ring remains visible without hover. Left/right arrow keys preserve caret editing in one-line inputs; up/down moves between fields and actions, while multi-line inputs and native selects keep their own arrow behavior. Opening a page or moving focus never starts a scan; active operations still require separate authorization. This is keyboard-emulated hardware support, not physical Raspberry Pi button acceptance. A Chromium layout acceptance script (`node tools/test_network_viewport.cjs`) now verifies the 480×320 screen and neighboring viewport sizes without ever probing a real network.
