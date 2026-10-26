@@ -141,6 +141,10 @@ async function main(){
   assert.equal(view.zipList.children[1].children[0].textContent,"02108");
   assert.equal(view.zipListNext.disabled,false);
   press(view.zipListNext);
+  assert.equal(view.zipListPrev.disabled,true,
+    "Reverse paging is locked while the next page is pending");
+  assert.equal(view.zipListNext.disabled,true,
+    "Reverse paging does not allow overlapping requests");
   await until(()=>view.zipOffset===12);
   assert.equal(view.zipList.children[0].textContent,"2020 ZCTAs / COUNTY 25025 / 13-13 OF 13");
   assert.equal(view.zipList.children[1].children[0].textContent,"02199");
@@ -152,6 +156,10 @@ async function main(){
   await until(()=>view.zipStatus.textContent.includes("GIS READY"));
   assert.equal(view.zipInput.value,"02108");
   assert.equal(view.county.id,"25025");
+  assert.equal(gps,0,"Selecting a ZCTA does not request GPS");
+  assert.equal(countyPointLookups,0,"Reverse ZCTA lookup uses county GEOID, never coordinates");
+  assert.ok(requests.every(item=>item.url.startsWith("/api/map/")),
+    "Reverse ZIP selection never contacts an external provider directly");
 
   const before=boundaries.length;
   view.zipInput.value="02360";
