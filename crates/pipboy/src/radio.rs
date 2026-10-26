@@ -1,12 +1,14 @@
-//! Explicit, offline demonstration of the receive-only radio abstraction.
-//! No hardware capture is performed by this command.
-use pipboy_core::radio::{Demodulation, RadioTuner, SimulatedRadio, Tuning};
-use std::error::Error;
-use std::time::Duration;
-use std::io::Read;
-use pipboy_core::radio_stream::open_station;
+//! Explicit receive-only radio CLI; no external media players are launched.
 use crate::radio_http::NativeRadioHttp;
-use pipboy_core::radio_directory::{curated_stations, station_by_id, station_tcp_reachable, select_source, NoHardwareEnumerator, PublisherTcpCheck, UncheckedConnectivity, RadioSource};
+use pipboy_core::radio::{Demodulation, RadioTuner, SimulatedRadio, Tuning};
+use pipboy_core::radio_directory::{
+    curated_stations, select_source, station_by_id, station_tcp_reachable, NoHardwareEnumerator,
+    PublisherTcpCheck, RadioSource, UncheckedConnectivity,
+};
+use pipboy_core::radio_stream::open_station;
+use std::error::Error;
+use std::io::Read;
+use std::time::Duration;
 
 fn modulation(value: &str) -> Option<Demodulation> {
     match value.to_ascii_lowercase().as_str() {
@@ -28,14 +30,17 @@ pub fn run(args: Vec<String>) -> Result<(), Box<dyn Error>> {
             let mut stream = open_station(&transport, id)?;
             let mut sample = [0u8; 8192];
             let count = stream.reader.read(&mut sample)?;
-            if count == 0 { return Err("stream ended before audio bytes arrived".into()); }
+            if count == 0 {
+                return Err("stream ended before audio bytes arrived".into());
+            }
             println!("RADIO / {} / HTTPS AUDIO BYTES: {}", id, count);
             println!("STREAM CHECK: bytes received, audio decoding/output not implemented.");
             Ok(())
         }
         [action, id, confirm] if action == "check" && confirm == "--confirm" => {
             let station = station_by_id(id).ok_or("unknown curated radio station ID")?;
-            let reachability = station_tcp_reachable(id, Duration::from_secs(2)).ok_or("station is not allowlisted")?;
+            let reachability = station_tcp_reachable(id, Duration::from_secs(2))
+                .ok_or("station is not allowlisted")?;
             println!("RADIO / {} / TCP: {:?}", station.name, reachability);
             println!("TCP reachability does not prove stream data or audio playback.");
             Ok(())
@@ -43,7 +48,10 @@ pub fn run(args: Vec<String>) -> Result<(), Box<dyn Error>> {
         [action] if action == "stations" => {
             println!("RADIO / CURATED DIRECTORY / published metadata, stream unchecked");
             for station in curated_stations() {
-                println!("{} | {} | {} | {}", station.id, station.name, station.genre, station.playlist_url);
+                println!(
+                    "{} | {} | {} | {}",
+                    station.id, station.name, station.genre, station.playlist_url
+                );
             }
             println!("No external player launches. Native audio worker is the next integration gate.");
             Ok(())
@@ -55,7 +63,10 @@ pub fn run(args: Vec<String>) -> Result<(), Box<dyn Error>> {
             if source == RadioSource::InternetDirectory {
                 println!("Publisher TCP reachable; stream health and playback NOT yet verified.");
                 for station in curated_stations() {
-                    println!("{} | {} | {} | {}", station.id, station.name, station.genre, station.playlist_url);
+                    println!(
+                "{} | {} | {} | {}",
+                station.id, station.name, station.genre, station.playlist_url
+            );
                 }
             } else {
                 println!("No approved provider route detected. Offline radio mode.");
