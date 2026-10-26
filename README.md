@@ -183,3 +183,7 @@ CI runs Linux stable, exact Rust 1.90.0, native macOS, native Windows and manife
 [Micro HUD](docs/MICRO_UI.md) · [Desktop dashboard](docs/DASHBOARD_UI.md) · [Roadmap](docs/ROADMAP.md) · [Architecture](docs/ARCHITECTURE.md) · [Changelog](CHANGELOG.md) · [Security](SECURITY.md) · [Branding](BRANDING.md) · [MIT license](LICENSE).
 
 Public brand: **Rust-Boy**. Compatibility names remain `pip_boy` (repository), `pipboy` (package/CLI) and `PIPBOY_HOME` (storage). No third-party game artwork or source is bundled.
+
+### RADIO from the Rust-Boy HUD
+
+Launch the micro HUD with `./scripts/launch-micro.command` or `cargo run --locked -p pipboy -- dashboard --micro`. Open **LINK → RADIO / IP**, choose Skylab Radio or a SomaFM station, then press **PLAY**. Use **STOP** and the volume −/+ buttons to control the **native Rust** audio engine. The desktop dashboard at `http://127.0.0.1:8765/` has a RADIO dock connected to the same session. No VLC, browser audio or other media player is launched. Audio depends on available speaker hardware and real HTTPS station service; field acceptance is pending.
