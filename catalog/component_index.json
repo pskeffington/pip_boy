@@ -1,0 +1,251 @@
+{
+  "schema_version": 1,
+  "scope": "Main-branch component entrypoints; not exhaustive per-file coverage or proof of device acceptance",
+  "development_host": "macOS",
+  "prototype_target": "Raspberry Pi Linux aarch64 (hardware selection and field acceptance pending)",
+  "components": [
+    {
+      "id": "workspace",
+      "boundary": "Shared Cargo package and compiler contracts; no platform-specific code moves.",
+      "hardware_gate": "software_only",
+      "code": [
+        "Cargo.toml",
+        "rust-toolchain.toml",
+        "crates/pipboy-core/Cargo.toml",
+        "crates/pipboy/Cargo.toml",
+        "crates/rust-boy-broker/Cargo.toml",
+        "crates/pipboy-core/src/lib.rs",
+        "crates/pipboy/src/main.rs"
+      ],
+      "docs": [
+        "docs/ARCHITECTURE.md",
+        "docs/REPO_STRUCTURE.md"
+      ],
+      "checks": [
+        "tools/validate_rust_version.py"
+      ]
+    },
+    {
+      "id": "runtime-policy",
+      "boundary": "Canonical runtime, module registry and capabilities; browser UI cannot grant permissions.",
+      "hardware_gate": "software_only",
+      "code": [
+        "crates/pipboy-core/src/runtime.rs",
+        "crates/pipboy-core/src/registry.rs",
+        "crates/pipboy-core/src/capability.rs",
+        "crates/pipboy-core/src/permissions.rs"
+      ],
+      "docs": [
+        "docs/OBJECT_MODEL.md",
+        "docs/PERMISSIONS.md"
+      ],
+      "checks": [
+        "tools/smoke_runtime.py",
+        "tools/smoke_permissions.py"
+      ]
+    },
+    {
+      "id": "workbenches",
+      "boundary": "Roles and operator workbench state live in Rust; Custom has no duplicate JS roster.",
+      "hardware_gate": "software_only",
+      "code": [
+        "crates/pipboy-core/src/workbench.rs",
+        "crates/pipboy/src/workbench.rs"
+      ],
+      "docs": [
+        "docs/ROLE_ROADMAP.md"
+      ],
+      "checks": [
+        "tools/validate_roles.py",
+        "tools/smoke_workbench.py"
+      ]
+    },
+    {
+      "id": "local-hud",
+      "boundary": "One loopback HTTP authority and shared desktop/micro shells.",
+      "hardware_gate": "software_only",
+      "code": [
+        "crates/pipboy/src/dashboard.rs",
+        "crates/pipboy/assets/dashboard.js",
+        "crates/pipboy/assets/micro.js"
+      ],
+      "docs": [
+        "docs/DASHBOARD_UI.md",
+        "docs/MICRO_UI.md"
+      ],
+      "checks": [
+        "tools/smoke_dashboard.py",
+        "tools/smoke_micro.py"
+      ]
+    },
+    {
+      "id": "scout-mapping",
+      "boundary": "Geospatial data and county cache with explicit location permission; GNSS hardware later.",
+      "hardware_gate": "field_pending",
+      "code": [
+        "crates/pipboy-core/src/scout_gis.rs",
+        "crates/pipboy/src/county_cache.rs",
+        "crates/pipboy/assets/map.js"
+      ],
+      "docs": [
+        "docs/SCOUT_GPS_MAP.md",
+        "docs/COUNTY_SOURCES.md"
+      ],
+      "checks": [
+        "tools/smoke_scout.py",
+        "tools/test_map_boot.cjs"
+      ]
+    },
+    {
+      "id": "network-engineering",
+      "boundary": "Bounded, authorized LAN probes and optional read-only UniFi access.",
+      "hardware_gate": "field_pending",
+      "code": [
+        "crates/pipboy-core/src/network_suite.rs",
+        "crates/pipboy-core/src/network_probe.rs",
+        "crates/pipboy/src/endpoint_probe.rs",
+        "crates/pipboy/assets/network.js"
+      ],
+      "docs": [
+        "docs/NETWORK_ENGINEERING.md",
+        "docs/NETWORK_HEALTH_UNIFI.md"
+      ],
+      "checks": [
+        "tools/smoke_network.py",
+        "tools/smoke_network_health.py"
+      ]
+    },
+    {
+      "id": "pace-messaging",
+      "boundary": "Message envelope and durable queue in core, explicit peer transport in binary.",
+      "hardware_gate": "field_pending",
+      "code": [
+        "crates/pipboy-core/src/message_protocol.rs",
+        "crates/pipboy-core/src/message_pace.rs",
+        "crates/pipboy-core/src/messenger.rs",
+        "crates/pipboy/src/peer.rs",
+        "crates/pipboy/assets/messenger.js"
+      ],
+      "docs": [
+        "docs/MESSENGER.md",
+        "docs/PACE_MESSAGING.md"
+      ],
+      "checks": [
+        "tools/smoke_messenger_protocol.py",
+        "tools/smoke_peer.py"
+      ]
+    },
+    {
+      "id": "task-control",
+      "boundary": "Revisioned task persistence and acknowledgements live in Rust; HUD presents the shared state.",
+      "hardware_gate": "software_only",
+      "code": [
+        "crates/pipboy-core/src/tasks.rs",
+        "crates/pipboy/assets/tasks.js"
+      ],
+      "docs": [
+        "docs/TASK_CONTROL.md"
+      ],
+      "checks": [
+        "tools/smoke_tasks.py"
+      ]
+    },
+    {
+      "id": "operator-storage",
+      "boundary": "Private state persists under PIPBOY_HOME and is never checked into the repository.",
+      "hardware_gate": "software_only",
+      "code": [
+        "crates/pipboy-core/src/notes.rs"
+      ],
+      "docs": [
+        "docs/STORAGE.md"
+      ],
+      "checks": [
+        "tools/smoke_notes.py"
+      ]
+    },
+    {
+      "id": "game-mode",
+      "boundary": "Game session logic stays separated from offline handheld controls; console interop needs testing.",
+      "hardware_gate": "field_pending",
+      "code": [
+        "crates/pipboy-core/src/game.rs",
+        "crates/pipboy/src/game.rs"
+      ],
+      "docs": [
+        "docs/GAME_MODE.md"
+      ],
+      "checks": [
+        "tools/smoke_game.py"
+      ]
+    },
+    {
+      "id": "reclamation",
+      "boundary": "Local site records and manual observations; never fabricate sensor readings.",
+      "hardware_gate": "software_only",
+      "code": [
+        "crates/pipboy-core/src/reclamation.rs",
+        "crates/pipboy/assets/reclamation.js"
+      ],
+      "docs": [
+        "docs/RECLAMATION.md"
+      ],
+      "checks": [
+        "tools/test_reclamation_map.cjs"
+      ]
+    },
+    {
+      "id": "device-broker",
+      "boundary": "Deny-only peripheral broker with synthetic adapters; no physical hardware grants.",
+      "hardware_gate": "deny_only",
+      "code": [
+        "crates/rust-boy-broker/src/main.rs",
+        "crates/pipboy-core/src/mock_adapters.rs"
+      ],
+      "docs": [
+        "docs/BROKER_PROTOCOL.md",
+        "docs/OS_DEVICE_BROKER.md"
+      ],
+      "checks": [
+        "tools/smoke_broker.py",
+        "tools/smoke_mock_adapters.py"
+      ]
+    },
+    {
+      "id": "research-and-catalog",
+      "boundary": "Cited source evidence and stable role/module IDs, not licensed code ingestion.",
+      "hardware_gate": "software_only",
+      "code": [
+        "catalog/literature.json",
+        "catalog/module_plan.json",
+        "catalog/role_roadmap.json",
+        "catalog/sources.json"
+      ],
+      "docs": [
+        "docs/LITERATURE_MATRIX.md",
+        "docs/MODULE_CATALOG.md"
+      ],
+      "checks": [
+        "tools/validate_catalog.py",
+        "tools/validate_roles.py"
+      ]
+    },
+    {
+      "id": "quality-gates",
+      "boundary": "One CI pipeline, documented acceptance and an explicit smoke roster.",
+      "hardware_gate": "software_only",
+      "code": [
+        ".github/workflows/rust.yml",
+        "tools/run_smokes.py"
+      ],
+      "docs": [
+        "docs/VALIDATION.md",
+        "docs/CI_TRIAGE.md"
+      ],
+      "checks": [
+        "tools/test_run_smokes.py",
+        "tools/validate_repo.py"
+      ]
+    }
+  ]
+}

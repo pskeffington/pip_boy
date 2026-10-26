@@ -9,6 +9,8 @@ Technical contracts, architecture decisions, research provenance and validation 
 | Guide | Focus |
 | --- | --- |
 | [Repository structure and maintenance](REPO_STRUCTURE.md) | Canonical file ownership, code boundaries, documentation navigation and cleanup gates |
+| [Organizational optimization research](ORGANIZATIONAL_OPTIMIZATION.md) | Measured code concentration, evidence matrix, component boundaries and ranked improvements |
+| [Mac-first / Pi-later architecture decision](adr/0001-mac-first-portable-core.md) | Accepted single-workspace strategy and separate hardware acceptance gates |
 | [Network health and UniFi setup](NETWORK_HEALTH_UNIFI.md) | Unified 16-tool catalog, bounded ICMP/TCP tests, controller configuration and view-owned refresh |
 | [NET ENGINEER LAN diagnostics](NETWORK_ENGINEERING.md) | Explicit private-subnet scan, ICMP/TCP RTT, bounded monitor and device-count limitations |
 | [DIAG offline ingestion](DIAGNOSTICS.md) | Scoped fault-evidence JSONL intake and local host heuristics |
