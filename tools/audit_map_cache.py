@@ -22,6 +22,7 @@ import re
 import subprocess
 import sys
 from urllib.parse import urlsplit
+import zlib
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -197,7 +198,7 @@ def validate_zip(data: bytes, geoid: str, layer: str) -> tuple[int, int]:
                     if count != entry.file_size:
                         raise AuditError("ZIP archive entry is truncated")
             return len(files), total
-    except (zipfile.BadZipFile, OSError, EOFError, RuntimeError) as error:
+    except (zipfile.BadZipFile, zipfile.LargeZipFile, OSError, EOFError, RuntimeError, zlib.error) as error:
         raise AuditError("Cached Census ZIP failed structural/CRC checks") from error
 
 
