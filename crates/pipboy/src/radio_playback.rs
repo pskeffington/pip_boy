@@ -256,7 +256,11 @@ fn play_with_recovery(
         if cancelled.load(Ordering::Acquire) {
             return Ok(());
         }
-        match decide(error.class(), attempted_retries, cancelled.load(Ordering::Acquire)) {
+        match decide(
+            error.class(),
+            attempted_retries,
+            cancelled.load(Ordering::Acquire),
+        ) {
             RecoveryAction::RetryAfter(delay) => {
                 signal(controller, generation, PlaybackEvent::ConnectionLost);
                 attempted_retries += 1;

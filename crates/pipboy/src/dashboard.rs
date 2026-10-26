@@ -1186,9 +1186,11 @@ fn radio_snapshot(engine: Option<&NativeRadioEngine>) -> Value {
         .collect();
     let stations: Vec<Value> = curated_stations()
         .iter()
-        .map(|s| json!({"id": s.id, "name": s.name, "genre": s.genre,
-            "category": s.category, "format": s.format,
-            "nominal_kbps": s.nominal_kbps}))
+        .map(|s| {
+            json!({"id": s.id, "name": s.name, "genre": s.genre,
+                "category": s.category, "format": s.format,
+                "nominal_kbps": s.nominal_kbps})
+        })
         .collect();
     match engine {
         Some(player) => {
@@ -1675,15 +1677,16 @@ mod tests {
         assert_eq!(station_list[0]["category"], "CHILL");
         assert_eq!(station_list[8]["id"], "defcon");
         assert_eq!(station_list[8]["nominal_kbps"], 128);
-        assert!(json["stations"].as_array().unwrap().len() >= 4);
         assert_eq!(json["sdr"], "not_connected");
         assert_eq!(json["output"], "system");
         assert!(json["outputs"].is_array());
         assert!(json["output_available"].is_boolean());
         assert_eq!(json["output_failure"], false);
-        assert!(json["outputs"].as_array().unwrap().iter().all(|device| {
-            device["id"].is_string() && device["available"].is_boolean()
-        }));
+        assert!(json["outputs"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .all(|device| { device["id"].is_string() && device["available"].is_boolean() }));
         let invalid = request(
             "POST",
             "/api/radio",

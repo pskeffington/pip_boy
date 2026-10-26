@@ -1,7 +1,7 @@
 .rb-radio{display:grid;gap:6px;width:100%;max-width:640px;min-width:0;border:1px solid rgba(114,205,136,.38);background:rgba(4,18,12,.82);color:#c7f6bf;padding:10px;border-radius:8px;font:inherit}
 .rb-radio-top{display:flex;align-items:center;gap:8px;justify-content:space-between;min-width:0;font-size:12px;letter-spacing:.05em}
 .rb-radio-title{white-space:nowrap}
-.rb-radio-count{margin-left:auto;font:700 10px/1.25 inherit;color:#a7ddae;white-space:nowrap}
+.rb-radio-count{margin-left:auto;font-size:10px;font-weight:700;line-height:1.25;color:#a7ddae;white-space:nowrap}
 .rb-radio-signal{border:1px solid currentColor;border-radius:4px;padding:3px 6px;font-size:10px;white-space:nowrap}
 .rb-radio-signal[data-state="playing"]{color:#78ff91}
 .rb-radio-signal[data-state="failed"]{color:#ffba78}

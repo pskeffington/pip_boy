@@ -94,6 +94,11 @@
       outputExpanded = expanded;
       outputPanel.hidden = !expanded;
       outputToggle.setAttribute("aria-expanded", String(expanded));
+      if (current) {
+        const choice = current.outputs?.find((item) => item.id === (current.output || "system"));
+        setText(outputToggle, "OUT / " + (choice?.name || "DISCONNECTED") +
+          (expanded ? " ▴" : " ▾"));
+      }
     };
     showOutput(outputExpanded);
 

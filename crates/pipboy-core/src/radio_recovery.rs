@@ -101,7 +101,10 @@ mod tests {
         assert!(!restart_after_output_change(PlaybackState::Failed, false));
         assert!(restart_after_output_change(PlaybackState::Failed, true));
         assert!(restart_after_output_change(PlaybackState::Playing, false));
-        assert!(restart_after_output_change(PlaybackState::Recovering, false));
+        assert!(restart_after_output_change(
+            PlaybackState::Recovering,
+            false
+        ));
     }
 
     #[test]

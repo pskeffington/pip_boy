@@ -220,8 +220,8 @@ impl RadioConnectivity for PublisherTcpCheck {
 pub fn station_tcp_reachable(id: &str, timeout: Duration) -> Option<IpReachability> {
     let (host, port) = match id {
         "skylab" => ("uksoutha.streaming.broadcast.radio", 29690),
-        "groovesalad" | "secretagent" | "lush" | "dronezone" | "deepspaceone"
-        | "spacestation" | "beatblender" | "defcon" | "u80s" => ("somafm.com", 443),
+        "groovesalad" | "secretagent" | "lush" | "dronezone" | "deepspaceone" | "spacestation"
+        | "beatblender" | "defcon" | "u80s" => ("somafm.com", 443),
         _ => return None,
     };
     let timeout = timeout.min(Duration::from_secs(3));
