@@ -67,3 +67,12 @@ Only the worker can emit playback status. A successful connection must never be 
 - `crates/pipboy/src/radio_net.rs`: a dedicated Tokio/reqwest async HTTPS worker implements explicit 8-second initial connection and 3-second per-chunk inactivity deadlines, plus bounded 16 x 8-KiB compressed-byte backpressure; normal live playback has no total lifespan deadline. An OS-independent `ChunkReader` exposes bytes to Symphonia; Stop cancels both workers and the network guard joins. `radio_http.rs` remains for short-lived explicit R2 probe commands. On network failure the session reports FAILED; automatic reconnection remains R6.
 - CLI: `pipboy radio listen skylab --confirm --seconds 30` starts native playback for 30 seconds; interactive `pipboy radio listen skylab --confirm` accepts `status`, `volume N`, `stop`. No VLC, FFplay, browsers, media subprocesses or durable audio storage.
 - Required external acceptance: OS speaker/headphone hardware, actual station stream availability, audio routing, underruns and network-loss behavior; CI without audio hardware verifies compile and pure tests, not audibility.
+
+## R4 / Integrated HUD radio (2026-10-26)
+
+- Dedicated RADIO panel in micro LINK and desktop dashboard, both using the same native Rust singleton playback session.
+- Same-origin `GET /api/radio` (curated directory, state, volume and errors) and `POST /api/radio` for `play` with explicit confirmation, `stop`, and bounded `volume` (0–100).
+- The browser contains only UI; sound remains in Rust through Symphonia/CPAL. No `<audio>` element, stream URL navigation, or external player process.
+- Polling cannot initiate playback; switching while playing requires STOP first. Session survives navigation between micro/desktop tabs until explicitly stopped or server exits.
+- Accessibility: minimum 40-pixel touch targets, keyboard focus states, high-contrast status, named buttons and readable failure messages.
+- Acceptance still required: CI + real Mac audio test, 480×320 screenshot and touch validation, and recovery handling for disconnected devices. The currently mounted panel is a HUD foundation, not an SDR hardware receiver.
