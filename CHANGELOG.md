@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-10-26 — ZIP↔county GIS lookups (Mac-first)
+
+- Add compact ZIP entry to MAP: operator-supplied five-digit ZIP → Census 2020 ZCTA relationship → 2025 county boundary and GIS packages by verified GEOID. No synthetic ZIP centroids or implicit GPS.
+- Include reverse COUNTY ZIPs listing of intersecting 2020 ZCTA areas with 12-row paging. For multi-county ZIPs, expose each Census intersection and require explicit selection.
+- Add strictly allowlisted national Census 2020 relationship download on first explicit request, validated and cached locally under a 9 MiB budget; no submitted ZIP, GPS or site record is forwarded to the remote Census host.
+- Preserve last-good GIS on failed replacement; add Rust and JS tests for ambiguity, offline mode, consent, leading-zero ZIPs, and no ZCTA cases. Crosswalk is not current USPS ZIP validation.
+- Mac operator acceptance and real Census availability remain open field gates.
+
 ## 2026-10-26 — Privacy and credential-isolation audit (CI pending)
 
 - Review tracked files, local HTTP API, notes/tasks/messages/GIS storage, UniFi credentials, native subprocesses and browser provider requests for leakage paths. Record severity and limitations in the security review.
