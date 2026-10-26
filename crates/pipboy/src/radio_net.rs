@@ -31,7 +31,7 @@ struct StreamHeaders {
 
 /// One in-flight compressed audio queue with a hard byte-capacity bound.
 /// Receiver pauses between reads; no entire stream is accumulated.
-struct ChunkReader {
+pub(crate) struct ChunkReader {
     receiver: Receiver<Vec<u8>>,
     buffered: Vec<u8>,
     position: usize,
@@ -77,14 +77,14 @@ impl Read for ChunkReader {
     }
 }
 
-pub struct RadioInput {
-    pub reader: IcyAudioReader<impl Read + Send>,
-    pub content_type: Option<String>,
+pub(crate) struct RadioInput {
+    pub(crate) reader: IcyAudioReader<ChunkReader>,
+    pub(crate) content_type: Option<String>,
 }
 
 /// The guard must outlive the decoder. Drop cancels HTTP reads and joins the
 /// single Tokio network worker within its per-chunk timeout boundary.
-pub struct NetworkGuard {
+pub(crate) struct NetworkGuard {
     cancelled: Arc<AtomicBool>,
     worker: Option<JoinHandle<()>>,
 }
@@ -98,7 +98,7 @@ impl Drop for NetworkGuard {
     }
 }
 
-pub fn open_station(
+pub(crate) fn open_station(
     station_id: &str,
     cancelled: Arc<AtomicBool>,
 ) -> Result<(RadioInput, NetworkGuard), String> {
