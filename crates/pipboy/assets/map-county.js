@@ -147,7 +147,7 @@
       fields.push({name, start, len});
       start += len;
     }
-    return function labelAt(row) {
+    const labelAt = function(row) {
       if (row >= records) return {name:"",mtfcc:""};
       const startAt = header + row * width;
       if (raw[startAt] === 0x2A) return {name:"",mtfcc:""};
@@ -160,6 +160,8 @@
       };
       return {name:get("FULLNAME") || get("NAME"), mtfcc:get("MTFCC")};
     };
+    labelAt.recordCount = records;
+    return labelAt;
   }
 
   // A Census POINTLM archive covers a whole state. Never display it as
@@ -242,6 +244,8 @@
       offset=end;
     }
     if (offset !== raw.length) bad("Landmark record layout invalid");
+    if (label && label.recordCount !== records)
+      bad("Landmark SHP/DBF record count mismatch");
     return {shapes,features:shapes.length,vertices:shapes.length,bounds:bbox,
       layer:"pointlm",records,sourceCrs:"GCS_NAD83",datumTransform:"not_applied",
       clip:"verified-county-polygon",scope:"state-origin"};
@@ -325,6 +329,8 @@
     }
     if (offset!==raw.length || !shapes.length)
       bad("County SHP contains no supported real geometry");
+    if (label && label.recordCount !== records)
+      bad("County SHP/DBF record count mismatch");
     return {shapes,features:shapes.length,vertices,bounds:bbox,layer,records,
       sourceCrs:"GCS_NAD83",datumTransform:"not_applied"};
   }
