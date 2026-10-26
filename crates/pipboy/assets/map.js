@@ -1179,8 +1179,142 @@
     }
   }
 
+  function invalidateZipLookup(view) {
+    view.zipVersion++;
+    if(view.zipAbort)view.zipAbort.abort();
+    view.zipAbort=null;
+    view.zipPageVersion++;
+  }
+
+  // ZIP/ZCTA membership is statistical, not a town or position. Fit the
+  // verified county polygon rather than inventing a postal ZIP centroid.
+  async function selectZipCounty(view,choice,zip,version,controller) {
+    if(active!==view||view.zipVersion!==version||controller.signal.aborted)return;
+    if(view.sitesVisible||view.siteCentered){
+      view.zipStatus.textContent="CLOSE SITES BEFORE ZIP COUNTY GIS";return;
+    }
+    const geoid=choice.geoid;
+    view.zipStatus.textContent="ZCTA "+zip+" / COUNTY "+geoid+" / GIS LOADING";
+    try {
+      const cacheOnly=navigator.onLine===false;
+      const county=await window.RustBoyCounty.boundary(geoid,{
+        cacheOnly,signal:controller.signal
+      });
+      if(active!==view||view.zipVersion!==version||controller.signal.aborted)return;
+      if(county.id!==geoid)throw new Error("COUNTY GEOID MISMATCH");
+      const old={county:view.county,enabled:view.countyEnabled,
+        package:view.countyPackage,shapes:view.countyShapes,
+        center:{...view.center},zoom:view.zoom,follow:view.follow,
+        selected:view.centerSelected,last:view.countyLastLookup};
+      view.countyRequest++;
+      if(view.countyAbort)view.countyAbort.abort();
+      view.countyAbort=null;
+      view.county=county;view.countyEnabled=true;view.countyLastLookup=null;
+      view.countyPackage=null;view.countyShapes=[];
+      view.follow=false;view.centerSelected=false;
+      fitLayer(view,[county.shape]);
+      view.countyStatus="ZIP "+zip+" / 2020 ZCTA → 2025 COUNTY "+geoid;
+      refresh(view);
+      const loaded=await loadCountyPackages(view,geoid,cacheOnly);
+      if(active!==view||view.zipVersion!==version||controller.signal.aborted)return;
+      if(!loaded){
+        view.county=old.county;view.countyEnabled=old.enabled;
+        view.countyPackage=old.package;view.countyShapes=old.shapes;
+        view.center=old.center;view.zoom=old.zoom;view.follow=old.follow;
+        view.centerSelected=old.selected;view.countyLastLookup=old.last;
+        view.zipStatus.textContent="ZCTA "+zip+" / GIS FAILED / PREVIOUS MAP KEPT";
+        view.countyStatus="COUNTY GIS UNAVAILABLE / PREVIOUS MAP KEPT";
+      }else{
+        view.zipStatus.textContent="ZCTA "+zip+" → "+county.name.toUpperCase()+
+          " / "+geoid+" / GIS READY";
+      }
+      refresh(view);
+    }catch(error){
+      if(active!==view||view.zipVersion!==version||controller.signal.aborted)return;
+      view.zipStatus.textContent="ZCTA "+zip+" / "+
+        (error instanceof Error?error.message:"COUNTY UNAVAILABLE").slice(0,90);
+    }
+  }
+
+  async function submitZip(view) {
+    if(active!==view)return;
+    const zip=view.zipInput.value.trim();
+    if(!window.RustBoyZip||!window.RustBoyCounty){
+      view.zipStatus.textContent="ZIP LOOKUP MODULE UNAVAILABLE";return;
+    }
+    if(!window.RustBoyZip.validateZip(zip)){
+      view.zipStatus.textContent="ENTER FIVE-DIGIT ZIP";return;
+    }
+    if(view.sitesVisible||view.siteCentered){
+      view.zipStatus.textContent="CLOSE SITES BEFORE ZIP LOOKUP";return;
+    }
+    invalidateZipLookup(view);
+    const version=view.zipVersion,controller=new AbortController();
+    view.zipAbort=controller;
+    view.zipCandidates.replaceChildren();
+    view.zipList.textContent="";
+    view.zipStatus.textContent="ZCTA "+zip+" / RESOLVING COUNTIES";
+    try {
+      const result=await window.RustBoyZip.lookup(zip,{
+        cacheOnly:navigator.onLine===false,signal:controller.signal
+      });
+      if(active!==view||view.zipVersion!==version||controller.signal.aborted)return;
+      if(!result.counties.length){
+        view.zipStatus.textContent="ZIP "+zip+
+          " / NO 2020 ZCTA MATCH (USPS-ONLY ZIP POSSIBLE)";return;
+      }
+      if(result.counties.length===1){
+        await selectZipCounty(view,result.counties[0],zip,version,controller);
+        return;
+      }
+      view.zipStatus.textContent="ZCTA "+zip+" INTERSECTS "+
+        result.counties.length+" COUNTIES / CHOOSE ONE";
+      for(const county of result.counties){
+        const option=control(county.name+" / "+county.geoid+
+          " / "+county.zcta_land_share_pct.toFixed(1)+"% AREA",
+          ()=>void selectZipCounty(view,county,zip,version,controller),
+          "Select "+county.name+" GIS; 2020 ZCTA overlap, not USPS delivery");
+        option.className+=" rb-map-zip-choice";
+        view.zipCandidates.append(option);
+      }
+    }catch(error){
+      if(active!==view||view.zipVersion!==version||controller.signal.aborted)return;
+      view.zipStatus.textContent="ZIP LOOKUP / "+
+        (error instanceof Error?error.message:"UNAVAILABLE").slice(0,100);
+    }
+  }
+
+  async function listCountyZctas(view,offset=0) {
+    if(active!==view||!window.RustBoyZip)return;
+    const geoid=view.county?.id;
+    if(!geoid){
+      view.zipStatus.textContent="LOAD COUNTY BEFORE LISTING ZCTAS";return;
+    }
+    const version=++view.zipPageVersion;
+    view.zipList.textContent="COUNTY "+geoid+" / ZCTA INDEX LOADING";
+    try {
+      const result=await window.RustBoyZip.countyZctas(geoid,{
+        offset,cacheOnly:navigator.onLine===false
+      });
+      if(active!==view||view.zipPageVersion!==version||
+        view.county?.id!==geoid)return;
+      view.zipList.textContent=result.zctas.length?
+        "2020 ZCTAs INTERSECTING COUNTY "+geoid+" ("+result.total+")\n"+
+        result.zctas.join(" · ") : "NO 2020 ZCTA INTERSECTIONS";
+      view.zipListPrev.disabled=offset===0;
+      view.zipListNext.disabled=offset+result.zctas.length>=result.total;
+      view.zipOffset=offset;
+      view.zipStatus.textContent="2020 ZCTA AREAS / NOT A USPS DELIVERY INVENTORY";
+    }catch(error){
+      if(active!==view||view.zipPageVersion!==version)return;
+      view.zipList.textContent="COUNTY ZCTA LIST / "+
+        (error instanceof Error?error.message:"UNAVAILABLE").slice(0,100);
+    }
+  }
+
   function disableCounty(view) {
     view.countyEnabled=false;
+    invalidateZipLookup(view);
     view.countyRequest++;
     if(view.countyAbort)view.countyAbort.abort();
     view.countyAbort=null;
@@ -1476,6 +1610,7 @@
     if (view.webProbeAbort) view.webProbeAbort.abort();
     view.countyRequest++;
     if (view.countyAbort) view.countyAbort.abort();
+    invalidateZipLookup(view);
     view.countyCacheReadVersion++;
     clearCountyPackages(view);
     view.siteVersion++;
