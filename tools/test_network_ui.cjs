@@ -239,8 +239,13 @@ async function main() {
   assert.match(pad.document.activeElement.textContent, /^TOOLS$/);
   assert.equal(pageKey(pad, "ArrowDown"), true);
   assert.equal(pad.document.activeElement.tagName, "input");
-  assert.equal(pageKey(pad, "ArrowDown"), false, "D-pad must not steal text input editing");
+  assert.equal(pageKey(pad, "ArrowRight"), false, "Left/right caret editing is preserved");
   assert.equal(pageKey(pad, "PageDown"), false, "Input must not be paged");
+  assert.equal(pageKey(pad, "ArrowDown"), true, "D-pad should leave a one-line text field");
+  assert.equal(pad.document.activeElement.tagName, "input");
+  assert.equal(pageKey(pad, "ArrowDown"), true, "D-pad should focus the submit control");
+  assert.match(pad.document.activeElement.textContent, /CALCULATE/);
+  assert.equal(pad.calls.length, 0, "Focusing submit must not run the calculation");
   pad.ui.destroy();
 
   const confirmation = environment();
