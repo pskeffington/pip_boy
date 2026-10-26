@@ -140,6 +140,9 @@
       if (busy) return;
       busy = true;
       play.disabled = stop.disabled = true;
+      outputSelector.disabled = true;
+      fallback.disabled = true;
+      minus.disabled = plus.disabled = true;
       message.textContent = "Applying native radio command...";
       try {
         const result = await request(data);
