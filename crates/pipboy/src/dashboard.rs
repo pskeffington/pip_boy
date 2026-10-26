@@ -1954,7 +1954,8 @@ mod tests {
         );
         assert_eq!(index.status, 200);
         let sources: Value = serde_json::from_slice(&index.body).unwrap();
-        assert_eq!(sources["sources"].as_array().unwrap().len(), 3);
+        assert_eq!(sources["sources"].as_array().unwrap().len(), 4);
+        assert_eq!(sources["sources"][3]["id"], "tiger-pointlm");
         let cache = dispatch(&request("GET", "/api/map/cache", Value::Null), &store, 8765);
         assert_eq!(cache.status, 200);
         let manifest: Value = serde_json::from_slice(&cache.body).unwrap();
