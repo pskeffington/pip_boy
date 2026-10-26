@@ -19,13 +19,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Resolve native RADIO R3 lockfile for review
-        run: |
-          rustup toolchain install 1.90.0 --profile minimal
-          cargo +1.90.0 generate-lockfile
-          echo RADIO_R3_LOCK_BEGIN
-          cat Cargo.lock
-          echo RADIO_R3_LOCK_END
       - name: Offline manifest validation
         run: |
           python3 tools/validate_catalog.py
