@@ -16,6 +16,12 @@ OS-backed queue keys, explicit pinned local-IP retry and passive recorded-USB
 capture inspection. **Physical USB and independent security/hardware acceptance
 remain pending.** See [field acceptance](MESSENGER_INTEROPERABILITY.md).
 
+## Source ownership: single HUD API, explicit delivery
+
+The Messenger/PACE dashboard adapter is `crates/pipboy/src/dashboard/messenger_routes.rs`. It exposes the existing `GET /api/messages`, `POST /api/messages/send` and `POST /api/messages/retry` handlers to both desktop and handheld LINK views. `dashboard.rs` is still the sole loopback HTTP server and enforces exact Host/Origin, content type and request bounds before dispatch; the extracted module retains confirmation, text validation and tier checks. `pipboy-core::messenger` and `pipboy-core::message_pace` own journal and route-policy state; `crates/pipboy/src/peer.rs` owns native explicitly requested SSH delivery. Moving these functions does **not** add automatic connections, a new bearer, or new remote privileges.
+
+Regression coverage checks that hostile Origin/Host requests are rejected before journal/configuration directories are created, that SEND/RETRY require explicit confirmation, and that invalid PACE tiers and unrecognized message IDs fail without delivery. Existing two-store/peer smoke tests still cover queued-message behavior; physical interoperability is a separate gate.
+
 ## Released secure-transport scope
 
 Messenger v1 provides peer-to-peer text conversations in handheld LINK and the desktop dashboard, using the **existing pinned OpenSSH device-to-device channel**. There is no cloud chat provider, direct Internet chat service, automatic background connection, discovery, inbound web listener, or remote message poll. A paired peer must be chosen and an operator must explicitly press SEND or RETRY.

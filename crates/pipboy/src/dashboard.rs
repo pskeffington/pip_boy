@@ -3,16 +3,13 @@
 //! This is a local companion window, not an external web service. Profiles are
 //! declarative. No hardware, camera, console, GNSS or TAK transport is opened
 //! by browsing the dashboard or selecting a role.
+mod messenger_routes;
 mod task_routes;
 
 use crate::county_cache::{self, CountyCache};
-use crate::peer;
-use pipboy_core::message_pace::{PaceStore, Tier};
-use pipboy_core::messenger::{valid_text, Direction, MessageStore};
 use pipboy_core::network_health;
 use pipboy_core::network_probe;
 use pipboy_core::network_suite;
-use pipboy_core::peers::PeerStore;
 use pipboy_core::reclamation::{NewSite, SiteStatus, SiteStore};
 use pipboy_core::scout_gis::{distance_meters, waypoint, Point};
 use pipboy_core::unifi;
@@ -635,160 +632,6 @@ fn reclamation_change(req: &Request, store: &WorkbenchStore) -> Result<Response,
 }
 
 /// Task records are in a separate local file and survive job-template changes.
-fn messenger_store(store: &WorkbenchStore) -> MessageStore {
-    let root = store
-        .path()
-        .parent()
-        .unwrap_or_else(|| std::path::Path::new("."));
-    MessageStore::new(root.to_path_buf())
-}
-
-fn messenger_peers(store: &WorkbenchStore) -> PeerStore {
-    let root = store
-        .path()
-        .parent()
-        .unwrap_or_else(|| std::path::Path::new("."));
-    PeerStore::new(root.to_path_buf())
-}
-
-fn messenger_pace(store: &WorkbenchStore) -> PaceStore {
-    PaceStore::new(
-        store
-            .path()
-            .parent()
-            .unwrap_or_else(|| std::path::Path::new("."))
-            .into(),
-    )
-}
-
-fn message_tier(input: &Value) -> Result<Tier, Response> {
-    match input.get("tier") {
-        None => Ok(Tier::Primary),
-        Some(Value::String(value)) => {
-            Tier::parse(value).map_err(|_| Response::error(422, "Unknown PACE tier"))
-        }
-        _ => Err(Response::error(422, "PACE tier must be a string")),
-    }
-}
-
-fn messages_read(store: &WorkbenchStore) -> Result<Response, Response> {
-    let peers = messenger_peers(store)
-        .load()
-        .map_err(|_| Response::error(409, "Messenger pairing configuration unavailable"))?;
-    let book = messenger_store(store)
-        .load()
-        .map_err(|_| Response::error(409, "Messenger journal unavailable; original preserved"))?;
-    let aliases: Vec<&str> = peers.peers.iter().map(|peer| peer.alias.as_str()).collect();
-    let mut conversations: Vec<String> = aliases.iter().map(|id| (*id).to_owned()).collect();
-    for message in &book.messages {
-        if !conversations.contains(&message.peer) {
-            conversations.push(message.peer.clone());
-        }
-    }
-    conversations.sort();
-    let pace = messenger_pace(store);
-    let plans = conversations
-        .iter()
-        .map(|alias| pace.view(alias, aliases.contains(&alias.as_str())))
-        .collect::<std::io::Result<Vec<_>>>()
-        .map_err(|_| Response::error(409, "PACE configuration unavailable; original preserved"))?;
-    let storage = messenger_store(store)
-        .storage_mode()
-        .map_err(|_| Response::error(409, "Messenger encryption key unavailable"))?;
-    Ok(Response::json(
-        200,
-        &json!({
-            "schema_version": 1,
-            "device_id": peers.device_id,
-            "ready": peers.device_id.is_some() && !aliases.is_empty(),
-            "peers": aliases,
-            "conversations": conversations,
-            "messages": book.messages,
-            "transport": "pinned_openssh_explicit",
-            "storage": storage,
-            "pace": plans,
-            "e2ee": false,
-            "automatic_connections": false
-        }),
-    ))
-}
-
-fn messages_send(req: &Request, store: &WorkbenchStore) -> Result<Response, Response> {
-    let input = parse_json_body(req, &["alias", "body", "confirm", "tier"])?;
-    if input.get("confirm").and_then(Value::as_bool) != Some(true) {
-        return Err(Response::error(
-            422,
-            "Explicit Messenger send confirmation required",
-        ));
-    }
-    let alias = str_field(&input, "alias")?;
-    let body = str_field(&input, "body")?;
-    if !valid_text(body) {
-        return Err(Response::error(
-            422,
-            "Message must be 1-1024 UTF-8 bytes without control characters",
-        ));
-    }
-    let journal = messenger_store(store);
-    let peers = messenger_peers(store);
-    let tier = message_tier(&input)?;
-    let pace = messenger_pace(store);
-    let (message, stored) =
-        peer::queue_message_pace_from_store(&journal, &peers, Some(&pace), alias, body, tier)
-            .map_err(|_| {
-                Response::error(409, "Messenger device not paired or journal unavailable")
-            })?;
-    Ok(Response::json(
-        200,
-        &json!({
-            "message": message,
-            "stored_on_receiver": stored,
-            "held_locally": tier == Tier::Emergency,
-            "pace_tier": tier,
-            "transport": if tier == Tier::Emergency { "local_hold" } else { "pinned_openssh_explicit" },
-            "read_by_human": false
-        }),
-    ))
-}
-
-fn messages_retry(req: &Request, store: &WorkbenchStore) -> Result<Response, Response> {
-    let input = parse_json_body(req, &["id", "confirm", "tier"])?;
-    if input.get("confirm").and_then(Value::as_bool) != Some(true) {
-        return Err(Response::error(
-            422,
-            "Explicit Messenger retry confirmation required",
-        ));
-    }
-    let id = positive_integer(&input, "id")?;
-    let journal = messenger_store(store);
-    let entry = journal
-        .load()
-        .map_err(|_| Response::error(409, "Messenger journal unavailable"))?
-        .messages
-        .into_iter()
-        .find(|message| message.id == id && message.direction == Direction::Outgoing)
-        .ok_or_else(|| Response::error(404, "Outgoing message not found"))?;
-    let peers = messenger_peers(store);
-    let tier = message_tier(&input)?;
-    let message = peer::send_message_pace_from_store(
-        &journal,
-        &peers,
-        &messenger_pace(store),
-        id,
-        &entry.peer,
-        tier,
-    )
-    .map_err(|_| Response::error(409, "Messenger retry failed; queued message preserved"))?;
-    Ok(Response::json(
-        200,
-        &json!({
-            "stored_on_receiver": message.delivery == pipboy_core::messenger::Delivery::Stored,
-            "held_locally": tier == Tier::Emergency, "pace_tier": tier,
-            "message": message, "read_by_human": false
-        }),
-    ))
-}
-
 fn scan_network(req: &Request, store: &WorkbenchStore) -> Result<Response, Response> {
     let body = parse_json_body(req, &["cidr", "confirm"])?;
     if body.get("confirm").and_then(Value::as_bool) != Some(true) {
@@ -1046,9 +889,15 @@ fn dispatch(req: &Request, store: &WorkbenchStore, port: u16) -> Response {
         }
         ("GET", "/api/tasks") => task_routes::tasks_read(store).unwrap_or_else(|error| error),
         ("GET", "/api/peers") => task_routes::peers_read(store).unwrap_or_else(|error| error),
-        ("GET", "/api/messages") => messages_read(store).unwrap_or_else(|error| error),
-        ("POST", "/api/messages/send") => messages_send(req, store).unwrap_or_else(|error| error),
-        ("POST", "/api/messages/retry") => messages_retry(req, store).unwrap_or_else(|error| error),
+        ("GET", "/api/messages") => {
+            messenger_routes::messages_read(store).unwrap_or_else(|error| error)
+        }
+        ("POST", "/api/messages/send") => {
+            messenger_routes::messages_send(req, store).unwrap_or_else(|error| error)
+        }
+        ("POST", "/api/messages/retry") => {
+            messenger_routes::messages_retry(req, store).unwrap_or_else(|error| error)
+        }
         ("POST", "/api/net/scan") => scan_network(req, store).unwrap_or_else(|error| error),
         ("POST", "/api/net/unifi") => unifi_request(req, store).unwrap_or_else(|error| error),
         ("POST", "/api/peer/send") => {
@@ -1770,6 +1619,78 @@ mod tests {
             .insert("origin".into(), "https://hostile.invalid".into());
         assert_eq!(dispatch(&cross, &store, 8765).status, 403);
         assert!(!dir.path().join("private/messages.json").exists());
+    }
+
+    #[test]
+    fn messenger_routes_reject_cross_origin_and_host_before_local_storage() {
+        let temp = tempfile::tempdir().unwrap();
+        let store = WorkbenchStore::new(temp.path().join("private/workbench.json"));
+        for path in ["/api/messages/send", "/api/messages/retry"] {
+            let mut req = request(
+                "POST",
+                path,
+                json!({"alias":"scout-one", "body":"Hello", "id":1, "confirm":true}),
+            );
+            req.headers
+                .insert("origin".into(), "https://untrusted.invalid".into());
+            assert_eq!(dispatch(&req, &store, 8765).status, 403, "{path}");
+            assert!(!temp.path().join("private").exists());
+        }
+        let mut wrong_host = request("GET", "/api/messages", Value::Null);
+        wrong_host
+            .headers
+            .insert("host".into(), "non-loopback.invalid".into());
+        assert_eq!(dispatch(&wrong_host, &store, 8765).status, 403);
+        assert!(!temp.path().join("private").exists());
+    }
+
+    #[test]
+    fn messenger_routes_preserve_confirmation_tier_and_payload_validation() {
+        let temp = tempfile::tempdir().unwrap();
+        let store = WorkbenchStore::new(temp.path().join("private/workbench.json"));
+        let requests = [
+            (
+                "/api/messages/send",
+                json!({"alias":"scout-one","body":"Hello"}),
+                422,
+            ),
+            (
+                "/api/messages/send",
+                json!({"alias":"scout-one","body":"Hello","confirm":true,"tier":99}),
+                422,
+            ),
+            (
+                "/api/messages/send",
+                json!({"alias":"scout-one","body":"Hello","confirm":true,"tier":"unknown"}),
+                422,
+            ),
+            (
+                "/api/messages/send",
+                json!({"alias":"scout-one","body":"\u{1b}","confirm":true}),
+                422,
+            ),
+            ("/api/messages/retry", json!({"id":1}), 422),
+            ("/api/messages/retry", json!({"id":0,"confirm":true}), 422),
+            ("/api/messages/retry", json!({"id":1,"confirm":true}), 404),
+        ];
+        for (path, body, expected) in requests {
+            assert_eq!(
+                dispatch(&request("POST", path, body), &store, 8765).status,
+                expected,
+                "{path}"
+            );
+            assert!(!temp.path().join("private").exists());
+        }
+        let mut wrong_type = request(
+            "POST",
+            "/api/messages/send",
+            json!({"alias":"scout-one","body":"Hello","confirm":true}),
+        );
+        wrong_type
+            .headers
+            .insert("content-type".into(), "text/plain".into());
+        assert_eq!(dispatch(&wrong_type, &store, 8765).status, 415);
+        assert!(!temp.path().join("private").exists());
     }
 
     #[test]

@@ -59,6 +59,13 @@ This is the **target separation of responsibilities**. Today some core modules s
 | P2 | Hardware adapters | Prototype Linux output, SDR read-only, GNSS and physical controls using opt-in adapters | Actual Pi peripheral tests and power/thermal records |
 | P2 | Release | Distinguish `source_present`, `software_verified`, `mac_field_accepted`, `pi_field_accepted` and `released` | Each label backed by a named test/evidence record |
 
+## Completed boundary passes (post-research)
+
+- **O1, PR #42:** Machine-readable component index and Mac-first/Raspberry Pi-later ADR merged after five-job CI. This did not relocate code or operator data.
+- **O2, PR #43:** Task Control / explicit peer handoff HTTP handlers extracted to `dashboard/task_routes.rs`, with same-origin regression and five-job CI; merged as `60c066ac`.
+- **O3, current review:** Messenger/PACE HTTP read/send/retry handlers isolated to `dashboard/messenger_routes.rs` with unchanged loopback router, PACE rules and pinned SSH backend. CI and external hardware acceptance must be recorded independently before merging.
+- **Next:** Consider geospatial cache and bounded network probe HTTP adapters one subsystem at a time, after finalizing active GIS and RADIO feature branches. Do not infer better runtime performance from reduced file length alone.
+
 ## Non-goals and safety
 
 - Do **not** move operator records out of `PIPBOY_HOME`, rewrite persisted formats, or turn a read-only receiver into a transmitter.

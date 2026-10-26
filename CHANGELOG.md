@@ -22,11 +22,18 @@
 - Extend browser viewport testing to discover Mac Chrome installations and add macOS CI execution of the Mac-first verification entrypoint. Physical user-Mac, live Census availability and browser GPS acceptance remain open until performed.
 - Clarify Mac-first / Pi-later program sequencing in top-level operator navigation.
 
-## 2026-10-26 — Dashboard Task Control route separation (CI pending)
+## 2026-10-26 — Messenger/PACE route ownership extraction (CI pending)
+
+- Isolate `GET /api/messages`, `POST /api/messages/send` and `POST /api/messages/retry` in `dashboard/messenger_routes.rs` while retaining the original same-origin loopback router, request bounds, confirmation checks, PACE policy and explicit native SSH transport.
+- Add Rust regression tests for hostile Origin/Host, disabled implicit delivery, invalid tiers/payloads, and unknown outgoing message IDs without creating private stores.
+- Assign the new entrypoint to the Messenger/PACE component index; document code ownership, unchanged API paths and outstanding hardware acceptance. Keep the extraction in a focused PR until exact-head CI passes.
+
+
+## 2026-10-26 — Dashboard Task Control route separation (PR #43; five-job CI passed)
 
 - Extract Task Control and explicitly confirmed peer-send/sync HTTP handlers from the monolithic dashboard server to `crates/pipboy/src/dashboard/task_routes.rs`, without changing public URLs, local storage, validation or native SSH boundaries.
 - Preserve parent loopback host/origin checks; add a table-driven regression asserting all Task/peer POST endpoints reject cross-origin requests before writing stores.
-- Assign the new route module to Task Control in the versioned component index and update the architecture/repository navigation guides. Do not merge until all five CI jobs pass.
+- Assign the new route module to Task Control in the versioned component index and update the architecture/repository navigation guides. Merged into `main` as `60c066ac` after all five CI jobs passed.
 
 
 ## 2026-10-26 — MAP layer controls and indexed handheld renderer

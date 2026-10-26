@@ -140,6 +140,10 @@ No release marked production-ready until CI, hardware simulation, terminal resto
 
 `console.rs` owns pure navigation and frame rendering; it opens no files or collectors. `tui.rs` maps terminal events to actions and manages telemetry and explicit note reloads. Collections use an item selector and a separately scrollable detail pane. Notes load on entering NOTES or pressing R; ordinary redraws reuse the in-memory list. See [console controls and size behavior](CONSOLE.md).
 
+## Messenger/PACE HTTP adapter boundary
+
+`crates/pipboy/src/dashboard/messenger_routes.rs` now owns the three Messenger HTTP handlers: read `GET /api/messages`, explicitly confirmed `POST /api/messages/send`, and explicitly confirmed `POST /api/messages/retry`. The parent `dashboard.rs` remains the sole loopback server, HTTP request parser and Host/Origin security gate; the extraction adds no new listener, permissions or transport. `pipboy-core::messenger` and `pipboy-core::message_pace` continue to own the journal, envelope and PACE policy. Pinned-identity OpenSSH actions remain in `crates/pipboy/src/peer.rs`, invoked only after validated operator actions. Reading LINK never initiates network delivery. These boundaries are covered by dashboard route tests and existing Messenger/peer smoke tests; independent physical bearer verification remains open.
+
 ## Messenger canonical transport and encrypted queue
 
 `message_protocol` defines the v1 envelope, typed storage receipt and one-attempt
