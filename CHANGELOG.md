@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-10-26 — Handheld touch paging refinement
+
+- Size tool decks from content height, reserving DATA/Custom action rows on compact screens; retain access to every pinned tool and keep pager focus after navigation.
+- Use 44px launcher, pager and profile targets; show two profiles per page on short screens. Paging preserves the staged profile until explicit selection and loading.
+- Return from the Custom palette to Settings with Back/Escape and suppress the startup success popup. Resize does not rebuild open tool editors.
+- Add offline production-JavaScript journeys to CI. Rendered geometry and physical touchscreen acceptance remain separate checks.
+
 ## 2026-10-26 — Focused desktop copy cleanup (CI pending)
 
 - Preserve the latest role-independent two-pane desktop and paged **TOOLS / VIEW / MESSAGES / SETTINGS** layout; station changes remain exclusively in Settings. Remove repetitive template paragraphs, redundant status tiles, oversized module-card contents and long visible guidance.

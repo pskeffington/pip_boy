@@ -38,6 +38,8 @@ cargo run --locked -p pipboy -- tui
 
 Micro navigation uses STAT / GEAR / MAP / DATA / LINK / SETUP, a consistent Back button and separate local-tool input/results screens. Back returns through inputs before leaving a tool; temporary drafts survive navigation until reload.
 
+Handheld tool pages adapt to available height: compact GEAR shows four tools, while DATA and the Custom palette reserve their action row and show two. Tool paging keeps keyboard focus; profile selection stays in SETUP.
+
 Open the printed loopback URL in a browser. The dashboard binds only to 127.0.0.1. Keep it local.
 
 Update an existing checkout from `main`; the features below no longer require switching among older preview branches:

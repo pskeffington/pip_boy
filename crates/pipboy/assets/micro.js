@@ -60,6 +60,17 @@ const viewPage = { gear: 0, data: 0, conf: 0 };
 let paletteOpen = false;
 let rolePage = 0;
 const MICRO_PAGE_SIZE = 6;
+const tilePageSizes = {};
+
+function toolsPerPage(key) {
+  // DATA and the Custom palette reserve a row for their leading action.
+  return ui.viewport.clientHeight < 260 ? (key === "gear" ? 4 : 2)
+    : key === "conf" ? 4 : MICRO_PAGE_SIZE;
+}
+
+function rolesPerPage() {
+  return window.innerHeight <= 400 ? 2 : 4;
+}
 
 const make = (name, cls, text) => {
   const node = document.createElement(name);
@@ -205,7 +216,11 @@ function showStat() {
 }
 
 /** Paging is bounded to the visible screen; modules are not hidden offscreen. */
-function pagedTiles(root, ids, key, renderItem = toolTile, pageSize = MICRO_PAGE_SIZE) {
+function pagedTiles(root, ids, key, renderItem = toolTile, pageSize = toolsPerPage(key)) {
+  if (tilePageSizes[key] && tilePageSizes[key] !== pageSize) {
+    viewPage[key] = Math.floor(viewPage[key] * tilePageSizes[key] / pageSize);
+  }
+  tilePageSizes[key] = pageSize;
   const count = Math.max(1, Math.ceil(ids.length / pageSize));
   viewPage[key] = Math.min(viewPage[key], count - 1);
   const offset = viewPage[key] * pageSize;
@@ -215,8 +230,17 @@ function pagedTiles(root, ids, key, renderItem = toolTile, pageSize = MICRO_PAGE
   root.append(grid);
   if (count > 1) {
     const pager = make("div", "micro-pager");
-    const prev = button("◀", () => { viewPage[key]--; render(); }, "micro-button compact");
-    const next = button("▶", () => { viewPage[key]++; render(); }, "micro-button compact");
+    pager.setAttribute("aria-label", "Tool pages");
+    const turn = (direction) => {
+      viewPage[key] += direction;
+      render();
+      const arrows = Array.from(ui.content.querySelectorAll(".micro-pager button"));
+      const preferred = arrows[direction < 0 ? 0 : 1];
+      (preferred && !preferred.disabled ? preferred : arrows.find((item) => !item.disabled))
+        ?.focus({preventScroll:true});
+    };
+    const prev = button("◀ PREV", () => turn(-1), "micro-button compact");
+    const next = button("NEXT ▶", () => turn(1), "micro-button compact");
     prev.disabled = viewPage[key] === 0;
     next.disabled = viewPage[key] >= count - 1;
     prev.setAttribute("aria-label", "Previous tool page");
@@ -357,7 +381,7 @@ function showConf() {
         make("small", "", item.availability === "planned"
           ? "PLANNED" : exists ? "PINNED" : "ADD"));
       return tile;
-    }, 4);
+    });
     return root;
   }
   root.append(sectionTop("DEVICE SETTINGS", "LOCAL"));
@@ -562,13 +586,13 @@ function render() {
             tab === "link" ? showLink() : showConf());
 }
 
-async function reload() {
+async function reload({silent = false} = {}) {
   try {
     snapshot = await api("/api/state");
     if (openedTool && !hasTool(openedTool)) openedTool = null;
     focusedCamera = null;
     render();
-    notify("SYNCED");
+    if (!silent) notify("SYNCED");
   } catch (error) {
     ui.code.textContent = "LOCAL / ERROR";
     ui.content.replaceChildren(make("div", "block-box error", error.message));
@@ -580,7 +604,7 @@ function openRoles() {
   if (!snapshot || busy) return;
   pendingProfile = snapshot.active.profile;
   rolePage = Math.max(0, Math.floor(snapshot.profiles.findIndex((r) =>
-    r.id === pendingProfile) / 4));
+    r.id === pendingProfile) / rolesPerPage()));
   renderRolePage();
   selectRole(pendingProfile);
   if (!ui.rolesDialog.open) ui.rolesDialog.showModal();
@@ -588,17 +612,19 @@ function openRoles() {
 
 function renderRolePage() {
   ui.rolesList.replaceChildren();
-  const roles = snapshot.profiles.slice(rolePage * 4, rolePage * 4 + 4);
+  const size = rolesPerPage();
+  rolePage = Math.min(rolePage, Math.max(0, Math.ceil(snapshot.profiles.length / size) - 1));
+  const roles = snapshot.profiles.slice(rolePage * size, rolePage * size + size);
   roles.forEach((role, index) => {
     const row = button("", () => selectRole(role.id), "profile-row");
     row.dataset.role = role.id;
-    row.append(make("span", "num", String(rolePage * 4 + index + 1).padStart(2, "0")));
+    row.append(make("span", "num", String(rolePage * size + index + 1).padStart(2, "0")));
     const info = make("div");
     info.append(make("strong", "", role.title));
     row.append(info);
     ui.rolesList.append(row);
   });
-  const count = Math.max(1, Math.ceil(snapshot.profiles.length / 4));
+  const count = Math.max(1, Math.ceil(snapshot.profiles.length / size));
   ui.rolePaging.textContent = (rolePage + 1) + " / " + count;
   ui.rolePrev.disabled = rolePage === 0;
   ui.roleNext.disabled = rolePage >= count - 1;
@@ -694,6 +720,9 @@ function back() {
   } else if (focusedCamera !== null) {
     focusedCamera = null;
     render();
+  } else if (tab === "conf" && paletteOpen) {
+    paletteOpen = false;
+    render();
   } else if (tab !== "stat") {
     setTab("stat");
   }
@@ -712,7 +741,17 @@ function ensureVisible() {
 function init() {
   const observer = new MutationObserver(ensureVisible);
   observer.observe(ui.content, { childList: true, subtree: true });
-  window.addEventListener("resize", ensureVisible);
+  window.addEventListener("resize", () => {
+    // Only repaginate launcher screens: resizing must not discard live editors.
+    if (snapshot && !openedTool && ["gear", "data", "conf"].includes(tab)) render();
+    if (snapshot && ui.rolesDialog.open) {
+      rolePage = Math.floor(Math.max(0, snapshot.profiles.findIndex((r) =>
+        r.id === pendingProfile)) / rolesPerPage());
+      renderRolePage();
+      selectRole(pendingProfile);
+    }
+    ensureVisible();
+  });
   ui.tabs.forEach((item) => item.addEventListener("click", () => setTab(item.dataset.tab)));
   ui.back.addEventListener("click", back);
   ui.closeRoles.addEventListener("click", () => ui.rolesDialog.close());
@@ -722,13 +761,13 @@ function init() {
     if (rolePage === 0) return;
     rolePage--;
     renderRolePage();
-    selectRole(snapshot.profiles[rolePage * 4].id);
+    selectRole(pendingProfile);
   });
   ui.roleNext.addEventListener("click", () => {
-    if ((rolePage + 1) * 4 >= snapshot.profiles.length) return;
+    if ((rolePage + 1) * rolesPerPage() >= snapshot.profiles.length) return;
     rolePage++;
     renderRolePage();
-    selectRole(snapshot.profiles[rolePage * 4].id);
+    selectRole(pendingProfile);
   });
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape") {
@@ -759,7 +798,7 @@ function init() {
   });
   updateClock();
   setInterval(updateClock, 60000);
-  reload();
+  void reload({silent:true});
 }
 
 init();
