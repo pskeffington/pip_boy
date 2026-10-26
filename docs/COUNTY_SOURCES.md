@@ -1,39 +1,42 @@
-# Rust-Boy | County source acquisition
+# Rust-Boy | U.S. Census county ingestion
 
-This is the **U.S.-only** county acquisition gate for handheld MAP. It uses actual geographic records, not procedural roads, fictional features or approximated shorelines.
+This source contract acquires **real vector records** for a deliberately selected U.S. county. No bundled demonstration city or manufactured geometry is part of normal runtime. The map is styled by Rust-Boy, but source shapes are not altered into fictional roads or points.
 
-## Acquisition chain
+## Provenance and fixed acquisition path
 
-1. Open MAP. On an unconfigured device the embedded, provenance-pinned Boston SAM roads load without using network or GPS. If a previously selected county has cached packages, MAP retrieves the cache manifest from the **local** Rust server and decodes only the locally cached archives. Neither step activates location services or a remote connection.
-2. Select **GPS ON** and accept the browser's location prompt, or select **CENTER**, enter valid WGS84 latitude/longitude, and submit. A manual center is explicitly **not** a GPS fix. Location can be acquired by the OS/browser, which may rely on external positioning services.
-3. Select **COUNTY** (or select COUNTY before obtaining location). This permits the browser to transmit the chosen position to **U.S. Census TIGERweb**, query its containing county, and obtain a real, bounded 2025 county polygon + five-digit GEOID. This legal/statistical boundary does **not** independently establish the physical coastline.
-4. Given a valid Census-resolved GEOID, Rust-Boy reads its fixed allowlist at \`GET /api/map/sources\`, then requests three county-wide 2025 TIGER/Line archives through the loopback-only local Rust API \`POST /api/map/package\`: **All Roads**, **Areal Water**, **Linear Water**. The server accepts **only** GEOID and predefined source IDs; no raw GPS coordinates or arbitrary network destination.
-5. The browser validates ZIP directory, member paths, decompressed lengths and CRC; reads actual TIGER/Line SHP vertices in GCS NAD83 longitude/latitude order and optional DBF street names / MTFCC road classes; and draws water polygons, linear water and roads below imported RustGIS layers. Nothing is drawn if the source fails validation. Existing Boston geometry remains available as a fallback.
-6. The loopback service stores successful ZIPs under \`PIPBOY_HOME/county_cache/\` (default \`~/.pipboy/county_cache/\`), and writes the last successfully acquired GEOID. Later MAP mounts load only available cached sources with \`cache_only:true\`. **COUNTY OFF** hides the current county layer and cancels requests; it does not destroy the offline cache.
+- **County resolution:** after GPS or explicit WGS84 manual center, pressing COUNTY sends that *selected point* to U.S. Census TIGERweb `State_County/MapServer/37` for a bounded polygon and five-digit county GEOID. The county boundary is legal/statistical geography, **not** a surveyed shoreline.
+- **Local package API:** `GET /api/map/sources` provides the pinned source manifest; `POST /api/map/package` accepts `{geoid,source,confirm,cache_only}` and **does not accept a URL or GPS coordinate**. Outbound downloads are restricted to `www2.census.gov` via fixed HTTPS origin.
+- **Vintage:** all downloadable archives are pinned to **2025** until compatibility tests explicitly approve 2026 or later data. Census released the 2026 TIGER/Line shapefiles on October 14, 2026; do not mix file vintage silently.
 
-## Fixed source list (vintage pinned)
-
-| ID | Official source pattern | Geometry | Scope |
+| Source ID | Scope | Allowlisted archive | Rendering purpose |
 | --- | --- | --- | --- |
-| \`tiger-roads\` | \`https://www2.census.gov/geo/tiger/TIGER2025/ROADS/tl_2025_{GEOID}_roads.zip\` | Street / road centerlines | Containing county |
-| \`tiger-areawater\` | \`https://www2.census.gov/geo/tiger/TIGER2025/AREAWATER/tl_2025_{GEOID}_areawater.zip\` | Water polygons | Containing county |
-| \`tiger-linearwater\` | \`https://www2.census.gov/geo/tiger/TIGER2025/LINEARWATER/tl_2025_{GEOID}_linearwater.zip\` | Rivers, streams, linear waterways | Containing county |
+| `tiger-roads` | county | `TIGER2025/ROADS/tl_2025_{GEOID}_roads.zip` | MTFCC-classified major/local streets and trails |
+| `tiger-areawater` | county | `TIGER2025/AREAWATER/tl_2025_{GEOID}_areawater.zip` | lakes, bays and other areal water |
+| `tiger-linearwater` | county | `TIGER2025/LINEARWATER/tl_2025_{GEOID}_linearwater.zip` | streams and rivers |
+| `tiger-pointlm` | **state** | `TIGER2025/POINTLM/tl_2025_{STATEFP}_pointlm.zip` | named point landmarks, clipped to confirmed county |
 
-Census has published 2026 TIGER/Line records, but this release intentionally **pins known 2025 file paths and schema** until newer ZIPs, schemas and provenance have passed release validation. Do not silently swap vintages between boundary and downloaded roads.
+The host derives `STATEFP` strictly from the first two digits of the validated county GEOID and never accepts a caller-defined state, path or origin. The state POINTLM archive is stored under a **county-isolated cache filename**, and is drawn only after a verified county polygon was provided to the decoder. Without that polygon, the source is skipped with an explicit restriction: no state-level markers are presented as county markers.
 
-Boundary provenance: U.S. Census TIGERweb \`State_County/MapServer/37\`, ACS 2025. Road and water packages: Census TIGER/Line 2025. Drawn water edges can provide reference shoreline context, but no source here is a survey-grade tidal shoreline or a NOAA nautical chart. TIGER shapefiles are **GCS NAD83**, not WGS84. Rust-Boy currently projects their raw geographic longitude/latitude coordinates into the Web Mercator viewer without a formal NAD83-to-WGS84 datum transformation; this is visual-reference cartography, not survey-grade alignment. Field routing and navigation require independent validation.
+## Decode and visualization
 
-## Resource and privacy constraints
+1. Server downloads with bounded TLS-verified `curl` (fixed host, no redirects, no shell, no retries, 40-second cap, 12 MiB per ZIP). Writes use temporary files and atomic persistence so failed downloads never corrupt existing caches.
+2. The browser validates the ZIP central directory/member identities, decompressed sizes and CRC. It accepts only expected SHP/DBF members for the exact archive name. It validates SHP header, record sequence, geometry types, finite geographic coordinate ranges, path structure and resource budgets.
+3. For roads and hydrography, the viewer uses actual SHP coordinates, names and MTFCC attributes. At lower zoom, minor roads are suppressed for legibility; source data is not simplified or fabricated.
+4. For state POINTLM, every actual point must pass the verified county polygon's even/odd ring test, including hole exclusion. Only named, in-county features receive visible landmark markers, with source-provided MTFCC retained. Invalid/missing county boundary means **no landmark display**.
+5. Valid layers replace a prior county only after a source passes validation, and subsequent layers are kept grouped by the same GEOID. A completely failed new acquisition preserves the last good county geometry. Partial-source failures are labeled; they do not claim a complete inventory.
+6. FIT frames the verified loaded county geometry. The SOURCE manifest reports per-layer feature/vertex counts and whether the original state-based landmark dataset was county-clipped.
 
-- Up to **4 counties** retained; at most **12 MiB** per downloaded ZIP and **40 seconds** per fixed-host request, with no automatic retries or redirect following. A missing optional layer leaves the remaining valid layers marked partial. No roaming across adjacent counties or synthetic stitching.
-- \`curl\` / \`curl.exe\` must be available for outbound HTTPS on the native host. The server invokes it with fixed arguments, fixed Census origin, bounded time/size and no shell. It never accepts a caller-supplied URL. TLS verification is not disabled.
-- The ZIP decoder limits entries, extracted file sizes, record counts (60,000) and vertices (450,000 per source); exceeding a bound fails without portraying an incomplete map as complete.
-- Browser GPS is opt-in. Selecting COUNTY permits a separate external Census boundary lookup with the selected coordinates; package download itself sends only GEOID to Census. Downloaded archives are plaintext files. The saved active county GEOID reveals approximate region; operators should use \`PIPBOY_HOME\` on an appropriately protected device.
-- External OSM WEB ON remains separate opt-in and viewport-limited; it is **not** used to imply a complete county road inventory. COUNTY will not expose saved private Reclamation site coordinates to remote services.
-- Large counties that exceed safety limits must use smaller, validated RustGIS extracts. This is not a routing engine, offline GNSS receiver or certified hydrographic navigation dataset.
+Source CRS is **GCS NAD83**; Rust-Boy displays raw longitude and latitude in a Web Mercator viewer and currently does **not** apply a formal NAD83-to-WGS84 transform. Features are reference cartography, not survey-grade alignment, road condition, or verified safe passage. Water polygons do not by themselves certify coastlines.
 
-## Acceptance tests
+## Cache and access controls
 
-\`node tools/test_county_sources.cjs\` exercises fixed-source lookup, real-format synthetic fixture ZIP/SHP/DBF parsing, CRC, raw geometry, and cache-only access. Rust unit tests check the server's GEOID/source restrictions, no side effects on invalid requests, and cached-byte responses. \`tools/test_county_map.cjs\` checks user-selected coordinate → Census boundary. Existing Boston/RustGIS/Reclamation tests ensure the new layers do not fabricate map features.
+- Up to four county cache keys; original ZIP archives persist under `PIPBOY_HOME/county_cache/` (default `~/.pipboy/county_cache/`). An active GEOID is stored locally and reveals an approximate area; protect the device and its storage.
+- On MAP entry, the local loopback API can restore the active county ZIPs **without GPS, Census or OSM network requests**. A cached state POINTLM file cannot be clipped in a cold session that lacks an authoritative county polygon; it remains hidden until one is available.
+- Every ZIP is capped at 12 MiB; decompressed data, record counts (60,000) and geometry vertices (450,000 per linear/polygon source) are bounded. Oversize county archives require a validated smaller RustGIS/GeoJSON extract rather than silently dropping shape data.
+- COUNTY sends the chosen point to Census; the subsequent ZIP fetch sends only the GEOID/state identifiers to the Census archive host. Separate **WEB ON** sends the current viewport to Overpass as community reference data. Neither action can share saved private Reclamation site coordinates.
 
-Production Census service availability, large real-world ZIP compatibility, 480×320 Raspberry Pi responsiveness and correct physical shoreline placement remain separate field gates.
+## Test and release gates
+
+`tools/test_county_sources.cjs` validates source-list/API boundaries, SHP/DBF, ZIP/CRC and offline cached area geometry. `tools/test_pointlm_ingestion.cjs` validates the state-based archive name, point SHP decoding, required real county polygon, exclusion of out-of-county points and interior holes, and refusal of invalid records. Rust unit tests validate fixed URL derivation and cache integrity. Browser and Rust CI must pass; production acceptance still requires real Census service calls, real dense counties, Raspberry Pi touchscreen/GNSS and visual datum verification.
+
+Sources: [Census TIGER/Line](https://www.census.gov/geographies/mapping-files/time-series/geo/tiger-line-file.html), [2025 MTFCC reference](https://www.census.gov/library/reference/code-lists/mt-feature-class-codes.html), [2025 ZIP archive](https://www2.census.gov/geo/tiger/TIGER2025/).
