@@ -6,8 +6,8 @@ use pipboy_core::process_safety::isolated_command;
 use serde_json::{json, Value};
 use std::collections::BTreeMap;
 use std::fs::{self, File};
-use std::io::{self, Read, Write};
-use std::path::{Path, PathBuf};
+use std::io::{self, Read};
+use std::path::PathBuf;
 use std::process::Stdio;
 use std::sync::{Mutex, OnceLock};
 
@@ -365,7 +365,8 @@ mod tests {
         bad[0] = b'X';
         assert!(parse(&bad).is_err());
         let s = String::from_utf8(fixture()).unwrap();
-        assert!(parse(s.replace("100||||||", "oops||||||").as_bytes()).is_err());
+        assert!(s.contains("100||||||"));
+        assert!(parse(s.replacen("100||||||", "oops||||||", 1).as_bytes()).is_err());
         assert!(SOURCE_URL.starts_with("https://www2.census.gov/geo/docs/maps-data/"));
     }
 }
