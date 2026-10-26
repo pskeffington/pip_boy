@@ -182,7 +182,6 @@ async fn pump_station(
         .redirect(Policy::none())
         .no_proxy()
         .connect_timeout(Duration::from_secs(5))
-        .timeout(None)
         .user_agent("Rust-Boy-RADIO/0.1 (native audio)")
         .build()
         .map_err(|e| format!("Cannot initialize native TLS client: {e}"))?;
