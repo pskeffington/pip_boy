@@ -9,9 +9,13 @@ mod network_routes;
 mod task_routes;
 
 use crate::county_cache::{self, CountyCache};
+use crate::radio_output::available_outputs;
+use crate::radio_playback::NativeRadioEngine;
 use crate::zip_index::ZipIndex;
 use pipboy_core::network_health;
 use pipboy_core::network_suite;
+use pipboy_core::radio_directory::curated_stations;
+use pipboy_core::radio_presets::{MoveDirection, RadioPresetStore, RadioPresets};
 use pipboy_core::reclamation::{NewSite, SiteStatus, SiteStore};
 use pipboy_core::scout_gis::{distance_meters, waypoint, Point};
 use pipboy_core::workbench::{inspect_hex, tool, WorkbenchStore, PALETTE, PRESETS};
@@ -24,6 +28,7 @@ use std::sync::{
     atomic::{AtomicUsize, Ordering},
     Arc,
 };
+use std::sync::{LazyLock, Mutex};
 use std::time::Duration;
 
 const DEFAULT_PORT: u16 = 8765;
@@ -49,6 +54,12 @@ const MESSENGER_JS: &str = include_str!("../assets/messenger.js");
 const MESSENGER_CSS: &str = include_str!("../assets/messenger.css");
 const RECLAMATION_JS: &str = include_str!("../assets/reclamation.js");
 const RECLAMATION_CSS: &str = include_str!("../assets/reclamation.css");
+const RADIO_UI_JS: &str = include_str!("../assets/radio-ui.js");
+const RADIO_UI_CSS: &str = include_str!("../assets/radio-ui.css");
+
+static RADIO_ENGINE: LazyLock<Mutex<Option<NativeRadioEngine>>> =
+    LazyLock::new(|| Mutex::new(None));
+static RADIO_OUTPUT: LazyLock<Mutex<String>> = LazyLock::new(|| Mutex::new("system".into()));
 
 struct Request {
     method: String,
@@ -704,6 +715,269 @@ fn reclamation_change(req: &Request, store: &WorkbenchStore) -> Result<Response,
 }
 
 /// Task records are in a separate local file and survive job-template changes.
+fn radio_preset_store(store: &WorkbenchStore) -> RadioPresetStore {
+    RadioPresetStore::new(
+        store
+            .path()
+            .parent()
+            .unwrap_or_else(|| std::path::Path::new("."))
+            .to_path_buf(),
+    )
+}
+
+fn radio_snapshot(engine: Option<&NativeRadioEngine>, presets: &RadioPresets) -> Value {
+    let selected_output = RADIO_OUTPUT
+        .lock()
+        .map(|id| id.clone())
+        .unwrap_or_else(|_| "system".into());
+    let outputs = available_outputs().unwrap_or_default();
+    let output_available = outputs
+        .iter()
+        .any(|device| device.id == selected_output && device.available);
+    let devices: Vec<Value> = outputs
+        .iter()
+        .map(|device| {
+            json!({
+                "id": device.id,
+                "name": device.name,
+                "default": device.is_default,
+                "available": device.available,
+            })
+        })
+        .collect();
+    let stations: Vec<Value> = curated_stations()
+        .iter()
+        .map(|s| {
+            json!({"id": s.id, "name": s.name, "genre": s.genre,
+                "category": s.category, "format": s.format,
+                "nominal_kbps": s.nominal_kbps})
+        })
+        .collect();
+    match engine {
+        Some(player) => {
+            let state = player.status();
+            json!({
+                "source": "native_ip",
+                "status": format!("{:?}", state.state).to_ascii_lowercase(),
+                "station": state.station_id,
+                "volume": state.volume_percent,
+                "error": state.last_error,
+                "stations": stations,
+                "presets": presets,
+                "sdr": "not_connected",
+                "outputs": devices,
+                "output": selected_output,
+                "output_available": output_available,
+                "output_failure": player.output_failed()
+            })
+        }
+        None => json!({
+            "source": "none", "status": "stopped",
+            "station": null, "volume": 60, "error": null,
+            "stations": stations, "presets": presets,
+            "sdr": "not_connected",
+            "outputs": devices, "output": selected_output,
+            "output_available": output_available, "output_failure": false
+        }),
+    }
+}
+
+fn radio_state(store: &WorkbenchStore) -> Response {
+    let presets = match radio_preset_store(store).load() {
+        Ok(presets) => presets,
+        Err(_) => return Response::error(409, "Local radio presets unavailable; file preserved"),
+    };
+    match RADIO_ENGINE.lock() {
+        Ok(lock) => Response::json(200, &radio_snapshot(lock.as_ref(), &presets)),
+        Err(_) => Response::error(500, "Radio controller unavailable"),
+    }
+}
+
+fn radio_command(req: &Request, store: &WorkbenchStore) -> Result<Response, Response> {
+    let body = parse_json_body(
+        req,
+        &[
+            "action",
+            "station",
+            "volume",
+            "confirm",
+            "output",
+            "enabled",
+            "direction",
+        ],
+    )?;
+    let action = str_field(&body, "action")?;
+    let presets = radio_preset_store(store);
+    let mut engine = RADIO_ENGINE
+        .lock()
+        .map_err(|_| Response::error(500, "Radio controller unavailable"))?;
+    match action {
+        "select" => {
+            let station = str_field(&body, "station")?;
+            if engine.as_ref().is_some_and(|current| {
+                !matches!(
+                    current.status().state,
+                    pipboy_core::radio_controller::PlaybackState::Failed
+                        | pipboy_core::radio_controller::PlaybackState::Stopped
+                )
+            }) {
+                return Err(Response::error(
+                    409,
+                    "Stop the active station before selecting",
+                ));
+            }
+            presets
+                .select(station)
+                .map_err(|error| match error.kind() {
+                    io::ErrorKind::InvalidInput => Response::error(422, "Unknown curated station"),
+                    _ => Response::error(409, "Cannot save radio selection"),
+                })?;
+        }
+        "favorite" => {
+            let station = str_field(&body, "station")?;
+            let enabled = body
+                .get("enabled")
+                .and_then(Value::as_bool)
+                .ok_or_else(|| Response::error(422, "Favorite requires boolean enabled"))?;
+            presets
+                .favorite(station, enabled)
+                .map_err(|error| match error.kind() {
+                    io::ErrorKind::InvalidInput => Response::error(422, "Invalid radio favorite"),
+                    _ => Response::error(409, "Cannot save radio favorite"),
+                })?;
+        }
+        "move_favorite" => {
+            let station = str_field(&body, "station")?;
+            let direction = match str_field(&body, "direction")? {
+                "earlier" => MoveDirection::Earlier,
+                "later" => MoveDirection::Later,
+                _ => return Err(Response::error(422, "Direction must be earlier or later")),
+            };
+            presets
+                .move_favorite(station, direction)
+                .map_err(|error| match error.kind() {
+                    io::ErrorKind::InvalidInput => Response::error(422, "Invalid radio favorite"),
+                    _ => Response::error(409, "Cannot reorder radio favorites"),
+                })?;
+        }
+        "play" => {
+            if body.get("confirm").and_then(Value::as_bool) != Some(true) {
+                return Err(Response::error(
+                    422,
+                    "Radio playback requires explicit confirmation",
+                ));
+            }
+            let station = str_field(&body, "station")?;
+            if !curated_stations().iter().any(|s| s.id == station) {
+                return Err(Response::error(422, "Unknown curated radio station"));
+            }
+            if engine.as_ref().is_some_and(|current| {
+                !matches!(
+                    current.status().state,
+                    pipboy_core::radio_controller::PlaybackState::Failed
+                        | pipboy_core::radio_controller::PlaybackState::Stopped
+                )
+            }) {
+                return Err(Response::error(
+                    409,
+                    "Stop the active station before switching",
+                ));
+            }
+            // Save last selected *before* starting native I/O. A corrupt or
+            // unavailable preferences file must not be silently overwritten.
+            presets
+                .select(station)
+                .map_err(|_| Response::error(409, "Cannot save radio selection"))?;
+            // Stop old failed session before opening a replacement. The native
+            // decoder owns audio; no external player or web media element.
+            if let Some(mut old) = engine.take() {
+                old.stop();
+            }
+            *engine = Some(
+                NativeRadioEngine::start_internet(
+                    station,
+                    60,
+                    &RADIO_OUTPUT
+                        .lock()
+                        .map_err(|_| Response::error(500, "Output controller unavailable"))?,
+                )
+                .map_err(|_| Response::error(409, "Cannot start native radio worker"))?,
+            );
+        }
+        "stop" => {
+            if let Some(mut old) = engine.take() {
+                old.stop();
+            }
+        }
+        "output" => {
+            let output_id = str_field(&body, "output")?;
+            if !available_outputs()
+                .map_err(|_| Response::error(409, "Audio outputs unavailable"))?
+                .iter()
+                .any(|device| device.id == output_id && device.available)
+            {
+                return Err(Response::error(
+                    422,
+                    "Output disconnected; refresh audio device list",
+                ));
+            }
+            // Changing hardware output must be explicitly requested. Restart
+            // the same stream/volume using the newly selected native endpoint.
+            let previous = engine.as_ref().map(|player| player.status());
+            let recover_failed_output = engine
+                .as_ref()
+                .is_some_and(NativeRadioEngine::output_failed);
+            if let Some(mut active) = engine.take() {
+                active.stop();
+            }
+            *RADIO_OUTPUT
+                .lock()
+                .map_err(|_| Response::error(500, "Output controller unavailable"))? =
+                output_id.to_owned();
+            if let Some(state) = previous {
+                if pipboy_core::radio_recovery::restart_after_output_change(
+                    state.state,
+                    recover_failed_output,
+                ) {
+                    if let Some(station) = state.station_id {
+                        *engine = Some(
+                            NativeRadioEngine::start_internet(
+                                &station,
+                                state.volume_percent,
+                                output_id,
+                            )
+                            .map_err(|_| {
+                                Response::error(409, "Cannot restart radio on selected output")
+                            })?,
+                        );
+                    }
+                }
+            }
+        }
+        "volume" => {
+            let volume = body
+                .get("volume")
+                .and_then(Value::as_u64)
+                .filter(|n| *n <= 100)
+                .ok_or_else(|| Response::error(422, "Volume must be between 0 and 100"))?;
+            let player = engine
+                .as_ref()
+                .ok_or_else(|| Response::error(409, "Start a station before changing volume"))?;
+            player
+                .set_volume(volume as u8)
+                .map_err(|_| Response::error(409, "Cannot change radio volume"))?;
+        }
+        _ => return Err(Response::error(422, "Unknown radio command")),
+    }
+    let saved = presets
+        .load()
+        .map_err(|_| Response::error(409, "Local radio presets unavailable; file preserved"))?;
+    Ok(Response::json(
+        200,
+        &radio_snapshot(engine.as_ref(), &saved),
+    ))
+}
+
 fn dispatch(req: &Request, store: &WorkbenchStore, port: u16) -> Response {
     let expected_host = format!("127.0.0.1:{port}");
     if req.header("host") != Some(expected_host.as_str()) {
@@ -722,6 +996,14 @@ fn dispatch(req: &Request, store: &WorkbenchStore, port: u16) -> Response {
         }
         ("GET", "/assets/micro.css") => {
             Response::new(200, "text/css; charset=utf-8", MICRO_CSS.as_bytes())
+        }
+        ("GET", "/assets/radio-ui.js") => Response::new(
+            200,
+            "text/javascript; charset=utf-8",
+            RADIO_UI_JS.as_bytes(),
+        ),
+        ("GET", "/assets/radio-ui.css") => {
+            Response::new(200, "text/css; charset=utf-8", RADIO_UI_CSS.as_bytes())
         }
         ("GET", "/assets/micro.js") => {
             Response::new(200, "text/javascript; charset=utf-8", MICRO_JS.as_bytes())
@@ -803,6 +1085,8 @@ fn dispatch(req: &Request, store: &WorkbenchStore, port: u16) -> Response {
         ("POST", "/api/map/zip") => zip_lookup(req, store).unwrap_or_else(|error| error),
         ("POST", "/api/map/county-zips") => county_zips(req, store).unwrap_or_else(|error| error),
         ("GET", "/api/state") => state(store).unwrap_or_else(|error| error),
+        ("GET", "/api/radio") => radio_state(store),
+        ("POST", "/api/radio") => radio_command(req, store).unwrap_or_else(|error| error),
         ("GET", "/api/reclamation") => reclamation_read(store, false).unwrap_or_else(|error| error),
         ("GET", "/api/reclamation/map") => {
             reclamation_map_read(store).unwrap_or_else(|error| error)
@@ -1058,6 +1342,137 @@ mod tests {
                 Vec::new()
             },
         }
+    }
+
+    #[test]
+    fn radio_hud_endpoints_require_same_origin_and_valid_commands() {
+        let temp = tempfile::tempdir().unwrap();
+        let store = WorkbenchStore::new(temp.path().join("radio-hud"));
+        for asset in ["/assets/radio-ui.js", "/assets/radio-ui.css"] {
+            assert_eq!(
+                dispatch(&request("GET", asset, Value::Null), &store, 8765).status,
+                200
+            );
+        }
+        let state = dispatch(&request("GET", "/api/radio", Value::Null), &store, 8765);
+        assert_eq!(state.status, 200);
+        let json: Value = serde_json::from_slice(&state.body).unwrap();
+        assert_eq!(json["presets"]["favorites"], json!([]));
+        assert_eq!(json["presets"]["last_selected"], Value::Null);
+        assert!(!radio_preset_store(&store).path().exists());
+        let station_list = json["stations"].as_array().expect("radio directory");
+        assert_eq!(station_list.len(), 10);
+        assert_eq!(station_list[0]["id"], "skylab");
+        assert_eq!(station_list[0]["category"], "CHILL");
+        assert_eq!(station_list[8]["id"], "defcon");
+        assert_eq!(station_list[8]["nominal_kbps"], 128);
+        assert_eq!(json["sdr"], "not_connected");
+        assert_eq!(json["output"], "system");
+        assert!(json["outputs"].is_array());
+        assert!(json["output_available"].is_boolean());
+        assert_eq!(json["output_failure"], false);
+        assert!(json["outputs"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .all(|device| { device["id"].is_string() && device["available"].is_boolean() }));
+        let invalid = request(
+            "POST",
+            "/api/radio",
+            json!({"action":"play", "station":"unknown", "confirm":true}),
+        );
+        assert_eq!(dispatch(&invalid, &store, 8765).status, 422);
+        let absent = request(
+            "POST",
+            "/api/radio",
+            json!({"action":"play", "station":"skylab"}),
+        );
+        assert_eq!(dispatch(&absent, &store, 8765).status, 422);
+        let unsafe_volume = request(
+            "POST",
+            "/api/radio",
+            json!({"action":"volume", "volume":101}),
+        );
+        assert_eq!(dispatch(&unsafe_volume, &store, 8765).status, 422);
+        let station = request(
+            "POST",
+            "/api/radio",
+            json!({"action":"select", "station":"skylab"}),
+        );
+        let selection = dispatch(&station, &store, 8765);
+        assert_eq!(selection.status, 200);
+        let selected: Value = serde_json::from_slice(&selection.body).unwrap();
+        assert_eq!(selected["status"], "stopped");
+        assert_eq!(selected["presets"]["last_selected"], "skylab");
+        assert_eq!(selected["presets"]["favorites"], json!([]));
+        for station in ["skylab", "dronezone"] {
+            let add = request(
+                "POST",
+                "/api/radio",
+                json!({"action":"favorite", "station":station, "enabled":true}),
+            );
+            assert_eq!(dispatch(&add, &store, 8765).status, 200);
+        }
+        let move_preset = request(
+            "POST",
+            "/api/radio",
+            json!({"action":"move_favorite", "station":"dronezone", "direction":"earlier"}),
+        );
+        let moved = dispatch(&move_preset, &store, 8765);
+        assert_eq!(moved.status, 200);
+        let body: Value = serde_json::from_slice(&moved.body).unwrap();
+        assert_eq!(body["presets"]["favorites"], json!(["dronezone", "skylab"]));
+        assert_eq!(body["presets"]["last_selected"], "skylab");
+        let reloaded = WorkbenchStore::new(temp.path().join("radio-hud"));
+        let persisted = dispatch(&request("GET", "/api/radio", Value::Null), &reloaded, 8765);
+        let persisted: Value = serde_json::from_slice(&persisted.body).unwrap();
+        assert_eq!(
+            persisted["presets"]["favorites"],
+            json!(["dronezone", "skylab"])
+        );
+        assert_eq!(persisted["status"], "stopped"); // No autoplay on reading presets.
+        for bad in [
+            json!({"action":"select","station":"https://evil.test/audio"}),
+            json!({"action":"favorite","station":"unknown","enabled":true}),
+            json!({"action":"favorite","station":"skylab","enabled":"true"}),
+            json!({"action":"move_favorite","station":"skylab","direction":"up"}),
+            json!({"action":"move_favorite","station":"secretagent","direction":"earlier"}),
+        ] {
+            assert_eq!(
+                dispatch(&request("POST", "/api/radio", bad), &store, 8765).status,
+                422
+            );
+        }
+        let mut cross_origin = request("POST", "/api/radio", json!({"action":"stop"}));
+        cross_origin
+            .headers
+            .insert("origin".into(), "http://evil.example".into());
+        assert_eq!(dispatch(&cross_origin, &store, 8765).status, 403);
+        let stop = request("POST", "/api/radio", json!({"action":"stop"}));
+        assert_eq!(dispatch(&stop, &store, 8765).status, 200);
+        assert!(RADIO_UI_JS.contains("/api/radio"));
+        assert!(MICRO_JS.contains("native-radio"));
+        assert!(HTML.contains("radio-dock"));
+    }
+
+    #[test]
+    fn corrupt_radio_presets_are_not_silently_reset() {
+        let temp = tempfile::tempdir().unwrap();
+        let store = WorkbenchStore::new(temp.path().to_path_buf());
+        let pref_path = radio_preset_store(&store).path().to_path_buf();
+        let corrupted = br#"{"schema_version":1,"favorites":["unapproved"],"last_selected":null}"#;
+        std::fs::write(&pref_path, corrupted).unwrap();
+        assert_eq!(
+            dispatch(&request("GET", "/api/radio", Value::Null), &store, 8765).status,
+            409
+        );
+        let mutation = request(
+            "POST",
+            "/api/radio",
+            json!({"action":"favorite","station":"skylab","enabled":true}),
+        );
+        assert_eq!(dispatch(&mutation, &store, 8765).status, 409);
+        assert_eq!(std::fs::read(&pref_path).unwrap(), corrupted);
     }
 
     #[test]

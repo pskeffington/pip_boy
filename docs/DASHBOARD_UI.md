@@ -121,3 +121,9 @@ The operator's occupation is **configuration, not navigation**. Desktop uses the
 Previewing a new role must never cause a profile mutation, change active tool pins, or launch a device connector. A confirmation remains mandatory before replacing the active template. New acceptance assertions verify SETTINGS-only role discovery, active-module stability during preview, four-tab desktop consistency, and the SETUP-only micro selector.
 
 [Medic / Doctor and the shared SOS emergency control](MEDIC_EMERGENCY.md) documents the new paired-device handoff and alarm workflow.
+
+## RADIO native dock within VIEWPORT (October 26, 2026)
+
+The common MODULES / VIEWPORT / MESSAGES / SETTINGS navigation remains four stages. Open **VIEWPORT → RADIO / IP** to mount the native in-process radio control widget. The radio dock replaces the active view within the existing workspace rather than stacking an always-visible second section. **◀ ACTIVE VIEW** or Escape returns to the original viewport. Switching away from VIEWPORT unmounts the radio controller UI and stops local status polling, **not** audio that the user intentionally started; STOP is still an explicit action. Merely launching the desktop, choosing a role or browsing other stages never opens a stream or fetches radio status.
+
+The desktop Chromium fixture covers explicit radio opening, no autoplay, view containment and clean unmount while preserving the one-screen 4-stage navigation. Micro radio remains accessible via LINK → RADIO / IP. Actual OS output and Pi touch acceptance remain separate gates.

@@ -56,6 +56,7 @@ let reducedEffects = false;
 let activeTaskUI = null;
 let activeNetworkUI = null;
 let activeMessengerUI = null;
+let activeRadioUI = null;
 const viewPage = { gear: 0, data: 0, conf: 0 };
 let paletteOpen = false;
 let rolePage = 0;
@@ -142,7 +143,8 @@ function toolInfo(id) {
 function renderHeading() {
   const index = pages.indexOf(tab);
   ui.code.textContent = String(index + 1).padStart(2, "0");
-  const label = openedTool === "secure-messenger" ? "MESSENGER"
+  const label = openedTool === "native-radio" ? "RADIO"
+    : openedTool === "secure-messenger" ? "MESSENGER"
     : openedTool === "assigned-duties" ? "ASSIGNED DUTIES"
     : openedTool ? toolInfo(openedTool)?.name : pageTitles[tab];
   ui.title.textContent = label || pageTitles[tab];
@@ -334,6 +336,7 @@ function cameraTile(number, focus = false) {
 function showLink() {
   const root = panel();
   if (snapshot.active.profile === "security-chief") {
+    root.append(button("RADIO / IP", () => { openedTool = "native-radio"; render(); }, "micro-button solid"));
     root.append(button("MESSENGER / SSH", () => {
       openedTool = "secure-messenger";
       render();
@@ -352,6 +355,11 @@ function showLink() {
     }
     return root;
   }
+  root.append(button("RADIO / IP", () => {
+    openedTool = "native-radio";
+    render();
+    ui.viewport.scrollTop = 0;
+  }, "micro-button solid"));
   root.append(sectionTop("MESSENGER", "LOCAL / SSH"));
   const host = make("div", "rb-msg-root");
   root.append(host);
@@ -510,6 +518,16 @@ function inputForm(root, id) {
 
 function showTool() {
   const root = panel();
+  if (openedTool === "native-radio") {
+    const host = make("div", "rb-radio-host");
+    root.append(host);
+    if (window.RustBoyRadio) {
+      activeRadioUI = window.RustBoyRadio.mount(host, { compact: true });
+    } else {
+      host.textContent = "NATIVE RADIO UI UNAVAILABLE";
+    }
+    return root;
+  }
   if (openedTool === "secure-messenger") {
     const host = make("div", "rb-msg-root");
     root.append(host);
@@ -576,6 +594,8 @@ function render() {
   if (!snapshot) return;
   if (activeNetworkUI) activeNetworkUI.destroy();
   activeNetworkUI = null;
+  if (activeRadioUI) activeRadioUI.destroy();
+  activeRadioUI = null;
   if (activeMessengerUI) activeMessengerUI.destroy();
   activeMessengerUI = null;
   if (window.RustBoyMap) window.RustBoyMap.unmount();
@@ -593,7 +613,7 @@ function render() {
 async function reload({silent = false} = {}) {
   try {
     snapshot = await api("/api/state");
-    if (openedTool && !hasTool(openedTool)) openedTool = null;
+    if (openedTool && openedTool !== "native-radio" && !hasTool(openedTool)) openedTool = null;
     focusedCamera = null;
     render();
     if (!silent) notify("SYNCED");
