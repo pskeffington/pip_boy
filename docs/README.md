@@ -65,3 +65,5 @@ The machine-readable `implemented_unverified` catalog label is a **module accept
 
 The product name is **Rust-Boy**; the existing `pip_boy` repository, `pipboy` CLI and `PIPBOY_HOME` storage variable remain compatibility interfaces. Keep implementation status explicit, preserve data provenance, and obtain separate rights clearance before copying third-party software or art.
 
+
+| [Contingency network core](CONTINGENCY_NETWORK_CORE.md) | Meshtastic, MeshCore, Reticulum, local mesh IP and fail-closed development gates |
