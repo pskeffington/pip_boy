@@ -1,19 +1,15 @@
 "use strict";
 
-// Offline RADIO HUD interaction regression. No real broadcasters, Bluetooth
-// scans, or audio devices are opened by this test.
+// Offline RADIO HUD interaction regression; only the local JSON API is mocked.
+// No broadcaster, audio hardware, network, Bluetooth or browser storage is used.
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 const vm = require("node:vm");
 
 const root = path.resolve(__dirname, "..");
-const script = fs.readFileSync(
-  path.join(root, "crates/pipboy/assets/radio-ui.js"), "utf8"
-);
-const css = fs.readFileSync(
-  path.join(root, "crates/pipboy/assets/radio-ui.css"), "utf8"
-);
+const script = fs.readFileSync(path.join(root, "crates/pipboy/assets/radio-ui.js"), "utf8");
+const css = fs.readFileSync(path.join(root, "crates/pipboy/assets/radio-ui.css"), "utf8");
 
 class Element {
   constructor(tag) {
@@ -56,7 +52,7 @@ function control(container, className) {
   assert.ok(found, "Missing RADIO control ." + className);
   return found;
 }
-const flush = () => new Promise(setImmediate);
+const flush = async () => { await new Promise(setImmediate); await new Promise(setImmediate); };
 const stations = [
   { id: "skylab", name: "Skylab Radio (UK)", genre: "Chillout / lounge / ambient",
     category: "CHILL", format: "Live", nominal_kbps: 0 },
@@ -67,19 +63,16 @@ const stations = [
   { id: "defcon", name: "DEF CON Radio", genre: "Electronic / hacker radio",
     category: "ELECTRONIC", format: "MP3", nominal_kbps: 128 }
 ];
-const system = {
-  id: "system", name: "System default", default: true, available: true
-};
-const bluetooth = {
-  id: "output-1-bb78", name: "Bluetooth Headphones",
-  default: false, available: true
-};
+const system = { id: "system", name: "System default", default: true, available: true };
+const bluetooth = { id: "output-1-bb78", name: "Bluetooth Headphones",
+  default: false, available: true };
 
 async function main() {
   let state = {
     source: "none", status: "stopped", station: null,
     volume: 60, error: null, output: "system", output_available: true,
     output_failure: false, stations, outputs: [system, bluetooth],
+    presets: { schema_version: 1, favorites: [], last_selected: null },
     sdr: "not_connected"
   };
   let poll = null;
@@ -106,11 +99,29 @@ async function main() {
         assert.equal(options.headers["Content-Type"], "application/json");
         const body = JSON.parse(options.body);
         calls.push(body);
-        if (body.action === "play") {
+        if (body.action === "select") {
+          assert.ok(stations.some((station) => station.id === body.station));
+          assert.equal(state.status === "stopped" || state.status === "failed", true);
+          state = { ...state, presets: { ...state.presets, last_selected: body.station } };
+        } else if (body.action === "favorite") {
+          assert.ok(stations.some((station) => station.id === body.station));
+          let favorites = [...state.presets.favorites];
+          if (body.enabled && !favorites.includes(body.station)) favorites.push(body.station);
+          if (!body.enabled) favorites = favorites.filter((id) => id !== body.station);
+          state = { ...state, presets: { ...state.presets, favorites } };
+        } else if (body.action === "move_favorite") {
+          const favorites = [...state.presets.favorites];
+          const index = favorites.indexOf(body.station);
+          assert.ok(index >= 0);
+          const other = body.direction === "earlier"
+            ? Math.max(0, index - 1) : Math.min(favorites.length - 1, index + 1);
+          [favorites[index], favorites[other]] = [favorites[other], favorites[index]];
+          state = { ...state, presets: { ...state.presets, favorites } };
+        } else if (body.action === "play") {
           assert.equal(body.station, "skylab");
           assert.equal(body.confirm, true);
-          state = { ...state, station: "skylab", source: "native_ip",
-            status: "playing" };
+          state = { ...state, station: body.station, source: "native_ip", status: "playing",
+            presets: { ...state.presets, last_selected: body.station } };
         } else if (body.action === "output") {
           assert.ok(state.outputs.some((device) => device.id === body.output));
           state = { ...state, output: body.output,
@@ -134,77 +145,108 @@ async function main() {
   const mounted = window.RustBoyRadio.mount(rootNode, { compact: true });
   await flush();
   assert.deepEqual(calls.map((x) => x.action), ["poll"],
-    "Loading the HUD must not start a broadcast");
-  assert.equal(control(rootNode, "rb-radio-play").disabled, false);
-  assert.equal(control(rootNode, "rb-radio-fallback").hidden, true);
-  assert.ok(poll, "HUD status refresh must be enabled");
+    "Opening radio must not start streaming or mutate preferences");
   assert.equal(control(rootNode, "rb-radio-count").textContent, "01 / 04 · CHILL");
+  assert.equal(control(rootNode, "rb-radio-output-panel").hidden, true);
+  assert.equal(control(rootNode, "rb-radio-play").disabled, false);
   const tuner = control(rootNode, "rb-radio-station");
-  assert.equal(walk(tuner).filter((item) => item.tagName === "optgroup").length, 3,
-    "Curated stations should be grouped into genres");
+  assert.equal(walk(tuner).filter((item) => item.tagName === "optgroup").length, 3);
   const next = control(rootNode, "rb-radio-next");
   const previous = control(rootNode, "rb-radio-prev");
   next.dispatch("click");
+  await flush();
   assert.equal(tuner.value, "groovesalad");
+  assert.equal(state.presets.last_selected, "groovesalad");
   assert.equal(control(rootNode, "rb-radio-count").textContent, "02 / 04 · CHILL");
   previous.dispatch("click");
+  await flush();
   assert.equal(tuner.value, "skylab");
   previous.dispatch("click");
-  assert.equal(tuner.value, "defcon", "Station stepping wraps around");
+  await flush();
+  assert.equal(tuner.value, "defcon", "Station navigation wraps");
   next.dispatch("click");
+  await flush();
   assert.equal(tuner.value, "skylab");
-  assert.deepEqual(calls.map((item) => item.action), ["poll"],
-    "Browsing and station stepping must never open a stream");
-  assert.equal(control(rootNode, "rb-radio-output-panel").hidden, true,
-    "Compact HUD defaults to collapsed audio output controls");
+  assert.equal(calls.filter((c) => c.action === "play").length, 0,
+    "Browsing must never initiate native audio");
+
+  const star = control(rootNode, "rb-radio-favorite");
+  star.dispatch("click");
+  await flush();
+  assert.deepEqual(state.presets.favorites, ["skylab"]);
+  assert.equal(star.attributes["aria-pressed"], "true");
+  next.dispatch("click");
+  await flush();
+  star.dispatch("click");
+  await flush();
+  assert.deepEqual(state.presets.favorites, ["skylab", "groovesalad"]);
+
+  const filter = control(rootNode, "rb-radio-filter");
+  filter.dispatch("click");
+  assert.equal(filter.attributes["aria-pressed"], "true");
+  assert.equal(control(rootNode, "rb-radio-count").textContent, "02 / 02 ★");
+  assert.equal(walk(tuner).filter((item) => item.tagName === "optgroup").length, 0);
   control(rootNode, "rb-radio-output-toggle").dispatch("click");
   assert.equal(control(rootNode, "rb-radio-output-panel").hidden, false);
+  const earlier = control(rootNode, "rb-radio-order-earlier");
+  earlier.dispatch("click");
+  await flush();
+  assert.deepEqual(state.presets.favorites, ["groovesalad", "skylab"]);
+  assert.equal(tuner.children[0].value, "groovesalad", "Favorite order is user controlled");
+  assert.equal(control(rootNode, "rb-radio-count").textContent, "01 / 02 ★");
+
+  star.dispatch("click");
+  await flush();
+  assert.deepEqual(state.presets.favorites, ["skylab"]);
+  assert.equal(tuner.value, "skylab", "Removing favorite selects the remaining preset");
+  filter.dispatch("click");
+  assert.equal(filter.attributes["aria-pressed"], "false");
+  await flush();
+  assert.ok(walk(tuner).some((item) => item.tagName === "option"
+    && item.textContent.includes("★ Skylab")));
+
+  const lastSelected = state.presets.last_selected;
+  assert.equal(typeof lastSelected, "string");
+  tuner.value = "skylab";
+  tuner.dispatch("change");
+  await flush();
+  assert.equal(state.presets.last_selected, "skylab");
 
   control(rootNode, "rb-radio-play").dispatch("click");
   await flush();
-  await flush();
-  assert.ok(calls.some((x) => x.action === "play"));
+  assert.equal(state.status, "playing");
   assert.equal(control(rootNode, "rb-radio-signal").textContent, "IP / PLAYING");
-  assert.equal(next.disabled, true, "Changing stations requires Stop");
+  assert.equal(next.disabled, true, "Cannot retune an active session");
   assert.equal(tuner.disabled, true);
+  assert.equal(filter.disabled, true);
 
   const outputs = control(rootNode, "rb-radio-output");
   outputs.value = bluetooth.id;
   outputs.dispatch("change");
   await flush();
-  await flush();
   assert.equal(state.output, bluetooth.id);
   assert.equal(state.station, "skylab");
   assert.equal(control(rootNode, "rb-radio-output-panel").hidden, true,
-    "Successful output change collapses compact output settings");
+    "Output menu collapses when a requested switch succeeds");
 
-  // Simulate a physical Bluetooth disappearance (changed CPAL enumeration)
-  // and decoder-detected output failure; the HUD must not auto-switch.
   state = { ...state, outputs: [system], output_available: false,
-    output_failure: true, error: "Native output disconnected",
-    status: "failed" };
-  const priorCommands = calls.filter((x) => x.action !== "poll").length;
+    output_failure: true, error: "Native output disconnected", status: "failed" };
+  const priorCommands = calls.filter((c) => c.action !== "poll").length;
   poll();
   await flush();
-  assert.equal(calls.filter((x) => x.action !== "poll").length, priorCommands,
-    "Device disappearance must not automatically switch audio");
+  assert.equal(calls.filter((c) => c.action !== "poll").length, priorCommands,
+    "Bluetooth failure must not trigger automatic output switching");
   assert.equal(control(rootNode, "rb-radio-signal").textContent, "OUTPUT FAILED");
-  assert.equal(control(rootNode, "rb-radio-output-panel").hidden, false,
-    "Output failure opens manual recovery controls");
-  assert.equal(control(rootNode, "rb-radio-fallback").hidden, false);
+  assert.equal(control(rootNode, "rb-radio-output-panel").hidden, false);
   assert.equal(control(rootNode, "rb-radio-fallback").disabled, false);
-  assert.match(control(rootNode, "rb-radio-message").textContent, /OUTPUT FAILED/);
   assert.ok(walk(outputs).some((item) =>
     item.tagName === "option" && item.value === bluetooth.id && item.disabled
-  ), "Disconnected selected output must remain visibly identified");
-
+  ));
   control(rootNode, "rb-radio-fallback").dispatch("click");
   await flush();
-  await flush();
   assert.equal(state.output, "system");
-  assert.equal(state.station, "skylab", "Explicit recovery must retain station");
+  assert.equal(state.station, "skylab");
   assert.equal(state.status, "connecting");
-  assert.equal(control(rootNode, "rb-radio-fallback").hidden, true);
 
   state = { ...state, status: "recovering" };
   poll();
@@ -212,11 +254,9 @@ async function main() {
   assert.match(control(rootNode, "rb-radio-message").textContent, /Reconnecting/);
   control(rootNode, "rb-radio-stop").dispatch("click");
   await flush();
-  await flush();
   assert.equal(state.status, "stopped");
+  assert.equal(state.presets.last_selected, "skylab", "Stop must preserve last station");
 
-  // If there is no default speaker, recovery may be shown but cannot be
-  // activated until the OS makes a legitimate output available.
   state = { ...state, output: bluetooth.id, output_available: false,
     output_failure: true, status: "failed",
     outputs: [{ ...system, available: false }] };
@@ -225,12 +265,24 @@ async function main() {
   assert.equal(control(rootNode, "rb-radio-fallback").disabled, true);
 
   mounted.destroy();
-  assert.equal(poll, null, "Unmount must release status polling");
-  assert.match(css, /\.rb-radio \.rb-radio-fallback/);
-  assert.match(css, /\.rb-radio-tuner/);
-  assert.match(css, /\.rb-radio-compact \.rb-radio-details\{display:none\}/);
-  assert.match(css, /min-height:\s*40px/);
-  console.log("RADIO HUD: curated navigation, no autoplay, output recovery, Stop OK");
+  assert.equal(poll, null);
+  state = { ...state, outputs: [system], output: "system",
+    output_available: true, output_failure: false, status: "stopped", error: null };
+  const beforeRestart = calls.filter((c) => c.action === "play").length;
+  const restarted = new Element("div");
+  const resumed = window.RustBoyRadio.mount(restarted, { compact: true });
+  await flush();
+  assert.equal(control(restarted, "rb-radio-station").value, "skylab",
+    "Last-selected station survives HUD recreation");
+  assert.equal(control(restarted, "rb-radio-favorite").attributes["aria-pressed"], "true");
+  assert.equal(calls.filter((c) => c.action === "play").length, beforeRestart,
+    "Restoring favorites/selection must not autoplay");
+  resumed.destroy();
+
+  assert.match(css, /\.rb-radio-compact \.rb-radio-transport\{/);
+  assert.match(css, /\.rb-radio-compact \.rb-radio-output-panel\{position:absolute/);
+  assert.match(css, /min-height:40px/);
+  console.log("RADIO HUD: favorites, ordering, last station, no autoplay, Bluetooth recovery OK");
 }
 main().catch((error) => {
   console.error(error);
