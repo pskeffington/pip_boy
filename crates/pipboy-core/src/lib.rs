@@ -29,6 +29,7 @@ pub mod observation;
 pub mod peers;
 pub mod permissions;
 pub mod reclamation;
+pub mod radio;
 pub mod registry;
 pub mod runtime;
 pub mod scout_gis;
