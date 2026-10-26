@@ -33,7 +33,7 @@ pub struct NativeRadioEngine {
 }
 
 impl NativeRadioEngine {
-    pub fn start_internet(station_id: &str, volume_percent: u8) -> Result<Self, String> {
+    pub fn start_internet(station_id: &str, volume_percent: u8, output_id: &str) -> Result<Self, String> {
         if station_by_id(station_id).is_none() {
             return Err("Unknown curated internet radio station".into());
         }
@@ -56,6 +56,7 @@ impl NativeRadioEngine {
         let worker_cancelled = Arc::clone(&cancelled);
         let worker_volume = Arc::clone(&volume);
         let id = station_id.to_owned();
+        let selected_output = output_id.to_owned();
         let worker = thread::Builder::new()
             .name("rust-boy-radio-ip".into())
             .spawn(move || {
@@ -65,6 +66,7 @@ impl NativeRadioEngine {
                     &worker_controller,
                     &worker_cancelled,
                     worker_volume,
+                    &selected_output,
                 );
                 if let Err(error) = result {
                     if !worker_cancelled.load(Ordering::Acquire) {
@@ -178,9 +180,10 @@ fn decode_and_play(
     controller: &Arc<Mutex<RadioController>>,
     cancelled: &Arc<AtomicBool>,
     volume: Arc<AtomicU8>,
+    output_id: &str,
 ) -> Result<(), String> {
     // Establish an audio device before opening a remote broadcaster.
-    let mut output = NativeAudioOutput::open(volume)?;
+    let mut output = NativeAudioOutput::open(volume, output_id)?;
     if cancelled.load(Ordering::Acquire) {
         return Ok(());
     }
@@ -300,7 +303,7 @@ fn validate_demo_duration(seconds: Option<u64>) -> Result<(), String> {
 /// otherwise standard input supports 'volume N', 'status' and 'stop'.
 pub fn run_demo(station_id: &str, duration_seconds: Option<u64>) -> Result<(), String> {
     validate_demo_duration(duration_seconds)?;
-    let mut player = NativeRadioEngine::start_internet(station_id, 60)?;
+    let mut player = NativeRadioEngine::start_internet(station_id, 60, "system")?;
     let mut played_audio = false;
     println!("RUST-BOY RADIO / {station_id} / native Rust audio / 60% volume");
     if let Some(seconds) = duration_seconds {
@@ -373,8 +376,8 @@ mod tests {
 
     #[test]
     fn refuses_unapproved_stream_without_opening_audio() {
-        assert!(NativeRadioEngine::start_internet("untrusted", 50).is_err());
-        assert!(NativeRadioEngine::start_internet("skylab", 101).is_err());
+        assert!(NativeRadioEngine::start_internet("untrusted", 50, "system").is_err());
+        assert!(NativeRadioEngine::start_internet("skylab", 101, "system").is_err());
     }
 
     #[test]
