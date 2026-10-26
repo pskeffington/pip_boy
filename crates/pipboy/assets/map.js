@@ -1913,7 +1913,9 @@
     setupControls.append(manualButton,zipButton,view.countyButton);
     mapSetup.append(make("summary","","MAP SETUP / LOCATION & COUNTY"),
       setupControls,manual,zipPanel,layerPanel,tools);
-    root.append(toolbar, mapSetup, stage, webStatusNode, countyNode, status, gpsHelp,
+    // Overlay map readouts instead of consuming permanent canvas height.
+    stage.append(countyNode,webStatusNode,status);
+    root.append(toolbar, mapSetup, stage, gpsHelp,
       sitePanel, sourceBox, file);
     host.replaceChildren(root);
 
