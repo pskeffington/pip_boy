@@ -91,6 +91,14 @@ async function main(){
   await assert.rejects(
     ()=>r.parsePackage(Uint8Array.from(invalid).buffer,"25025","tiger-pointlm",rings),
     /no matching SHP/);
+  const mismatched=zip({
+    "tl_2025_25_pointlm.shp":pointShp([[1,1],[8,8]]),
+    "tl_2025_25_pointlm.dbf":pointDbf(["Only one DBF row"])
+  });
+  await assert.rejects(
+    ()=>r.parsePackage(Uint8Array.from(mismatched).buffer,
+      "25025","tiger-pointlm",rings),
+    /SHP\/DBF record count mismatch/);
   const clipped=[];
   const report=await r.load("25025",{
     clipRings:rings,onLayer:(id,data)=>clipped.push({id,count:data.features})
