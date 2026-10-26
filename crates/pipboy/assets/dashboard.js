@@ -698,21 +698,41 @@ ui.confirm.addEventListener("close", () => {
 });
 document.addEventListener("keydown", (event) => {
   if (!snapshot) return;
-  if (event.key === "Escape" && selectedCamera !== null) {
-    selectedCamera = null;
-    renderExtension();
-    return;
+  if (event.key === "Escape" && !ui.confirm.open) {
+    if (selectedCamera !== null) {
+      selectedCamera = null;
+      if (activeStage === "viewport") renderExtension();
+      return;
+    }
+    if (event.target?.matches?.("input,textarea,select,[contenteditable]")) return;
+    if (window.matchMedia("(max-width: 1100px)").matches && activePane !== "workspace") {
+      activateStage("modules");
+      activatePane("workspace");
+      return;
+    }
+    if (activeStage !== "modules") {
+      activateStage("modules");
+      return;
+    }
   }
   if (!event.altKey || event.ctrlKey || event.metaKey) return;
   if (event.key === "ArrowUp" || event.key === "ArrowDown") {
     event.preventDefault();
     const i = snapshot.profiles.findIndex((p) => p.id === previewId);
     const delta = event.key === "ArrowUp" ? -1 : 1;
-    previewId = snapshot.profiles[(i + delta + snapshot.profiles.length) % snapshot.profiles.length].id;
+    const nextIndex = (i + delta + snapshot.profiles.length) % snapshot.profiles.length;
+    previewId = snapshot.profiles[nextIndex].id;
+    rolePage = Math.floor(nextIndex / rolesPerPage());
+    modulePage = 0;
     selectedTool = null;
     selectedCamera = null;
+    extensionMode = "map";
     lastOutput = "";
     renderAll();
+    if (window.matchMedia("(max-width: 1100px)").matches) {
+      activateStage("modules");
+      activatePane("workspace");
+    }
   } else if (event.key === "Enter") {
     event.preventDefault();
     loadSelected();
