@@ -186,7 +186,7 @@ fn is_audio(content_type: Option<&str>) -> bool {
     mime.starts_with("audio/") || mime == "application/octet-stream"
 }
 
-fn icy_interval(value: Option<&str>) -> Result<Option<usize>, StreamError> {
+pub fn icy_interval(value: Option<&str>) -> Result<Option<usize>, StreamError> {
     let Some(value) = value else {
         return Ok(None);
     };
