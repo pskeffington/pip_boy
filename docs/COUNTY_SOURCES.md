@@ -32,6 +32,10 @@ Source CRS is **GCS NAD83**; Rust-Boy displays raw longitude and latitude in a W
 
 After an operator-initiated COUNTY load, the [Mac-native cache audit](MAC_MAP_TESTING.md#audit-the-real-saved-county-without-a-network-connection) can replay the active county through Rust-Boy's own **cache-only** API. Run `bash scripts/test-map-macos.command --audit-cache`; no external map, GPS, or manual coordinates are requested. The audit checks the independently validated stored boundary and each 2025 TIGER archive's ZIP CRC, compressed/uncompressed size, source naming and SHP/DBF presence. It reports COMPLETE, PARTIAL, EMPTY or FAIL without exporting geometry or site records. This independent cross-check catches corrupted ZIP bytes that the Rust caching layer's initial signature check alone would not find. It is source integrity verification, **not** cryptographic authentication of Census files or a survey-grade map claim.
 
+## Optional ZIP/ZCTA to county index
+
+The MAP ZIP input and reverse **COUNTY ZIPs** listing use the [2020 Census ZCTA-to-county relationship](ZIP_COUNTY_LOOKUP.md). The national crosswalk is obtained from a fixed `www2.census.gov` URL only after explicit operator action, validated, and cached separately from up to four 2025 county GIS packages in `PIPBOY_HOME/geo_index/`. ZIP values are never forwarded to Census. A ZCTA can intersect multiple counties; the operator chooses the desired 2025 GEOID for GIS ingestion. ZCTAs are statistical approximations, **not** USPS delivery ZIPs, towns or certified county membership.
+
 ## Rendering and layer visibility
 
 The local MAP engine groups source IDs into four display categories: **ROADS** (`tiger-roads`), **WATER** (`tiger-areawater` and `tiger-linearwater`), **LANDMARKS** (`tiger-pointlm`, clipped by verified boundary), and **BORDER** (the independently validated Census county polygon). Toggling only changes canvas visibility. It never edits source ZIPs, county identifiers, attributes, or the boundary cache, and never sends a request. RustGIS and OSM overlay controls remain independent.

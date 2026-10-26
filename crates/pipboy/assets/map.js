@@ -796,6 +796,7 @@
     view.webRefresh.hidden = !view.webEnabled;
     view.webStatusNode.textContent = view.webStatus;
     view.countyButton.textContent = view.countyEnabled ? "COUNTY OFF" : "COUNTY";
+    view.zipCountyButton.disabled = !view.county?.id;
     view.countyNode.textContent = view.countyStatus;
     view.attribution.hidden = !view.onlineShapes.length;
     view.sourceBox.hidden = !view.county && !view.countyShapes.length &&
@@ -1134,13 +1135,15 @@
         (report.errors.length?" / PARTIAL - SEE SOURCES":" / SOURCES LOADED") +
         (staged.warnings.length?" / "+staged.warnings.join("; ").slice(0,90):"");
       refresh(view);
+      return Boolean(view.countyPackage?.geoid===geoid);
     }catch(error){
       if(active!==view || view.countyPackageVersion!==version ||
-         controller.signal.aborted)return;
+         controller.signal.aborted)return false;
       view.countyStatus="COUNTY "+geoid+" / "+
         (error instanceof Error?error.message:"SOURCE FAILED").slice(0,75)+
         " / PREVIOUS MAP KEPT";
       refresh(view);
+      return false;
     }finally{
       if(view.countyPackageAbort===controller)view.countyPackageAbort=null;
     }
@@ -1179,8 +1182,145 @@
     }
   }
 
+  function invalidateZipLookup(view) {
+    view.zipVersion++;
+    view.zipChoiceVersion++;
+    if(view.zipAbort)view.zipAbort.abort();
+    view.zipAbort=null;
+    view.zipPageVersion++;
+  }
+
+  // ZIP/ZCTA membership is statistical, not a town or position. Fit the
+  // verified county polygon rather than inventing a postal ZIP centroid.
+  async function selectZipCounty(view,choice,zip,version,controller) {
+    if(active!==view||view.zipVersion!==version||controller.signal.aborted)return;
+    const choiceVersion=++view.zipChoiceVersion;
+    if(view.sitesVisible||view.siteCentered){
+      view.zipStatus.textContent="CLOSE SITES BEFORE ZIP COUNTY GIS";return;
+    }
+    const geoid=choice.geoid;
+    view.zipStatus.textContent="ZCTA "+zip+" / COUNTY "+geoid+" / GIS LOADING";
+    try {
+      const cacheOnly=navigator.onLine===false;
+      const county=await window.RustBoyCounty.boundary(geoid,{
+        cacheOnly,signal:controller.signal
+      });
+      if(active!==view||view.zipVersion!==version||view.zipChoiceVersion!==choiceVersion||controller.signal.aborted)return;
+      if(county.id!==geoid)throw new Error("COUNTY GEOID MISMATCH");
+      const old={county:view.county,enabled:view.countyEnabled,
+        package:view.countyPackage,shapes:view.countyShapes,
+        center:{...view.center},zoom:view.zoom,follow:view.follow,
+        selected:view.centerSelected,last:view.countyLastLookup};
+      view.countyRequest++;
+      if(view.countyAbort)view.countyAbort.abort();
+      view.countyAbort=null;
+      view.county=county;view.countyEnabled=true;view.countyLastLookup=null;
+      view.countyPackage=null;view.countyShapes=[];
+      view.follow=false;view.centerSelected=false;
+      fitLayer(view,[county.shape]);
+      view.countyStatus="ZIP "+zip+" / 2020 ZCTA → 2025 COUNTY "+geoid;
+      refresh(view);
+      const loaded=await loadCountyPackages(view,geoid,cacheOnly);
+      if(active!==view||view.zipVersion!==version||view.zipChoiceVersion!==choiceVersion||controller.signal.aborted)return;
+      if(!loaded){
+        view.county=old.county;view.countyEnabled=old.enabled;
+        view.countyPackage=old.package;view.countyShapes=old.shapes;
+        view.center=old.center;view.zoom=old.zoom;view.follow=old.follow;
+        view.centerSelected=old.selected;view.countyLastLookup=old.last;
+        view.zipStatus.textContent="ZCTA "+zip+" / GIS FAILED / PREVIOUS MAP KEPT";
+        view.countyStatus="COUNTY GIS UNAVAILABLE / PREVIOUS MAP KEPT";
+      }else{
+        view.zipStatus.textContent="ZCTA "+zip+" → "+county.name.toUpperCase()+
+          " / "+geoid+" / GIS READY";
+      }
+      refresh(view);
+    }catch(error){
+      if(active!==view||view.zipVersion!==version||view.zipChoiceVersion!==choiceVersion||controller.signal.aborted)return;
+      view.zipStatus.textContent="ZCTA "+zip+" / "+
+        (error instanceof Error?error.message:"COUNTY UNAVAILABLE").slice(0,90);
+    }
+  }
+
+  async function submitZip(view) {
+    if(active!==view)return;
+    invalidateZipLookup(view);
+    view.zipCandidates.replaceChildren();
+    const zip=view.zipInput.value.trim();
+    if(!window.RustBoyZip||!window.RustBoyCounty){
+      view.zipStatus.textContent="ZIP LOOKUP MODULE UNAVAILABLE";return;
+    }
+    if(!window.RustBoyZip.validateZip(zip)){
+      view.zipStatus.textContent="ENTER FIVE-DIGIT ZIP";return;
+    }
+    if(view.sitesVisible||view.siteCentered){
+      view.zipStatus.textContent="CLOSE SITES BEFORE ZIP LOOKUP";return;
+    }
+    const version=view.zipVersion,controller=new AbortController();
+    view.zipAbort=controller;
+    view.zipCandidates.replaceChildren();
+    view.zipList.textContent="";
+    view.zipStatus.textContent="ZCTA "+zip+" / RESOLVING COUNTIES";
+    try {
+      const result=await window.RustBoyZip.lookup(zip,{
+        cacheOnly:navigator.onLine===false,signal:controller.signal
+      });
+      if(active!==view||view.zipVersion!==version||controller.signal.aborted)return;
+      if(!result.counties.length){
+        view.zipStatus.textContent="ZIP "+zip+
+          " / NO 2020 ZCTA MATCH (USPS-ONLY ZIP POSSIBLE)";return;
+      }
+      if(result.counties.length===1){
+        await selectZipCounty(view,result.counties[0],zip,version,controller);
+        return;
+      }
+      view.zipStatus.textContent="ZCTA "+zip+" INTERSECTS "+
+        result.counties.length+" COUNTIES / CHOOSE ONE";
+      for(const county of result.counties){
+        const option=control(county.name+" / "+county.geoid+
+          " / "+county.zcta_land_share_pct.toFixed(1)+"% AREA",
+          ()=>void selectZipCounty(view,county,zip,version,controller),
+          "Select "+county.name+" GIS; 2020 ZCTA overlap, not USPS delivery");
+        option.className+=" rb-map-zip-choice";
+        view.zipCandidates.append(option);
+      }
+    }catch(error){
+      if(active!==view||view.zipVersion!==version||controller.signal.aborted)return;
+      view.zipStatus.textContent="ZIP LOOKUP / "+
+        (error instanceof Error?error.message:"UNAVAILABLE").slice(0,100);
+    }
+  }
+
+  async function listCountyZctas(view,offset=0) {
+    if(active!==view||!window.RustBoyZip)return;
+    const geoid=view.county?.id;
+    if(!geoid){
+      view.zipStatus.textContent="LOAD COUNTY BEFORE LISTING ZCTAS";return;
+    }
+    const version=++view.zipPageVersion;
+    view.zipList.textContent="COUNTY "+geoid+" / ZCTA INDEX LOADING";
+    try {
+      const result=await window.RustBoyZip.countyZctas(geoid,{
+        offset,cacheOnly:navigator.onLine===false
+      });
+      if(active!==view||view.zipPageVersion!==version||
+        view.county?.id!==geoid)return;
+      view.zipList.textContent=result.zctas.length?
+        "2020 ZCTAs INTERSECTING COUNTY "+geoid+" ("+result.total+")\n"+
+        result.zctas.join(" · ") : "NO 2020 ZCTA INTERSECTIONS";
+      view.zipListPrev.disabled=offset===0;
+      view.zipListNext.disabled=offset+result.zctas.length>=result.total;
+      view.zipOffset=offset;
+      view.zipStatus.textContent="2020 ZCTA AREAS / NOT A USPS DELIVERY INVENTORY";
+    }catch(error){
+      if(active!==view||view.zipPageVersion!==version)return;
+      view.zipList.textContent="COUNTY ZCTA LIST / "+
+        (error instanceof Error?error.message:"UNAVAILABLE").slice(0,100);
+    }
+  }
+
   function disableCounty(view) {
     view.countyEnabled=false;
+    invalidateZipLookup(view);
     view.countyRequest++;
     if(view.countyAbort)view.countyAbort.abort();
     view.countyAbort=null;
@@ -1476,6 +1616,7 @@
     if (view.webProbeAbort) view.webProbeAbort.abort();
     view.countyRequest++;
     if (view.countyAbort) view.countyAbort.abort();
+    invalidateZipLookup(view);
     view.countyCacheReadVersion++;
     clearCountyPackages(view);
     view.siteVersion++;
@@ -1570,6 +1711,39 @@
     const apply = make("button", "rb-map-button", "SET CENTER");
     apply.type = "submit";
     manual.append(latitude, longitude, apply);
+    const zipPanel=make("section","rb-map-zip");
+    zipPanel.hidden=true;
+    zipPanel.setAttribute("role","region");
+    zipPanel.setAttribute("aria-label","ZIP code to county map");
+    const zipForm=make("form","rb-map-zip-form");
+    const zipInput=make("input","");
+    zipInput.type="text";zipInput.inputMode="numeric";
+    zipInput.maxLength=5;zipInput.pattern="[0-9]{5}";
+    zipInput.required=true;zipInput.placeholder="ZIP 00000";
+    zipInput.setAttribute("aria-label","US five-digit ZIP code");
+    const zipApply=make("button","rb-map-button","FIND COUNTY");
+    zipApply.type="submit";
+    zipForm.append(zipInput,zipApply);
+    const zipStatus=make("div","rb-map-zip-status",
+      "2020 CENSUS ZCTA ≠ USPS ZIP / CHOOSE COUNTY IF MULTIPLE");
+    zipStatus.setAttribute("role","status");
+    zipStatus.setAttribute("aria-live","polite");
+    const zipCandidates=make("div","rb-map-zip-candidates");
+    const zipCountyButton=control("COUNTY ZIPs",
+      ()=>void listCountyZctas(view,0),
+      "List Census 2020 ZCTA areas intersecting selected county");
+    zipCountyButton.disabled=true;
+    const zipList=make("div","rb-map-zip-list");
+    const zipPager=make("div","rb-map-zip-pager");
+    const zipListPrev=control("PREV",
+      ()=>void listCountyZctas(view,Math.max(0,view.zipOffset-12)),
+      "Previous 12 county ZCTA areas");
+    const zipListNext=control("NEXT",
+      ()=>void listCountyZctas(view,view.zipOffset+12),
+      "Next 12 county ZCTA areas");
+    zipListPrev.disabled=true;zipListNext.disabled=true;
+    zipPager.append(zipCountyButton,zipListPrev,zipListNext);
+    zipPanel.append(zipForm,zipStatus,zipCandidates,zipPager,zipList);
     // Separate local marker-list controls allow keyboard/touch selection even
     // though the canvas is a visual layer.
     const sitePanel = make("details", "rb-map-sites");
@@ -1594,6 +1768,9 @@
     const view = {
       host, root, stage, canvas, status, file, sourceBox, sourceSummary, sourceLines,
       manual, latitude, longitude,
+      zipPanel,zipForm,zipInput,zipStatus,zipCandidates,zipCountyButton,
+      zipList,zipListPrev,zipListNext,zipOffset:0,zipVersion:0,
+      zipAbort:null,zipPageVersion:0,zipChoiceVersion:0,
       width: 0, height: 0, dpr: 1,
       center: mapMemory ? { ...mapMemory.center } : { lat: 0, lon: 0 },
       zoom: mapMemory ? mapMemory.zoom : 2,
@@ -1669,12 +1846,16 @@
       manual.hidden = !manual.hidden;
       if (!manual.hidden) latitude.focus();
     }, "Enter map center manually; not a GPS fix");
+    const zipButton=control("ZIP",()=>{
+      zipPanel.hidden=!zipPanel.hidden;
+      if(!zipPanel.hidden)zipInput.focus();
+    },"Find county GIS by US five-digit ZIP / Census ZCTA");
     view.fitButton = control("FIT", () => fitMap(view), "Fit available geometry to screen");
     const zoomIn = control("+", () => { view.zoom = clamp(view.zoom + 1, MIN_ZOOM, MAX_ZOOM); refresh(view); },
       "Zoom in");
     const zoomOut = control("-", () => { view.zoom = clamp(view.zoom - 1, MIN_ZOOM, MAX_ZOOM); refresh(view); },
       "Zoom out");
-    toolbar.append(view.locate, view.followButton, manualButton,
+    toolbar.append(view.locate, view.followButton, manualButton,zipButton,
       view.countyButton, view.fitButton, zoomIn, zoomOut);
     const layerPanel=make("details","rb-map-layers");
     const layerSummary=make("summary","","LAYERS / 4 OF 4 VISIBLE");
@@ -1704,10 +1885,14 @@
     }
     tools.append(make("summary", "", "TOOLS / MAP SOURCES"), extra);
     view.tools = tools;
-    root.append(toolbar, layerPanel, tools, manual, stage, webStatusNode, countyNode, status, gpsHelp,
+    root.append(toolbar, layerPanel, tools, zipPanel, manual, stage, webStatusNode, countyNode, status, gpsHelp,
       sitePanel, sourceBox, file);
     host.replaceChildren(root);
 
+    zipForm.addEventListener("submit",event=>{
+      event.preventDefault();
+      void submitZip(view);
+    });
     manual.addEventListener("submit", (event) => {
       event.preventDefault();
       const lat = Number(latitude.value), lon = Number(longitude.value);

@@ -140,3 +140,31 @@
   .rb-map-layer-grid { max-height:86px; overflow:auto; }
   .rb-map-layers summary { padding:2px 4px; }
 }
+
+/* One-tap ZIP entry; panel is collapsed by default to preserve map pixels. */
+.rb-map-zip { flex:none; min-width:0; max-height:156px; overflow-y:auto;
+  border:1px solid #456a45; padding:4px; background:#0e2114;
+  color:#c3ecad; font:10px ui-monospace,Consolas,monospace; }
+.rb-map-zip[hidden] { display:none; }
+.rb-map-zip-form { display:flex; gap:5px; align-items:stretch; }
+.rb-map-zip-form input { min-width:0; flex:1 1 90px; width:95px; border:1px solid #71966a;
+  border-radius:3px; background:#08180e; color:#f0ffdd; padding:5px 8px;
+  font:12px ui-monospace,Consolas,monospace; letter-spacing:.09em; }
+.rb-map-zip-form .rb-map-button { min-height:36px; flex:1 1 110px; }
+.rb-map-zip input:focus-visible, .rb-map-zip button:focus-visible {
+  outline:2px solid #eaffb8;outline-offset:1px; }
+.rb-map-zip-status { padding:4px 0; white-space:normal; overflow-wrap:anywhere;
+  line-height:1.35; color:#e1df9c; }
+.rb-map-zip-candidates { display:flex;flex-wrap:wrap;gap:4px;
+  max-height:68px;overflow-y:auto; }
+.rb-map-zip-choice { min-height:36px;flex:1 1 150px;text-align:left; }
+.rb-map-zip-pager { display:flex; gap:4px; align-items:center; padding:2px 0; }
+.rb-map-zip-pager .rb-map-button { min-height:34px;flex:1 1 auto; }
+.rb-map-zip-list { white-space:pre-wrap; overflow-wrap:anywhere;
+  color:#c1eaba;max-height:50px;overflow-y:auto; }
+@media (max-height:360px) {
+  .rb-map-zip { max-height:112px; }
+  .rb-map-zip-form .rb-map-button, .rb-map-zip-pager .rb-map-button {
+    min-height:34px;
+  }
+}

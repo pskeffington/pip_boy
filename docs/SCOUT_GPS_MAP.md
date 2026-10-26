@@ -10,7 +10,13 @@ Rust-Boy's MAP is an **offline-first field reference viewer**. The Fallout-inspi
 4. The resolved county GEOID is passed to the **local** allowlisted Census package service. No raw position is passed to the package service, which retrieves **2025 All Roads**, **Areal Water**, and **Linear Water** records for the selected county. The viewer displays genuine centerlines, polygons, names, classifications and source vintage. A fourth source, state-level **Point Landmarks**, is shown **only after the returned points have been clipped to the verified county polygon**.
 5. Use **FIT** to frame available geography and **+/-** to zoom. Finger drag pans and disables follow. **RECENTER** returns to the live browser fix when one is available. Roads, water and landmark symbols use Rust-Boy's green/amber phosphor style, without fictional geometries.
 
-The 480×320 primary bar contains GPS, FOLLOW/RECENTER, CENTER, COUNTY, FIT and zoom. Census visibility toggles are grouped beneath the collapsed **LAYERS** disclosure. Secondary **RUSTGIS**, **SITES**, **WEB**, and **GIS** actions are under **TOOLS / MAP SOURCES**. Controls are designed for finger access and keyboard focus, but final physical touchscreen acceptance remains outstanding.
+The 480×320 primary bar contains GPS, FOLLOW/RECENTER, CENTER, **ZIP**, COUNTY, FIT and zoom. Census visibility toggles are grouped beneath the collapsed **LAYERS** disclosure. Secondary **RUSTGIS**, **SITES**, **WEB**, and **GIS** actions are under **TOOLS / MAP SOURCES**. Controls are designed for finger access and keyboard focus, but final physical touchscreen acceptance remains outstanding.
+
+## ZIP → County GIS and reverse county ZIP lookup
+
+Press **ZIP**, enter five digits and choose **FIND COUNTY**. Rust-Boy consults the locally cached U.S. Census 2020 ZCTA-to-county relationship index (downloaded from a fixed Census URL on the first explicit request), then loads **2025 county GIS** by validated county GEOID. One matching county proceeds directly; where a ZCTA intersects several counties, the operator must choose. Open ZIP → **COUNTY ZIPs** after selecting a county to view its associated ZCTA areas in pages of 12. The current county GIS remains available if a new ZIP does not resolve or fails to load.
+
+ZIP codes, Census ZCTAs, USPS postal towns and legal county boundaries are not equivalent. The ZIP input is **not a GPS fix**, and Rust-Boy uses a verified county boundary as the map frame, not a guessed ZIP centroid. ZIP requests go only to the loopback Rust server; the remote Census lookup downloads a **national static crosswalk**, never the entered ZIP or coordinates. See the [bidirectional ZIP/County source and limitations](ZIP_COUNTY_LOOKUP.md).
 
 ## Offline layer controls and field rendering
 

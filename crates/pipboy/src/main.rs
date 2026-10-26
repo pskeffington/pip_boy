@@ -29,6 +29,7 @@ mod scout;
 mod status;
 mod tui;
 mod workbench;
+mod zip_index;
 
 fn help() {
     println!("{PRODUCT_NAME} | {PRODUCT_DESCRIPTOR}");
