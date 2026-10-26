@@ -10,7 +10,17 @@ Rust-Boy's MAP is an **offline-first field reference viewer**. The Fallout-inspi
 4. The resolved county GEOID is passed to the **local** allowlisted Census package service. No raw position is passed to the package service, which retrieves **2025 All Roads**, **Areal Water**, and **Linear Water** records for the selected county. The viewer displays genuine centerlines, polygons, names, classifications and source vintage. A fourth source, state-level **Point Landmarks**, is shown **only after the returned points have been clipped to the verified county polygon**.
 5. Use **FIT** to frame available geography and **+/-** to zoom. Finger drag pans and disables follow. **RECENTER** returns to the live browser fix when one is available. Roads, water and landmark symbols use Rust-Boy's green/amber phosphor style, without fictional geometries.
 
-The 480×320 primary bar contains GPS, FOLLOW/RECENTER, CENTER, COUNTY, FIT and zoom. Secondary **RUSTGIS**, **SITES**, **WEB**, and **GIS** actions are under **TOOLS / MAP SOURCES**. Controls are designed for finger access and keyboard focus, but final physical touchscreen acceptance remains outstanding.
+The 480×320 primary bar contains GPS, FOLLOW/RECENTER, CENTER, COUNTY, FIT and zoom. Census visibility toggles are grouped beneath the collapsed **LAYERS** disclosure. Secondary **RUSTGIS**, **SITES**, **WEB**, and **GIS** actions are under **TOOLS / MAP SOURCES**. Controls are designed for finger access and keyboard focus, but final physical touchscreen acceptance remains outstanding.
+
+## Offline layer controls and field rendering
+
+On the 480×320 display, expand **LAYERS / 4 OF 4 VISIBLE** (initially closed). Four 38-pixel touch controls independently toggle **ROADS**, **WATER**, **LANDMARKS** and **BORDER**. Each control announces **ON/OFF** and its actual pressed state for keyboard/screen-reader use. **WATER** groups the official Census areal and linear waterways; **BORDER** affects only the verified Census county boundary. Imported RustGIS geometry, an explicitly activated OSM reference, and locally held Reclamation site markers are separate overlays and are not hidden by these Census-specific switches. A layer may be ON but unavailable when its source is not cached or validated.
+
+These controls **only affect rendering**. OFF never deletes county ZIPs, stops GPS, requests new network access, changes county GEOID, or changes source attribution. FIT frames only enabled, already-loaded county features and otherwise falls back to the enabled county border or available imported GIS. Switch settings remain in volatile page memory between MAP tab visits; restarting the browser restores all four to ON. No location or layer preference is written to a server.
+
+**Rendering performance:** On ingestion, Rust-Boy builds a conservative grid index from each validated Census feature's source envelope. The renderer selects nearby features rather than scanning an entire county for each pan/zoom. It limits index references and scans oversized features conservatively instead of dropping geometry. At overview zoom, minor roads and point landmarks are intentionally suppressed, while major roads and water remain. Full geometry is retained in memory/cache for zoom-in. When the view spans the antimeridian or most of the world, the renderer falls back to its full visibility checks, preserving wrapped geometry. Touch-motion redraws are coalesced to one animation frame; the center projection is reused for all vertices. Landmark labels take precedence over road names, with an explicit small-display collision budget.
+
+**DATA SOURCES** continues to report all loaded source counts irrespective of layer visibility, and additionally reports enabled categories and viewport candidate/drawn counts. These are inspection diagnostics, not timing benchmarks or guarantees of Raspberry Pi frame rate.
 
 ## What data is acquired?
 
@@ -39,4 +49,4 @@ The displayed **DATA SOURCES** view exposes dataset names, source origin, featur
 
 ### Verification
 
-`node tools/test_map_boot.cjs`, `node tools/test_county_sources.cjs`, `node tools/test_pointlm_ingestion.cjs`, `node tools/test_map_gps_permissions.cjs`, `node tools/test_county_map.cjs`, and Rust/Cargo CI check unattended boot behavior, allowlisted acquisition, clipping, no network fallback, source controls, and offline restoration. Real Census endpoint, Raspberry Pi GNSS and 480×320 physical touchscreen acceptance remain separate gates.
+`node tools/test_map_boot.cjs`, `node tools/test_map_layers.cjs`, `node tools/test_county_sources.cjs`, `node tools/test_pointlm_ingestion.cjs`, `node tools/test_map_gps_permissions.cjs`, `node tools/test_county_map.cjs`, and Rust/Cargo CI check unattended boot behavior, allowlisted acquisition, clipping, no network fallback, source controls, and offline restoration. Real Census endpoint, Raspberry Pi GNSS and 480×320 physical touchscreen acceptance remain separate gates.
