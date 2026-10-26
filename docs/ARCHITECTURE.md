@@ -8,6 +8,12 @@ Both browser shells mount `assets/network.js` with the catalog from `/api/state`
 
 Rust-Boy is the public name of the modular console. The repository, executable, crate names, and data paths retain their existing `pip_boy`/`pipboy` identifiers for compatibility; see [BRANDING.md](../BRANDING.md).
 
+## Network Engineer HTTP adapter boundary
+
+`crates/pipboy/src/dashboard/network_routes.rs` owns the existing explicit HTTP handlers `POST /api/net/scan` and `POST /api/net/unifi`. The single `dashboard.rs` loopback listener continues to enforce exact Host, same-origin POST and JSON body bounds **before** either handler. `pipboy-core::network_probe` still validates private CIDR and performs bounded, confirmed LAN scanning; `pipboy-core::unifi` retains read-only HTTPS/controller policy, and the OS subprocess credential-isolation layer remains unchanged. Role selection alone or opening NET ENGINEER does not initiate probes, fetch controller data or grant network permissions.
+
+The extraction changes source organization only. It does not create another listener, duplicate credentials, expand the allowed scan scope, or certify a real UniFi controller or Raspberry Pi hardware. Dashboard and existing network/UniFi smoke tests enforce the contract.
+
 ## Engineering navigation
 
 - [Organizational optimization research](ORGANIZATIONAL_OPTIMIZATION.md): evidence matrix, code concentration, component accountability and Mac-to-Pi sequencing.

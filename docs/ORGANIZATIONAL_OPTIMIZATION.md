@@ -63,8 +63,9 @@ This is the **target separation of responsibilities**. Today some core modules s
 
 - **O1, PR #42:** Machine-readable component index and Mac-first/Raspberry Pi-later ADR merged after five-job CI. This did not relocate code or operator data.
 - **O2, PR #43:** Task Control / explicit peer handoff HTTP handlers extracted to `dashboard/task_routes.rs`, with same-origin regression and five-job CI; merged as `60c066ac`.
-- **O3, current review:** Messenger/PACE HTTP read/send/retry handlers isolated to `dashboard/messenger_routes.rs` with unchanged loopback router, PACE rules and pinned SSH backend. CI and external hardware acceptance must be recorded independently before merging.
-- **Next:** Consider geospatial cache and bounded network probe HTTP adapters one subsystem at a time, after finalizing active GIS and RADIO feature branches. Do not infer better runtime performance from reduced file length alone.
+- **O3, PR #45:** Messenger/PACE HTTP read/send/retry handlers isolated to `dashboard/messenger_routes.rs`, preserving the parent same-origin gate, PACE rules and pinned SSH backend. Five-job CI passed on exact combined head `da650c89`; merged to `main` as `c96d3943`. No physical bearer acceptance is implied.
+- **O4, current review:** Isolate NET ENGINEER's operator-confirmed LAN scan and read-only UniFi HTTP handlers in `dashboard/network_routes.rs`, while keeping the single server, controller policy, credential isolation and CI field gates unchanged. Rust regression tests must prove the unauthorized/malformed paths cannot reach network I/O.
+- **Next:** Consider geospatial cache route separation after active Mac GIS ingestion settles. Do not infer better runtime performance from reduced file length alone.
 
 ## Non-goals and safety
 

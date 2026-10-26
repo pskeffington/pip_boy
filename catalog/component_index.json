@@ -104,6 +104,7 @@
         "crates/pipboy-core/src/network_suite.rs",
         "crates/pipboy-core/src/network_probe.rs",
         "crates/pipboy/src/endpoint_probe.rs",
+        "crates/pipboy/src/dashboard/network_routes.rs",
         "crates/pipboy/assets/network.js"
       ],
       "docs": [
