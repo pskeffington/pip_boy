@@ -64,9 +64,9 @@ pub fn run(args: Vec<String>) -> Result<(), Box<dyn Error>> {
                 println!("Publisher TCP reachable; stream health and playback NOT yet verified.");
                 for station in curated_stations() {
                     println!(
-                "{} | {} | {} | {}",
-                station.id, station.name, station.genre, station.playlist_url
-            );
+                        "{} | {} | {} | {}",
+                        station.id, station.name, station.genre, station.playlist_url
+                    );
                 }
             } else {
                 println!("No approved provider route detected. Offline radio mode.");
