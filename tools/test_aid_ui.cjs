@@ -63,10 +63,12 @@ const fireTimers=()=>{for(const [id,fn] of [...timers]){timers.delete(id);fn();}
   document.hidden=false;
   hold.dispatch("pointerdown");fireTimers();await flush();
   assert.equal(posts().length,1);assert.equal(posts()[0].url,"/api/aid/activate");
-  assert.equal(posts()[0].body.confirm,true);assert.equal(trigger.textContent,"SOS ACTIVE");
+  assert.equal(posts()[0].body.confirm,true);assert.equal(trigger.textContent,"SOS WAIT");
   assert.ok(document.body.textContent.includes("NOT CONFIRMED"),"No false delivery success");
   const cancel=find("HOLD 3s TO CANCEL");cancel.click();assert.equal(posts().length,1);
   find("CONFIRM").click();await flush();assert.equal(posts()[1].url,"/api/aid/cancel");
+  assert.equal(trigger.textContent,"CANCEL ?","Unconfirmed cancellation stays visible");
+  fixture.beacon_delivery="stored";
   // Reordered/repeated alarms cannot revive a cancelled incident in the banner.
   fixture.records=[{peer:"medic-other",direction:"incoming",packet:{kind:"alarm",incident:2}},
     {peer:"medic-other",direction:"incoming",packet:{kind:"cancel",incident:2}}];

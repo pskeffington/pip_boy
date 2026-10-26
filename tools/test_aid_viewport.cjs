@@ -19,7 +19,7 @@ window.fetch=async(url,options)=>{
 const probe=`
 (async()=>{
  const checks=[];
- const wait=()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
+ const wait=()=>new Promise(r=>setTimeout(r,60));
  const click=text=>{const b=[...document.querySelectorAll(".aid-dialog button")].find(b=>b.textContent===text);if(!b)throw Error("Missing "+text);b.click();};
  const check=name=>{
    const dialog=document.querySelector(".aid-dialog"),body=document.querySelector(".aid-body");
@@ -47,7 +47,7 @@ const probe=`
 })();`;
 function host(width,height){return `<!doctype html><style>body{margin:0}iframe{border:0}</style>
 <iframe width="${width}" height="${height}" src="/fixture"></iframe><pre id="viewport-report" hidden></pre>
-<script>window.addEventListener("message",e=>{if(e.origin===location.origin && e.data?.type==="dashboard-viewport")document.querySelector("pre").textContent=btoa(JSON.stringify(e.data.value));});</script>`;}
+<script>window.addEventListener("message",e=>{if(e.origin===location.origin && e.data?.type==="dashboard-viewport")document.querySelector("pre").textContent=btoa(String.fromCharCode(...new TextEncoder().encode(JSON.stringify(e.data.value))));});</script>`;}
 async function main(){
  const bin=findChrome();
  const server=http.createServer((req,res)=>{

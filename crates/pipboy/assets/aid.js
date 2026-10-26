@@ -42,8 +42,11 @@
       if(packet.kind==="alarm" && !cancelled.has(key))alarms.set(key,true);
       if(packet.kind==="cancel")alarms.delete(key);
     }
-    trigger.textContent=active?"SOS ACTIVE":state?.journal_available===false?"SOS ?":alarms.size?"ALERT "+alarms.size:"SOS";
-    trigger.dataset.active=String(Boolean(active || alarms.size));
+    const beacon=state?.state?.beacon;
+    const cancelPending=beacon && !beacon.active && beacon.peer && state.beacon_delivery!=="stored";
+    trigger.textContent=active?(state.human_acknowledged?"SOS ACK":state.beacon_delivery==="stored"?"SOS RCVD":"SOS WAIT"):
+      state?.journal_available===false?"SOS ?":cancelPending?"CANCEL ?":alarms.size?"ALERT "+alarms.size:"SOS";
+    trigger.dataset.active=String(Boolean(active || alarms.size || cancelPending));
     trigger.setAttribute("aria-label",active?"Emergency active; open beacon controls":alarms.size?"Incoming emergency alert; open aid inbox":"Open emergency beacon");
   }
   async function load(draw=false){
