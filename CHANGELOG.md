@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-10-26 — MAP layer controls and indexed handheld renderer
+
+- Add independent touch/keyboard ON/OFF switches for official Census roads, combined water, clipped landmarks and county border without modifying authoritative cached data or initiating location/provider calls.
+- Index each validated county source by geographic feature bounds for viewport-only drawing, with finite reference budgets and conservative full-scan fallback at the world seam or for extended/missing envelopes.
+- Preselect only MTFCC major roads at low zoom, suppress point landmarks until usable scale, coalesce touch redraws and reuse the per-frame Mercator camera transform. Keep all original source geometry intact.
+- Prioritize named landmarks ahead of street labels and apply small-screen collision avoidance; report loaded, candidate and drawn Census features in DATA SOURCES.
+- Gate a deterministic 20,000-feature test covering category filtering, offline source preservation, viewport candidate reductions, point-name visibility, no new network/GPS actions and session settings. Physical GNSS and Raspberry Pi FPS remain unverified.
+
+
 ## 2026-10-26 — Offline county-boundary and landmark ingestion
 
 - Add a fixed-host, GEOID-only TIGERweb boundary fetch, bound to an explicit COUNTY action and strict geographic/JSON limits; atomically cache and revalidate raw Census GeoJSON.
