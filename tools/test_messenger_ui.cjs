@@ -18,6 +18,10 @@ let state={schema_version:1,device_id:"head-engineer",peers:["scout-one"],
   messages:[]};
 const calls=[];
 let failSend=false;
+function pace(){return [{peer:"scout-one",lanes:[
+  {tier:"primary",selectable:true},{tier:"alternate",selectable:true},
+  {tier:"contingency",selectable:false},{tier:"emergency",selectable:true}]}]}
+state.pace=pace();
 async function fakeFetch(url,options={}){
   calls.push({url,options});
   if(url==="/api/messages")
@@ -28,10 +32,10 @@ async function fakeFetch(url,options={}){
     assert.equal(frame.alias,"scout-one");
     const id=state.messages.length+1;
     state.messages.push({id,peer:"scout-one",body:frame.body,
-      direction:"outgoing",delivery:failSend?"queued":"stored",
+      direction:"outgoing",delivery:failSend||frame.tier==="emergency"?"queued":"stored",
       created_at:10,remote_origin_id:null,remote_stored_id:failSend?null:id});
     return {ok:true,json:async()=>({
-      stored_on_receiver:!failSend,message:state.messages.at(-1),
+      stored_on_receiver:!failSend&&frame.tier!=="emergency",held_locally:frame.tier==="emergency",message:state.messages.at(-1),
       read_by_human:false
     })};
   }
@@ -39,8 +43,9 @@ async function fakeFetch(url,options={}){
     const frame=JSON.parse(options.body);
     const m=state.messages.find(x=>x.id===frame.id);
     assert.ok(m&&m.delivery==="queued");
-    m.delivery="stored";m.remote_stored_id=90;
-    return {ok:true,json:async()=>({stored_on_receiver:true,message:m})};
+    assert.ok(["primary","alternate","emergency"].includes(frame.tier));
+    m.delivery=frame.tier==="emergency"?"queued":"stored";m.remote_stored_id=frame.tier==="emergency"?null:90;
+    return {ok:true,json:async()=>({stored_on_receiver:frame.tier!=="emergency",held_locally:frame.tier==="emergency",message:m})};
   }
   throw new Error("Unexpected Messenger fetch: "+url);
 }
@@ -85,12 +90,28 @@ async function main(){
   assert.equal(state.messages[1].delivery,"stored");
   assert.equal(calls.filter(x=>x.url==="/api/messages/retry").length,1);
   assert.ok(!find(root,x=>x.tag==="button"&&x.textContent==="RETRY"));
+  const route=find(root,x=>x.attrs["aria-label"]==="PACE delivery route");
+  assert.ok(route);
+  assert.equal(route.children.find(x=>x.value==="contingency").disabled,true);
+  const beforeRoute=calls.length;
+  route.value="alternate";press(route,"change");await tick();
+  assert.equal(calls.length,beforeRoute,"route selection cannot contact a peer");
+  input.value="Alternate lane report";failSend=false;
+  press(form,"submit");await tick();
+  assert.equal(JSON.parse(calls.findLast(x=>x.url==="/api/messages/send").options.body).tier,"alternate");
+  route.value="emergency";press(route,"change");await tick();
+  input.value="Hold this report";press(form,"submit");await tick();
+  assert.equal(state.messages.at(-1).delivery,"queued");
+  assert.ok(walk(root).some(x=>x.textContent.includes("HELD LOCALLY / NOT DELIVERED")));
+  const heldRetry=find(root,x=>x.tag==="button"&&x.textContent==="RETRY");
+  press(heldRetry);await tick();
+  assert.equal(state.messages.at(-1).delivery,"queued","hold retry cannot claim remote delivery");
   const before=calls.length;
   app.destroy();
   assert.equal(root.children.length,0);
   assert.equal(calls.length,before,"unmount has no outbound request");
   const emptyRoot=new Element("section");
-  state={...state,device_id:null,peers:[],conversations:[],messages:[]};
+  state={...state,device_id:null,peers:[],conversations:[],messages:[],pace:[]};
   const empty=window.RustBoyMessenger.mount(emptyRoot,{compact:true});
   await tick();
   assert.ok(walk(emptyRoot).some(x=>x.textContent.includes("NO PAIRED DEVICES")));
@@ -98,9 +119,9 @@ async function main(){
   const locked=find(emptyRoot,x=>x.tag==="button"&&x.textContent==="SEND VIA SSH");
   assert.equal(locked.disabled,true);
   press(compose,"submit");await tick();
-  assert.equal(calls.filter(x=>x.url==="/api/messages/send").length,2);
+  assert.equal(calls.filter(x=>x.url==="/api/messages/send").length,4);
   empty.destroy();
-  state={...state,device_id:"scout-one",peers:[],conversations:["overseer-a"],
+  state={...state,device_id:"scout-one",peers:[],conversations:["overseer-a"],pace:[],
     messages:[{id:1,peer:"overseer-a",direction:"incoming",body:"Inbound from HQ",
       delivery:"received",created_at:100,remote_origin_id:1,remote_stored_id:null}]};
   const receiver=new Element("div");
@@ -110,6 +131,12 @@ async function main(){
   assert.ok(walk(receiver).some(x=>x.textContent.includes("RECEIVE ONLY")));
   assert.equal(find(receiver,x=>x.tag==="button"&&x.textContent==="SEND VIA SSH").disabled,true);
   receiverApp.destroy();
+  state={...state,device_id:"overseer-a",peers:["scout-one"],conversations:["scout-one"],pace:pace(),storage:"age_os_keyring",messages:[]};
+  const encryptedRoot=new Element("div");
+  const encryptedApp=window.RustBoyMessenger.mount(encryptedRoot);await tick();
+  assert.ok(walk(encryptedRoot).some(x=>x.textContent.includes("AGE HISTORY ENCRYPTION")));
+  assert.ok(!walk(encryptedRoot).some(x=>x.textContent.includes("LOCAL HISTORY PLAINTEXT")));
+  encryptedApp.destroy();
   console.log("Messenger UI: manual send, safe text, bounded input, queued retry, no auto transport PASS");
 }
 main().catch(e=>{console.error(e);process.exitCode=1;});

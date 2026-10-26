@@ -117,6 +117,7 @@ jobs:
           python3 tools/smoke_micro.py
           python3 tools/smoke_tasks.py
           python3 tools/smoke_peer.py
+          python3 tools/smoke_messenger_protocol.py
 
   native:
     name: Native ${{ matrix.os }}
@@ -163,6 +164,7 @@ jobs:
           ${{ matrix.python }} tools/smoke_micro.py
           ${{ matrix.python }} tools/smoke_tasks.py
           ${{ matrix.python }} tools/smoke_peer.py
+          ${{ matrix.python }} tools/smoke_messenger_protocol.py
       - name: Native macOS terminal PTY journey
         if: matrix.os == 'macos-latest'
         shell: bash

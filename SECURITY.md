@@ -60,6 +60,27 @@ Scout GIS is **offline and operator-invoked**: WGS84 waypoint/distance and bound
 
 TAK integration is not currently implemented. A future Raspberry Pi OpenTAKServer connector needs explicit destination approval, verified TLS identity/certificates, client/source authorization, message TTL and replay checks, rate limits, log redaction, and immediate disconnect on revocation. It must not accept or rebroadcast untrusted position/identity claims as authenticated personnel. ATAK-CIV is Android software, not a native Pi OS application. See [Scout GIS and TAK-on-Pi](docs/SCOUT_GIS_TAK.md).
 
+## PACE routing boundary
+
+The [PACE selector](docs/PACE_MESSAGING.md) makes only the operator-selected
+attempt. Saved RFC1918 Alternate routes retain pinned SSH identities. Route
+configuration and E holds open no connection; C cannot transmit. P/A share a
+failure domain, so this is not four independent operational communication paths.
+Pairing, strict receipts and explicit confirmation remain mandatory. The API/UI
+now distinguish enrolled age queue encryption from default plaintext history.
+
+## Messenger queue and fallback boundary
+
+[Build passes A–C](docs/MESSENGER_BUILD_PASSES.md) integrate a shared v1 envelope,
+typed durable receipts, explicit private-IP retry preserving the pinned SSH host
+identity, and opt-in age encryption for fresh message queues. Queue private keys
+use native credential storage, fail closed on unlock errors, and remain distinct
+from operator-managed SSH sender keys. Default/legacy message journals and other
+local stores remain plaintext. This is not E2EE, anti-rollback storage or an
+independently audited integration. No new live serial backend is enabled:
+Meshtastic decoding accepts recorded capture files/borrowed read streams only.
+[Native key lifecycle and physical tests](docs/MESSENGER_INTEROPERABILITY.md) are pending.
+
 ## Trust boundaries and planned hardware
 
 | Boundary | Current protection | Not yet available |

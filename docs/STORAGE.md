@@ -42,3 +42,13 @@ The implementation uses `fs2` 0.4.3 and `tempfile` 3.27.0; see [L35/L36](LITERAT
 ## Acceptance evidence
 
 Unit fixtures cover lock contention/release, interrupted staging, failed replacement, orphaned staging, invalid schemas/records, size/count/ID limits, private Unix modes, read-only access and search. `python3 tools/smoke_notes.py` invokes real CLI processes concurrently and verifies every successful note and unique sequential ID, plus search, export/import/re-import and error preservation. See [VALIDATION.md](VALIDATION.md) for executed platform results.
+
+## Messenger encrypted queue option
+
+Messenger defaults to a bounded plaintext journal. Before any message exists,
+`pipboy peer message-key-init --confirm` enrolls age encryption and an OS-backed
+queue identity. `messages.recipient` contains only the public recipient;
+`messages.json` then contains binary age ciphertext. Existing journals are never
+automatically migrated. Other stores remain plaintext. Losing the OS credential
+can make the queue unrecoverable; backup/rotation and independent review remain
+release gates. See [full contract and limitations](MESSENGER_BUILD_PASSES.md).

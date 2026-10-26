@@ -1,8 +1,10 @@
 //! Rust-Boy Messenger: bounded, local device-to-device message log.
 //!
 //! Transport authentication and encryption are delegated to pinned OpenSSH.
-//! This journal is plaintext at rest. Never label it end-to-end encrypted.
+//! Existing journals are plaintext; fresh journals can enroll age + OS key storage.
+//! Neither mode is an end-to-end encryption protocol.
 //! Peer identity must be enforced by the restricted SSH bridge, not labels alone.
+use crate::message_keys;
 use crate::tasks::valid_device_id;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
@@ -11,6 +13,7 @@ use std::fs::{self, File};
 use std::io::{self, Read, Write};
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
+use zeroize::Zeroizing;
 
 pub const SCHEMA: u32 = 1;
 const MAX_FILE: u64 = 256 * 1024;
@@ -65,6 +68,8 @@ pub struct Message {
     pub created_at: u64,
     pub delivery: Delivery,
     pub remote_origin_id: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub remote_sent_at: Option<u64>,
     pub remote_stored_id: Option<u64>,
 }
 
@@ -132,7 +137,7 @@ impl MessageBook {
     }
 
     fn read(input: impl Read) -> io::Result<Self> {
-        let mut bytes = Vec::new();
+        let mut bytes = Zeroizing::new(Vec::new());
         input.take(MAX_FILE + 1).read_to_end(&mut bytes)?;
         if bytes.len() as u64 > MAX_FILE {
             return Err(invalid("Messenger journal exceeds bound"));
@@ -168,13 +173,42 @@ impl RemoteMessage {
 
 pub struct MessageStore {
     path: PathBuf,
+    key: Option<age::x25519::Identity>,
 }
 
 impl MessageStore {
     pub fn new(root: PathBuf) -> Self {
         Self {
             path: root.join("messages.json"),
+            key: None,
         }
+    }
+
+    /// Explicit identity injection for a caller with a secure key provider.
+    pub fn with_key(root: PathBuf, identity: age::x25519::Identity) -> Self {
+        Self {
+            path: root.join("messages.json"),
+            key: Some(identity),
+        }
+    }
+
+    fn identity(&self) -> io::Result<Option<age::x25519::Identity>> {
+        match &self.key {
+            Some(key) => Ok(Some(key.clone())),
+            None => message_keys::unlock(self.directory()),
+        }
+    }
+
+    pub fn storage_mode(&self) -> io::Result<&'static str> {
+        Ok(if self.identity()?.is_some() {
+            "age_os_keyring"
+        } else {
+            "plaintext_local_only"
+        })
+    }
+
+    pub fn enroll_encryption(&self) -> io::Result<String> {
+        message_keys::enroll(self.directory())
     }
 
     pub fn from_environment() -> io::Result<Self> {
@@ -194,8 +228,23 @@ impl MessageStore {
     }
 
     pub fn load(&self) -> io::Result<MessageBook> {
+        let identity = self.identity()?;
         match File::open(&self.path) {
-            Ok(file) => MessageBook::read(file),
+            Ok(mut file) => {
+                if let Some(identity) = identity {
+                    let mut encrypted = Vec::new();
+                    (&mut file)
+                        .take(MAX_FILE + 4097)
+                        .read_to_end(&mut encrypted)?;
+                    if encrypted.len() as u64 > MAX_FILE + 4096 {
+                        return Err(invalid("Encrypted journal exceeds bound"));
+                    }
+                    let plaintext = message_keys::decrypt(&identity, &encrypted, MAX_FILE)?;
+                    MessageBook::read(plaintext.as_slice())
+                } else {
+                    MessageBook::read(file)
+                }
+            }
             Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(MessageBook::default()),
             Err(error) => Err(error),
         }
@@ -226,8 +275,12 @@ impl MessageStore {
 
     fn save(&self, book: &MessageBook) -> io::Result<()> {
         book.validate()?;
-        let bytes = serde_json::to_vec(book)?;
-        if bytes.len() as u64 > MAX_FILE {
+        let plaintext = Zeroizing::new(serde_json::to_vec(book)?);
+        let bytes = match self.identity()? {
+            Some(identity) => message_keys::encrypt(&identity, &plaintext)?,
+            None => plaintext.to_vec(),
+        };
+        if plaintext.len() as u64 > MAX_FILE {
             return Err(invalid("Messenger storage limit reached"));
         }
         let mut tmp = tempfile::Builder::new()
@@ -260,6 +313,7 @@ impl MessageStore {
             created_at: unix_time()?,
             delivery: Delivery::Queued,
             remote_origin_id: None,
+            remote_sent_at: None,
             remote_stored_id: None,
         };
         book.next_id += 1;
@@ -325,7 +379,11 @@ impl MessageStore {
                 && entry.peer == frame.from_device
                 && entry.remote_origin_id == Some(frame.origin_id)
         }) {
-            if existing.body == frame.body {
+            if existing.body == frame.body
+                && existing
+                    .remote_sent_at
+                    .is_none_or(|time| time == frame.sent_at)
+            {
                 return Ok((existing.clone(), false)); // idempotent retry
             }
             return Err(invalid("Conflicting retransmission of remote message"));
@@ -343,6 +401,7 @@ impl MessageStore {
             created_at: unix_time()?, // local arrival timestamp; sender time untrusted
             delivery: Delivery::Received,
             remote_origin_id: Some(frame.origin_id),
+            remote_sent_at: Some(frame.sent_at),
             remote_stored_id: None,
         };
         book.next_id += 1;
@@ -355,6 +414,43 @@ impl MessageStore {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn encrypted_restart_wrong_key_tampering_and_no_plaintext_artifacts() {
+        let dir = tempfile::tempdir().unwrap();
+        let key = age::x25519::Identity::generate();
+        let store = MessageStore::with_key(dir.path().into(), key.clone());
+        store.queue("scout-one", "secret rendezvous").unwrap();
+        let bytes = fs::read(&store.path).unwrap();
+        assert!(!String::from_utf8_lossy(&bytes).contains("secret rendezvous"));
+        let reopened = MessageStore::with_key(dir.path().into(), key);
+        assert_eq!(
+            reopened.load().unwrap().messages[0].body,
+            "secret rendezvous"
+        );
+        let wrong = MessageStore::with_key(dir.path().into(), age::x25519::Identity::generate());
+        assert!(wrong.load().is_err());
+        assert!(wrong.queue("scout-one", "cannot overwrite").is_err());
+        assert_eq!(fs::read(&store.path).unwrap(), bytes);
+        let mut corrupt = bytes;
+        let last = corrupt.len() - 1;
+        corrupt[last] ^= 1;
+        fs::write(&store.path, &corrupt).unwrap();
+        assert!(reopened.load().is_err());
+        assert!(MessageStore::new(dir.path().into()).load().is_err());
+        assert_eq!(fs::read(&store.path).unwrap(), corrupt);
+    }
+
+    #[test]
+    fn existing_plaintext_and_bad_marker_refuse_enrollment_or_downgrade() {
+        let dir = tempfile::tempdir().unwrap();
+        let store = MessageStore::new(dir.path().into());
+        store.queue("scout-one", "existing").unwrap();
+        assert!(store.enroll_encryption().is_err());
+        fs::write(dir.path().join("messages.recipient"), "invalid").unwrap();
+        assert!(store.load().is_err());
+        assert!(store.queue("scout-one", "no fallback").is_err());
+    }
 
     #[test]
     fn strictly_bounded_text_no_terminal_controls_or_spoofed_direction() {
@@ -397,6 +493,9 @@ mod tests {
         assert_eq!(received.delivery, Delivery::Received);
         assert_eq!(received.remote_origin_id, Some(15));
         assert!(!store.receive(&frame, "scout-one").unwrap().1);
+        let mut changed_time = frame.clone();
+        changed_time.sent_at += 1;
+        assert!(store.receive(&changed_time, "scout-one").is_err());
         let mut altered = frame;
         altered.body = "Changed after first delivery".into();
         assert!(store.receive(&altered, "scout-one").is_err());

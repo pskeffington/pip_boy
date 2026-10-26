@@ -1,6 +1,6 @@
 /* Rust-Boy dedicated message view. No cloud, polling, dynamic HTML, or
  * transport calls until SEND/RETRY. All content is rendered as text nodes.
- * Transport: explicit pinned OpenSSH. Local journal is NOT encrypted at rest.
+ * PACE routes are operator-selected; storage mode is verified by the local API.
  */
 (function () {
   "use strict";
@@ -34,7 +34,7 @@
   function mount(root, {compact=false}={}) {
     if (!root) return null;
     let closed = false, version = 0, busy = false, state = null;
-    let selected = "", page = 0, feedback = "", failure = false;
+    let selected = "", selectedTier = "primary", page = 0, feedback = "", failure = false;
     let controller = null;
     const pageSize = compact ? 3 : 7;
     const title = el("div","rb-msg-title","RB / MESSENGER");
@@ -52,7 +52,11 @@
     peerSelect.setAttribute("aria-label","Messenger destination device");
     peerLabel.append(peerSelect);
     const refresh = btn("REFRESH", () => { void load(); });
-    peerRow.append(peerLabel,refresh);
+    const routeLabel=el("label","rb-msg-label","PACE");
+    const routeSelect=el("select","rb-msg-select");
+    routeSelect.setAttribute("aria-label","PACE delivery route");
+    routeLabel.append(routeSelect);
+    peerRow.append(peerLabel,routeLabel,refresh);
 
     const thread = el("div","rb-msg-thread");
     thread.setAttribute("aria-label","Stored messages on this device");
@@ -75,6 +79,35 @@
     form.append(entryLabel,send);
     root.replaceChildren(title,transport,warning,status,peerRow,thread,pager,form);
 
+    function planForPeer() {
+      return state?.pace?.find(plan=>plan.peer===selected);
+    }
+    function selectedLane() {
+      const plan=planForPeer();
+      if(plan)return plan.lanes.find(lane=>lane.tier===selectedTier);
+      return {selectable:selectedTier==="primary" && state?.peers?.includes(selected)};
+    }
+    function canCompose() {
+      return Boolean(selected && state?.peers?.includes(selected) && selectedLane()?.selectable);
+    }
+    function drawRoutes() {
+      const plan=planForPeer();
+      const lanes=plan?.lanes || [{tier:"primary",selectable:state?.peers?.includes(selected)}];
+      if(!lanes.some(lane=>lane.tier===selectedTier && lane.selectable))selectedTier="primary";
+      routeSelect.replaceChildren();
+      const names={primary:"P · PAIRED SSH",alternate:"A · LOCAL IP",contingency:"C · RX ONLY",emergency:"E · LOCAL HOLD"};
+      for(const lane of lanes){
+        const option=el("option","",names[lane.tier] || "UNAVAILABLE");
+        option.value=lane.tier;option.disabled=!lane.selectable;routeSelect.append(option);
+      }
+      routeSelect.value=selectedTier;routeSelect.disabled=busy || !state?.peers?.includes(selected);
+      send.textContent=selectedTier==="emergency"?"QUEUE / HOLD":selectedTier==="alternate"?"SEND VIA LOCAL IP":"SEND VIA SSH";
+      send.disabled=busy || !canCompose();
+      transport.textContent=plan ? "P/A SHARE LAN · C RX ONLY · E LOCAL HOLD" : "PAIRED OPENSSH / MANUAL DELIVERY";
+      warning.textContent=state?.storage==="age_os_keyring" ?
+        "SSH IN TRANSIT · AGE HISTORY ENCRYPTION · NOT E2EE" :
+        "ENCRYPTED IN TRANSIT ONLY · LOCAL HISTORY PLAINTEXT · NOT E2EE";
+    }
     function notice(message, error=false) {
       feedback=message;failure=error;
       if(!closed)renderStatus();
@@ -123,19 +156,19 @@
         if (message.direction==="outgoing" && message.delivery==="queued") {
           const retry=btn("RETRY",async () => {
             if (busy || closed) return;
-            busy=true;send.disabled=true;retry.disabled=true;
-            notice("CONTACTING PAIRED DEVICE / EXPLICIT RETRY");
+            busy=true;send.disabled=true;retry.disabled=true;routeSelect.disabled=true;peerSelect.disabled=true;
+            notice(selectedTier==="emergency" ? "HOLDING LOCALLY / NO CONNECTION" : "CONTACTING PAIRED DEVICE / EXPLICIT RETRY");
             try{
-              const response=await request("/api/messages/retry",{id:message.id,confirm:true});
+              const response=await request("/api/messages/retry",{id:message.id,confirm:true,tier:selectedTier});
               if(closed)return;
               notice(response.stored_on_receiver ?
                 "MESSAGE STORED ON RECEIVER / NOT READ" :
-                "DELIVERY NOT CONFIRMED");
+                response.held_locally ? "HELD LOCALLY / NOT DELIVERED" : "DELIVERY NOT CONFIRMED");
               await load(true);
             }catch(error){
               if(!closed)notice("RETRY FAILED / LOCAL MESSAGE PRESERVED",true);
             }finally{
-              busy=false;if(!closed){send.disabled=!selected || !state?.peers?.includes(selected);retry.disabled=false;}
+              busy=false;if(!closed){drawRoutes();peerSelect.disabled=!state?.conversations?.length;retry.disabled=false;}
             }
           });
           retry.setAttribute("aria-label","Retry queued message "+message.id+
@@ -161,7 +194,7 @@
       }
       peerSelect.value=selected;
       peerSelect.disabled=!choices.length || busy;
-      send.disabled=!selected || !state.peers.includes(selected) || busy;
+      drawRoutes();
       renderStatus();
       drawMessages();
     }
@@ -178,7 +211,7 @@
         if(data.schema_version!==1 || !Array.isArray(data.messages) ||
            !Array.isArray(data.peers) || !Array.isArray(data.conversations) ||
            data.transport!=="pinned_openssh_explicit" ||
-           data.e2ee!==false || data.storage!=="plaintext_local_only"){
+           data.e2ee!==false || !["plaintext_local_only","age_os_keyring"].includes(data.storage)){
           throw new Error("Unrecognized Messenger security contract");
         }
         state=data;
@@ -190,28 +223,30 @@
     }
 
     peerSelect.addEventListener("change",()=>{
-      selected=peerSelect.value;page=0;drawMessages();
-      send.disabled=!selected || !state?.peers?.includes(selected) || busy;
+      selected=peerSelect.value;selectedTier="primary";page=0;drawRoutes();drawMessages();
+    });
+    routeSelect.addEventListener("change",()=>{
+      selectedTier=routeSelect.value;drawRoutes();
     });
     form.addEventListener("submit",async event=>{
       event.preventDefault();
-      if(closed || busy || !selected || !state?.peers?.includes(selected))return;
+      if(closed || busy || !canCompose())return;
       const body=input.value;
       const bytes=new TextEncoder().encode(body).length;
       if(!body.trim() || bytes>1024){
         notice("MESSAGE MUST BE 1–1024 UTF-8 BYTES",true);return;
       }
-      busy=true;send.disabled=true;refresh.disabled=true;peerSelect.disabled=true;
-      notice("CONNECTING TO PEER / NO READ RECEIPT");
+      busy=true;send.disabled=true;refresh.disabled=true;peerSelect.disabled=true;routeSelect.disabled=true;
+      notice(selectedTier==="emergency" ? "HOLDING LOCALLY / NO CONNECTION" : "CONNECTING TO PEER / NO READ RECEIPT");
       try{
-        const data=await request("/api/messages/send",{alias:selected,body,confirm:true});
+        const data=await request("/api/messages/send",{alias:selected,body,confirm:true,tier:selectedTier});
         if(closed)return;
         input.value="";
         page=0;
         notice(data.stored_on_receiver ?
           "STORED ON PEER / NOT MARKED READ" :
-          "QUEUED LOCALLY / PEER UNAVAILABLE · RETRY MANUALLY",
-          !data.stored_on_receiver);
+          data.held_locally ? "HELD LOCALLY / NOT DELIVERED" : "QUEUED LOCALLY / PEER UNAVAILABLE · RETRY MANUALLY",
+          !data.stored_on_receiver && !data.held_locally);
         await load(true);
       }catch(error){
         if(!closed)notice("NOT SENT / "+error.message,true);
@@ -219,7 +254,7 @@
         busy=false;
         if(!closed){
           refresh.disabled=false;peerSelect.disabled=!state?.conversations?.length;
-          send.disabled=!selected || !state?.peers?.includes(selected);
+          drawRoutes();
         }
       }
     });

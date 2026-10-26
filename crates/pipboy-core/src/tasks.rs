@@ -30,7 +30,7 @@ fn now() -> u64 {
 
 fn checked_text(value: &str, max: usize, required: bool) -> bool {
     value.len() <= max
-        && (required && !value.is_empty() || !required)
+        && (!required || !value.is_empty())
         && value.trim() == value
         && value.chars().all(|ch| !ch.is_control())
 }

@@ -45,7 +45,7 @@ No physical screen, Raspberry Pi graphics stack, battery sensor or refresh-rate 
 
 ## LINK Messenger
 
-Handheld LINK hosts a dedicated device-to-device message view for all non-Security-Chief profiles; Security Chief retains its four-camera fixture with a **MESSENGER / SSH** action. Peer selection, three-message paging, short UTF-8 text, explicit SEND/RETRY, and manual local REFRESH operate entirely through the loopback Rust API. The transport uses pinned OpenSSH and forced-command enrollment, not an Internet chat gateway. **Transport is encrypted, but the local journal is plaintext and the protocol is not E2EE.** No messages are sent or fetched from peers by entering LINK. See [Messenger security, pairing, and threat model](MESSENGER.md).
+Handheld LINK hosts a dedicated device-to-device message view for all non-Security-Chief profiles; Security Chief retains its four-camera fixture with a **MESSENGER / SSH** action. Peer selection, three-message paging, short UTF-8 text, explicit SEND/RETRY, and manual local REFRESH operate entirely through the loopback Rust API. The transport uses pinned OpenSSH and forced-command enrollment, not an Internet chat gateway. **Transport is encrypted; default journals are plaintext. Fresh journals may explicitly enroll age encryption with OS-backed keys. The protocol is not E2EE.** No messages are sent or fetched from peers by entering LINK. See [Messenger security, pairing, and threat model](MESSENGER.md).
 
 ## Direct device task delivery
 
@@ -94,3 +94,8 @@ The new smoke script starts an actual Rust loopback server with `--micro --port 
 ## Offline Boston base, RustGIS import and GPS map
 
 MAP mounts the shared [RustGIS-native map and GPS viewer](SCOUT_GPS_MAP.md): explicit browser GPS permission, native RustGIS JSON/map/mobile-package and GeoJSON imports, source manifest, follow, accuracy, and pan/zoom. With the built-in Boston base active, MAP opens without an outbound ping. Tapping **WEB ON** separately permits bounded Overpass area queries; saved-site views continue to block them. These are real-source city road records, not the official Fallout map. This is **community reference geography**, not a substitute for imported authoritative layers. It does not embed native RustGIS, supply remote raster tiles or open USB serial GNSS. [Boston data provenance](BOSTON_BASEMAP.md) · [Lore naming](LORE_NAMING.md).
+
+LINK now includes a compact [PACE route selector](PACE_MESSAGING.md) beside DEVICE.
+Primary/Alternate send only on explicit actions; Contingency is disabled and
+Emergency queues locally. Its banner states P/A share a LAN, C is receive-only
+and E holds locally. History encryption labels follow the actual queue mode.

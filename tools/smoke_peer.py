@@ -122,6 +122,13 @@ with tempfile.TemporaryDirectory() as temp:
         r'''
 import os, sys, subprocess
 args = sys.argv[1:]
+if os.environ.get("FAKE_RB_SSH_TRACE"):
+    with open(os.environ["FAKE_RB_SSH_TRACE"], "a", encoding="utf-8") as f:
+        f.write("contact\n")
+if any(x.startswith("Hostname=") for x in args):
+    assert "Hostname=192.168.1.20" in args
+    assert "HostKeyAlias=scout.local" in args
+
 for required in [
     "StrictHostKeyChecking=yes", "BatchMode=yes", "IdentitiesOnly=yes",
     "ForwardAgent=no", "ClearAllForwardings=yes",
@@ -150,6 +157,7 @@ sys.exit(result.returncode)
     )
     ssh.chmod(0o755)
     sender_env = dict(
+        FAKE_RB_SSH_TRACE=str(root / "contacts.txt"),
         FAKE_RB_BINARY=str(BIN),
         FAKE_RB_RECEIVER_HOME=str(scout),
         PATH=str(bin_dir) + os.pathsep + os.environ["PATH"]
@@ -226,6 +234,32 @@ sys.exit(result.returncode)
                })
         assert len(json.loads((scout / "messages.json").read_text())["messages"]) == 1
 
+        # PACE: route configuration and local holds must not contact a peer.
+        trace = root / "contacts.txt"
+        contacts = trace.read_text()
+        invoke(manager, "peer", "pace-local", "scout-one", "192.168.1.20", "--confirm")
+        plan = json.loads(invoke(manager, "peer", "pace-show", "scout-one", "--json").stdout)
+        assert plan["independent_bearers"] is False
+        assert plan["lanes"][1]["can_transmit"] is True
+        assert trace.read_text() == contacts
+        code, held = api(port, "POST", "/api/messages/send", {
+            "alias": "scout-one", "body": "Hold for next contact", "tier": "emergency", "confirm": True
+        })
+        assert code == 200 and held["held_locally"] is True and held["stored_on_receiver"] is False
+        held_id = held["message"]["id"]
+        assert held["message"]["delivery"] == "queued" and trace.read_text() == contacts
+        code, denied = api(port, "POST", "/api/messages/retry", {"id": held_id, "tier": "contingency", "confirm": True})
+        assert code == 409 and trace.read_text() == contacts
+        code, denied = api(port, "POST", "/api/messages/send", {
+            "alias": "scout-one", "body": "No radio transmitter", "tier": "contingency", "confirm": True
+        })
+        assert code == 409 and trace.read_text() == contacts
+        code, stored = api(port, "POST", "/api/messages/retry", {"id": held_id, "tier": "alternate", "confirm": True})
+        assert code == 200 and stored["stored_on_receiver"] is True
+        assert stored["message"]["id"] == held_id
+        assert len(json.loads((scout / "messages.json").read_text())["messages"]) == 2
+        assert len(trace.read_text().splitlines()) == len(contacts.splitlines()) + 1
+
         code, created = api(port, "POST", "/api/tasks/create", {
             "title": "Survey west intake", "details": "Return site condition and water sample notes",
             "assignee": "Scout", "role": "reclamation-scout",
@@ -285,7 +319,7 @@ sys.exit(result.returncode)
         invoke(scout, "workbench", "use", "reclamation-scout", "--replace")
         remote_service, remote_port = launch(scout)
         code, receiver_chat = api(remote_port, "GET", "/api/messages")
-        assert code == 200 and len(receiver_chat["messages"]) == 1
+        assert code == 200 and len(receiver_chat["messages"]) == 2
         assert receiver_chat["messages"][0]["direction"] == "incoming"
         assert receiver_chat["messages"][0]["peer"] == "overseer-a"
         assert receiver_chat["conversations"] == ["overseer-a"]

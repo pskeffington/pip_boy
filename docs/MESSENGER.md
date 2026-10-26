@@ -1,12 +1,28 @@
 # Rust-Boy Messenger | LINK
 
+## PACE route selection
+
+[PACE setup and delivery contract](PACE_MESSAGING.md) describes saved Alternate
+IPs, the LINK route selector, blocked Contingency transmission and local Emergency
+hold. Default Primary behavior remains compatible. Route changes do not connect;
+local holds do not count as remote delivery. The UI reports actual history
+storage mode, including explicitly enrolled age encryption.
+
+## Build passes A–C
+
+The existing SSH path now uses the [canonical envelope/transport contract](MESSENGER_BUILD_PASSES.md),
+with deterministic fault simulations, opt-in age encrypted fresh journals,
+OS-backed queue keys, explicit pinned local-IP retry and passive recorded-USB
+capture inspection. **Physical USB and independent security/hardware acceptance
+remain pending.** See [field acceptance](MESSENGER_INTEROPERABILITY.md).
+
 ## Released secure-transport scope
 
 Messenger v1 provides peer-to-peer text conversations in handheld LINK and the desktop dashboard, using the **existing pinned OpenSSH device-to-device channel**. There is no cloud chat provider, direct Internet chat service, automatic background connection, discovery, inbound web listener, or remote message poll. A paired peer must be chosen and an operator must explicitly press SEND or RETRY.
 
 **Security boundary:** pinned SSH host-key verification, dedicated sender SSH identity, strict OpenSSH command flags, and a receiver-side forced command tied to the exact sender device label. The receiver validates both source and destination device IDs. Receive-only devices can view inbound conversations but cannot SEND until reverse SSH pairing is complete. It persists the message before issuing a typed, sender/receiver-bound receipt. Replays of the same original ID and content are idempotent; changed-content replay is rejected. Successful receipt means STORED ON REMOTE DEVICE; it does **not** mean read by a human.
 
-**This is NOT end-to-end encrypted and NOT encrypted at rest.** SSH encrypts message traffic on the authenticated device-to-device connection. The local message journal is plaintext, with restricted Unix file/directory permissions and platform-dependent Windows ACL inheritance. The local loopback UI does not independently authenticate OS users; job templates are not authorization roles. A compromised account, receiver, or privileged local process can read chat history. Do not send secrets, health records, sensitive location information or classified material with this version.
+**This is NOT end-to-end encrypted. Default/legacy journals are NOT encrypted at rest.** SSH encrypts message traffic on the authenticated device-to-device connection. Unless a fresh journal has explicitly enrolled queue encryption, the local message journal is plaintext, with restricted Unix file/directory permissions and platform-dependent Windows ACL inheritance. The local loopback UI does not independently authenticate OS users; job templates are not authorization roles. A compromised account, receiver, or privileged local process can read chat history. Do not send secrets, health records, sensitive location information or classified material with this version.
 
 ## Enrollment: Mac Overseer → Raspberry Pi Scout
 
@@ -52,7 +68,7 @@ Storage is PIPBOY_HOME/messages.json (default ~/.pipboy/messages.json), with ind
 
 ## Architecture and follow-on security gates
 
-The existing forced bridge now permits three precisely matched operations: task receive, sender-specific task receipts and message receive. The messenger is **not** a custom encryption protocol; OpenSSH provides authenticated transport. Trusted sender labels require matching key-level forced-command restrictions for protection against impersonation. The local dashboard uses its existing exact loopback Host / Origin check on writes and strict JSON limits, but **does not offer separate user login or an encrypted message database**.
+The existing forced bridge now permits three precisely matched operations: task receive, sender-specific task receipts and message receive. The messenger is **not** a custom encryption protocol; OpenSSH provides authenticated transport. Trusted sender labels require matching key-level forced-command restrictions for protection against impersonation. The local dashboard uses its existing exact loopback Host / Origin check on writes and strict JSON limits, but **does not offer separate user login or a separately authenticated UI session**.
 
 Before use for sensitive content: design and independently evaluate an E2EE protocol with established libraries, secure OS-managed device keys, identity fingerprints, rotation/revocation, authenticated local sessions, retention/deletion, compromised-endpoint response and human read receipt semantics. OWASP recommends established authenticated encryption and secure key management rather than homegrown ciphers: https://cheatsheetseries.owasp.org/cheatsheets/Cryptographic_Storage_Cheat_Sheet.html .
 

@@ -5,6 +5,7 @@
 //! by browsing the dashboard or selecting a role.
 use crate::county_cache::{self, CountyCache};
 use crate::peer;
+use pipboy_core::message_pace::{PaceStore, Tier};
 use pipboy_core::messenger::{valid_text, Direction, MessageStore};
 use pipboy_core::network_health;
 use pipboy_core::network_probe;
@@ -857,6 +858,26 @@ fn messenger_peers(store: &WorkbenchStore) -> PeerStore {
     PeerStore::new(root.to_path_buf())
 }
 
+fn messenger_pace(store: &WorkbenchStore) -> PaceStore {
+    PaceStore::new(
+        store
+            .path()
+            .parent()
+            .unwrap_or_else(|| std::path::Path::new("."))
+            .into(),
+    )
+}
+
+fn message_tier(input: &Value) -> Result<Tier, Response> {
+    match input.get("tier") {
+        None => Ok(Tier::Primary),
+        Some(Value::String(value)) => {
+            Tier::parse(value).map_err(|_| Response::error(422, "Unknown PACE tier"))
+        }
+        _ => Err(Response::error(422, "PACE tier must be a string")),
+    }
+}
+
 fn messages_read(store: &WorkbenchStore) -> Result<Response, Response> {
     let peers = messenger_peers(store)
         .load()
@@ -872,6 +893,15 @@ fn messages_read(store: &WorkbenchStore) -> Result<Response, Response> {
         }
     }
     conversations.sort();
+    let pace = messenger_pace(store);
+    let plans = conversations
+        .iter()
+        .map(|alias| pace.view(alias, aliases.contains(&alias.as_str())))
+        .collect::<std::io::Result<Vec<_>>>()
+        .map_err(|_| Response::error(409, "PACE configuration unavailable; original preserved"))?;
+    let storage = messenger_store(store)
+        .storage_mode()
+        .map_err(|_| Response::error(409, "Messenger encryption key unavailable"))?;
     Ok(Response::json(
         200,
         &json!({
@@ -882,7 +912,8 @@ fn messages_read(store: &WorkbenchStore) -> Result<Response, Response> {
             "conversations": conversations,
             "messages": book.messages,
             "transport": "pinned_openssh_explicit",
-            "storage": "plaintext_local_only",
+            "storage": storage,
+            "pace": plans,
             "e2ee": false,
             "automatic_connections": false
         }),
@@ -890,7 +921,7 @@ fn messages_read(store: &WorkbenchStore) -> Result<Response, Response> {
 }
 
 fn messages_send(req: &Request, store: &WorkbenchStore) -> Result<Response, Response> {
-    let input = parse_json_body(req, &["alias", "body", "confirm"])?;
+    let input = parse_json_body(req, &["alias", "body", "confirm", "tier"])?;
     if input.get("confirm").and_then(Value::as_bool) != Some(true) {
         return Err(Response::error(
             422,
@@ -907,21 +938,28 @@ fn messages_send(req: &Request, store: &WorkbenchStore) -> Result<Response, Resp
     }
     let journal = messenger_store(store);
     let peers = messenger_peers(store);
-    let (message, stored) = peer::queue_message_from_store(&journal, &peers, alias, body)
-        .map_err(|_| Response::error(409, "Messenger device not paired or journal unavailable"))?;
+    let tier = message_tier(&input)?;
+    let pace = messenger_pace(store);
+    let (message, stored) =
+        peer::queue_message_pace_from_store(&journal, &peers, Some(&pace), alias, body, tier)
+            .map_err(|_| {
+                Response::error(409, "Messenger device not paired or journal unavailable")
+            })?;
     Ok(Response::json(
         200,
         &json!({
             "message": message,
             "stored_on_receiver": stored,
-            "transport": "pinned_openssh_explicit",
+            "held_locally": tier == Tier::Emergency,
+            "pace_tier": tier,
+            "transport": if tier == Tier::Emergency { "local_hold" } else { "pinned_openssh_explicit" },
             "read_by_human": false
         }),
     ))
 }
 
 fn messages_retry(req: &Request, store: &WorkbenchStore) -> Result<Response, Response> {
-    let input = parse_json_body(req, &["id", "confirm"])?;
+    let input = parse_json_body(req, &["id", "confirm", "tier"])?;
     if input.get("confirm").and_then(Value::as_bool) != Some(true) {
         return Err(Response::error(
             422,
@@ -938,12 +976,22 @@ fn messages_retry(req: &Request, store: &WorkbenchStore) -> Result<Response, Res
         .find(|message| message.id == id && message.direction == Direction::Outgoing)
         .ok_or_else(|| Response::error(404, "Outgoing message not found"))?;
     let peers = messenger_peers(store);
-    let message = peer::send_message_from_store(&journal, &peers, id, &entry.peer)
-        .map_err(|_| Response::error(409, "Messenger retry failed; queued message preserved"))?;
+    let tier = message_tier(&input)?;
+    let message = peer::send_message_pace_from_store(
+        &journal,
+        &peers,
+        &messenger_pace(store),
+        id,
+        &entry.peer,
+        tier,
+    )
+    .map_err(|_| Response::error(409, "Messenger retry failed; queued message preserved"))?;
     Ok(Response::json(
         200,
         &json!({
-            "message": message, "stored_on_receiver": true, "read_by_human": false
+            "stored_on_receiver": message.delivery == pipboy_core::messenger::Delivery::Stored,
+            "held_locally": tier == Tier::Emergency, "pace_tier": tier,
+            "message": message, "read_by_human": false
         }),
     ))
 }

@@ -15,6 +15,6 @@ mod tests {
     fn canonical_product_name_and_stable_command() {
         assert_eq!(PRODUCT_NAME, "Rust-Boy");
         assert_eq!(CLI_COMMAND, "pipboy");
-        assert!(!PRODUCT_DESCRIPTOR.is_empty());
+        assert_eq!(PRODUCT_DESCRIPTOR, "Offline-first field systems console");
     }
 }

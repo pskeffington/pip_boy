@@ -108,7 +108,7 @@ Switch profiles through the UI or `pipboy workbench use head-engineer --replace`
 
 ## Maps, tasks and diagnostics
 
-**Messenger / LINK:** paired-device text chat with strict OpenSSH host authentication, explicit sending and durable receipts; queued retry when offline. Messenger is encrypted **in transit only**, not E2EE or encrypted on disk. [Setup and limitations](docs/MESSENGER.md).
+**Messenger / LINK:** [PACE routing](docs/PACE_MESSAGING.md) adds a manual P/A/C/E selector, saved private-IP alternate and local emergency hold. P/A share the IP network; C cannot send and E does not deliver.  paired-device text chat with strict OpenSSH host authentication, explicit sending and durable receipts; queued retry when offline. Default journals remain plaintext; fresh journals can opt into **age encryption at rest with an OS-stored queue key**. This is not E2EE. Explicit local-IP retry and passive recorded-USB inspection are available; live USB and physical interoperability remain pending. [Build passes A–C](docs/MESSENGER_BUILD_PASSES.md). [Setup and limitations](docs/MESSENGER.md).
 
 **Reclamation:** load Reclamation Scout and select **SITES** on micro. Add site observations with manual WGS84 coordinates, condition, priority, notes and position uncertainty; update status and export RFC 7946 GeoJSON. Records persist at `PIPBOY_HOME/reclamation.json` (default `~/.pipboy/reclamation.json`). **MAP → SITES** loads saved markers explicitly; selecting **MAP** on a site opens its location on the grid. WEB is blocked while saved sites are displayed, so site coordinates are not sent to Overpass. No background GNSS or uploads. [Field kit guide](docs/RECLAMATION.md).
 
