@@ -3,8 +3,7 @@
 
 use pipboy_core::radio_directory::station_by_id;
 use pipboy_core::radio_stream::{
-    icy_interval, parse_m3u, ApprovedEndpoint, IcyAudioReader, MAX_PLAYLIST_BYTES,
-    MAX_REQUEST_HOPS,
+    icy_interval, parse_m3u, ApprovedEndpoint, IcyAudioReader, MAX_PLAYLIST_BYTES, MAX_REQUEST_HOPS,
 };
 use reqwest::header::{CONTENT_TYPE, LOCATION};
 use reqwest::redirect::Policy;
@@ -51,7 +50,8 @@ impl Read for ChunkReader {
             if self.position < self.buffered.len() {
                 let available = self.buffered.len() - self.position;
                 let copied = available.min(out.len());
-                out[..copied].copy_from_slice(&self.buffered[self.position..self.position + copied]);
+                out[..copied]
+                    .copy_from_slice(&self.buffered[self.position..self.position + copied]);
                 self.position += copied;
                 return Ok(copied);
             }
@@ -119,12 +119,7 @@ pub(crate) fn open_station(
                 .build()
                 .map_err(|e| format!("Radio network runtime unavailable: {e}"))
                 .and_then(|runtime| {
-                    runtime.block_on(pump_station(
-                        &id,
-                        &worker_cancel,
-                        &startup_tx,
-                        &audio_tx,
-                    ))
+                    runtime.block_on(pump_station(&id, &worker_cancel, &startup_tx, &audio_tx))
                 });
             if let Err(message) = result {
                 if !worker_cancel.load(Ordering::Acquire) {
@@ -199,10 +194,7 @@ async fn pump_station(
         }
         let mut response = timeout(
             CONNECT_DEADLINE,
-            client
-                .get(next.url())
-                .header("Icy-MetaData", "1")
-                .send(),
+            client.get(next.url()).header("Icy-MetaData", "1").send(),
         )
         .await
         .map_err(|_| "Radio connect/header timeout".to_owned())?
