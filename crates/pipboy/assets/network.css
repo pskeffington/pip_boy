@@ -37,3 +37,50 @@
 .net-compact .net-form { gap:5px; }
 .net-compact .net-result-row { padding:3px 0; }
 @media (max-width:340px) { .net-menu { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+
+/* Handheld Network Engineer: fill the available panel with a readable tool deck. */
+.net-launch-head { display:flex; align-items:center; justify-content:space-between; gap:8px; min-width:0; }
+.net-count { color:#9fc796; font-size:10px; white-space:nowrap; }
+.net-status-strip { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); border:1px solid #355d3a; background:#0b2111; }
+.net-status-cell { min-width:0; display:flex; flex-direction:column; justify-content:center; gap:4px; padding:8px 10px; border-right:1px solid #355d3a; }
+.net-status-cell:last-child { border-right:0; }
+.net-status-label { color:#a2c698; font-size:9px; letter-spacing:.04em; }
+.net-status-value { font-size:12px; color:#c1f4a8; overflow-wrap:anywhere; }
+.net-landing { display:flex; flex-direction:column; gap:10px; min-width:0; }
+.net-landing .net-menu { grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
+.net-landing .net-tile { text-align:left; align-items:flex-start; min-height:82px; justify-content:center; padding:10px 12px; gap:5px; border-color:#3e7448; }
+.net-landing .net-tile-title { font-size:13px; }
+.net-landing .net-tile-detail { font-size:10px; color:#c4e2b2; }
+.net-landing .net-tile-mode { font-size:9px; color:#9dbd8f; }
+.net-launch-footer { display:flex; align-items:center; justify-content:space-between; gap:12px; min-height:32px; }
+.net-page-hint { font-size:10px; color:#9fc796; }
+.net-launch-footer .net-pager { flex:1; max-width:260px; }
+.net-compact .net-landing { gap:6px; }
+.net-compact .net-launch-head .net-caption { font-size:10px; }
+.net-compact .net-count { font-size:9px; }
+.net-compact .net-status-cell { padding:5px 7px; gap:2px; }
+.net-compact .net-status-label { font-size:8px; }
+.net-compact .net-status-value { font-size:10px; }
+.net-compact .net-landing .net-menu { grid-template-columns:repeat(2,minmax(0,1fr)); gap:5px; }
+.net-compact .net-landing .net-tile { min-height:61px; text-align:left; align-items:flex-start; gap:3px; padding:6px 9px; }
+.net-compact .net-landing .net-tile-title { font-size:11px; }
+.net-compact .net-landing .net-tile-detail { font-size:9px; }
+.net-compact .net-landing .net-tile-mode { font-size:8px; }
+.net-compact .net-launch-footer { gap:6px; min-height:25px; }
+.net-compact .net-page-hint { font-size:9px; }
+.net-compact .net-launch-footer .net-pager { max-width:200px; }
+@media (max-width:440px) {
+  .net-landing .net-tile { min-height:62px; }
+  .net-compact .net-landing .net-tile { min-height:57px; }
+  .net-compact .net-tile-mode { display:none; }
+  .net-compact .net-status-strip { grid-template-columns:repeat(3,minmax(0,1fr)); }
+  .net-compact .net-status-value { font-size:9px; }
+}
+@media (max-height:360px) {
+  .net-compact .net-landing { gap:4px; }
+  .net-compact .net-status-cell { padding:3px 6px; }
+  .net-compact .net-landing .net-tile { min-height:47px; padding:4px 8px; gap:1px; }
+  .net-compact .net-landing .net-tile-detail { font-size:8px; }
+  .net-compact .net-page-hint { display:none; }
+  .net-compact .net-launch-footer .net-pager { max-width:none; width:100%; }
+}
