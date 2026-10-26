@@ -211,7 +211,7 @@ pub fn open_station<C: RadioHttp>(
     let mut playlist_seen = false;
 
     for _ in 0..MAX_REQUEST_HOPS {
-        let mut response = client.get(&next)?;
+        let response = client.get(&next)?;
         if matches!(response.status, 301 | 302 | 303 | 307 | 308) {
             let location = response
                 .redirect_location
