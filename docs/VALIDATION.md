@@ -1,5 +1,9 @@
 # Rust-Boy | Validation evidence
 
+## Native Mac MAP operator acceptance — pending local run (2026-10-26)
+
+`scripts/test-map-macos.command` provides a native macOS Rust build, isolated loopback HTTP smoke, offline GIS parser/permission tests, optional real Chrome emulation and a persistent test-home launch. [Mac MAP acceptance matrix](MAC_MAP_TESTING.md) defines cold startup, live Census GEOID resolution, layer toggles, full offline restart, GPS permission behavior and draw/source timing measurements. The GitHub macOS runner may execute the automated portion after CI passes; **no user-Mac field results are recorded yet**. Do not equate CI with a passed GPS, Safari, or physical touch session.
+
 ## PACE routing local validation — 2026-10-25
 
 Exact Rust 1.90.0 passes 239 workspace tests (52 CLI/dashboard, 175 core,
