@@ -16,22 +16,6 @@ pub struct NativeRadioHttp {
 }
 
 impl NativeRadioHttp {
-    /// Continuous audio stream: a per-read inactivity limit, no total lifespan
-    /// deadline, and explicit end-user start/stop in the receiver worker.
-    pub fn for_playback() -> Result<Self, StreamError> {
-        let client = Client::builder()
-            .https_only(true)
-            .redirect(Policy::none())
-            .no_proxy()
-            .connect_timeout(Duration::from_secs(5))
-            .read_timeout(Duration::from_secs(3))
-            .timeout(None)
-            .user_agent("Rust-Boy-RADIO/0.1 (native receiver)")
-            .build()
-            .map_err(|_| StreamError::TransportUnavailable)?;
-        Ok(Self { client })
-    }
-
     pub fn for_probe() -> Result<Self, StreamError> {
         let client = Client::builder()
             .https_only(true)
