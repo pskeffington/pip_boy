@@ -62,6 +62,8 @@ The separate `rust-boy-broker` prototype denies every physical-device request. S
 
 Load **Head Engineer → NET ENGINEER** on desktop or micro. Both views use the same Rust operation catalog and shared tool component. The handheld separates tool selection, inputs, authorization and results; large inventories have pages.
 
+**Handheld controls:** Network Engineer uses four tool tiles per page. Touch PREV/NEXT or use physical D-pad left/right (also PageUp/PageDown) to turn pages; up/down focuses controls in reading order. The browser's normal Enter/Space activates a focused control. Escape/Back returns to the prior screen. The focus ring remains visible without hover. Left/right arrow keys preserve caret editing in one-line inputs; up/down moves between fields and actions, while multi-line inputs and native selects keep their own arrow behavior. Opening a page or moving focus never starts a scan; active operations still require separate authorization. This is keyboard-emulated hardware support, not physical Raspberry Pi button acceptance.
+
 | Tools | Behavior |
 | --- | --- |
 | SCAN LAN | Explicit RFC1918 IPv4 /24–/32 sweep, at most 254 targets; ICMP/TCP evidence and separate neighbor-cache sightings |

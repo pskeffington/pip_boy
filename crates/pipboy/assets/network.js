@@ -35,6 +35,7 @@ window.RustBoyNetwork = (() => {
     let status = null;
     let screen = "menu";
     let activePager = null;
+    let menuButtons = [];
     const candidates = Array.isArray(operations) ? operations : [];
     const toolsPerPage = compact ? 4 : 6;
 
@@ -84,16 +85,53 @@ window.RustBoyNetwork = (() => {
       activePager = go;
     }
 
+    // Hardware D-pad navigation uses native focus and browser button activation.
+    // Arrow Up/Down moves focus; Left/Right and PageUp/PageDown turn pages.
+    // Enter/Space still activate the focused button or checkbox normally.
+    function focusWithPad(step) {
+      const controls = screen === "menu" ? menuButtons : Array.from(
+        root.querySelectorAll?.("button,input,select,textarea,summary") || []
+      ).filter((item) => !item.disabled);
+      if (!controls.length) return false;
+      const current = controls.indexOf(document.activeElement);
+      const next = current === -1 ? (step > 0 ? 0 : controls.length - 1)
+        : Math.max(0, Math.min(controls.length - 1, current + step));
+      if (current === next) return false;
+      controls[next].focus?.({ preventScroll: true });
+      return true;
+    }
+
     function onPageKey(event) {
       if (destroyed || !compact || document.hidden || root.isConnected === false ||
-          (screen !== "menu" && screen !== "result") ||
           document.querySelector?.("dialog[open]") ||
           event.altKey || event.ctrlKey || event.metaKey || event.repeat) return;
       const target = event.target;
-      if (target?.isContentEditable ||
-          ["INPUT", "SELECT", "TEXTAREA"].includes(String(target?.tagName || "").toUpperCase())) return;
-      const step = event.key === "ArrowLeft" ? -1 : event.key === "ArrowRight" ? 1 : 0;
-      if (step && activePager?.(step)) event.preventDefault();
+      if (target && root.contains && !root.contains(target) &&
+          !target.contains?.(root) &&
+          target !== document.body && target !== document.documentElement) return;
+      if (target?.isContentEditable) return;
+      const tag = String(target?.tagName || "").toUpperCase();
+      // On one-line inputs, Up/Down advances hardware focus between fields;
+      // Left/Right still edits the caret. Native selects/textareas keep their arrows.
+      if (["TEXTAREA", "SELECT"].includes(tag) ||
+          (tag === "INPUT" && target.type !== "checkbox" &&
+           event.key !== "ArrowUp" && event.key !== "ArrowDown")) return;
+      if (event.key === "ArrowUp" || event.key === "ArrowDown") {
+        const moved = focusWithPad(event.key === "ArrowUp" ? -1 : 1);
+        // Avoid accidental document scrolling at the ends of the tool deck.
+        if (moved || screen === "menu") event.preventDefault();
+        return;
+      }
+      if (screen !== "menu" && screen !== "result") return;
+      const step = ["ArrowLeft", "PageUp"].includes(event.key) ? -1
+        : ["ArrowRight", "PageDown"].includes(event.key) ? 1 : 0;
+      if (!step || !activePager) return;
+      const moved = activePager(step);
+      // After hardware page-turning, land on a tool instead of a now-replaced arrow.
+      if (moved && screen === "menu") menuButtons[0]?.focus?.({ preventScroll: true });
+      // On a tool-deck boundary the key is still handled, not a scroll request.
+      // Result pages permit native scrolling at the boundary for longer detail output.
+      if (moved || screen === "menu") event.preventDefault();
     }
 
     const toolDescription = Object.freeze({
@@ -138,14 +176,16 @@ window.RustBoyNetwork = (() => {
       screen = "menu";
       stop();
       activePager = null;
+      menuButtons = [];
       root.replaceChildren();
       const total = Math.max(1, Math.ceil(candidates.length / toolsPerPage));
       menuPage = Math.max(0, Math.min(menuPage, total - 1));
       const landing = node("div", "net-landing");
       const heading = node("div", "net-launch-head");
       heading.append(
-        node("strong", "net-caption", "NETWORK ENGINEER / SELECT TOOL"),
-        node("span", "net-count", candidates.length + " TOOLS / " + total + " PAGES")
+        node("strong", "net-caption", compact ? "SELECT TOOL" : "NETWORK ENGINEER / SELECT TOOL"),
+        node("span", "net-count", compact ? "UP/DOWN SELECT / L/R PAGE" :
+          candidates.length + " TOOLS / " + total + " PAGES")
       );
       landing.append(heading);
 
@@ -177,6 +217,7 @@ window.RustBoyNetwork = (() => {
           node("small", "net-tile-mode", op.active ? "AUTHORIZATION REQUIRED" : "OFFLINE CALCULATION")
         );
         grid.append(item);
+        menuButtons.push(item);
       }
       if (!candidates.length) grid.append(node("p", "", "Tool catalog unavailable. Reload the dashboard."));
       landing.append(grid);

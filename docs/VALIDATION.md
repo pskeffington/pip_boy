@@ -35,6 +35,12 @@ was tested here. [Build contract](MESSENGER_BUILD_PASSES.md) and
 from remaining field/review gates. Two pre-existing strict-Clippy issues were
 also corrected: a redundant required-text boolean and a constant-emptiness test.
 
+## Network Engineer handheld controls — 2026-10-26
+
+[PR #32](https://github.com/pskeffington/pip_boy/pull/32) merged the four-tool-per-page handheld selector, status strip, labeled PREV/NEXT pager and the first physical-key pager mapping to `main` at `6ece898`. Its exact PR head `e88171d7a616e63dc6d68e67fa0dfe36656d2160` passed [quality run 40268875632](https://github.com/pskeffington/pip_boy/actions/runs/40268875632), with five jobs successful (stable Rust, exact Rust 1.90.0, native macOS, native Windows and source/manifest validation).
+
+The follow-up extends D-pad Up/Down focus traversal, PageUp/PageDown page turns and high-contrast focus/press cues. Dependency-free browser fixture journeys cover tool-page boundaries, focus, no requests while browsing, text input preservation, consent checkbox traversal and safe cancellation. Its exact-head CI must be separately recorded before merge. Neither automated mock DOM journeys nor CI establish glove touch accuracy, physical button wiring, 480×320 screenshot geometry or an authorized network field test.
+
 ## Network mainline and UI consolidation — 2026-10-25
 
 Baseline [PR #15](https://github.com/pskeffington/pip_boy/pull/15) merged LAN scan/watch, read-only UniFi connected-client reconciliation and DIAG ingestion to `main` at `15c9500`. [Quality run 40216528470](https://github.com/pskeffington/pip_boy/actions/runs/40216528470) passed all five jobs at `badabc523df585e31de20337f79d03dad8298139`: Linux stable, Rust 1.90.0, native macOS, native Windows and manifest validation.
