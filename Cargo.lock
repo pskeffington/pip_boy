@@ -2325,6 +2325,7 @@ dependencies = [
  "serde_json",
  "symphonia",
  "tempfile",
+ "tokio",
 ]
 
 [[package]]
