@@ -33,7 +33,7 @@ class Element {
   querySelector(selector) {
     if (!selector.startsWith(".")) return null;
     const className = selector.slice(1);
-    return walk(this).find((item) => item.className.split(/\\s+/).includes(className)) || null;
+    return walk(this).find((item) => item.className.split(/\s+/).includes(className)) || null;
   }
   querySelectorAll(selector) {
     const tags = new Set(selector.split(",").map((item) => item.trim().toLowerCase()));
