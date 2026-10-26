@@ -68,7 +68,12 @@ impl ApprovedEndpoint {
                 b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'.' || b == b'-' || b == b':'
             })
             || path.bytes().any(|b| {
-                !b.is_ascii_graphic() || b == b'\\' || b == b'?' || b == b'#' || b == b'%' || b == b'@'
+                !b.is_ascii_graphic()
+                    || b == b'\\'
+                    || b == b'?'
+                    || b == b'#'
+                    || b == b'%'
+                    || b == b'@'
             })
             || path.split('/').any(|part| part == "." || part == "..")
         {
@@ -86,9 +91,9 @@ impl ApprovedEndpoint {
                     !label.is_empty()
                         && !label.starts_with('-')
                         && !label.ends_with('-')
-                        && label
-                            .bytes()
-                            .all(|byte| byte.is_ascii_lowercase() || byte.is_ascii_digit() || byte == b'-')
+                        && label.bytes().all(|byte| {
+                            byte.is_ascii_lowercase() || byte.is_ascii_digit() || byte == b'-'
+                        })
                 })
         };
         if !allowed {
@@ -290,7 +295,9 @@ impl<R: Read> Read for IcyAudioReader<R> {
             if self.remaining_audio == 0 {
                 self.consume_metadata()?;
             }
-            let count = self.inner.read(&mut buffer[..cap.min(self.remaining_audio)])?;
+            let count = self
+                .inner
+                .read(&mut buffer[..cap.min(self.remaining_audio)])?;
             self.remaining_audio -= count;
             Ok(count)
         } else {
@@ -335,10 +342,7 @@ mod tests {
     impl RadioHttp for FakeHttp {
         type Body = Cursor<Vec<u8>>;
 
-        fn get(
-            &self,
-            target: &ApprovedEndpoint,
-        ) -> Result<HttpResponse<Self::Body>, StreamError> {
+        fn get(&self, target: &ApprovedEndpoint) -> Result<HttpResponse<Self::Body>, StreamError> {
             let fixture = self
                 .0
                 .iter()
@@ -453,8 +457,14 @@ mod tests {
 
     #[test]
     fn invalid_icy_interval_and_content_are_rejected() {
-        assert!(matches!(icy_interval(Some("0")), Err(StreamError::InvalidIcyInterval)));
-        assert!(matches!(icy_interval(Some("abc")), Err(StreamError::InvalidIcyInterval)));
+        assert!(matches!(
+            icy_interval(Some("0")),
+            Err(StreamError::InvalidIcyInterval)
+        ));
+        assert!(matches!(
+            icy_interval(Some("abc")),
+            Err(StreamError::InvalidIcyInterval)
+        ));
         assert!(!is_audio(Some("text/html")));
     }
 
