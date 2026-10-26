@@ -77,6 +77,8 @@ with tempfile.TemporaryDirectory() as work:
         _, _, js = request(port, "GET", "/assets/micro.js")
         assert all(('data-tab="' + name + '"').encode() in html
                    for name in ("stat", "role", "data", "map", "radio"))
+        assert b'class="micro-device micro-unified-header"' in html
+        assert html.count(b'id="page-title"') == 1
         assert b"viewport-fit=cover" in html
         assert b"@media (max-width:520px)" in css
         assert b"@media (max-height:360px)" in css

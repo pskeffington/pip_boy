@@ -437,3 +437,29 @@ small { font-size:11px; }
   .micro-device { grid-template-rows:44px 28px minmax(0,1fr) 45px; }
 }
 .topbar { padding-top:0; padding-bottom:0; }
+
+/* One shared title/control row gives the reclaimed heading row to every module.
+   Legacy isolated module fixtures keep their existing two-row shell geometry. */
+.micro-device.micro-unified-header {
+  grid-template-rows:44px minmax(0,1fr) 59px 21px;
+}
+.micro-unified-header .topbar { gap:8px; }
+.micro-unified-header .view-heading {
+  flex:1; min-width:0; justify-content:flex-start; border:0; padding:0; gap:8px;
+}
+.micro-unified-header .heading-left { flex:1; min-width:0; }
+.micro-unified-header .view-heading h1 { margin:0; font-size:16px; }
+.micro-unified-header .mode-indicator { display:none; }
+.micro-unified-header .micro-back { min-width:44px; min-height:44px; }
+.micro-unified-header .desk-link { min-width:44px; min-height:44px; justify-content:center; }
+.micro-unified-header .right-status { gap:8px; }
+@media (max-width:960px) {
+  .micro-device.micro-unified-header { grid-template-rows:44px minmax(0,1fr) 48px; }
+}
+@media (max-width:520px) {
+  .micro-unified-header .status-local { display:none; }
+  .micro-device.micro-unified-header { grid-template-rows:44px minmax(0,1fr) 47px; }
+}
+@media (max-height:360px) {
+  .micro-device.micro-unified-header { grid-template-rows:44px minmax(0,1fr) 45px; }
+}

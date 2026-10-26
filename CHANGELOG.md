@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-10-26 — Compact shared mini UI header
+
+- Combine branding and page heading into one 44px title/control bar across all mini UI sections and tool details.
+- Remove repeated Local labeling while retaining Back, Settings, clock and Desktop access; return 28–50px to module content.
+- Check header and control geometry on all sections at handheld and portrait viewport sizes.
+
 ## 2026-10-26 — Universal micro sections
 
 - Replace six crowded tabs with Status, active role, Data, Map and direct Radio.
