@@ -115,17 +115,21 @@ window.RustBoyNetwork = (() => {
       if (["TEXTAREA", "SELECT"].includes(tag) ||
           (tag === "INPUT" && target.type !== "checkbox")) return;
       if (event.key === "ArrowUp" || event.key === "ArrowDown") {
-        if (focusWithPad(event.key === "ArrowUp" ? -1 : 1)) event.preventDefault();
+        const moved = focusWithPad(event.key === "ArrowUp" ? -1 : 1);
+        // Avoid accidental document scrolling at the ends of the tool deck.
+        if (moved || screen === "menu") event.preventDefault();
         return;
       }
       if (screen !== "menu" && screen !== "result") return;
       const step = ["ArrowLeft", "PageUp"].includes(event.key) ? -1
         : ["ArrowRight", "PageDown"].includes(event.key) ? 1 : 0;
-      if (step && activePager?.(step)) {
-        // After hardware page-turning, land on a tool instead of a now-replaced arrow.
-        if (screen === "menu") menuButtons[0]?.focus?.({ preventScroll: true });
-        event.preventDefault();
-      }
+      if (!step || !activePager) return;
+      const moved = activePager(step);
+      // After hardware page-turning, land on a tool instead of a now-replaced arrow.
+      if (moved && screen === "menu") menuButtons[0]?.focus?.({ preventScroll: true });
+      // On a tool-deck boundary the key is still handled, not a scroll request.
+      // Result pages permit native scrolling at the boundary for longer detail output.
+      if (moved || screen === "menu") event.preventDefault();
     }
 
     const toolDescription = Object.freeze({
