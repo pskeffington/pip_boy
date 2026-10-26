@@ -22,7 +22,9 @@ pub struct OutputDeviceInfo {
 
 pub fn available_outputs() -> Result<Vec<OutputDeviceInfo>, String> {
     let host = cpal::default_host();
-    let default_name = host.default_output_device().and_then(|device| device.name().ok());
+    let default_name = host
+        .default_output_device()
+        .and_then(|device| device.name().ok());
     let devices = host
         .output_devices()
         .map_err(|error| format!("Cannot list audio outputs: {error}"))?;
@@ -32,7 +34,9 @@ pub fn available_outputs() -> Result<Vec<OutputDeviceInfo>, String> {
         is_default: true,
     }];
     for (index, device) in devices.enumerate() {
-        let name = device.name().unwrap_or_else(|_| "Unnamed audio output".into());
+        let name = device
+            .name()
+            .unwrap_or_else(|_| "Unnamed audio output".into());
         let label = if default_name.as_deref() == Some(name.as_str()) {
             format!("{name} (default)")
         } else {
@@ -49,7 +53,9 @@ pub fn available_outputs() -> Result<Vec<OutputDeviceInfo>, String> {
 
 fn resolve_output(host: &cpal::Host, output_id: &str) -> Result<cpal::Device, String> {
     if output_id == "system" {
-        return host.default_output_device().ok_or_else(|| "No default audio output".into());
+        return host
+            .default_output_device()
+            .ok_or_else(|| "No default audio output".into());
     }
     let index = output_id
         .strip_prefix("output-")
