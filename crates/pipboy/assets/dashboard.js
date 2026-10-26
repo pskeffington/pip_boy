@@ -623,3 +623,8 @@ if (window.RustBoyMessenger && document.getElementById("messenger-dock")) {
   window.RustBoyMessenger.mount(document.getElementById("messenger-dock"));
 }
 reload();
+
+// The desktop RADIO dock shares one in-process Rust playback session with micro.
+if (window.RustBoyRadio && document.getElementById("radio-dock")) {
+  window.RustBoyRadio.mount(document.getElementById("radio-dock"));
+}
