@@ -899,29 +899,34 @@
   async function loadCountyPackages(view, geoid, cacheOnly=false) {
     if (active !== view || view.sitesVisible || view.siteCentered ||
         !window.RustBoyCounty?.validGeoid(geoid)) return;
-    clearCountyPackages(view);
+    // Stage each new county separately. No request or parse failure may
+    // discard the previous valid county geometry.
+    if (view.countyPackageAbort) view.countyPackageAbort.abort();
     const version = ++view.countyPackageVersion;
     const controller = new AbortController();
     view.countyPackageAbort = controller;
-    view.countyPackage = {geoid,layers:Object.create(null),errors:[]};
-    view.countyStatus = "COUNTY "+geoid+" / SOURCE LIST";
+    const staged = {geoid,layers:Object.create(null),errors:[]};
+    view.countyStatus = "COUNTY "+geoid+" / LOADING / OLD MAP KEPT";
     refresh(view);
     try {
       const report = await window.RustBoyCounty.load(geoid,{
         cacheOnly,signal:controller.signal,
         onStatus: message => {
           if(active===view && view.countyPackageVersion===version) {
-            view.countyStatus=message;refresh(view);
+            view.countyStatus=message+" / OLD MAP KEPT";refresh(view);
           }
         },
         onLayer: (id,data) => {
           if(active!==view || view.countyPackageVersion!==version ||
               controller.signal.aborted)return;
-          view.countyPackage.layers[id]=data;
+          staged.layers[id]=data;
+          // Hand over after the first validated source; subsequent layers
+          // belong to this same GEOID, never a mixture of two counties.
+          view.countyPackage=staged;
           view.countyShapes=[
-            ...(view.countyPackage.layers["tiger-areawater"]?.shapes||[]),
-            ...(view.countyPackage.layers["tiger-linearwater"]?.shapes||[]),
-            ...(view.countyPackage.layers["tiger-roads"]?.shapes||[])
+            ...(staged.layers["tiger-areawater"]?.shapes||[]),
+            ...(staged.layers["tiger-linearwater"]?.shapes||[]),
+            ...(staged.layers["tiger-roads"]?.shapes||[])
           ];
           if(view.countyPriorBaseVisible===null)view.countyPriorBaseVisible=view.baseVisible;
           view.baseVisible=false;
@@ -930,7 +935,7 @@
         }
       });
       if(active!==view || view.countyPackageVersion!==version)return;
-      view.countyPackage.errors=report.errors;
+      staged.errors=report.errors;
       view.countyStatus="COUNTY "+geoid+" / "+report.features+" REAL FEATURES / "+
         (cacheOnly?"LOCAL CACHE":"CENSUS 2025")+
         (report.errors.length?" / PARTIAL - SEE SOURCES":" / SOURCES LOADED");
@@ -939,7 +944,8 @@
       if(active!==view || view.countyPackageVersion!==version ||
          controller.signal.aborted)return;
       view.countyStatus="COUNTY "+geoid+" / "+
-        (error instanceof Error?error.message:"SOURCE FAILED").slice(0,100);
+        (error instanceof Error?error.message:"SOURCE FAILED").slice(0,75)+
+        " / PREVIOUS MAP KEPT";
       refresh(view);
     }finally{
       if(view.countyPackageAbort===controller)view.countyPackageAbort=null;
