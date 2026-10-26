@@ -550,59 +550,90 @@
     ctx.lineJoin = "round";
     ctx.lineCap = "round";
     let labels = 0;
-    // Geometry is always provider-derived, never tied to a demo city.
-    for (const shape of [...view.countyShapes, ...view.onlineShapes, ...view.shapes,
-      ...(view.county ? [view.county.shape] : [])]) {
-      if (!shapeVisible(shape, view)) continue;
-      const style = shape.style || {};
-      ctx.globalAlpha = Number.isFinite(style.opacity) ? style.opacity : 1;
-      if (shape.kind === "point") {
-        ctx.fillStyle = style.fill || "#bced99";
-        for (const point of shape.paths[0]) {
-          const p = screenPoint(view, point[0], point[1]);
-          if (p[0] < -8 || p[0] > view.width + 8 || p[1] < -8 || p[1] > view.height + 8) continue;
+    const stats={loaded:view.countyShapes.length,candidates:0,drawn:0,
+      indexedLayers:0,roadLabels:0,landmarkLabels:0,
+      byLayer:{roads:0,water:0,landmarks:0,boundary:0}};
+    const labelCandidates={points:[],roads:[]};
+    function paintShape(shape,category) {
+      if (!shapeVisible(shape,view)) return;
+      const style=shape.style||{};
+      ctx.globalAlpha=Number.isFinite(style.opacity)?style.opacity:1;
+      if(category){
+        stats.drawn++;
+        stats.byLayer[category]++;
+      }
+      if(shape.kind==="point"){
+        ctx.fillStyle=style.fill||"#bced99";
+        for(const point of shape.paths[0]){
+          const p=screenPoint(view,point[0],point[1]);
+          if(p[0]<-8 || p[0]>view.width+8 || p[1]<-8 || p[1]>view.height+8)
+            continue;
           ctx.beginPath();
-          ctx.arc(p[0], p[1], 3, 0, Math.PI * 2);
+          ctx.arc(p[0],p[1],3,0,Math.PI*2);
           ctx.fill();
-          if (shape.label && labels < 12) {
-            ctx.font = "10px monospace";
-            ctx.fillText(shape.label, p[0] + 6, p[1] - 6);
-            labels++;
+          if(shape.label && labelCandidates.points.length<80){
+            labelCandidates.points.push({
+              x:p[0],y:p[1],name:shape.label,point:true
+            });
           }
         }
-      } else {
+      }else{
         ctx.beginPath();
-        for (const path of shape.paths) {
-          path.forEach((point, index) => {
-            const p = screenPoint(view, point[0], point[1]);
-            if (index === 0) ctx.moveTo(p[0], p[1]);
-            else ctx.lineTo(p[0], p[1]);
+        for(const path of shape.paths){
+          path.forEach((point,index)=>{
+            const p=screenPoint(view,point[0],point[1]);
+            if(index===0)ctx.moveTo(p[0],p[1]);
+            else ctx.lineTo(p[0],p[1]);
           });
-          if (shape.kind === "polygon") ctx.closePath();
+          if(shape.kind==="polygon")ctx.closePath();
         }
-        if (shape.kind === "polygon") {
-          ctx.fillStyle = style.fill || "rgba(116, 178, 112, 0.19)";
+        if(shape.kind==="polygon"){
+          ctx.fillStyle=style.fill||"rgba(116,178,112,0.19)";
           ctx.fill("evenodd");
         }
-        ctx.lineWidth = style.width || (shape.kind === "polygon" ? 1 : 1.5);
-        ctx.strokeStyle = style.stroke || (shape.kind === "polygon" ? "#6b9f6b" : "#b5db90");
+        ctx.lineWidth=style.width||(shape.kind==="polygon"?1:1.5);
+        ctx.strokeStyle=style.stroke||
+          (shape.kind==="polygon"?"#6b9f6b":"#b5db90");
         ctx.stroke();
-        // A few named roads are useful on the miniature field display.
-        if (shape.label && shape.kind === "line" && view.zoom >= 13.5 && labels < 12 &&
-            shape.paths[0] && shape.paths[0].length >= 2) {
-          const mid = shape.paths[0][Math.floor(shape.paths[0].length / 2)];
-          const p = screenPoint(view, mid[0], mid[1]);
-          if (p[0] > 5 && p[0] < view.width - 65 &&
-              p[1] > 16 && p[1] < view.height - 12) {
-            ctx.fillStyle = "#d6efbd";
-            ctx.font = "10px monospace";
-            ctx.fillText(shape.label, p[0] + 4, p[1] - 6);
-            labels++;
-          }
+        if(shape.label && shape.kind==="line" && view.zoom>=13.5 &&
+            labelCandidates.roads.length<96 &&
+            shape.paths[0] && shape.paths[0].length>=2){
+          const mid=shape.paths[0][Math.floor(shape.paths[0].length/2)];
+          const p=screenPoint(view,mid[0],mid[1]);
+          if(p[0]>5 && p[0]<view.width-65 && p[1]>16 &&
+              p[1]<view.height-12)
+            labelCandidates.roads.push({x:p[0],y:p[1],
+              name:shape.label,point:false});
         }
       }
     }
-
+    // Draw native county layers in stable source order. A per-source spatial
+    // index selects only viewport-intersecting geometries; hidden categories
+    // cost no draw work and retain their fully decoded authoritative data.
+    const viewport=countyViewport(view);
+    for(const id of COUNTY_ORDER){
+      const category=countyFilterFor(id);
+      if(!view.countyLayerVisible[category])continue;
+      const layer=view.countyPackage?.layers[id];
+      if(!layer)continue;
+      const index=layer.renderIndex||(layer.renderIndex=buildCountyIndex(layer.shapes));
+      const candidates=indexedCountyShapes(index,viewport);
+      stats.candidates+=candidates.length;
+      if(index.cells && viewport)stats.indexedLayers++;
+      for(const shape of candidates)paintShape(shape,category);
+    }
+    // Imported RustGIS and independently opted-in OSM reference are not
+    // silently reclassified or hidden by the official Census layer controls.
+    for(const shape of view.onlineShapes)paintShape(shape,null);
+    for(const shape of view.shapes)paintShape(shape,null);
+    if(view.county?.shape && view.countyLayerVisible.boundary)
+      paintShape(view.county.shape,"boundary");
+    // Preserve landmark labels even when numerous named roads occupy the view.
+    labelCandidates.points.sort((a,b)=>
+      ((a.x-view.width/2)**2+(a.y-view.height/2)**2)-
+      ((b.x-view.width/2)**2+(b.y-view.height/2)**2));
+    drawMapLabels(view,ctx,labelCandidates,stats);
+    view.renderStats=stats;
 
     // Site markers remain distinct from imported RustGIS and opt-in OSM layers.
     view.siteMarkers = [];
