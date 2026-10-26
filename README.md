@@ -174,3 +174,5 @@ CI runs Linux stable, exact Rust 1.90.0, native macOS, native Windows and manife
 [Micro HUD](docs/MICRO_UI.md) · [Desktop dashboard](docs/DASHBOARD_UI.md) · [Roadmap](docs/ROADMAP.md) · [Architecture](docs/ARCHITECTURE.md) · [Changelog](CHANGELOG.md) · [Security](SECURITY.md) · [Branding](BRANDING.md) · [MIT license](LICENSE).
 
 Public brand: **Rust-Boy**. Compatibility names remain `pip_boy` (repository), `pipboy` (package/CLI) and `PIPBOY_HOME` (storage). No third-party game artwork or source is bundled.
+
+**Contingency research:** [LoRa/Meshtastic, MeshCore, Reticulum and local-IP architecture](docs/CONTINGENCY_NETWORK_CORE.md) and [14-source evidence matrix](docs/research/contingency_transport_matrix.csv). This pass contains passive policy types and no radio transmissions.
