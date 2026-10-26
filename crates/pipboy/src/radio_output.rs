@@ -35,9 +35,9 @@ fn device_key(index: usize, name: &str) -> String {
 
 pub fn available_outputs() -> Result<Vec<OutputDeviceInfo>, String> {
     let host = cpal::default_host();
-    let default_name = host
-        .default_output_device()
-        .and_then(|device| device.name().ok());
+    let default_device = host.default_output_device();
+    let default_available = default_device.is_some();
+    let default_name = default_device.and_then(|device| device.name().ok());
     let devices = host
         .output_devices()
         .map_err(|error| format!("Cannot list audio outputs: {error}"))?;
@@ -45,7 +45,7 @@ pub fn available_outputs() -> Result<Vec<OutputDeviceInfo>, String> {
         id: "system".into(),
         name: "System default".into(),
         is_default: true,
-        available: default_name.is_some(),
+        available: default_available,
     }];
     for (index, device) in devices.enumerate() {
         let name = device
