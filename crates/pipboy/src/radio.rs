@@ -24,6 +24,16 @@ fn modulation(value: &str) -> Option<Demodulation> {
 
 pub fn run(args: Vec<String>) -> Result<(), Box<dyn Error>> {
     match args.as_slice() {
+        [action, id, confirm] if action == "listen" && confirm == "--confirm" => {
+            crate::radio_playback::run_demo(id, None)?;
+            Ok(())
+        }
+        [action, id, confirm, option, seconds]
+            if action == "listen" && confirm == "--confirm" && option == "--seconds" =>
+        {
+            crate::radio_playback::run_demo(id, Some(seconds.parse()?))?;
+            Ok(())
+        }
         [action, id, confirm] if action == "probe" && confirm == "--confirm" => {
             let _ = station_by_id(id).ok_or("unknown curated radio station ID")?;
             let transport = NativeRadioHttp::for_probe()?;
@@ -107,7 +117,7 @@ pub fn run(args: Vec<String>) -> Result<(), Box<dyn Error>> {
             println!("SIMULATED ONLY: no antenna, live RF or audio decoder connected.");
             Ok(())
         }
-        _ => Err("usage: pipboy radio <capabilities|source|stations [--check-ip]|check STATION_ID --confirm|probe STATION_ID --confirm|simulate FREQ_HZ am|nfm|wfm|usb|lsb|iq>".into()),
+        _ => Err("usage: pipboy radio <capabilities|source|stations [--check-ip]|check STATION_ID --confirm|probe STATION_ID --confirm|listen STATION_ID --confirm [--seconds 1..300]|simulate FREQ_HZ am|nfm|wfm|usb|lsb|iq>".into()),
     }
 }
 
