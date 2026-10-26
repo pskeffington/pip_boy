@@ -97,7 +97,7 @@ Browser/physical hardware acceptance is still required at 480×320, 800×480, 12
 
 ### Follow-up UI pass: focused subviews and browser acceptance
 
-The responsive dashboard now opens **INSPECTOR** when a module tile is chosen on a narrow screen and provides a dedicated **MODULES** return action. Staging a role in Settings does not change the visible workspace; only a confirmed profile load replaces pinned modules. Role lists show three items per page on short (480 CSS-pixel high or smaller) viewports; module and Custom palettes show four, with six on taller displays. Keyboard Tab/Enter and native button semantics remain supported.
+The responsive dashboard now opens **INSPECTOR** when a module tile is chosen on a narrow screen and provides a dedicated **MODULES** return action. Staging a role in Settings does not change the visible workspace; only a confirmed profile load replaces pinned modules. Role lists show two items per page on short (480 CSS-pixel high or smaller) viewports to retain large touch targets; module and Custom palettes show four, with six on taller displays. Keyboard Tab/Enter and native button semantics remain supported.
 
 The Reclamation Scout viewport now separates **MAP / SITES / DUTIES** into focused screens. A site-to-map action opens MAP and requests focus on the chosen site after the map is mounted in a visible container. Security Chief separates **CAMERAS / DUTIES**; simulated cameras remain explicitly disconnected. These focused views prevent the original stacked content from being clipped by the no-scroll shell. Overflow-heavy forms, task details, and accessibility zoom retain internal scroll access.
 
