@@ -34,18 +34,33 @@ function findChrome() {
 // Headless Chrome enforces a >=500px top-level window width. An iframe supplies
 // exact inner CSS viewports (including 480x320 and 320px portrait media queries).
 function hostHtml(width,height,view) {
+  const script = [
+    'const frame=document.querySelector("#handheld");',
+    'const output=document.getElementById("viewport-report");',
+    'const encode=value=>btoa(String.fromCharCode(...new TextEncoder().encode(JSON.stringify(value))));',
+    'let checks=0;',
+    'function copy(){',
+    'const doc=frame.contentDocument;',
+    'const result=doc?.getElementById("viewport-report")?.textContent;',
+    'if(result){output.textContent=result;return;}',
+    'if(++checks>=40){',
+    'output.textContent=encode({error:"Iframe report unavailable; state="+doc?.readyState+',
+    '"; network="+doc?.querySelectorAll(".net-tile").length+',
+    '"; body="+doc?.body?.innerText?.slice(0,240)});return;}',
+    'setTimeout(copy,20);',
+    '}',
+    'window.addEventListener("message",event=>{',
+    'if(event.origin===location.origin&&event.source===frame.contentWindow&&',
+    'event.data?.type==="rustboy-layout-report")output.textContent=encode(event.data.value);',
+    '});',
+    'frame.addEventListener("load",copy);copy();'
+  ].join("");
   return '<!doctype html><html lang="en"><head><meta charset="utf-8">' +
     '<title>Rust-Boy viewport host</title>' +
     '<style>html,body{margin:0}iframe{border:0;display:block}</style></head><body>' +
     '<iframe id="handheld" title="Handheld preview" style="width:' + width +
     'px;height:' + height + 'px" src="/fixture?view=' + view + '"></iframe>' +
-    '<pre id="viewport-report" hidden></pre>' +
-    '<script>window.addEventListener("message",event=>{' +
-    'if(event.origin!==location.origin||event.source!==document.querySelector("#handheld").contentWindow||' +
-    'event.data?.type!=="rustboy-layout-report")return;' +
-    'const bytes=new TextEncoder().encode(JSON.stringify(event.data.value));' +
-    'document.getElementById("viewport-report").textContent=btoa(String.fromCharCode(...bytes));' +
-    '});<\/script></body></html>'.replace("<\\/script>","</script>");
+    '<pre id="viewport-report" hidden></pre><script>' + script + '</script></body></html>';
 }
 
 function render(chrome, port, width, height, view) {
@@ -57,7 +72,7 @@ function render(chrome, port, width, height, view) {
       "--disable-background-networking", "--no-first-run", "--no-default-browser-check",
       "--hide-scrollbars", "--force-device-scale-factor=1",
       "--window-size=1000,900",
-      "--virtual-time-budget=1200", "--dump-dom",
+      "--virtual-time-budget=2500", "--dump-dom",
       "--user-data-dir=" + profile, url
     ];
     const proc = spawn(chrome,args,{stdio:["ignore","pipe","pipe"]});
