@@ -184,7 +184,7 @@ fn decode_and_play(
     if cancelled.load(Ordering::Acquire) {
         return Ok(());
     }
-    let (stream, _network_guard) = radio_net::open_station(station_id, Arc::clone(&cancelled))?;
+    let (stream, _network_guard) = radio_net::open_station(station_id, Arc::clone(cancelled))?;
     if cancelled.load(Ordering::Acquire) {
         return Ok(());
     }
