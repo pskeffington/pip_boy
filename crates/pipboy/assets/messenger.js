@@ -123,6 +123,20 @@
       }
       status.className = "rb-msg-status" + (failure ? " rb-msg-error" : "");
     }
+    function progressText(message) {
+      const progress=message.progress;
+      if(!progress)return "PRIOR ATTEMPT DETAILS UNAVAILABLE";
+      const last=progress.last_attempt;
+      const wait=message.delivery==="stored"?"RECEIPT VERIFIED / NOT READ":
+        progress.held_locally?"LOCAL HOLD / MANUAL RETRY":
+        !last?"AWAITING EXPLICIT ATTEMPT":
+        last.outcome==="receipt_rejected"?"RECEIPT REJECTED / DELIVERY UNKNOWN":
+        last.outcome==="exchange_unconfirmed"?"EXCHANGE UNCONFIRMED / DELIVERY UNKNOWN":
+        "ATTEMPT OUTCOME UNKNOWN / REFRESH OR RETRY";
+      if(!last)return wait+" · "+progress.attempts+(progress.attempts===1?" TRY":" TRIES");
+      const route=last.route?.tier==="alternate"?"A / LOCAL IP":"P / PAIRED SSH";
+      return wait+" · "+progress.attempts+(progress.attempts===1?" TRY":" TRIES")+" · LAST "+route;
+    }
     function drawMessages() {
       thread.replaceChildren();
       if (!state) return;
@@ -150,13 +164,14 @@
           (message.direction==="incoming"?"IN":"OUT")+
           " #"+message.id+" · "+
           (message.delivery==="stored"?"STORED ON PEER":
-           message.delivery==="queued"?"QUEUED / NOT DELIVERED":"RECEIVED ON DEVICE"));
+           message.delivery==="queued"?"QUEUED / STORAGE UNCONFIRMED":"RECEIVED ON DEVICE"));
         const body=el("p","rb-msg-body",message.body);
         row.append(head,body);
+        if(message.direction==="outgoing")row.append(el("div","rb-msg-progress",progressText(message)));
         if (message.direction==="outgoing" && message.delivery==="queued") {
           const retry=btn("RETRY",async () => {
-            if (busy || closed) return;
-            busy=true;send.disabled=true;retry.disabled=true;routeSelect.disabled=true;peerSelect.disabled=true;
+            if (busy || closed || !canCompose()) return;
+            busy=true;send.disabled=true;retry.disabled=true;routeSelect.disabled=true;peerSelect.disabled=true;refresh.disabled=true;
             notice(selectedTier==="emergency" ? "HOLDING LOCALLY / NO CONNECTION" : "CONTACTING PAIRED DEVICE / EXPLICIT RETRY");
             try{
               const response=await request("/api/messages/retry",{id:message.id,confirm:true,tier:selectedTier});
@@ -166,13 +181,17 @@
                 response.held_locally ? "HELD LOCALLY / NOT DELIVERED" : "DELIVERY NOT CONFIRMED");
               await load(true);
             }catch(error){
-              if(!closed)notice("RETRY FAILED / LOCAL MESSAGE PRESERVED",true);
+              if(!closed){
+                notice("RETRY UNCONFIRMED / REFRESHING LOCAL EVIDENCE",true);
+                await load(true);
+              }
             }finally{
-              busy=false;if(!closed){drawRoutes();peerSelect.disabled=!state?.conversations?.length;retry.disabled=false;}
+              busy=false;if(!closed){drawRoutes();drawMessages();peerSelect.disabled=!state?.conversations?.length;refresh.disabled=false;}
             }
           });
           retry.setAttribute("aria-label","Retry queued message "+message.id+
             " to "+message.peer);
+          retry.disabled=busy || !canCompose();
           row.append(retry);
         }
         thread.append(row);
@@ -226,7 +245,7 @@
       selected=peerSelect.value;selectedTier="primary";page=0;drawRoutes();drawMessages();
     });
     routeSelect.addEventListener("change",()=>{
-      selectedTier=routeSelect.value;drawRoutes();
+      selectedTier=routeSelect.value;drawRoutes();drawMessages();
     });
     form.addEventListener("submit",async event=>{
       event.preventDefault();
@@ -245,7 +264,7 @@
         page=0;
         notice(data.stored_on_receiver ?
           "STORED ON PEER / NOT MARKED READ" :
-          data.held_locally ? "HELD LOCALLY / NOT DELIVERED" : "QUEUED LOCALLY / PEER UNAVAILABLE · RETRY MANUALLY",
+          data.held_locally ? "HELD LOCALLY / NOT DELIVERED" : "QUEUED LOCALLY / STORAGE UNCONFIRMED · REVIEW STATUS",
           !data.stored_on_receiver && !data.held_locally);
         await load(true);
       }catch(error){
@@ -254,7 +273,7 @@
         busy=false;
         if(!closed){
           refresh.disabled=false;peerSelect.disabled=!state?.conversations?.length;
-          drawRoutes();
+          drawRoutes();drawMessages();
         }
       }
     });

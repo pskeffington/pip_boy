@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-10-25 — Persistent PACE delivery progress
+
+- Persist tracked attempt counts, last P/A route and exchange/receipt outcomes inside the existing message journal, including its opt-in age encryption. Preserve local holds across restart.
+- Commit verified receipt status and the successful attempt together. Interrupted or unconfirmed exchanges remain queued with delivery unknown; retries retain the original envelope and receiver deduplication identity.
+- Serialize cooperative outbound attempts/holds with a separate nonblocking dispatch lock; inbound journal writes remain available. Add read-only `peer message-status ID ALIAS --json`.
+- Display wait reasons and last route in desktop/handheld LINK, reload local evidence after retry errors and disable unavailable retry actions. Existing journals load without fabricated attempt history; older binaries cannot read records after progress metadata is written.
+- Extend encrypted restart, interruption, locking, forged/lost receipt, CLI, browser and two-store relay validation. Physical hardware, native key lifecycle and independent review gates remain open.
+
 ## 2026-10-25 — Boston real street base and lore-aligned names (feature validation pending)
 
 - Pin 10,634 true City Boston SAM street segments and 47,994 original WGS84 source vertices for a local central-Boston MAP. No fictional feature creation; show coverage and source credit.

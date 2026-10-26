@@ -24,6 +24,7 @@
 .rb-msg-item{padding:5px;margin:2px 0;border:1px solid #35553a;background:#102419}
 .rb-msg-item .rb-msg-button{min-height:25px}
 .rb-msg-meta{font-size:9px;color:#e2d19b}
+.rb-msg-progress{font-size:9px;color:#b8d9a9;line-height:1.3;overflow-wrap:anywhere}
 .rb-msg-body{font-size:11px;line-height:1.35;white-space:pre-wrap;overflow-wrap:anywhere;
   margin:3px 0;color:#ddf8c5}
 .rb-msg-empty{font-size:10px;color:#9abf95;padding:9px}

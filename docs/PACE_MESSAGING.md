@@ -96,8 +96,81 @@ keeps the original sender ID, body and timestamp. The receiver deduplicates that
 identity even if an earlier receipt was lost. Neither the selected tier nor an
 IP address can substitute for cryptographic peer authentication.
 
+## Persistent delivery progress
+
+Outgoing records have optional local `progress` metadata. Fresh messages start
+with zero tracked attempts, no last attempt and no hold. Before each actual P/A
+exchange, Rust-Boy durably increments the counter and records its selected route,
+local Unix start time and `started` outcome. Alternate records include the exact
+private IPv4 attempted, including for direct-IP CLI retries. Holds set
+`held_locally:true` without incrementing the counter or discarding prior attempt
+evidence; an explicit P/A attempt clears that hold.
+
+| Last outcome | Meaning while queued | Operator action |
+| --- | --- | --- |
+| No last attempt | No tracked exchange has started | Choose a viable route and send explicitly |
+| `started` | Attempt may be running, interrupted, or unable to save its final result; remote delivery is unknown | Refresh local evidence; explicitly retry when appropriate |
+| `exchange_unconfirmed` | SSH exchange did not produce a usable response; remote delivery is unknown | Check the peer/network/key configuration, then retry explicitly |
+| `receipt_rejected` | Response was oversized, malformed, or failed envelope identity checks; remote delivery is unknown | Check peer configuration and investigate the response before retrying |
+| `stored` | A validated receiver-storage receipt and local successful outcome committed together | No further transmission; this never proves human reading |
+
+The UI shows the current wait reason, tracked count and last P/A route. A local
+hold takes precedence as the current wait reason; the last attempt remains
+available in the local API/CLI. A failed retry refreshes those local records.
+Refreshing, loading after restart and selecting a route never contact a peer.
+Inspect one outgoing record without any transport action:
+
+```bash
+pipboy peer message-status 1 scout-one --json
+```
+
+The record includes `progress` under `message`; `automatic_connections` and
+`read_by_human` remain false. This local read also works for an older conversation
+whose peer pairing has since been removed. It still requires an unlocked queue
+key if encrypted. Detailed SSH stderr, message payload echoes and credentials are
+not saved as failure metadata. SSH's generic nonzero exit is not sufficient to
+claim an authentication failure or a network outage, so both remain
+`exchange_unconfirmed` rather than a guessed diagnosis. A lost receipt can follow
+successful remote storage: QUEUED means **not confirmed locally**, not proof of
+non-delivery. The receiver deduplicates an explicit retry of the same envelope.
+
+One nonblocking, cooperative `message-dispatch.lock` per data directory serializes
+outbound exchanges and changes to existing holds, including CLI/API processes
+and different peers. New Emergency records commit their initial hold atomically
+with queue creation and need only the journal lock.
+A busy dispatch rejects another attempt before contacting its peer. The separate
+short-lived journal lock still permits inbound persistence between outgoing
+updates. Locks release on process exit; an interrupted `started` record does not
+cause an automatic retry or become a permanent software lock. Receipt/storage
+writes can fail after a peer has stored a message; without a committed receipt,
+Rust-Boy retains the unknown-outcome state. This is not a distributed lease or
+protection against hostile same-account processes.
+
+Metadata stays inside the existing atomic journal and is encrypted with the
+whole book when age storage is enrolled. The 192-record/256-KiB decoded bounds
+remain; metadata can cause the byte bound to be reached before the record bound.
+Only a count and the latest attempt are retained, not an unbounded event log.
+Local wall-clock timestamps are informational and are never retry/expiry or
+ordering authorities. Counters reject overflow rather than wrapping.
+
+Existing records without `progress` load with prior attempt details unavailable.
+The first hold or tracked attempt adds metadata; the counter covers only tracked
+attempts, not the message's unknown earlier history. The v1 wire envelope remains
+unchanged. **Older Rust-Boy binaries reject journal records containing progress**
+because they deny unknown fields. Update local installations together; do not
+roll back the executable against a modified journal or strip metadata to reuse
+IDs. No automatic plaintext/encrypted migration or rollback mechanism is added.
+
 ## Evidence and next gates
 
+- Encrypted restart tests cover lost receipts followed by an Alternate retry with
+  one receiver record and the original envelope. Other tests exercise interrupted
+  attempts, dispatch-lock contention with zero transport calls, forged receipts,
+  legacy journals, strict progress validation and attempt-counter overflow.
+- Browser tests verify persisted wait/route evidence, reload after retry errors,
+  unknown interrupted outcomes, legacy history labels and zero-count local holds.
+- The local relay injects receipt loss and malformed receipts, restarts the
+  dashboard, inspects CLI status without contacts and verifies deduplicated retry.
 - Unit tests verify strict plan persistence, missing routes, pairing precedence,
   blocked radio sends, local hold resolution and corruption preservation.
 - Browser tests cover route changes with zero send/retry requests, disabled C,

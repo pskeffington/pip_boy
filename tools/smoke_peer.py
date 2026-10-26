@@ -140,6 +140,8 @@ assert any(x.startswith("UserKnownHostsFile=") for x in args)
 remote = args[-1]
 assert remote in {"pipboy peer receive", "pipboy peer receipts overseer-a",
                   "pipboy peer message-receive"}
+mode_file = os.environ.get("FAKE_RB_MODE_FILE")
+mode = open(mode_file).read().strip() if mode_file and os.path.exists(mode_file) else ""
 command = ["peer", "bridge", "overseer-a"]
 payload = sys.stdin.buffer.read(8193)
 assert len(payload) <= 8192
@@ -149,7 +151,12 @@ result = subprocess.run(
     [os.environ["FAKE_RB_BINARY"], *command],
     input=payload, capture_output=True, env=child_env, timeout=12
 )
-sys.stdout.buffer.write(result.stdout)
+if remote == "pipboy peer message-receive" and mode == "lose_receipt":
+    sys.exit(255)  # Receiver stored the frame, but sender sees no receipt.
+if remote == "pipboy peer message-receive" and mode == "bad_receipt":
+    sys.stdout.buffer.write(b'{"schema_version":1,"kind":"message_stored"}')
+else:
+    sys.stdout.buffer.write(result.stdout)
 sys.stderr.buffer.write(result.stderr)
 sys.exit(result.returncode)
 ''' ,
@@ -158,6 +165,7 @@ sys.exit(result.returncode)
     ssh.chmod(0o755)
     sender_env = dict(
         FAKE_RB_SSH_TRACE=str(root / "contacts.txt"),
+        FAKE_RB_MODE_FILE=str(root / "relay-mode.txt"),
         FAKE_RB_BINARY=str(BIN),
         FAKE_RB_RECEIVER_HOME=str(scout),
         PATH=str(bin_dir) + os.pathsep + os.environ["PATH"]
@@ -197,6 +205,8 @@ sys.exit(result.returncode)
         assert result["read_by_human"] is False
         assert result["message"]["delivery"] == "stored"
         assert result["message"]["remote_stored_id"] == 1
+        assert result["message"]["progress"]["attempts"] == 1
+        assert result["message"]["progress"]["last_attempt"]["outcome"] == "stored"
         assert json.loads((scout / "messages.json").read_text())["messages"][0]["body"] == "Check north intake"
         code, retry = api(port, "POST", "/api/messages/retry", {
             "id": 1, "confirm": True
@@ -248,6 +258,9 @@ sys.exit(result.returncode)
         assert code == 200 and held["held_locally"] is True and held["stored_on_receiver"] is False
         held_id = held["message"]["id"]
         assert held["message"]["delivery"] == "queued" and trace.read_text() == contacts
+        assert held["message"]["progress"] == {"attempts": 0, "held_locally": True, "last_attempt": None}
+        status = json.loads(invoke(manager, "peer", "message-status", str(held_id), "scout-one", "--json").stdout)
+        assert status["message"] == held["message"] and trace.read_text() == contacts
         code, denied = api(port, "POST", "/api/messages/retry", {"id": held_id, "tier": "contingency", "confirm": True})
         assert code == 409 and trace.read_text() == contacts
         code, denied = api(port, "POST", "/api/messages/send", {
@@ -257,8 +270,41 @@ sys.exit(result.returncode)
         code, stored = api(port, "POST", "/api/messages/retry", {"id": held_id, "tier": "alternate", "confirm": True})
         assert code == 200 and stored["stored_on_receiver"] is True
         assert stored["message"]["id"] == held_id
+        assert stored["message"]["progress"]["last_attempt"]["route"] == {"tier": "alternate", "ipv4": "192.168.1.20"}
         assert len(json.loads((scout / "messages.json").read_text())["messages"]) == 2
         assert len(trace.read_text().splitlines()) == len(contacts.splitlines()) + 1
+
+        # Lost receipt: receiver persistence does not permit a sender delivery claim.
+        mode_file = root / "relay-mode.txt"
+        mode_file.write_text("lose_receipt")
+        code, lost = api(port, "POST", "/api/messages/send", {
+            "alias": "scout-one", "body": "Keep identity through receipt loss", "confirm": True
+        })
+        assert code == 200 and lost["stored_on_receiver"] is False
+        message = lost["message"]
+        assert message["progress"]["last_attempt"]["outcome"] == "exchange_unconfirmed"
+        assert len(json.loads((scout / "messages.json").read_text())["messages"]) == 3
+        mode_file.write_text("bad_receipt")
+        code, rejected = api(port, "POST", "/api/messages/retry", {"id": message["id"], "confirm": True})
+        assert code == 409
+        code, refreshed = api(port, "GET", "/api/messages")
+        pending = next(m for m in refreshed["messages"] if m["id"] == message["id"])
+        assert pending["progress"]["attempts"] == 2
+        assert pending["progress"]["last_attempt"]["outcome"] == "receipt_rejected"
+        # Restart to verify durable local status; reading never contacts the relay.
+        finish(service)
+        service, port = launch(manager, sender_env)
+        contacts = trace.read_text()
+        code, refreshed = api(port, "GET", "/api/messages")
+        assert code == 200 and trace.read_text() == contacts
+        assert next(m for m in refreshed["messages"] if m["id"] == message["id"])["progress"] == pending["progress"]
+        mode_file.write_text("")
+        code, retried = api(port, "POST", "/api/messages/retry", {"id": message["id"], "tier": "alternate", "confirm": True})
+        assert code == 200 and retried["stored_on_receiver"] is True
+        assert retried["message"]["progress"]["attempts"] == 3
+        for field in ["id", "body", "created_at"]:
+            assert retried["message"][field] == message[field]
+        assert len(json.loads((scout / "messages.json").read_text())["messages"]) == 3
 
         code, created = api(port, "POST", "/api/tasks/create", {
             "title": "Survey west intake", "details": "Return site condition and water sample notes",
@@ -319,7 +365,7 @@ sys.exit(result.returncode)
         invoke(scout, "workbench", "use", "reclamation-scout", "--replace")
         remote_service, remote_port = launch(scout)
         code, receiver_chat = api(remote_port, "GET", "/api/messages")
-        assert code == 200 and len(receiver_chat["messages"]) == 2
+        assert code == 200 and len(receiver_chat["messages"]) == 3
         assert receiver_chat["messages"][0]["direction"] == "incoming"
         assert receiver_chat["messages"][0]["peer"] == "overseer-a"
         assert receiver_chat["conversations"] == ["overseer-a"]
@@ -357,7 +403,8 @@ sys.exit(result.returncode)
         assert code == 200 and sync["updated"] == 0
         assert not (manager / "notes.json").exists()
         assert not (manager / "permissions.json").exists()
-        print("PASS: encrypted-transport Messenger protocol, forced peer identity and replay checks; "
+        print("PASS: persistent PACE attempts, receipt-loss/rejection/restart/deduplication, read-only status; "
+              "encrypted-transport Messenger protocol, forced peer identity and replay checks; "
                "two distinct Rust-Boy stores, explicit SSH dispatch, durable receiver ID, "
               "duplicate safety, role inbox, human acknowledgment and on-demand progress "
               "sync without automatic connections")

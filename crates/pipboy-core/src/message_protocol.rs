@@ -1,5 +1,5 @@
 //! Canonical Messenger v1 wire contract. No transport can confer human read status.
-use crate::messenger::{MessageStore, RemoteMessage};
+use crate::messenger::{AttemptOutcome, AttemptRoute, Delivery, MessageStore, RemoteMessage};
 use serde::{Deserialize, Serialize};
 use std::io;
 
@@ -73,7 +73,10 @@ pub fn transmit(
     frame: &Envelope,
 ) -> io::Result<StoredReceipt> {
     let pending = journal.outgoing(frame.origin_id, &frame.to_device)?;
-    if pending.body != frame.body || pending.created_at != frame.sent_at {
+    if pending.delivery != Delivery::Queued
+        || pending.body != frame.body
+        || pending.created_at != frame.sent_at
+    {
         return Err(io::Error::new(
             io::ErrorKind::InvalidInput,
             "Envelope differs from queued record",
@@ -82,6 +85,59 @@ pub fn transmit(
     frame.encode()?;
     let receipt = transport.exchange(frame)?;
     receipt.validate_for(frame)?;
+    journal.mark_stored(frame.origin_id, &frame.to_device, receipt.remote_id)?;
+    Ok(receipt)
+}
+
+/// Persist evidence before contacting the peer. A crash or failed final write
+/// leaves Started (unknown outcome), never a fabricated delivery or safe-to-retry
+/// claim. Retrying is always explicit and uses the original immutable envelope.
+pub fn transmit_on_route(
+    transport: &mut impl MessageTransport,
+    journal: &MessageStore,
+    frame: &Envelope,
+    route: AttemptRoute,
+) -> io::Result<StoredReceipt> {
+    let _dispatch = journal.dispatch_lock()?;
+    let pending = journal.outgoing(frame.origin_id, &frame.to_device)?;
+    if pending.delivery != Delivery::Queued
+        || pending.body != frame.body
+        || pending.created_at != frame.sent_at
+    {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "Envelope differs from pending record",
+        ));
+    }
+    frame.encode()?;
+    let started = journal.start_attempt(frame.origin_id, &frame.to_device, route)?;
+    let attempts = started
+        .progress
+        .as_ref()
+        .expect("attempt progress initialized")
+        .attempts;
+    let receipt = match transport.exchange(frame) {
+        Ok(receipt) => receipt,
+        Err(error) => {
+            let outcome = if error.kind() == io::ErrorKind::InvalidData {
+                AttemptOutcome::ReceiptRejected
+            } else {
+                AttemptOutcome::ExchangeUnconfirmed
+            };
+            journal.fail_attempt(frame.origin_id, &frame.to_device, attempts, outcome)?;
+            return Err(error);
+        }
+    };
+    if let Err(error) = receipt.validate_for(frame) {
+        journal.fail_attempt(
+            frame.origin_id,
+            &frame.to_device,
+            attempts,
+            AttemptOutcome::ReceiptRejected,
+        )?;
+        return Err(error);
+    }
+    // Receipt and successful attempt outcome commit together in one atomic save.
     journal.mark_stored(frame.origin_id, &frame.to_device, receipt.remote_id)?;
     Ok(receipt)
 }
@@ -168,6 +224,7 @@ impl FaultSimulator {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::messenger::AttemptOutcome;
     fn frame(id: u64) -> Envelope {
         Envelope {
             schema_version: 1,
@@ -279,5 +336,197 @@ mod tests {
             remote_id: 1,
         };
         assert!(receipt.validate_for(&frame(1)).is_err());
+    }
+
+    #[test]
+    fn tracked_lost_receipt_then_alternate_retry_preserves_identity_and_remote_record() {
+        struct Relay<'a> {
+            receiver: &'a MessageStore,
+            lose_receipt: bool,
+        }
+        impl MessageTransport for Relay<'_> {
+            fn exchange(&mut self, frame: &Envelope) -> io::Result<StoredReceipt> {
+                let (stored, _) = self.receiver.receive(frame, "scout")?;
+                if self.lose_receipt {
+                    return Err(io::Error::new(io::ErrorKind::TimedOut, "lost receipt"));
+                }
+                Ok(StoredReceipt {
+                    schema_version: 1,
+                    kind: "message_stored".into(),
+                    receiver_device: "scout".into(),
+                    from_device: "overseer".into(),
+                    origin_id: frame.origin_id,
+                    remote_id: stored.id,
+                })
+            }
+        }
+        let dir = tempfile::tempdir().unwrap();
+        let key = age::x25519::Identity::generate();
+        let sender = MessageStore::with_key(dir.path().join("sender"), key.clone());
+        let receiver = MessageStore::new(dir.path().join("receiver"));
+        let pending = sender.queue("scout", "immutable report").unwrap();
+        let frame = Envelope {
+            schema_version: 1,
+            from_device: "overseer".into(),
+            to_device: "scout".into(),
+            origin_id: pending.id,
+            body: pending.body.clone(),
+            sent_at: pending.created_at,
+        };
+        let wire = frame.encode().unwrap();
+        let mut relay = Relay {
+            receiver: &receiver,
+            lose_receipt: true,
+        };
+        assert!(transmit_on_route(&mut relay, &sender, &frame, AttemptRoute::Primary).is_err());
+        assert_eq!(receiver.load().unwrap().messages.len(), 1);
+        let reopened = MessageStore::with_key(dir.path().join("sender"), key);
+        let failed = reopened.outgoing(pending.id, "scout").unwrap();
+        let progress = failed.progress.unwrap();
+        assert_eq!(progress.attempts, 1);
+        assert_eq!(
+            progress.last_attempt.unwrap().outcome,
+            AttemptOutcome::ExchangeUnconfirmed
+        );
+        let held = reopened
+            .hold(pending.id, "scout")
+            .unwrap()
+            .progress
+            .unwrap();
+        assert!(held.held_locally);
+        assert_eq!(held.attempts, 1);
+        relay.lose_receipt = false;
+        let route = AttemptRoute::Alternate {
+            ipv4: "192.168.1.20".parse().unwrap(),
+        };
+        let receipt = transmit_on_route(&mut relay, &reopened, &frame, route).unwrap();
+        assert_eq!(receipt.remote_id, 1);
+        assert_eq!(receiver.load().unwrap().messages.len(), 1);
+        let stored = reopened.outgoing(pending.id, "scout").unwrap();
+        assert_eq!(
+            (stored.id, stored.body, stored.created_at),
+            (pending.id, pending.body, pending.created_at)
+        );
+        let progress = stored.progress.unwrap();
+        assert_eq!(progress.attempts, 2);
+        assert!(!progress.held_locally);
+        let last = progress.last_attempt.unwrap();
+        assert_eq!(last.route, route);
+        assert_eq!(last.outcome, AttemptOutcome::Stored);
+        assert_eq!(frame.encode().unwrap(), wire);
+        assert!(reopened.hold(pending.id, "scout").is_err());
+        assert!(transmit_on_route(&mut relay, &reopened, &frame, route).is_err());
+    }
+
+    #[test]
+    fn dispatch_lock_and_interrupted_attempt_do_not_trigger_automatic_transport() {
+        struct Reject {
+            calls: u32,
+        }
+        impl MessageTransport for Reject {
+            fn exchange(&mut self, _: &Envelope) -> io::Result<StoredReceipt> {
+                self.calls += 1;
+                Err(io::Error::new(
+                    io::ErrorKind::InvalidData,
+                    "malformed receipt",
+                ))
+            }
+        }
+        let dir = tempfile::tempdir().unwrap();
+        let sender = MessageStore::new(dir.path().into());
+        let pending = sender.queue("scout", "report").unwrap();
+        let frame = Envelope {
+            schema_version: 1,
+            from_device: "overseer".into(),
+            to_device: "scout".into(),
+            origin_id: pending.id,
+            body: pending.body,
+            sent_at: pending.created_at,
+        };
+        let mut transport = Reject { calls: 0 };
+        let guard = sender.dispatch_lock().unwrap();
+        assert!(transmit_on_route(&mut transport, &sender, &frame, AttemptRoute::Primary).is_err());
+        assert!(sender.hold(pending.id, "scout").is_err());
+        assert_eq!(transport.calls, 0);
+        assert_eq!(
+            sender
+                .outgoing(pending.id, "scout")
+                .unwrap()
+                .progress
+                .unwrap()
+                .attempts,
+            0
+        );
+        // Model interruption after the durable start record, before any receipt.
+        sender
+            .start_attempt(pending.id, "scout", AttemptRoute::Primary)
+            .unwrap();
+        drop(guard);
+        let reopened = MessageStore::new(dir.path().into());
+        assert_eq!(
+            reopened.load().unwrap().messages[0]
+                .progress
+                .as_ref()
+                .unwrap()
+                .last_attempt
+                .as_ref()
+                .unwrap()
+                .outcome,
+            AttemptOutcome::Started
+        );
+        assert_eq!(transport.calls, 0);
+        assert!(
+            transmit_on_route(&mut transport, &reopened, &frame, AttemptRoute::Primary).is_err()
+        );
+        let progress = reopened
+            .outgoing(pending.id, "scout")
+            .unwrap()
+            .progress
+            .unwrap();
+        assert_eq!(progress.attempts, 2);
+        assert_eq!(
+            progress.last_attempt.unwrap().outcome,
+            AttemptOutcome::ReceiptRejected
+        );
+        assert_eq!(transport.calls, 1);
+        assert!(reopened
+            .fail_attempt(pending.id, "scout", 1, AttemptOutcome::ExchangeUnconfirmed)
+            .is_err());
+    }
+
+    #[test]
+    fn tracked_mismatched_receipt_is_recorded_without_trusting_remote_status() {
+        struct Forged;
+        impl MessageTransport for Forged {
+            fn exchange(&mut self, frame: &Envelope) -> io::Result<StoredReceipt> {
+                Ok(StoredReceipt {
+                    schema_version: 1,
+                    kind: "message_stored".into(),
+                    receiver_device: "wrong-device".into(),
+                    from_device: frame.from_device.clone(),
+                    origin_id: frame.origin_id,
+                    remote_id: 1,
+                })
+            }
+        }
+        let dir = tempfile::tempdir().unwrap();
+        let sender = MessageStore::new(dir.path().into());
+        let pending = sender.queue("scout", "report").unwrap();
+        let frame = Envelope {
+            schema_version: 1,
+            from_device: "overseer".into(),
+            to_device: "scout".into(),
+            origin_id: pending.id,
+            body: pending.body,
+            sent_at: pending.created_at,
+        };
+        assert!(transmit_on_route(&mut Forged, &sender, &frame, AttemptRoute::Primary).is_err());
+        let message = sender.outgoing(pending.id, "scout").unwrap();
+        assert_eq!(message.delivery, Delivery::Queued);
+        assert_eq!(message.remote_stored_id, None);
+        assert_eq!(
+            message.progress.unwrap().last_attempt.unwrap().outcome,
+            AttemptOutcome::ReceiptRejected
+        );
     }
 }
