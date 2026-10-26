@@ -5,6 +5,9 @@
 //! by browsing the dashboard or selecting a role.
 use crate::county_cache::{self, CountyCache};
 use crate::peer;
+use crate::radio_playback::NativeRadioEngine;
+use pipboy_core::radio_directory::curated_stations;
+use std::sync::{LazyLock, Mutex};
 use pipboy_core::message_pace::{PaceStore, Tier};
 use pipboy_core::messenger::{valid_text, Direction, MessageStore};
 use pipboy_core::network_health;
@@ -51,6 +54,11 @@ const MESSENGER_JS: &str = include_str!("../assets/messenger.js");
 const MESSENGER_CSS: &str = include_str!("../assets/messenger.css");
 const RECLAMATION_JS: &str = include_str!("../assets/reclamation.js");
 const RECLAMATION_CSS: &str = include_str!("../assets/reclamation.css");
+const RADIO_UI_JS: &str = include_str!("../assets/radio-ui.js");
+const RADIO_UI_CSS: &str = include_str!("../assets/radio-ui.css");
+
+static RADIO_ENGINE: LazyLock<Mutex<Option<NativeRadioEngine>>> =
+    LazyLock::new(|| Mutex::new(None));
 
 struct Request {
     method: String,
@@ -1154,6 +1162,93 @@ fn unifi_request(req: &Request, store: &WorkbenchStore) -> Result<Response, Resp
     }
 }
 
+fn radio_snapshot(engine: Option<&NativeRadioEngine>) -> Value {
+    let stations: Vec<Value> = curated_stations()
+        .iter()
+        .map(|s| json!({"id": s.id, "name": s.name, "genre": s.genre}))
+        .collect();
+    match engine {
+        Some(player) => {
+            let state = player.status();
+            json!({
+                "source": "native_ip",
+                "status": format!("{:?}", state.state).to_ascii_lowercase(),
+                "station": state.station_id,
+                "volume": state.volume_percent,
+                "error": state.last_error,
+                "stations": stations,
+                "sdr": "not_connected"
+            })
+        }
+        None => json!({
+            "source": "none", "status": "stopped",
+            "station": null, "volume": 60, "error": null,
+            "stations": stations, "sdr": "not_connected"
+        }),
+    }
+}
+
+fn radio_state() -> Response {
+    match RADIO_ENGINE.lock() {
+        Ok(lock) => Response::json(200, &radio_snapshot(lock.as_ref())),
+        Err(_) => Response::error(500, "Radio controller unavailable"),
+    }
+}
+
+fn radio_command(req: &Request) -> Result<Response, Response> {
+    let body = parse_json_body(req, &["action", "station", "volume", "confirm"])?;
+    let action = str_field(&body, "action")?;
+    let mut engine = RADIO_ENGINE
+        .lock()
+        .map_err(|_| Response::error(500, "Radio controller unavailable"))?;
+    match action {
+        "play" => {
+            if body.get("confirm").and_then(Value::as_bool) != Some(true) {
+                return Err(Response::error(422, "Radio playback requires explicit confirmation"));
+            }
+            let station = str_field(&body, "station")?;
+            if !curated_stations().iter().any(|s| s.id == station) {
+                return Err(Response::error(422, "Unknown curated radio station"));
+            }
+            if engine.as_ref().is_some_and(|current| {
+                !matches!(
+                    current.status().state,
+                    pipboy_core::radio_controller::PlaybackState::Failed
+                        | pipboy_core::radio_controller::PlaybackState::Stopped
+                )
+            }) {
+                return Err(Response::error(409, "Stop the active station before switching"));
+            }
+            // Stop old failed session before opening a replacement. The native
+            // decoder owns audio; no external player or web media element.
+            if let Some(mut old) = engine.take() {
+                old.stop();
+            }
+            *engine = Some(
+                NativeRadioEngine::start_internet(station, 60)
+                    .map_err(|_| Response::error(409, "Cannot start native radio worker"))?,
+            );
+        }
+        "stop" => {
+            if let Some(mut old) = engine.take() {
+                old.stop();
+            }
+        }
+        "volume" => {
+            let volume = body.get("volume").and_then(Value::as_u64)
+                .filter(|n| *n <= 100)
+                .ok_or_else(|| Response::error(422, "Volume must be between 0 and 100"))?;
+            let player = engine.as_ref().ok_or_else(|| {
+                Response::error(409, "Start a station before changing volume")
+            })?;
+            player.set_volume(volume as u8)
+                .map_err(|_| Response::error(409, "Cannot change radio volume"))?;
+        }
+        _ => return Err(Response::error(422, "Unknown radio command")),
+    }
+    Ok(Response::json(200, &radio_snapshot(engine.as_ref())))
+}
+
 fn dispatch(req: &Request, store: &WorkbenchStore, port: u16) -> Response {
     let expected_host = format!("127.0.0.1:{port}");
     if req.header("host") != Some(expected_host.as_str()) {
@@ -1172,6 +1267,12 @@ fn dispatch(req: &Request, store: &WorkbenchStore, port: u16) -> Response {
         }
         ("GET", "/assets/micro.css") => {
             Response::new(200, "text/css; charset=utf-8", MICRO_CSS.as_bytes())
+        }
+        ("GET", "/assets/radio-ui.js") => {
+            Response::new(200, "text/javascript; charset=utf-8", RADIO_UI_JS.as_bytes())
+        }
+        ("GET", "/assets/radio-ui.css") => {
+            Response::new(200, "text/css; charset=utf-8", RADIO_UI_CSS.as_bytes())
         }
         ("GET", "/assets/micro.js") => {
             Response::new(200, "text/javascript; charset=utf-8", MICRO_JS.as_bytes())
@@ -1247,6 +1348,8 @@ fn dispatch(req: &Request, store: &WorkbenchStore, port: u16) -> Response {
             .unwrap_or_else(|_| Response::error(409, "County cache unavailable")),
         ("POST", "/api/map/package") => county_package(req, store).unwrap_or_else(|error| error),
         ("GET", "/api/state") => state(store).unwrap_or_else(|error| error),
+        ("GET", "/api/radio") => radio_state(),
+        ("POST", "/api/radio") => radio_command(req).unwrap_or_else(|error| error),
         ("GET", "/api/reclamation") => reclamation_read(store, false).unwrap_or_else(|error| error),
         ("GET", "/api/reclamation/map") => {
             reclamation_map_read(store).unwrap_or_else(|error| error)
