@@ -55,7 +55,7 @@ let activePane = "workspace";
 let extensionMode = "map";
 let queuedSiteId = null;
 const PAGE_SIZE = 6;
-const rolesPerPage = () => window.innerHeight <= 480 ? 3 : PAGE_SIZE;
+const rolesPerPage = () => window.innerHeight <= 480 ? 2 : PAGE_SIZE;
 const cardsPerPage = () => window.innerHeight <= 480 ? 4 : PAGE_SIZE;
 function pager(id, total, current, setter, pageSize = PAGE_SIZE) {
   const host = byId(id);
