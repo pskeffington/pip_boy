@@ -796,6 +796,7 @@
     view.webRefresh.hidden = !view.webEnabled;
     view.webStatusNode.textContent = view.webStatus;
     view.countyButton.textContent = view.countyEnabled ? "COUNTY OFF" : "COUNTY";
+    view.zipCountyButton.disabled = !view.county?.id;
     view.countyNode.textContent = view.countyStatus;
     view.attribution.hidden = !view.onlineShapes.length;
     view.sourceBox.hidden = !view.county && !view.countyShapes.length &&
@@ -1707,6 +1708,39 @@
     const apply = make("button", "rb-map-button", "SET CENTER");
     apply.type = "submit";
     manual.append(latitude, longitude, apply);
+    const zipPanel=make("section","rb-map-zip");
+    zipPanel.hidden=true;
+    zipPanel.setAttribute("role","region");
+    zipPanel.setAttribute("aria-label","ZIP code to county map");
+    const zipForm=make("form","rb-map-zip-form");
+    const zipInput=make("input","");
+    zipInput.type="text";zipInput.inputMode="numeric";
+    zipInput.maxLength=5;zipInput.pattern="[0-9]{5}";
+    zipInput.required=true;zipInput.placeholder="ZIP 00000";
+    zipInput.setAttribute("aria-label","US five-digit ZIP code");
+    const zipApply=make("button","rb-map-button","FIND COUNTY");
+    zipApply.type="submit";
+    zipForm.append(zipInput,zipApply);
+    const zipStatus=make("div","rb-map-zip-status",
+      "2020 CENSUS ZCTA ≠ USPS ZIP / CHOOSE COUNTY IF MULTIPLE");
+    zipStatus.setAttribute("role","status");
+    zipStatus.setAttribute("aria-live","polite");
+    const zipCandidates=make("div","rb-map-zip-candidates");
+    const zipCountyButton=control("COUNTY ZIPs",
+      ()=>void listCountyZctas(view,0),
+      "List Census 2020 ZCTA areas intersecting selected county");
+    zipCountyButton.disabled=true;
+    const zipList=make("div","rb-map-zip-list");
+    const zipPager=make("div","rb-map-zip-pager");
+    const zipListPrev=control("PREV",
+      ()=>void listCountyZctas(view,Math.max(0,view.zipOffset-12)),
+      "Previous 12 county ZCTA areas");
+    const zipListNext=control("NEXT",
+      ()=>void listCountyZctas(view,view.zipOffset+12),
+      "Next 12 county ZCTA areas");
+    zipListPrev.disabled=true;zipListNext.disabled=true;
+    zipPager.append(zipCountyButton,zipListPrev,zipListNext);
+    zipPanel.append(zipForm,zipStatus,zipCandidates,zipPager,zipList);
     // Separate local marker-list controls allow keyboard/touch selection even
     // though the canvas is a visual layer.
     const sitePanel = make("details", "rb-map-sites");
@@ -1731,6 +1765,9 @@
     const view = {
       host, root, stage, canvas, status, file, sourceBox, sourceSummary, sourceLines,
       manual, latitude, longitude,
+      zipPanel,zipForm,zipInput,zipStatus,zipCandidates,zipCountyButton,
+      zipList,zipListPrev,zipListNext,zipOffset:0,zipVersion:0,
+      zipAbort:null,zipPageVersion:0,
       width: 0, height: 0, dpr: 1,
       center: mapMemory ? { ...mapMemory.center } : { lat: 0, lon: 0 },
       zoom: mapMemory ? mapMemory.zoom : 2,
@@ -1806,12 +1843,16 @@
       manual.hidden = !manual.hidden;
       if (!manual.hidden) latitude.focus();
     }, "Enter map center manually; not a GPS fix");
+    const zipButton=control("ZIP",()=>{
+      zipPanel.hidden=!zipPanel.hidden;
+      if(!zipPanel.hidden)zipInput.focus();
+    },"Find county GIS by US five-digit ZIP / Census ZCTA");
     view.fitButton = control("FIT", () => fitMap(view), "Fit available geometry to screen");
     const zoomIn = control("+", () => { view.zoom = clamp(view.zoom + 1, MIN_ZOOM, MAX_ZOOM); refresh(view); },
       "Zoom in");
     const zoomOut = control("-", () => { view.zoom = clamp(view.zoom - 1, MIN_ZOOM, MAX_ZOOM); refresh(view); },
       "Zoom out");
-    toolbar.append(view.locate, view.followButton, manualButton,
+    toolbar.append(view.locate, view.followButton, manualButton,zipButton,
       view.countyButton, view.fitButton, zoomIn, zoomOut);
     const layerPanel=make("details","rb-map-layers");
     const layerSummary=make("summary","","LAYERS / 4 OF 4 VISIBLE");
@@ -1841,10 +1882,14 @@
     }
     tools.append(make("summary", "", "TOOLS / MAP SOURCES"), extra);
     view.tools = tools;
-    root.append(toolbar, layerPanel, tools, manual, stage, webStatusNode, countyNode, status, gpsHelp,
+    root.append(toolbar, layerPanel, tools, zipPanel, manual, stage, webStatusNode, countyNode, status, gpsHelp,
       sitePanel, sourceBox, file);
     host.replaceChildren(root);
 
+    zipForm.addEventListener("submit",event=>{
+      event.preventDefault();
+      void submitZip(view);
+    });
     manual.addEventListener("submit", (event) => {
       event.preventDefault();
       const lat = Number(latitude.value), lon = Number(longitude.value);
