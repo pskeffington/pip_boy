@@ -3,6 +3,7 @@
 //! This deliberately delegates transport encryption and host authentication to
 //! mature OpenSSH instead of claiming home-grown TLS or unprotected LAN sockets.
 //! It opens no listening port and sends nothing when merely loading a profile.
+use pipboy_core::messenger::{Delivery, Message, MessageStore, RemoteMessage, MAX_TEXT_BYTES};
 use pipboy_core::peers::{Peer, PeerConfig, PeerStore};
 use pipboy_core::tasks::{
     valid_device_id, NewTask, RemoteAssignment, RemoteReport, Task, TaskStore,
@@ -274,6 +275,114 @@ pub fn sync_peer(alias: &str) -> io::Result<usize> {
     sync_from_store(&tasks, &peers, alias)
 }
 
+/// An outgoing message is queued durably before any outbound SSH attempt.
+/// The remote receipt proves application-level persistence, NOT human reading.
+pub fn send_message_from_store(
+    journal: &MessageStore,
+    peers: &PeerStore,
+    id: u64,
+    alias: &str,
+) -> io::Result<Message> {
+    if !valid_device_id(alias) || id == 0 {
+        return Err(invalid("Invalid Messenger peer or message ID"));
+    }
+    let config = peers.load()?;
+    let source = own_device(&config)?;
+    let destination = peers.get(alias)?;
+    if source == alias {
+        return Err(invalid("Cannot message the local device"));
+    }
+    let message = journal.outgoing(id, alias)?;
+    if message.delivery != Delivery::Queued {
+        return Err(io::Error::new(
+            io::ErrorKind::AlreadyExists,
+            "Message has already been stored on peer",
+        ));
+    }
+    let packet = RemoteMessage {
+        schema_version: 1,
+        from_device: source.to_owned(),
+        to_device: alias.to_owned(),
+        origin_id: message.id,
+        body: message.body,
+        sent_at: message.created_at,
+    };
+    let bytes = serde_json::to_vec(&packet)?;
+    let response = run_ssh(&destination, "pipboy peer message-receive", Some(&bytes))?;
+    if response.get("schema_version").and_then(Value::as_u64) != Some(1)
+        || get_id(&response, "kind")? != "message_stored"
+        || get_id(&response, "receiver_device")? != alias
+        || get_id(&response, "from_device")? != source
+        || get_num(&response, "origin_id")? != id
+    {
+        return Err(invalid(
+            "Peer returned a mismatched Messenger storage receipt",
+        ));
+    }
+    journal.mark_stored(id, alias, get_num(&response, "remote_id")?)
+}
+
+pub fn queue_message_from_store(
+    journal: &MessageStore,
+    peers: &PeerStore,
+    alias: &str,
+    body: &str,
+) -> io::Result<(Message, bool)> {
+    if !valid_device_id(alias) {
+        return Err(invalid("Invalid Messenger peer"));
+    }
+    let config = peers.load()?;
+    let source = own_device(&config)?;
+    if source == alias {
+        return Err(invalid("Cannot message the local device"));
+    }
+    // Prove the destination was explicitly paired BEFORE retaining the body.
+    peers.get(alias)?;
+    let pending = journal.queue(alias, body)?;
+    match send_message_from_store(journal, peers, pending.id, alias) {
+        Ok(stored) => Ok((stored, true)),
+        Err(_) => Ok((pending, false)), // explicit retry; never claim delivery
+    }
+}
+
+/// Execute on the receiving SSH account only. The recommended forced command
+/// binds a dedicated SSH public key to exactly one sender label.
+fn message_receive(expected_sender: Option<&str>) -> io::Result<()> {
+    let (config, _, _) = setup()?;
+    let local = own_device(&config)?;
+    let mut bytes = Vec::new();
+    io::stdin().take(MAX_REQUEST + 1).read_to_end(&mut bytes)?;
+    if bytes.len() as u64 > MAX_REQUEST {
+        return Err(invalid("Messenger frame exceeds transport limit"));
+    }
+    let frame: RemoteMessage =
+        serde_json::from_slice(&bytes).map_err(|_| invalid("Unrecognized Messenger frame"))?;
+    if !frame.valid()
+        || frame.to_device != local
+        || expected_sender.is_some_and(|sender| frame.from_device != sender)
+        || !config.trusted_senders.contains(&frame.from_device)
+    {
+        return Err(io::Error::new(
+            io::ErrorKind::PermissionDenied,
+            "Sender or receiver is not authorized for Messenger",
+        ));
+    }
+    let journal = MessageStore::from_environment()?;
+    let (stored, _) = journal.receive(&frame, local)?;
+    println!(
+        "{}",
+        json!({
+            "schema_version": 1,
+            "kind": "message_stored",
+            "receiver_device": local,
+            "from_device": frame.from_device,
+            "origin_id": frame.origin_id,
+            "remote_id": stored.id,
+        })
+    );
+    Ok(())
+}
+
 fn receive(expected_sender: Option<&str>) -> io::Result<()> {
     let (config, _, tasks) = setup()?;
     let local = own_device(&config)?;
@@ -358,16 +467,18 @@ fn bridge(source: &str) -> io::Result<()> {
         receive(Some(source))
     } else if original == format!("pipboy peer receipts {source}") {
         receipts(source)
+    } else if original == "pipboy peer message-receive" {
+        message_receive(Some(source))
     } else {
         Err(io::Error::new(
             io::ErrorKind::PermissionDenied,
-            "OpenSSH restricted key permits receive and source-specific receipts only",
+            "OpenSSH restricted key permits task receive, receipts and Messenger receive only",
         ))
     }
 }
 
 pub fn run(args: Vec<String>) -> Result<(), Box<dyn Error>> {
-    let use_text = "usage: pipboy peer <init DEVICE --confirm|trust SENDER --confirm|add ALIAS USER@HOST ABSOLUTE_KEY ABSOLUTE_KNOWN_HOSTS --confirm|list [--json]|send TASK_ID ALIAS --confirm|sync ALIAS --confirm>";
+    let use_text = "usage: pipboy peer <init DEVICE --confirm|trust SENDER --confirm|add ALIAS USER@HOST ABSOLUTE_KEY ABSOLUTE_KNOWN_HOSTS --confirm|list [--json]|send TASK_ID ALIAS --confirm|sync ALIAS --confirm|message-send ALIAS --confirm (text on stdin)|message-retry ID ALIAS --confirm>";
     let (config, peers, _) = setup()?;
     match args.as_slice() {
         [command, id, flag] if command == "init" && flag == "--confirm" => {
@@ -415,6 +526,34 @@ pub fn run(args: Vec<String>) -> Result<(), Box<dyn Error>> {
             let count = sync_peer(alias)?;
             println!("{count} locally stored tasks updated with peer-reported progress");
         }
+        [command, alias, flag] if command == "message-send" && flag == "--confirm" => {
+            let mut bytes = Vec::new();
+            io::stdin()
+                .take(MAX_TEXT_BYTES as u64 + 1)
+                .read_to_end(&mut bytes)?;
+            if bytes.len() > MAX_TEXT_BYTES {
+                return Err(invalid("Messenger body exceeds 1024 bytes").into());
+            }
+            let body = String::from_utf8(bytes).map_err(|_| invalid("Message must be UTF-8"))?;
+            let journal = MessageStore::from_environment()?;
+            let (message, delivered) = queue_message_from_store(&journal, &peers, alias, &body)?;
+            println!(
+                "MESSAGE #{} / {}",
+                message.id,
+                if delivered {
+                    "STORED ON RECEIVER"
+                } else {
+                    "QUEUED / RETRY REQUIRED"
+                }
+            );
+        }
+        [command, id, alias, flag] if command == "message-retry" && flag == "--confirm" => {
+            let id = id.parse::<u64>()?;
+            let journal = MessageStore::from_environment()?;
+            let result = send_message_from_store(&journal, &peers, id, alias)?;
+            println!("MESSAGE #{} / STORED ON RECEIVER", result.id);
+        }
+        [command] if command == "message-receive" => message_receive(None)?,
         [command] if command == "receive" => receive(None)?,
         [command, source] if command == "bridge" => bridge(source)?,
         [command, device] if command == "receipts" => receipts(device)?,

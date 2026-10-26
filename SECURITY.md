@@ -86,3 +86,7 @@ A research-catalog link is not a license grant. Review source licenses, dependen
 ## Explicit game companion connection
 
 `pipboy game --connect IP:PORT --confirm` authorizes one direct plaintext TCP connection to the specified Fallout 4 host. It transmits heartbeat responses only; game actions are not implemented. No discovery, DNS, automatic retry or saved state is used. Treat the endpoint as untrusted and use a trusted local network. See [game protocol bounds](docs/GAME_MODE.md). This opt-in path does not enable physical device adapters.
+
+## Rust-Boy Messenger v1
+
+Device-to-device text travels only through manually initiated, strict pinned OpenSSH connections with a dedicated forced-command key per sender. Remote receipts verify persisted application storage but not a human read. Local `PIPBOY_HOME/messages.json` is **plaintext**, not E2EE or encrypted storage. The loopback HTTP user interface does not establish per-human authentication. Do not use it for patient records, passwords, classified data, protected locations or other sensitive communication. Preserve host fingerprint out-of-band verification; do not enable SSH agent/port forwarding. See [Messenger threat model](docs/MESSENGER.md).

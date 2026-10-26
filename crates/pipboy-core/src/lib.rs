@@ -14,6 +14,7 @@ pub mod diagnostics;
 pub mod game;
 pub mod host_report;
 pub mod lifecycle;
+pub mod messenger;
 pub mod metrics;
 pub mod mock_adapters;
 pub mod network_health;

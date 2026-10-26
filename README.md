@@ -108,6 +108,8 @@ Switch profiles through the UI or `pipboy workbench use head-engineer --replace`
 
 ## Maps, tasks and diagnostics
 
+**Messenger / LINK:** paired-device text chat with strict OpenSSH host authentication, explicit sending and durable receipts; queued retry when offline. Messenger is encrypted **in transit only**, not E2EE or encrypted on disk. [Setup and limitations](docs/MESSENGER.md).
+
 **Reclamation:** load Reclamation Scout and select **SITES** on micro. Add site observations with manual WGS84 coordinates, condition, priority, notes and position uncertainty; update status and export RFC 7946 GeoJSON. Records persist at `PIPBOY_HOME/reclamation.json` (default `~/.pipboy/reclamation.json`). **MAP → SITES** loads saved markers explicitly; selecting **MAP** on a site opens its location on the grid. WEB is blocked while saved sites are displayed, so site coordinates are not sent to Overpass. No background GNSS or uploads. [Field kit guide](docs/RECLAMATION.md).
 
 **GPS troubleshooting:** a browser geolocation refusal now shows **GPS HELP** with site permission status and OS/browser guidance, while **CENTER** remains a manual fallback. [GPS troubleshooting](docs/SCOUT_GPS_MAP.md#gps-denied-despite-system-location-services-being-on).
