@@ -1828,7 +1828,10 @@ mod tests {
         let reloaded = WorkbenchStore::new(temp.path().join("radio-hud"));
         let persisted = dispatch(&request("GET", "/api/radio", Value::Null), &reloaded, 8765);
         let persisted: Value = serde_json::from_slice(&persisted.body).unwrap();
-        assert_eq!(persisted["presets"]["favorites"], json!(["dronezone", "skylab"]));
+        assert_eq!(
+            persisted["presets"]["favorites"],
+            json!(["dronezone", "skylab"])
+        );
         assert_eq!(persisted["status"], "stopped"); // No autoplay on reading presets.
         for bad in [
             json!({"action":"select","station":"https://evil.test/audio"}),
