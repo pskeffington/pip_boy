@@ -7,6 +7,7 @@
 - Preselect only MTFCC major roads at low zoom, suppress point landmarks until usable scale, coalesce touch redraws and reuse the per-frame Mercator camera transform. Keep all original source geometry intact.
 - Prioritize named landmarks ahead of street labels and apply small-screen collision avoidance; report loaded, candidate and drawn Census features in DATA SOURCES.
 - Gate a deterministic 20,000-feature test covering category filtering, offline source preservation, viewport candidate reductions, point-name visibility, no new network/GPS actions and session settings. Physical GNSS and Raspberry Pi FPS remain unverified.
+- Gate real headless Chromium layout at 480x320, 800x480 and 320x568 with collapsed/expanded layer controls, canvas height, touch-target size, accessible button state and zero implicit provider calls.
 
 
 ## 2026-10-26 — Offline county-boundary and landmark ingestion
