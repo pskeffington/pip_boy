@@ -107,7 +107,7 @@ async function main() {
         } else if (body.action === "output") {
           assert.ok(state.outputs.some((device) => device.id === body.output));
           state = { ...state, output: body.output,
-            output_failure: false, output_available: true,
+            output_failure: false, output_available: true, error: null,
             status: state.status === "failed" ? "connecting" : state.status };
         } else if (body.action === "stop") {
           state = { ...state, station: null, source: "none",
