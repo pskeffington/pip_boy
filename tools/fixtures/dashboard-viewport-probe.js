@@ -25,7 +25,9 @@
         moduleCount:all(".module-card").length,
         cardsFit:all(".module-card").every(e=>inside(e,modules)),
         roleCount:all(".role-card").length,
-        rolesFit:innerWidth<=1100 || all(".role-card").every(e=>inside(e,roles)),
+        rolesHidden:!shown(roles),
+        noRoleNavigation:!$("[data-pane-target=\"roles\"]"),
+        commonTabs:all("[data-stage-target]").map(e=>e.textContent),
         pagerFits:all("#module-pager button").every(e=>inside(e,$("#module-pager"))),
         paneTabsVisible:innerWidth>1100 || shown($('[data-pane-target="workspace"]'))
       };
@@ -61,9 +63,24 @@
       $('[data-stage-target="messages"]').click();
       result.messages=shown($('[data-stage="messages"]')) &&
         inside($('[data-stage="messages"]'),$("#workspace-stage"));
-      const customTab=$('[data-stage-target="palette"]');
-      if(shown(customTab)){
-        customTab.click();
+      const beforeRole=$("#status-role").textContent;
+      const beforeCards=all(".module-card").map(e=>e.getAttribute("aria-label"));
+      $('[data-stage-target="settings"]').click();
+      result.settings={
+        visible:shown($('[data-stage="settings"]')),
+        roleButtonsVisible:all(".role-card").length>0 &&
+          all(".role-card").every(e=>inside(e,roles)),
+        rolePagerVisible:all("#role-pager button").every(e=>inside(e,$("#role-pager"))),
+        activeText:$("#settings-current-role").textContent
+      };
+      const alt=all(".role-card").find(e=>!e.textContent.includes("SAVED"));
+      if(alt)alt.click();
+      result.settings.previewIsolated=$("#status-role").textContent===beforeRole &&
+        JSON.stringify(beforeCards)===JSON.stringify(all(".module-card").map(e=>e.getAttribute("aria-label"))) &&
+        $("#load-role").textContent==="LOAD PROFILE";
+      const customButton=$("#open-palette");
+      if(shown(customButton)){
+        customButton.click();
         result.palette={
           visible:shown($('[data-stage="palette"]')),
           count:all(".palette-button").length,
@@ -73,11 +90,9 @@
           $("#palette-pager button:last-child").click();
           result.palette.next=all(".palette-button").length;
         }
+        $("#palette-back").click();
+        result.palette.back=shown($('[data-stage="settings"]'));
       }
-      const roleTab=$('[data-pane-target="roles"]');
-      if(shown(roleTab))roleTab.click();
-      result.rolePane=shown($(".role-panel")) &&
-        all(".role-card").every(e=>inside(e,roles));
       result.documentFitsAfter=documentFits();
       result.ok=true;
     }catch(e){result.error=e.stack || e.message;}
