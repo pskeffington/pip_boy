@@ -24,3 +24,7 @@
 .rb-radio-output:disabled{opacity:.55}
 .rb-radio-output:focus-visible{outline:3px solid #f1e995;outline-offset:2px}
 .rb-radio-compact .rb-radio-output{min-height:36px}
+
+.rb-radio .rb-radio-fallback{min-height:38px;background:#49331b;border-color:#d1a15d;color:#ffe8bf;font-size:11px;letter-spacing:.04em}
+.rb-radio .rb-radio-fallback[hidden]{display:none}
+.rb-radio-compact .rb-radio-fallback{min-height:36px}
