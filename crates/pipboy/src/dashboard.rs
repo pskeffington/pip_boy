@@ -5,8 +5,8 @@
 //! by browsing the dashboard or selecting a role.
 use crate::county_cache::{self, CountyCache};
 use crate::peer;
-use crate::radio_playback::NativeRadioEngine;
 use crate::radio_output::available_outputs;
+use crate::radio_playback::NativeRadioEngine;
 use pipboy_core::message_pace::{PaceStore, Tier};
 use pipboy_core::messenger::{valid_text, Direction, MessageStore};
 use pipboy_core::network_health;
@@ -1165,13 +1165,21 @@ fn unifi_request(req: &Request, store: &WorkbenchStore) -> Result<Response, Resp
 }
 
 fn radio_snapshot(engine: Option<&NativeRadioEngine>) -> Value {
-    let selected_output = RADIO_OUTPUT.lock().map(|id| id.clone()).unwrap_or_else(|_| "system".into());
+    let selected_output = RADIO_OUTPUT
+        .lock()
+        .map(|id| id.clone())
+        .unwrap_or_else(|_| "system".into());
     let outputs = available_outputs().unwrap_or_default();
-    let devices: Vec<Value> = outputs.iter().map(|device| json!({
-        "id": device.id,
-        "name": device.name,
-        "default": device.is_default,
-    })).collect();
+    let devices: Vec<Value> = outputs
+        .iter()
+        .map(|device| {
+            json!({
+                "id": device.id,
+                "name": device.name,
+                "default": device.is_default,
+            })
+        })
+        .collect();
     let stations: Vec<Value> = curated_stations()
         .iter()
         .map(|s| json!({"id": s.id, "name": s.name, "genre": s.genre}))
@@ -1242,8 +1250,14 @@ fn radio_command(req: &Request) -> Result<Response, Response> {
                 old.stop();
             }
             *engine = Some(
-                NativeRadioEngine::start_internet(station, 60, &RADIO_OUTPUT.lock().map_err(|_| Response::error(500, "Output controller unavailable"))?)
-                    .map_err(|_| Response::error(409, "Cannot start native radio worker"))?,
+                NativeRadioEngine::start_internet(
+                    station,
+                    60,
+                    &RADIO_OUTPUT
+                        .lock()
+                        .map_err(|_| Response::error(500, "Output controller unavailable"))?,
+                )
+                .map_err(|_| Response::error(409, "Cannot start native radio worker"))?,
             );
         }
         "stop" => {
@@ -1258,7 +1272,10 @@ fn radio_command(req: &Request) -> Result<Response, Response> {
                 .iter()
                 .any(|device| device.id == output_id)
             {
-                return Err(Response::error(422, "Output disconnected; refresh audio device list"));
+                return Err(Response::error(
+                    422,
+                    "Output disconnected; refresh audio device list",
+                ));
             }
             // Changing hardware output must be explicitly requested. Restart
             // the same stream/volume using the newly selected native endpoint.
@@ -1266,14 +1283,27 @@ fn radio_command(req: &Request) -> Result<Response, Response> {
             if let Some(mut active) = engine.take() {
                 active.stop();
             }
-            *RADIO_OUTPUT.lock().map_err(|_| Response::error(500, "Output controller unavailable"))? =
+            *RADIO_OUTPUT
+                .lock()
+                .map_err(|_| Response::error(500, "Output controller unavailable"))? =
                 output_id.to_owned();
             if let Some(state) = previous {
-                if !matches!(state.state, pipboy_core::radio_controller::PlaybackState::Stopped | pipboy_core::radio_controller::PlaybackState::Failed) {
+                if !matches!(
+                    state.state,
+                    pipboy_core::radio_controller::PlaybackState::Stopped
+                        | pipboy_core::radio_controller::PlaybackState::Failed
+                ) {
                     if let Some(station) = state.station_id {
-                        *engine = Some(NativeRadioEngine::start_internet(
-                            &station, state.volume_percent, output_id,
-                        ).map_err(|_| Response::error(409, "Cannot restart radio on selected output"))?);
+                        *engine = Some(
+                            NativeRadioEngine::start_internet(
+                                &station,
+                                state.volume_percent,
+                                output_id,
+                            )
+                            .map_err(|_| {
+                                Response::error(409, "Cannot restart radio on selected output")
+                            })?,
+                        );
                     }
                 }
             }
