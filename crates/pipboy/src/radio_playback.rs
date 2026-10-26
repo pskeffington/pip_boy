@@ -1,14 +1,13 @@
 //! In-process IP-radio playback worker using native Rust decoding and CPAL.
 //! No subprocesses, browser playback, persistent audio files or RF transmit.
 
-use crate::radio_http::NativeRadioHttp;
+use crate::radio_net;
 use crate::radio_output::NativeAudioOutput;
 use pipboy_core::radio_controller::{
     PlaybackEvent, PlaybackState, RadioCommand, RadioController, RadioSession,
 };
 use pipboy_core::radio_directory::station_by_id;
 use pipboy_core::radio_pcm::PcmConverter;
-use pipboy_core::radio_stream::open_station;
 use std::io::{self, Read, Seek, SeekFrom};
 use std::sync::{
     atomic::{AtomicBool, AtomicU8, Ordering},
@@ -185,8 +184,7 @@ fn decode_and_play(
     if cancelled.load(Ordering::Acquire) {
         return Ok(());
     }
-    let http = NativeRadioHttp::for_playback().map_err(|e| e.to_string())?;
-    let stream = open_station(&http, station_id).map_err(|e| e.to_string())?;
+    let (stream, _network_guard) = radio_net::open_station(station_id, Arc::clone(&cancelled))?;
     if cancelled.load(Ordering::Acquire) {
         return Ok(());
     }
