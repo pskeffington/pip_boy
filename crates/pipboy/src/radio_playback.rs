@@ -270,7 +270,9 @@ fn decode_and_play(
         let keep_going = converter
             .as_mut()
             .expect("PCM converter is initialized")
-            .convert(samples.samples(), |frame| output.push_frame(frame, cancelled))
+            .convert(samples.samples(), |frame| {
+                output.push_frame(frame, cancelled)
+            })
             .map_err(|e| format!("Radio PCM conversion failed: {e:?}"))?;
         if !keep_going {
             return Ok(());
@@ -304,7 +306,9 @@ pub fn run_demo(station_id: &str, duration_seconds: Option<u64>) -> Result<(), S
             thread::sleep(Duration::from_millis(100));
             let snapshot = player.status();
             if snapshot.state == PlaybackState::Failed {
-                let error = snapshot.last_error.unwrap_or_else(|| "Unknown failure".into());
+                let error = snapshot
+                    .last_error
+                    .unwrap_or_else(|| "Unknown failure".into());
                 player.stop();
                 return Err(error);
             }
