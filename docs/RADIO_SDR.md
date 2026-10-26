@@ -66,3 +66,15 @@ A successful TCP connection proves only routability to the station publisher's H
 ## Native playback implementation policy
 
 The previous external-player CLI experiment has been removed. The `radio_controller` module now models user-driven session state, volume and generation-specific events in-process. It is a control foundation, **not** a functioning player. Live HTTP download, Symphonia decode, CPAL playback and micro UI are explicit following milestones. See [research, object model and phase gates](RADIO_NATIVE_ROADMAP.md).
+
+## R2 native stream ingress (implementation pending CI)
+
+R2 adds `radio_stream` and `radio_http`: controlled, in-process HTTPS response acquisition, publisher-allowlisted playlist URLs, bounded M3U parsing and ICY metadata stripping. The short-lived probe reads at most 8192 audio bytes and discards them. It does not initiate a player, persist audio or declare audible output.
+
+```bash
+cargo run --locked -p pipboy -- radio probe skylab --confirm
+cargo run --locked -p pipboy -- radio probe groovesalad --confirm
+cargo test --locked -p pipboy-core radio_stream
+```
+
+Only `probe` contacts a published stream; `stations` remains offline. Probe uses a total timeout and is explicitly unsuitable for continuous listening. Some broadcaster playlists may list HTTP endpoints; the first-stage HTTPS-only resolver deliberately rejects those entries. Real endpoint, Cargo.lock, licensing and all-platform build verification are release gates. [Phased native roadmap](RADIO_NATIVE_ROADMAP.md).
