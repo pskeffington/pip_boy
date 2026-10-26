@@ -48,14 +48,7 @@ const navigator = {
 const window = {
   isSecureContext:true,devicePixelRatio:1,requestAnimationFrame(fn){fn();},
   addEventListener(){},removeEventListener(){},
-  RustBoyBoston:{load(){
-    return {
-      center:{lon:-71.06,lat:42.36},
-      bounds:[-71.14,42.309,-70.99,42.399],
-      featureCount:0,vertexCount:0,shapes:[],labelShapes:[],
-      source:{origin_url:"https://data.boston.gov",source_blob_sha:"fake-fixture"}
-    };
-  }}
+
 };
 const renderer = fs.readFileSync(path.join(__dirname,
   "../crates/pipboy/assets/map.js"),"utf8");
@@ -76,6 +69,8 @@ async function main(){
   assert.equal(positions.length,0,"Mount never requests browser location");
   assert.equal(map.gpsHelp.hidden,true,"No intrusive GPS help until failure");
   assert.equal(map.fix,null);
+  map.latitude.value="42.36";map.longitude.value="-71.06";
+  map.manual.listeners.submit[0]({preventDefault(){}});
   click(map.locate);
   assert.equal(positions.length,1);
   assert.equal(map.gpsState,"WAITING FOR BROWSER LOCATION");
