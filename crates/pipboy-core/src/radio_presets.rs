@@ -283,7 +283,9 @@ mod tests {
         assert_eq!(document.favorites, vec!["skylab"]);
         document = store.favorite("dronezone", true).unwrap();
         assert_eq!(document.favorites, vec!["skylab", "dronezone"]);
-        document = store.move_favorite("dronezone", MoveDirection::Earlier).unwrap();
+        document = store
+            .move_favorite("dronezone", MoveDirection::Earlier)
+            .unwrap();
         assert_eq!(document.favorites, vec!["dronezone", "skylab"]);
         document = store.select("groovesalad").unwrap();
         assert_eq!(document.last_selected.as_deref(), Some("groovesalad"));
@@ -309,7 +311,9 @@ mod tests {
         let original = fs::read(store.path()).unwrap();
         assert!(store.select("https://unapproved.test/stream").is_err());
         assert!(store.favorite("malicious", true).is_err());
-        assert!(store.move_favorite("groovesalad", MoveDirection::Later).is_err());
+        assert!(store
+            .move_favorite("groovesalad", MoveDirection::Later)
+            .is_err());
         assert_eq!(fs::read(store.path()).unwrap(), original);
         let invalid = RadioPresets {
             favorites: vec!["skylab".into(), "skylab".into()],
@@ -352,7 +356,9 @@ mod tests {
         store.favorite("skylab", true).unwrap();
         let original = fs::read(store.path()).unwrap();
         store.favorite("skylab", true).unwrap();
-        store.move_favorite("skylab", MoveDirection::Earlier).unwrap();
+        store
+            .move_favorite("skylab", MoveDirection::Earlier)
+            .unwrap();
         store.move_favorite("skylab", MoveDirection::Later).unwrap();
         assert_eq!(fs::read(store.path()).unwrap(), original);
     }

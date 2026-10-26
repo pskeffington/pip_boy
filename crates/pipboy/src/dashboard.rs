@@ -1167,7 +1167,8 @@ fn unifi_request(req: &Request, store: &WorkbenchStore) -> Result<Response, Resp
 
 fn radio_preset_store(store: &WorkbenchStore) -> RadioPresetStore {
     RadioPresetStore::new(
-        store.path()
+        store
+            .path()
             .parent()
             .unwrap_or_else(|| std::path::Path::new("."))
             .to_path_buf(),
@@ -1245,7 +1246,15 @@ fn radio_state(store: &WorkbenchStore) -> Response {
 fn radio_command(req: &Request, store: &WorkbenchStore) -> Result<Response, Response> {
     let body = parse_json_body(
         req,
-        &["action", "station", "volume", "confirm", "output", "enabled", "direction"],
+        &[
+            "action",
+            "station",
+            "volume",
+            "confirm",
+            "output",
+            "enabled",
+            "direction",
+        ],
     )?;
     let action = str_field(&body, "action")?;
     let presets = radio_preset_store(store);
@@ -1262,7 +1271,10 @@ fn radio_command(req: &Request, store: &WorkbenchStore) -> Result<Response, Resp
                         | pipboy_core::radio_controller::PlaybackState::Stopped
                 )
             }) {
-                return Err(Response::error(409, "Stop the active station before selecting"));
+                return Err(Response::error(
+                    409,
+                    "Stop the active station before selecting",
+                ));
             }
             presets
                 .select(station)
@@ -1410,7 +1422,10 @@ fn radio_command(req: &Request, store: &WorkbenchStore) -> Result<Response, Resp
     let saved = presets
         .load()
         .map_err(|_| Response::error(409, "Local radio presets unavailable; file preserved"))?;
-    Ok(Response::json(200, &radio_snapshot(engine.as_ref(), &saved)))
+    Ok(Response::json(
+        200,
+        &radio_snapshot(engine.as_ref(), &saved),
+    ))
 }
 
 fn dispatch(req: &Request, store: &WorkbenchStore, port: u16) -> Response {
