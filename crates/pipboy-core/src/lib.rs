@@ -30,6 +30,7 @@ pub mod peers;
 pub mod permissions;
 pub mod radio;
 pub mod radio_controller;
+pub mod radio_pcm;
 pub mod radio_directory;
 pub mod radio_stream;
 pub mod reclamation;
