@@ -22,7 +22,10 @@ const inside=(node,box)=>{
     for(const id of ["stat","role","data","radio","conf"]){
       setTab(id);await settle();
       const box=ui.viewport.getBoundingClientRect();
-      const controls=[...ui.content.querySelectorAll("button,select,input")];
+      const controls=[...ui.content.querySelectorAll("button,select,input")]
+        .filter(x=>x.getClientRects().length>0);
+      if(id === "radio" && !inside(ui.content.querySelector(".rb-radio-play"),box))
+        throw Error("Primary Radio playback control clipped");
       report.pages.push({id,fits:ui.content.scrollHeight<=ui.viewport.clientHeight+1,
         height:ui.content.scrollHeight,available:ui.viewport.clientHeight,
         controlsFit:controls.every(x=>inside(x,box))});
