@@ -23,6 +23,13 @@
   let pendingSiteFocus = null; // numeric ID only, never raw coordinates or notes
   const MAX_LOCAL_SITES = 256;
   const SITE_PAGE_SIZE = 6;
+  // Per-page preferences only: no coordinates, flags or map features on disk.
+  const COUNTY_ORDER = ["tiger-areawater","tiger-linearwater",
+    "tiger-roads","tiger-pointlm"];
+  const COUNTY_KEYS = ["roads","water","landmarks","boundary"];
+  const COUNTY_LABELS = {roads:"ROADS",water:"WATER",
+    landmarks:"LANDMARKS",boundary:"BORDER"};
+  let countyPreferences = {roads:true,water:true,landmarks:true,boundary:true};
 
   function clamp(value, lower, upper) {
     return Math.min(upper, Math.max(lower, value));
@@ -404,6 +411,116 @@
     }
   }
 
+
+  // Index source-provided feature envelopes only. The index affects lookup,
+  // never the source geometry or the authoritative census cache. Each feature
+  // is assigned to a bounded number of cells; extensive shapes are scanned
+  // conservatively instead of producing millions of bucket references.
+  function countyFilterFor(id) {
+    return id==="tiger-roads" ? "roads" :
+      id==="tiger-pointlm" ? "landmarks" : "water";
+  }
+
+  function validEnvelope(b) {
+    return Array.isArray(b) && b.length===4 &&
+      b.every(Number.isFinite) && b[0]>=-180 && b[2]<=180 &&
+      b[1]>=-90 && b[3]<=90 && b[0]<=b[2] && b[1]<=b[3];
+  }
+
+  function buildCountyIndex(shapes) {
+    if (shapes.length < 128) return {shapes,cells:null};
+    const bounds = [Infinity,Infinity,-Infinity,-Infinity];
+    for (const shape of shapes) {
+      if (!validEnvelope(shape.bounds) || shape.bounds[2]-shape.bounds[0]>180)
+        continue;
+      bounds[0]=Math.min(bounds[0],shape.bounds[0]);
+      bounds[1]=Math.min(bounds[1],shape.bounds[1]);
+      bounds[2]=Math.max(bounds[2],shape.bounds[2]);
+      bounds[3]=Math.max(bounds[3],shape.bounds[3]);
+    }
+    if (!bounds.every(Number.isFinite)) return {shapes,cells:null};
+    const size=Math.min(48,Math.max(8,Math.ceil(Math.sqrt(shapes.length/16))));
+    const cols=bounds[2]-bounds[0]<1e-9 ? 1 : size;
+    const rows=bounds[3]-bounds[1]<1e-9 ? 1 : size;
+    const cells=new Map(), spill=[];
+    const ix=lon=>clamp(Math.floor((lon-bounds[0])/
+      Math.max(1e-9,bounds[2]-bounds[0])*cols),0,cols-1);
+    const iy=lat=>clamp(Math.floor((lat-bounds[1])/
+      Math.max(1e-9,bounds[3]-bounds[1])*rows),0,rows-1);
+    let references=0;
+    for (let i=0;i<shapes.length;i++) {
+      const b=shapes[i].bounds;
+      if (!validEnvelope(b) || b[2]-b[0]>180) {spill.push(i);continue;}
+      const x0=ix(b[0]),x1=ix(b[2]),y0=iy(b[1]),y1=iy(b[3]);
+      const count=(x1-x0+1)*(y1-y0+1);
+      if (count>24) {spill.push(i);continue;}
+      // At most 240k references for one source; no unbounded index growth.
+      if (references+count>240000) return {shapes,cells:null};
+      for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){
+        const key=y*cols+x;
+        if(!cells.has(key))cells.set(key,[]);
+        cells.get(key).push(i);
+      }
+      references+=count;
+    }
+    return {shapes,bounds,cols,rows,cells,spill,references};
+  }
+
+  function countyViewport(view) {
+    if (!view.width || !view.height) return null;
+    const center=project(view.center.lon,view.center.lat);
+    const scale=Math.pow(2,view.zoom),pad=16;
+    const westX=center[0]-(view.width/2+pad)/scale;
+    const eastX=center[0]+(view.width/2+pad)/scale;
+    // World-spanning and antimeridian viewports use the complete feature
+    // list, preserving original wrap behavior rather than dropping geometry.
+    if(westX<0 || eastX>TILE || eastX-westX>=TILE) return null;
+    const north=inverse(center[0],center[1]-(view.height/2+pad)/scale).lat;
+    const south=inverse(center[0],center[1]+(view.height/2+pad)/scale).lat;
+    return [westX/TILE*360-180,south,eastX/TILE*360-180,north];
+  }
+
+  function indexedCountyShapes(index, viewport) {
+    if (!index.cells || !viewport) return index.shapes;
+    const b=index.bounds;
+    if(viewport[0]>b[2] || viewport[2]<b[0] ||
+       viewport[1]>b[3] || viewport[3]<b[1])
+      return index.spill.map(i=>index.shapes[i]);
+    const cx=v=>clamp(Math.floor((v-b[0])/
+      Math.max(1e-9,b[2]-b[0])*index.cols),0,index.cols-1);
+    const cy=v=>clamp(Math.floor((v-b[1])/
+      Math.max(1e-9,b[3]-b[1])*index.rows),0,index.rows-1);
+    const found=new Set(index.spill);
+    for(let y=cy(viewport[1]);y<=cy(viewport[3]);y++){
+      for(let x=cx(viewport[0]);x<=cx(viewport[2]);x++){
+        for(const id of index.cells.get(y*index.cols+x)||[]) found.add(id);
+      }
+    }
+    // Maintain deterministic Census record order even across spatial buckets.
+    return [...found].sort((a,b)=>a-b).map(i=>index.shapes[i]);
+  }
+
+  // Labels are rendered after geometry with POIs ahead of roads. A tiny
+  // collision budget keeps the 480x320 display legible and prevents a crowded
+  // road layer from consuming all landmark labels.
+  function drawMapLabels(view,ctx,labels,stats) {
+    const occupied=[];
+    for(const candidate of [...labels.points,...labels.roads]) {
+      if(occupied.length>=12)break;
+      const name=candidate.name.slice(0,Math.min(30,Math.max(8,Math.floor(view.width/12))));
+      const x=candidate.x+6,y=candidate.y-6,width=name.length*6.2+5;
+      if(x<4 || y<13 || x+width>view.width-3 || y>view.height-4)continue;
+      const box=[x-2,y-11,x+width,y+2];
+      if(occupied.some(b=>box[0]<b[2]+3 && box[2]+3>b[0] &&
+          box[1]<b[3]+3 && box[3]+3>b[1]))continue;
+      occupied.push(box);
+      ctx.fillStyle=candidate.point?"#f3db9a":"#d6efbd";
+      ctx.font="10px monospace";
+      ctx.fillText(name,x,y);
+      if(candidate.point)stats.landmarkLabels++;
+      else stats.roadLabels++;
+    }
+  }
 
   function shapeVisible(shape, view) {
     // Do not synthesize geometry: use only the bounded source envelope.
