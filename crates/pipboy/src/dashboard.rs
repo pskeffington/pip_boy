@@ -7,6 +7,7 @@ mod messenger_routes;
 mod task_routes;
 
 use crate::county_cache::{self, CountyCache};
+use crate::zip_index::ZipIndex;
 use pipboy_core::network_health;
 use pipboy_core::network_probe;
 use pipboy_core::network_suite;
@@ -503,6 +504,60 @@ fn county_boundary(req: &Request, store: &WorkbenchStore) -> Result<Response, Re
     Ok(Response::json(200, &boundary))
 }
 
+fn zip_index(store: &WorkbenchStore) -> ZipIndex {
+    ZipIndex::new(
+        store.path()
+            .parent()
+            .unwrap_or_else(|| std::path::Path::new("."))
+            .join("geo_index"),
+    )
+}
+
+fn zip_lookup(req: &Request, store: &WorkbenchStore) -> Result<Response, Response> {
+    let body = parse_json_body(req, &["zip", "confirm", "cache_only"])?;
+    let zip = str_field(&body, "zip")?;
+    let cache_only = body.get("cache_only").and_then(Value::as_bool) == Some(true);
+    let confirm = body.get("confirm").and_then(Value::as_bool) == Some(true);
+    if !confirm && !cache_only {
+        return Err(Response::error(403, "ZIP relationship lookup requires confirmation"));
+    }
+    let result = zip_index(store)
+        .resolve_zip(zip, !cache_only && confirm)
+        .map_err(|error| match error.kind() {
+            io::ErrorKind::NotFound => Response::error(404, "ZCTA index not cached"),
+            io::ErrorKind::InvalidInput => Response::error(422, "Invalid ZIP or Census ZCTA index"),
+            io::ErrorKind::WouldBlock => Response::error(409, "Census lookup download in progress"),
+            _ => Response::error(409, "Census ZCTA source unavailable; existing cache preserved"),
+        })?;
+    Ok(Response::json(200, &result))
+}
+
+fn county_zips(req: &Request, store: &WorkbenchStore) -> Result<Response, Response> {
+    let body = parse_json_body(req, &["geoid", "offset", "confirm", "cache_only"])?;
+    let geoid = str_field(&body, "geoid")?;
+    let offset = match body.get("offset") {
+        None => 0,
+        Some(value) => value
+            .as_u64()
+            .filter(|offset| *offset <= 80_000)
+            .ok_or_else(|| Response::error(422, "Invalid county ZIP page offset"))? as usize,
+    };
+    let cache_only = body.get("cache_only").and_then(Value::as_bool) == Some(true);
+    let confirm = body.get("confirm").and_then(Value::as_bool) == Some(true);
+    if !confirm && !cache_only {
+        return Err(Response::error(403, "County ZCTA lookup requires confirmation"));
+    }
+    let result = zip_index(store)
+        .county_zctas(geoid, offset, !cache_only && confirm)
+        .map_err(|error| match error.kind() {
+            io::ErrorKind::NotFound => Response::error(404, "ZCTA index not cached"),
+            io::ErrorKind::InvalidInput => Response::error(422, "Invalid county or Census ZCTA index"),
+            io::ErrorKind::WouldBlock => Response::error(409, "Census lookup download in progress"),
+            _ => Response::error(409, "Census ZCTA source unavailable; existing cache preserved"),
+        })?;
+    Ok(Response::json(200, &result))
+}
+
 fn reclamation_store(store: &WorkbenchStore) -> SiteStore {
     SiteStore::new(
         store
@@ -873,6 +928,8 @@ fn dispatch(req: &Request, store: &WorkbenchStore, port: u16) -> Response {
             .unwrap_or_else(|_| Response::error(409, "County cache unavailable")),
         ("POST", "/api/map/package") => county_package(req, store).unwrap_or_else(|error| error),
         ("POST", "/api/map/boundary") => county_boundary(req, store).unwrap_or_else(|error| error),
+        ("POST", "/api/map/zip") => zip_lookup(req, store).unwrap_or_else(|error| error),
+        ("POST", "/api/map/county-zips") => county_zips(req, store).unwrap_or_else(|error| error),
         ("GET", "/api/state") => state(store).unwrap_or_else(|error| error),
         ("GET", "/api/reclamation") => reclamation_read(store, false).unwrap_or_else(|error| error),
         ("GET", "/api/reclamation/map") => {
