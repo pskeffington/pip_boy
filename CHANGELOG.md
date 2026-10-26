@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-10-26 — Focused desktop copy cleanup (CI pending)
+
+- Preserve the latest role-independent two-pane desktop and paged **TOOLS / VIEW / MESSAGES / SETTINGS** layout; station changes remain exclusively in Settings. Remove repetitive template paragraphs, redundant status tiles, oversized module-card contents and long visible guidance.
+- Retain complete Rust metadata through hover tooltips, collapsed **About this tool** and **Safety & access** sections, and existing confirmation dialogs. Keep short-screen station paging and the dedicated micro HUD intact.
+- Defer the local Messenger status read until the user opens MESSAGES. No automatic sending, network connections or device access.
+- Register offline DOM and real Chromium focus/layout tests while retaining MAP, Security/Scout, Settings preview, Custom and browser acceptance gates.
+
+
 ## 2026-10-26 — ZIP↔county GIS lookups (Mac-first)
 
 - Add compact ZIP entry to MAP: operator-supplied five-digit ZIP → Census 2020 ZCTA relationship → 2025 county boundary and GIS packages by verified GEOID. No synthetic ZIP centroids or implicit GPS.
@@ -8,11 +16,11 @@
 - Preserve last-good GIS on failed replacement; add Rust and JS tests for ambiguity, offline mode, consent, leading-zero ZIPs, and no ZCTA cases. Crosswalk is not current USPS ZIP validation.
 - Mac operator acceptance and real Census availability remain open field gates.
 
-## 2026-10-26 — NET ENGINEER dashboard route separation (CI pending)
+## 2026-10-26 — NET ENGINEER dashboard route separation (PR #48; five-job CI passed)
 
 - Extract the opt-in private LAN scan and read-only UniFi HTTP handlers to `crates/pipboy/src/dashboard/network_routes.rs`, retaining original `/api/net/scan` and `/api/net/unifi` paths, JSON responses, parent loopback gate and Rust core network/controller policy.
 - Add offline Rust regressions for cross-origin requests, missing confirmation, unavailable `net-lab`, invalid CIDR and UniFi site inputs, with no unauthorized network activity.
-- Update the ownership index and developer/operator documentation. Keep the focused PR separate from RADIO and Mac MAP work until its full five-job CI passes.
+- Update the ownership index and developer/operator documentation. Merged to `main` as `870c975b` after all five CI jobs passed; field acceptance remains separate.
 
 
 ## 2026-10-26 — Privacy and credential-isolation audit (CI pending)

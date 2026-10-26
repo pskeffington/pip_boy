@@ -457,7 +457,88 @@ html, body { height:100%; overflow:hidden; }
 }
 /* Keep Settings reachable from both viewport classes with no role sidebar. */
 
+/* Desktop declutter: preserve focused Settings/VIEW/MESSAGES navigation. */
+.brand-copy > span { font-size:9px; letter-spacing:.1em; }
+.masthead-right { gap:8px; }
+.workspace-head .eyebrow { letter-spacing:.08em; }
+.hud-strip { grid-template-columns:1fr .75fr 1.15fr; gap:6px; }
+.hud-strip .access-stat { border-right:0; }
+.hud-strip strong { font-size:10px; }
+.stage-surface > .section-heading { margin:2px 0 6px; }
+.module-card {
+  flex-direction:row; justify-content:flex-start; align-items:center;
+  gap:10px; border-radius:8px; padding:7px 10px; overflow:hidden;
+}
+.module-top {
+  flex:none; display:flex; align-items:center; justify-content:center;
+  font:18px/1 var(--mono); color:var(--lime);
+}
+.module-name { font-size:12px; line-height:1.25; overflow-wrap:anywhere; }
+.module-category { margin-top:3px; font-size:9px; }
+.empty-state { padding:12px; }
+.settings-surface .role-list .role-card { gap:7px; padding:6px 8px; }
+.settings-surface .role-panel .panel-top { padding:0 0 5px; }
+.settings-surface .role-panel .panel-top h2 { font-size:14px; }
+.settings-surface .role-title { font-size:12px; line-height:1.25; }
+.settings-surface .role-number { width:27px; height:27px; font-size:11px; }
+.settings-surface .role-activated { font-size:8px; }
+.settings-choice > span { font-size:11px; }
+.detail-header { padding:10px 12px; }
+.detail-header h2 { margin:4px 0 6px; }
+.detail-status { margin-top:5px; }
+.detail-header .copy-disclosure { margin-top:8px; }
+.copy-disclosure summary {
+  cursor:pointer; color:var(--sub); font:11px/1.35 var(--mono);
+}
+.copy-disclosure summary:hover { color:var(--lime); }
+.copy-disclosure summary:focus-visible {
+  outline:2px solid var(--lime); outline-offset:3px; border-radius:3px;
+}
+.copy-disclosure[open] summary { color:var(--lime); }
+.copy-disclosure p {
+  display:block; margin:7px 0 0; color:var(--sub);
+  font-size:11px; line-height:1.45;
+}
+.detail-info p { max-height:100px; overflow:auto; }
+.detail-foot {
+  display:block; flex:none; padding:8px 12px;
+  border-top:1px solid var(--border);
+}
+.detail-foot .copy-disclosure { margin:0; }
+.detail-handoff { padding:9px 12px; }
+.detail-handoff code { margin:6px 0 0; }
+.stage-tabs button { letter-spacing:.02em; }
+@media(min-height:481px) {
+  .module-grid { grid-template-rows:repeat(2,minmax(48px,60px)); align-content:start; }
+  .module-card { min-height:48px; }
+}
+@media(max-width:600px) and (min-height:481px) {
+  .module-grid { grid-template-rows:repeat(3,minmax(48px,58px)); }
+}
+@media(max-height:480px) {
+  /* Keep mainline four-card/short-screen geometry; do not force 44px rows. */
+  .module-grid { grid-template-rows:repeat(2,minmax(0,1fr)); }
+  .module-card { min-height:0; padding:3px 6px; gap:3px; }
+  .settings-surface .role-list .role-card { padding:4px; }
+  .detail-header .copy-disclosure { margin-top:4px; }
+  .detail-info p { max-height:55px; }
+  .detail-foot { padding:4px 8px; }
+}
 @media (max-height:480px) and (pointer:coarse) {
   .settings-surface .role-card, .settings-surface .deck-button,
   .settings-choice .primary-button { min-height:44px; }
+}
+
+/* Keep Custom's manual tool editor reachable even when the short-height
+   Settings summary is hidden to preserve 44px station targets. */
+.settings-choice #open-palette { flex:none; min-width:0; min-height:36px; }
+@media(max-height:480px) {
+  .settings-choice { gap:5px; }
+  .settings-choice > span { flex:1 1 0; min-width:0; }
+  .settings-choice #open-palette {
+    min-height:33px; padding:4px 6px; font-size:9px; white-space:nowrap;
+  }
+}
+@media(pointer:coarse) {
+  .settings-choice #open-palette { min-height:44px; }
 }

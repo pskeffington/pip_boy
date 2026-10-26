@@ -1,5 +1,15 @@
 # Rust-Boy | Local graphical dashboard
 
+## Compact desktop focus layout — 2026-10-26
+
+The shared desktop workspace retains the current **TOOLS / VIEW / MESSAGES / SETTINGS** navigation for every role; station/profile changes happen only in **SETTINGS**. The desktop has one workspace plus an inspector on wide screens, or a two-way WORKSPACE / INSPECTOR switch on narrower windows. Station selection, six-item pages (two on short touch screens), the Custom tool editor, Reclamation Scout MAP/SITES/DUTIES, camera views and the `/micro` UI are preserved.
+
+Visible copy is now intentionally minimal: compact tool buttons with name and meaningful status, a three-value **Station / Tools / Access** band, and concise inspector and Settings labels. Full Rust-authored station/tool descriptions remain available as hover tooltips or inspector **About this tool** disclosure. **Safety & access** is also expandable. Optional guidance is closed by default; no permissions or information are removed.
+
+Opening the desktop reads only `GET /api/state`. The MESSAGES stage is initially hidden and its existing local Messenger component is mounted only after that page is selected; reading local journal status does not send, retry, connect to peers, launch a LAN scan, or enable hardware. Load-station confirmation remains mandatory and a Settings preview never changes active pinned tools.
+
+**Regression coverage:** `node tools/test_desktop_focus_ui.cjs` checks unchanged routing/pagers, consent and collapsed details. `node tools/test_desktop_viewport.cjs` uses headless Chromium and a fictional Rust snapshot at 1440×900, 1280×800, 1024×768 and 800×600, including verifying that MESSAGES triggers a local GET only on first entry. The existing `node tools/test_dashboard_viewport.cjs` additionally exercises 480×320, 800×480, Scout/Security focused views, Custom and 44px touch sizing on short screens. Physical Mac browser and Raspberry Pi acceptance remain separate.
+
 ## Unified Network Engineer
 
 `main` includes the shared desktop/micro Network Engineer. Its 16-operation catalog arrives from Rust, with offline calculators, bounded ICMP/TCP health, private-LAN evidence and controller-connected-client inventory. The inspector mounts `assets/network.js`; tool navigation itself performs no I/O. Active tools have a separate authorization step. Inventories have pages; refresh stops on navigation, edits, hidden tabs, errors or STOP and never resumes automatically. [Operator setup and measurement definitions](NETWORK_HEALTH_UNIFI.md).
@@ -19,7 +29,7 @@ Load Head Engineer or Security Chief, open NET ENGINEER, select Live Private LAN
 From the `feat/dashboard-ui-shell` development branch, with Rust **1.90 or newer** installed:
 
 ```bash
-git clone --branch feat/dashboard-ui-shell https://github.com/pskeffington/pip_boy.git
+git clone https://github.com/pskeffington/pip_boy.git
 cd pip_boy
 cargo run --locked -p pipboy -- dashboard --open
 ```
