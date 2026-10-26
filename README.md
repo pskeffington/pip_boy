@@ -1,7 +1,5 @@
 # Rust-Boy
 
-Micro navigation uses STAT / GEAR / MAP / DATA / LINK / SETUP, a consistent header Back button and separate local-tool input/results screens. Back returns through inputs before leaving a tool; temporary local drafts survive navigation until reload.
-
 [![Rust-Boy quality gates](https://github.com/pskeffington/pip_boy/actions/workflows/rust.yml/badge.svg?branch=main)](https://github.com/pskeffington/pip_boy/actions/workflows/rust.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-informational)](LICENSE)
 [![Rust: 1.90+](https://img.shields.io/badge/Rust-1.90%2B-informational)](Cargo.toml)
@@ -11,6 +9,12 @@ Micro navigation uses STAT / GEAR / MAP / DATA / LINK / SETUP, a consistent head
 Rust-Boy is a Rust workbench for local diagnostics, field maps, network engineering and device-to-device task assignments. It has a desktop dashboard, a phosphor-style micro HUD and a terminal console. Seven occupational profiles come preloaded; Custom starts empty.
 
 **Development preview on `main`.** Implemented modules are merged after software checks pass. Physical Raspberry Pi touchscreen, actual UniFi controller, Mac-to-Pi SSH and PlayStation game acceptance remain separate field tests. There is no packaged production release.
+
+## Project navigation
+
+[Documentation index](docs/README.md) · [Repository structure](docs/REPO_STRUCTURE.md) · [Architecture](docs/ARCHITECTURE.md) · [Organizational research](docs/ORGANIZATIONAL_OPTIMIZATION.md) · [Validation](docs/VALIDATION.md) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md).
+
+**Desktop focus:** The shared console uses compact **TOOLS / VIEW / MESSAGES / SETTINGS** pages. Change stations only under Settings; optional explanations replace repeated text. The handheld `/micro` is unchanged. [Desktop guide](docs/DASHBOARD_UI.md).
 
 ## Quick start
 
@@ -32,6 +36,10 @@ cargo run --locked -p pipboy -- dashboard
 cargo run --locked -p pipboy -- tui
 ```
 
+Micro navigation uses STAT / GEAR / MAP / DATA / LINK / SETUP, a consistent Back button and separate local-tool input/results screens. Back returns through inputs before leaving a tool; temporary drafts survive navigation until reload.
+
+Handheld tool pages adapt to available height: compact GEAR shows four tools, while DATA and the Custom palette reserve their action row and show two. Tool paging keeps keyboard focus; profile selection stays in SETUP.
+
 Open the printed loopback URL in a browser. The dashboard binds only to 127.0.0.1. Keep it local.
 
 Update an existing checkout from `main`; the features below no longer require switching among older preview branches:
@@ -42,6 +50,20 @@ git pull --ff-only origin main
 ./scripts/launch-micro.command
 ```
 
+## Native Mac MAP test bench
+
+**Mac-first:** develop and test the single Rust workspace on macOS. The built Rust binary hosts the localhost desktop/micro MAP; the Fallout-style vector renderer remains browser JavaScript. No Raspberry Pi is required for this phase.
+
+```bash
+# In your cloned pip_boy directory, with Rust 1.90+, Python 3 and Node 22+:
+bash scripts/test-map-macos.command --verify
+bash scripts/test-map-macos.command --launch
+```
+
+`--verify` builds and checks real native Rust plus offline map/GPS/ingestion tests against a temporary loopback service; no live Census or OSM requests. `--launch` opens the native Rust micro HUD on a free localhost port with a **separate persistent Mac test home**, so cached counties can be verified after restarting offline without modifying `~/.pipboy`. County download remains an explicit MAP → COUNTY action. Optional Chromium device-emulation verification is available via `--verify --require-chromium`; Safari is supported for manual UI inspection. MAP → DATA SOURCES includes local-only source load and drawing timings. [Mac MAP operator checklist](docs/MAC_MAP_TESTING.md). Actual operator-Mac acceptance is distinct from GitHub's macOS CI runner.
+
+After explicitly downloading a county in MAP, run `bash scripts/test-map-macos.command --audit-cache` to independently check the real saved boundary and ZIP contents through the **local Rust cache-only API**. It makes no Census, OSM or GPS requests and reports complete/partial/empty/corrupt status; missing optional sources are not treated as fabricated features.
+
 ## Available modules
 
 | Module | Implemented behavior | Field acceptance still open |
@@ -51,7 +73,7 @@ git pull --ff-only origin main
 | Overseer Task Control | Persistent assignments, role queues, status, due dates and revision-safe history | Human/organizational identity beyond local role labels |
 | Peer task transport | Explicit paired-device OpenSSH send and receipt/status retrieval | Real Mac-to-Pi SSH pairing, interruption and key-rotation tests |
 | Reclamation Field Kit | Persistent manual-position survey sites, statuses, selectable offline map markers and GeoJSON export | Field GNSS, RustGIS full renderer, Pi touch acceptance and operational verification |
-| Scout maps | Default offline central-Boston real City SAM street geometry; imported RustGIS/GeoJSON layers, opt-in GPS and separately enabled web reference | Upstream RustGIS renderer, raster/terrain, native GNSS and Pi display |
+| Scout maps | Mac-local native Rust service + location-driven county map; Census TIGER roads, waters, verified-county landmarks, RustGIS/GeoJSON imports, explicit GPS/OSM | Mac operator/browser/GPS acceptance, upstream RustGIS renderer, raster/terrain and later Pi hardware |
 | Host / Library / Notes | Local telemetry with quality labels, bundled references and offline notes | Production packaging and accessibility acceptance |
 | Fallout 4 companion | Read-only TCP protocol browser, diagnostics and bounded observation | Actual game-build/PlayStation interoperability |
 | Radio / SDR (feature branch) | Native in-process IP playback, 10 curated stations, favorites/order/last selection, Bluetooth-ready OS output chooser and a receive-only simulated SDR contract | Real SDR receiver/DSP, individual stream checks, Pi speaker/touch and physical Bluetooth failure acceptance |\n| Device simulation | Fixed fixtures, bounded queues and mock adapters | Physical GPIO, serial, SDR, BLE, mesh and camera integrations |
@@ -133,9 +155,9 @@ Switch profiles through the UI or `pipboy workbench use head-engineer --replace`
 
 **GPS troubleshooting:** a browser geolocation refusal now shows **GPS HELP** with site permission status and OS/browser guidance, while **CENTER** remains a manual fallback. [GPS troubleshooting](docs/SCOUT_GPS_MAP.md#gps-denied-despite-system-location-services-being-on).
 
-**County MAP:** select GPS ON or manual CENTER, then COUNTY. The map resolves the containing Census county GEOID and pulls approved TIGER 2025 county-wide roads, areal water and streams with bounded downloads. A prior county package restores from the local cache without remote requests. [County source guide](docs/COUNTY_SOURCES.md).
+**County MAP:** select **ZIP** (enter five digits → Census 2020 ZCTA → matching county → 2025 county GIS), or select GPS ON or manual CENTER, then COUNTY. Multiple intersecting counties require explicit choice; a postal ZIP/town is not guaranteed to correspond to one county. Reverse **COUNTY ZIPs** lists intersecting 2020 ZCTAs. [ZIP/County source guide](docs/ZIP_COUNTY_LOOKUP.md). The map resolves the containing Census county GEOID and pulls approved TIGER 2025 county-wide roads, areal water and streams with bounded downloads. A prior county package restores from the local cache without remote requests. [County source guide](docs/COUNTY_SOURCES.md).
 
-**Scout MAP:** defaults to an **offline real-geometry central Boston street basemap** (10,634 source-derived segments, no fictional roads or landmarks), rendered in Rust-Boy's original phosphor style. **BOS OFF / BOS ON** hides or restores the reference; the source manifest identifies its dated municipal data. Coverage is partial, not live. [Boston basemap provenance](docs/BOSTON_BASEMAP.md) · [Lore naming](docs/LORE_NAMING.md).
+**Scout MAP:** begins with an unlocated reference grid. The operator selects GPS or a manual center, then COUNTY to resolve a Census GEOID and acquire verified 2025 TIGER/Line road, water and county-clipped point-landmark geometry from a fixed source registry. Cached county geometry and county-clipped landmarks reload without internet. Expand LAYERS to independently show/hide official roads, waterways, landmarks and border; the renderer uses a bounded viewport index while preserving source geometries. No demonstration city or fictitious features are bundled. [County ingestion and provenance](docs/COUNTY_SOURCES.md) · [Lore naming](docs/LORE_NAMING.md).
 
 **RustGIS import:** choose **RUSTGIS** to load `.rgismap`, `.rgis`, `.rgislyr`, `.rgismpk`, `.rgispkg` or GeoJSON. Native vector data remains primary; missing raster/streamed sources are reported. Browser GPS needs permission. **WEB ON** enables a separately labeled OpenStreetMap/Overpass reference overlay; provider reachability checks contain no coordinates. [Map/GPS guide](docs/SCOUT_GPS_MAP.md).
 

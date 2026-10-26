@@ -8,12 +8,10 @@ import json
 import re
 from pathlib import Path
 
+from validation_common import require
+
 ROOT = Path(__file__).resolve().parents[1]
 
-
-def require(ok, message):
-    if not ok:
-        raise ValueError(message)
 
 
 def read(path):

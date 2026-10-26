@@ -7,8 +7,6 @@ const $ = (id) => document.getElementById(id);
 const ui = {
   screen: $("micro-device"),
   back: $("micro-back"),
-  roleSwitch: $("role-switch"),
-  roleShort: $("role-short"),
   clock: $("local-clock"),
   code: $("page-code"),
   title: $("page-title"),
@@ -39,49 +37,6 @@ const glyphs = {
   "diag": "!", "net-lab": "⌘", "byte-lab": "0x", "simulator": "◈",
   "geo-lab": "⌖", "reclamation": "▧"
 };
-const roleStations = Object.freeze({
-  "overseer": {
-    heading: "OPS",
-    purpose: "TASKS / TEAM",
-    quick: "TASKS", tool: "mission-board"
-  },
-  "head-engineer": {
-    heading: "ENGINEER",
-    purpose: "SYSTEM / NET",
-    quick: "NETWORK", tool: "net-lab"
-  },
-  "security-chief": {
-    heading: "SECURITY",
-    purpose: "CAMERAS / WATCH",
-    quick: "CAM WALL", page: "link"
-  },
-  "vault-doctor": {
-    heading: "MEDICAL",
-    purpose: "REFERENCE / NOTES",
-    quick: "ARCHIVES", tool: "library"
-  },
-  "university-researcher": {
-    heading: "RESEARCH",
-    purpose: "LAB / DATA",
-    quick: "BYTE LAB", tool: "byte-lab"
-  },
-  "reclamation-scout": {
-    heading: "SCOUT",
-    purpose: "SITES / SURVEYS",
-    quick: "SITES", tool: "reclamation", page: "map"
-  },
-  "records-custodian": {
-    heading: "RECORDS",
-    purpose: "ARCHIVES / JOURNAL",
-    quick: "ARCHIVES", tool: "library"
-  },
-  "custom": {
-    heading: "CUSTOM",
-    purpose: "USER / TOOLS",
-    quick: "ADD TOOLS", page: "conf"
-  }
-});
-
 function openDuties() {
   openedTool = "assigned-duties";
   render();
@@ -106,6 +61,17 @@ const viewPage = { gear: 0, data: 0, conf: 0 };
 let paletteOpen = false;
 let rolePage = 0;
 const MICRO_PAGE_SIZE = 6;
+const tilePageSizes = {};
+
+function toolsPerPage(key) {
+  // DATA and the Custom palette reserve a row for their leading action.
+  return ui.viewport.clientHeight < 260 ? (key === "gear" ? 4 : 2)
+    : key === "conf" ? 4 : MICRO_PAGE_SIZE;
+}
+
+function rolesPerPage() {
+  return window.innerHeight <= 400 ? 2 : 4;
+}
 
 const make = (name, cls, text) => {
   const node = document.createElement(name);
@@ -174,14 +140,7 @@ function toolInfo(id) {
   return snapshot?.palette.find((entry) => entry.id === id) || null;
 }
 
-function labelForProfile(profile) {
-  const title = profile?.title || "RUST-BOY";
-  if (profile?.id === "custom") return "CUSTOM";
-  return title.replace(/\s+(Operations|Station|Field Kit)$/i, "").toUpperCase();
-}
-
 function renderHeading() {
-  ui.roleShort.textContent = labelForProfile(activeProfile());
   const index = pages.indexOf(tab);
   ui.code.textContent = String(index + 1).padStart(2, "0");
   const label = openedTool === "native-radio" ? "RADIO"
@@ -239,19 +198,11 @@ function showStat() {
   const root = panel();
   root.classList.add("micro-home");
   const profileId = snapshot.active.profile;
-  const station = roleStations[profileId] || roleStations.custom;
-  root.append(sectionTop("QUICK ACCESS", ""));
+  root.append(sectionTop("QUICK ACCESS", "LOCAL"));
   const actions = make("div", "quick-row micro-home-actions");
-  if (station.tool && hasTool(station.tool)) {
-    actions.append(button(station.quick, () => openTool(station.tool), "micro-button solid"));
-  } else if (station.page) {
-    actions.append(button(station.quick, () => setTab(station.page), "micro-button solid"));
-  }
-  if (station.page && station.tool) {
-    actions.append(button("MAP", () => setTab(station.page), "micro-button"));
-  }
-  actions.append(button("RADIO", () => { openedTool = "native-radio"; render(); }, "micro-button"));
-  actions.append(button("TOOLS", () => setTab("gear"), "micro-button"));
+  // The same controls and ordering for every profile; only pinned tools vary.
+  actions.append(button("TOOLS", () => setTab("gear"), "micro-button solid"));
+  actions.append(button("MAP", () => setTab("map"), "micro-button"));
   root.append(actions);
   const taskSection = make("div", "task-station-summary");
   root.append(taskSection);
@@ -267,7 +218,11 @@ function showStat() {
 }
 
 /** Paging is bounded to the visible screen; modules are not hidden offscreen. */
-function pagedTiles(root, ids, key, renderItem = toolTile, pageSize = MICRO_PAGE_SIZE) {
+function pagedTiles(root, ids, key, renderItem = toolTile, pageSize = toolsPerPage(key)) {
+  if (tilePageSizes[key] && tilePageSizes[key] !== pageSize) {
+    viewPage[key] = Math.floor(viewPage[key] * tilePageSizes[key] / pageSize);
+  }
+  tilePageSizes[key] = pageSize;
   const count = Math.max(1, Math.ceil(ids.length / pageSize));
   viewPage[key] = Math.min(viewPage[key], count - 1);
   const offset = viewPage[key] * pageSize;
@@ -277,8 +232,17 @@ function pagedTiles(root, ids, key, renderItem = toolTile, pageSize = MICRO_PAGE
   root.append(grid);
   if (count > 1) {
     const pager = make("div", "micro-pager");
-    const prev = button("◀", () => { viewPage[key]--; render(); }, "micro-button compact");
-    const next = button("▶", () => { viewPage[key]++; render(); }, "micro-button compact");
+    pager.setAttribute("aria-label", "Tool pages");
+    const turn = (direction) => {
+      viewPage[key] += direction;
+      render();
+      const arrows = Array.from(ui.content.querySelectorAll(".micro-pager button"));
+      const preferred = arrows[direction < 0 ? 0 : 1];
+      (preferred && !preferred.disabled ? preferred : arrows.find((item) => !item.disabled))
+        ?.focus({preventScroll:true});
+    };
+    const prev = button("◀ PREV", () => turn(-1), "micro-button compact");
+    const next = button("NEXT ▶", () => turn(1), "micro-button compact");
     prev.disabled = viewPage[key] === 0;
     next.disabled = viewPage[key] >= count - 1;
     prev.setAttribute("aria-label", "Previous tool page");
@@ -347,9 +311,10 @@ function showData() {
   const tools = allPinned().filter((id) =>
     ["notes", "library", "byte-lab", "simulator", "geo-lab", "reclamation", "net-lab", "diag"].includes(id));
   root.append(sectionTop("DATA", String(tools.length) + " TOOLS"));
-  if (snapshot.active.profile !== "overseer") {
-    root.append(button("MY DUTIES", openDuties, "micro-button solid"));
-  }
+  root.append(button("DUTIES", () => {
+    if (snapshot.active.profile === "overseer" && hasTool("mission-board")) openTool("mission-board");
+    else openDuties();
+  }, "micro-button solid"));
   if (tools.length) pagedTiles(root, tools, "data");
   else root.append(make("div", "custom-empty", "NO DATA TOOLS"));
   return root;
@@ -424,13 +389,13 @@ function showConf() {
         make("small", "", item.availability === "planned"
           ? "PLANNED" : exists ? "PINNED" : "ADD"));
       return tile;
-    }, 4);
+    });
     return root;
   }
-  root.append(sectionTop("SETTINGS", "LOCAL"));
+  root.append(sectionTop("DEVICE SETTINGS", "LOCAL"));
   const current = make("div", "block-box lit preview-row compact-profile");
   current.append(make("strong", "", activeProfile()?.title || "UNKNOWN"),
-    button("CHANGE", openRoles, "micro-button compact"));
+    button("CHANGE PROFILE", openRoles, "micro-button compact"));
   root.append(current);
   const effects = make("div", "button-row");
   effects.append(
@@ -641,13 +606,13 @@ function render() {
             tab === "link" ? showLink() : showConf());
 }
 
-async function reload() {
+async function reload({silent = false} = {}) {
   try {
     snapshot = await api("/api/state");
     if (openedTool && openedTool !== "native-radio" && !hasTool(openedTool)) openedTool = null;
     focusedCamera = null;
     render();
-    notify("SYNCED");
+    if (!silent) notify("SYNCED");
   } catch (error) {
     ui.code.textContent = "LOCAL / ERROR";
     ui.content.replaceChildren(make("div", "block-box error", error.message));
@@ -659,7 +624,7 @@ function openRoles() {
   if (!snapshot || busy) return;
   pendingProfile = snapshot.active.profile;
   rolePage = Math.max(0, Math.floor(snapshot.profiles.findIndex((r) =>
-    r.id === pendingProfile) / 4));
+    r.id === pendingProfile) / rolesPerPage()));
   renderRolePage();
   selectRole(pendingProfile);
   if (!ui.rolesDialog.open) ui.rolesDialog.showModal();
@@ -667,17 +632,19 @@ function openRoles() {
 
 function renderRolePage() {
   ui.rolesList.replaceChildren();
-  const roles = snapshot.profiles.slice(rolePage * 4, rolePage * 4 + 4);
+  const size = rolesPerPage();
+  rolePage = Math.min(rolePage, Math.max(0, Math.ceil(snapshot.profiles.length / size) - 1));
+  const roles = snapshot.profiles.slice(rolePage * size, rolePage * size + size);
   roles.forEach((role, index) => {
     const row = button("", () => selectRole(role.id), "profile-row");
     row.dataset.role = role.id;
-    row.append(make("span", "num", String(rolePage * 4 + index + 1).padStart(2, "0")));
+    row.append(make("span", "num", String(rolePage * size + index + 1).padStart(2, "0")));
     const info = make("div");
     info.append(make("strong", "", role.title));
     row.append(info);
     ui.rolesList.append(row);
   });
-  const count = Math.max(1, Math.ceil(snapshot.profiles.length / 4));
+  const count = Math.max(1, Math.ceil(snapshot.profiles.length / size));
   ui.rolePaging.textContent = (rolePage + 1) + " / " + count;
   ui.rolePrev.disabled = rolePage === 0;
   ui.roleNext.disabled = rolePage >= count - 1;
@@ -773,6 +740,9 @@ function back() {
   } else if (focusedCamera !== null) {
     focusedCamera = null;
     render();
+  } else if (tab === "conf" && paletteOpen) {
+    paletteOpen = false;
+    render();
   } else if (tab !== "stat") {
     setTab("stat");
   }
@@ -791,9 +761,18 @@ function ensureVisible() {
 function init() {
   const observer = new MutationObserver(ensureVisible);
   observer.observe(ui.content, { childList: true, subtree: true });
-  window.addEventListener("resize", ensureVisible);
+  window.addEventListener("resize", () => {
+    // Only repaginate launcher screens: resizing must not discard live editors.
+    if (snapshot && !openedTool && ["gear", "data", "conf"].includes(tab)) render();
+    if (snapshot && ui.rolesDialog.open) {
+      rolePage = Math.floor(Math.max(0, snapshot.profiles.findIndex((r) =>
+        r.id === pendingProfile)) / rolesPerPage());
+      renderRolePage();
+      selectRole(pendingProfile);
+    }
+    ensureVisible();
+  });
   ui.tabs.forEach((item) => item.addEventListener("click", () => setTab(item.dataset.tab)));
-  ui.roleSwitch.addEventListener("click", openRoles);
   ui.back.addEventListener("click", back);
   ui.closeRoles.addEventListener("click", () => ui.rolesDialog.close());
   ui.cancelRoles.addEventListener("click", () => ui.rolesDialog.close());
@@ -802,13 +781,13 @@ function init() {
     if (rolePage === 0) return;
     rolePage--;
     renderRolePage();
-    selectRole(snapshot.profiles[rolePage * 4].id);
+    selectRole(pendingProfile);
   });
   ui.roleNext.addEventListener("click", () => {
-    if ((rolePage + 1) * 4 >= snapshot.profiles.length) return;
+    if ((rolePage + 1) * rolesPerPage() >= snapshot.profiles.length) return;
     rolePage++;
     renderRolePage();
-    selectRole(snapshot.profiles[rolePage * 4].id);
+    selectRole(pendingProfile);
   });
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape") {
@@ -839,7 +818,7 @@ function init() {
   });
   updateClock();
   setInterval(updateClock, 60000);
-  reload();
+  void reload({silent:true});
 }
 
 init();

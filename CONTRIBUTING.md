@@ -4,9 +4,21 @@
 
 Keep `main` as the current development preview. Build each module on a focused branch, update the README, documentation index, changelog and affected operator contracts, then merge after all applicable quality jobs pass at the proposed head. Software integration does not assert physical controller, radio, touchscreen or game acceptance; record those field gates explicitly instead of leaving verified software permanently on stacked branches.
 
-The shared Network Engineer view uses Rust `network_suite::OPERATIONS`. Keep controller inventory on the existing `pipboy_core::unifi` adapter and endpoint measurements on `endpoint_probe`; do not add another incompatible credential/configuration path. Run `node tools/test_network_ui.cjs`, `python3 tools/smoke_network.py` and `python3 tools/smoke_network_health.py` alongside the workspace checks.
+The shared Network Engineer view uses Rust `network_suite::OPERATIONS`. Keep controller inventory on the existing `pipboy_core::unifi` adapter and endpoint measurements on `endpoint_probe`; do not add another incompatible credential/configuration path. Run `node tools/test_network_ui.cjs`, `python3 tools/smoke_network.py` and `python3 tools/smoke_network_health.py` alongside the workspace checks. NET ENGINEER's opt-in local scan and UniFi handlers belong to `crates/pipboy/src/dashboard/network_routes.rs` behind the existing `dashboard.rs` Host/Origin gate. The extraction must not introduce an additional network listener, automatic probes, an alternate controller credential path, or a change to explicit consent.
 
 Rust-Boy is an open-source, offline-first Rust console. Contributions are welcome when they preserve clear provenance, stable commands and the boundary between **tested local features**, **simulators** and **future physical devices**.
+
+## Security and privacy changes
+
+Treat all operator messages, task boards, peer rosters, GIS location exports, inventory snapshots and device credentials as private, even when a test looks synthetic. Keep public fixtures explicitly invented and license-cleared. Never use actual `PIPBOY_HOME` files in test fixtures or PR attachments. Run `python3 tools/validate_security.py` and `python3 tools/test_validate_security.py` before pushing. This check rejects high-confidence token formats and tracked runtime filenames; it does **not** inspect Git history or replace GitHub secret scanning. Security findings involving real credentials should be reported privately, and the credentials rotated, not copied into public issues.
+
+Any new external subprocess must use `pipboy_core::process_safety::isolated_command` to avoid passing the UniFi credential and other commonly named API tokens through the child environment. Adding or changing external network providers, logging of coordinates, data retention, or local API authentication needs a security review and regression test.
+
+## Repository and documentation hygiene
+
+Place implementation in the owning crate, browser assets in the existing shared dashboard/micro shells, and machine-readable research in `catalog/`. Use the [repository map](docs/REPO_STRUCTURE.md) and avoid moving existing on-disk stores or duplicating role/network catalogs in JavaScript. For new externally visible subsystem entrypoints, update the [component index](catalog/component_index.json), name the related validation tests and retain separate hardware acceptance status. Keep the root README concise; module contracts belong under `docs/`.
+
+Changes to top-level navigation or local Markdown links must pass `python3 tools/validate_repo.py` and `python3 tools/test_validate_repo.py`. The check is offline and covers required navigation, reference-style and inline local links, and nested public Markdown under `docs/`, `catalog/` and optional `data/`. It never traverses `PIPBOY_HOME` and does not certify third-party URLs or hardware.
 
 ## Set up
 
@@ -37,7 +49,7 @@ To test: `cargo run --locked -p pipboy -- dashboard --micro --open` on macOS; `n
 
 ## Dashboard development
 
-The [graphical dashboard](docs/DASHBOARD_UI.md) is a local browser shell served by `crates/pipboy/src/dashboard.rs`. UI assets live under `crates/pipboy/assets/`; do not add external font/CDN/API references or new network routes without review. The job-template source of truth is `pipboy-core::workbench::PRESETS`, and physical/simulated availability is `PALETTE`. Do **not** add a hard-coded duplicate role list to JavaScript; keep Custom last.
+The [graphical dashboard](docs/DASHBOARD_UI.md) is a local browser shell served by `crates/pipboy/src/dashboard.rs`. UI assets live under `crates/pipboy/assets/`; do not add external font/CDN/API references or new network routes without review. Task/peer handlers are in `crates/pipboy/src/dashboard/task_routes.rs` and Messenger/PACE handlers in `crates/pipboy/src/dashboard/messenger_routes.rs`; preserve the single parent Host/Origin gate and explicit confirmation on every mutation. The source split does not authorize new sockets or background message delivery. The job-template source of truth is `pipboy-core::workbench::PRESETS`, and physical/simulated availability is `PALETTE`. Do **not** add a hard-coded duplicate role list to JavaScript; keep Custom last.
 
 Start with `cargo run --locked -p pipboy -- dashboard --open` on Mac; run `python3 tools/smoke_dashboard.py` after building the binary. Only allowlisted, bounded, explicitly requested Rust core operations can run from the dashboard. Scope non-loopback access, device transport, authentication, RustGIS/TAK/video integration and any storage of sensitive user information as separate changes.
 
@@ -45,15 +57,19 @@ Start with `cargo run --locked -p pipboy -- dashboard --open` on Mac; run `pytho
 
 ```bash
 python3 tools/validate_catalog.py
+python3 tools/validate_component_index.py
+python3 tools/test_component_index.py
 cargo fmt --all -- --check
 cargo check --workspace --all-targets --locked
 cargo test --workspace --locked
 cargo clippy --workspace --all-targets --locked -- -D warnings
 cargo build --workspace --locked
-python3 tools/smoke_broker.py
+python3 tools/run_smokes.py --check
+python3 tools/test_run_smokes.py
+python3 tools/run_smokes.py linux  # Linux; use 'native' on macOS/Windows
 ```
 
-GitHub Actions also runs the CLI, notes, permission, simulator, transport and mock-adapter smoke scripts; native macOS PTY and Windows ConPTY tests are platform-specific. Check [the workflow](.github/workflows/rust.yml) and [validation records](docs/VALIDATION.md). A test defined but not executed is **not** a passing result.
+GitHub Actions uses the [single smoke-test roster](tools/run_smokes.py) for 19 Linux and 17 native-platform CLI/API checks; native macOS PTY and Windows ConPTY tests remain separate. Adding a new `smoke_*.py` script requires explicit roster classification. [CI inventory and historical triage](docs/CI_TRIAGE.md). Check [the workflow](.github/workflows/rust.yml) and [validation records](docs/VALIDATION.md). A test defined but not executed is **not** a passing result.
 
 ## Role feature contract
 

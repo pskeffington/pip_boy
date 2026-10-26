@@ -9,7 +9,7 @@
   const MAX_UNPACKED = 64 * 1024 * 1024;
   const MAX_FEATURES = 60000;
   const MAX_VERTICES = 450000;
-  const SOURCES = Object.freeze(["tiger-roads", "tiger-areawater", "tiger-linearwater"]);
+  const SOURCES = Object.freeze(["tiger-roads", "tiger-areawater", "tiger-linearwater", "tiger-pointlm"]);
   const bad = (message) => { throw new Error(message); };
   const finite = (n) => typeof n === "number" && Number.isFinite(n);
   const validGeoid = (id) => typeof id === "string" && /^\d{5}$/.test(id) &&
@@ -60,7 +60,7 @@
     if (end > tail) bad("County ZIP directory outside archive");
     let offset = uint32(dv, tail + 16);
     const matches = Object.create(null);
-    const expected = "tl_" + VINTAGE + "_" + geoid + "_" + layer + ".";
+    const expected = "tl_" + VINTAGE + "_" + (layer === "pointlm" ? geoid.slice(0,2) : geoid) + "_" + layer + ".";
     for (let i = 0; i < count; i++) {
       if (uint32(dv, offset) !== 0x02014B50) bad("Broken county ZIP directory");
       const flags = uint16(dv, offset + 8), method = uint16(dv, offset + 10);
@@ -147,7 +147,7 @@
       fields.push({name, start, len});
       start += len;
     }
-    return function labelAt(row) {
+    const labelAt = function(row) {
       if (row >= records) return {name:"",mtfcc:""};
       const startAt = header + row * width;
       if (raw[startAt] === 0x2A) return {name:"",mtfcc:""};
@@ -160,6 +160,95 @@
       };
       return {name:get("FULLNAME") || get("NAME"), mtfcc:get("MTFCC")};
     };
+    labelAt.recordCount = records;
+    return labelAt;
+  }
+
+  // A Census POINTLM archive covers a whole state. Never display it as
+  // county-specific geography without the actual TIGERweb county polygon.
+  function countyRings(rings) {
+    if (!Array.isArray(rings) || !rings.length || rings.length > 512)
+      bad("County polygon required for point landmarks");
+    let vertices = 0;
+    for (const ring of rings) {
+      if (!Array.isArray(ring) || ring.length < 4) bad("Invalid county landmark clip ring");
+      vertices += ring.length;
+      if (vertices > 30000) bad("County landmark polygon too large");
+      if (!ring.every(p => Array.isArray(p) && p.length >= 2 &&
+          finite(p[0]) && finite(p[1]) &&
+          Math.abs(p[0]) <= 180 && Math.abs(p[1]) <= 90))
+        bad("County landmark polygon has invalid coordinates");
+      if (ring[0][0] !== ring.at(-1)[0] ||
+          ring[0][1] !== ring.at(-1)[1])
+        bad("County landmark polygon ring must be closed");
+    }
+    return rings;
+  }
+
+  function insideCounty(lon, lat, rings) {
+    // Even-odd ring parity excludes interior holes without guessing which
+    // rings are outer boundaries. No bbox-only filtering or synthetic POIs.
+    let inside = false;
+    for (const ring of rings) {
+      for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+        const a = ring[i], b = ring[j];
+        if ((a[1] > lat) !== (b[1] > lat) &&
+            lon < (b[0] - a[0]) * (lat - a[1]) / (b[1] - a[1]) + a[0])
+          inside = !inside;
+      }
+    }
+    return inside;
+  }
+
+  function readPoints(raw, dbf, clipRings) {
+    const rings = countyRings(clipRings);
+    if (raw.byteLength < 100) bad("Landmark SHP header truncated");
+    const dv = new DataView(raw.buffer, raw.byteOffset, raw.byteLength);
+    if (uint32(dv,0,false) !== 9994 || uint32(dv,28) !== 1000 ||
+        uint32(dv,24,false)*2 !== raw.byteLength || uint32(dv,32) !== 1)
+      bad("Landmark source must be a POINT SHP");
+    const label = fieldsFromDbf(dbf), shapes = [];
+    const bbox = [Infinity,Infinity,-Infinity,-Infinity];
+    let offset=100, records=0;
+    while (offset < raw.length) {
+      if (offset + 12 > raw.length) bad("Landmark record truncated");
+      const number = uint32(dv,offset,false);
+      const length = uint32(dv,offset+4,false)*2;
+      const end = offset+8+length;
+      if (number !== records+1 || end > raw.length || length < 4)
+        bad("Landmark record invalid");
+      const kind = uint32(dv,offset+8);
+      if (kind === 1) {
+        if (length !== 20) bad("Landmark point has invalid record length");
+        const lon=f64(dv,offset+12),lat=f64(dv,offset+20);
+        if (!finite(lon) || !finite(lat) || Math.abs(lon)>180 || Math.abs(lat)>90)
+          bad("Invalid Census landmark coordinate");
+        if (insideCounty(lon,lat,rings)) {
+          const name=label ? label(records) : {name:"",mtfcc:""};
+          if (name.name) {
+            shapes.push({
+              kind:"point", paths:[[[lon,lat]]], label:name.name.slice(0,36),
+              countyBase:true, countyLayer:"pointlm", countyMajor:false,
+              countyMtfcc:name.mtfcc, bounds:[lon,lat,lon,lat],
+              style:{fill:"#d9c990",opacity:0.96}
+            });
+            bbox[0]=Math.min(bbox[0],lon); bbox[1]=Math.min(bbox[1],lat);
+            bbox[2]=Math.max(bbox[2],lon); bbox[3]=Math.max(bbox[3],lat);
+          }
+        }
+      } else if (kind !== 0) {
+        bad("Unexpected landmark geometry type");
+      }
+      records++;
+      if (records > MAX_FEATURES) bad("Landmark state SHP exceeds feature bound");
+      offset=end;
+    }
+    if (offset !== raw.length) bad("Landmark record layout invalid");
+    if (label && label.recordCount !== records)
+      bad("Landmark SHP/DBF record count mismatch");
+    return {shapes,features:shapes.length,vertices:shapes.length,bounds:bbox,
+      layer:"pointlm",records,sourceCrs:"GCS_NAD83",datumTransform:"not_applied",
+      clip:"verified-county-polygon",scope:"state-origin"};
   }
 
   function readShp(raw, layer, dbf) {
@@ -240,19 +329,22 @@
     }
     if (offset!==raw.length || !shapes.length)
       bad("County SHP contains no supported real geometry");
+    if (label && label.recordCount !== records)
+      bad("County SHP/DBF record count mismatch");
     return {shapes,features:shapes.length,vertices,bounds:bbox,layer,records,
       sourceCrs:"GCS_NAD83",datumTransform:"not_applied"};
   }
 
-  async function parsePackage(buffer, geoid, source) {
+  async function parsePackage(buffer, geoid, source, clipRings) {
     if (!validGeoid(geoid) || !SOURCES.includes(source))
       bad("Invalid county package source or GEOID");
     const layer = source === "tiger-roads" ? "roads" :
-      source === "tiger-areawater" ? "areawater" : "linearwater";
+      source === "tiger-areawater" ? "areawater" :
+      source === "tiger-pointlm" ? "pointlm" : "linearwater";
     const directory = zipDirectory(buffer, geoid, layer);
     const shp = await unpack(directory.shp);
     const dbf = directory.dbf ? await unpack(directory.dbf) : null;
-    return readShp(shp, layer, dbf);
+    return layer === "pointlm" ? readPoints(shp, dbf, clipRings) : readShp(shp, layer, dbf);
   }
 
   async function boundedResponse(response) {
@@ -291,9 +383,40 @@
     const data = await localJson("/api/map/cache",signal);
     if (data.schema!==1 || (data.active_geoid!==null &&
         !validGeoid(data.active_geoid)) ||
-        !Array.isArray(data.cached_sources) || data.network_used!==false)
+        !Array.isArray(data.cached_sources) || data.network_used!==false ||
+        (data.boundary_cached!==undefined && typeof data.boundary_cached!=="boolean"))
       bad("Unrecognized local county cache manifest");
     return data;
+  }
+
+  // Obtain the independently fetched, locally validated TIGERweb boundary
+  // from the loopback Rust service. Never send a GPS fix to this endpoint.
+  async function boundary(geoid, {cacheOnly=false,signal}={}) {
+    if (!validGeoid(geoid)) bad("Invalid county boundary GEOID");
+    const response=await fetch("/api/map/boundary",{
+      method:"POST",headers:{"Content-Type":"application/json"},
+      cache:"no-store",credentials:"omit",signal,
+      body:JSON.stringify({geoid,confirm:!cacheOnly,cache_only:cacheOnly})
+    });
+    if (!response.ok) bad((cacheOnly?"OFFLINE BOUNDARY ":"CENSUS BOUNDARY ")+
+      "UNAVAILABLE ("+response.status+")");
+    const value=await response.json();
+    if (!value || value.schema!==1 || value.geoid!==geoid ||
+        value.vintage!=="2025-01-01" ||
+        value.source!=="U.S. Census TIGERweb State_County ACS 2025 / January 1 2025" ||
+        typeof value.name!=="string" || !value.name.trim() ||
+        value.name.length>100 || typeof value.network_used!=="boolean" ||
+        typeof value.cache_hit!=="boolean" ||
+        (cacheOnly && (value.network_used || !value.cache_hit)))
+      bad("Untrusted county boundary cache response");
+    const paths=countyRings(value.paths);
+    return {
+      id:geoid,name:value.name,paths,
+      source:value.source,vintage:value.vintage,
+      cacheHit:value.cache_hit,
+      shape:{kind:"line",paths,label:"COUNTY "+value.name.slice(0,32),
+        style:{stroke:"#ecda94",width:2.1,opacity:0.9}}
+    };
   }
 
   async function sources(signal) {
@@ -306,7 +429,7 @@
     return data.sources;
   }
 
-  async function packageFor(geoid, id, cacheOnly, signal) {
+  async function packageFor(geoid, id, cacheOnly, signal, clipRings) {
     if (!validGeoid(geoid)||!SOURCES.includes(id)) bad("Invalid county source selection");
     const response=await fetch("/api/map/package",{
       method:"POST",headers:{"Content-Type":"application/json"},
@@ -315,18 +438,22 @@
     });
     if (!response.ok) bad((cacheOnly?"OFFLINE PACKAGE ":"CENSUS PACKAGE ")+
       id.toUpperCase()+" UNAVAILABLE ("+response.status+")");
-    return parsePackage(await boundedResponse(response),geoid,id);
+    return parsePackage(await boundedResponse(response),geoid,id,clipRings);
   }
 
-  async function load(geoid, {cacheOnly=false,signal,onLayer,onStatus}={}) {
+  async function load(geoid, {cacheOnly=false,signal,onLayer,onStatus,clipRings}={}) {
     if (!validGeoid(geoid)) bad("County GEOID not valid");
     if (!cacheOnly) await sources(signal);
-    const report={geoid,sourceIds:[],errors:[],features:0};
+    const report={geoid,sourceIds:[],errors:[],warnings:[],features:0};
     for (const id of SOURCES) {
+      if (id === "tiger-pointlm" && !clipRings) {
+        report.warnings.push("POINTLM hidden: verified county polygon unavailable");
+        continue;
+      }
       if (signal?.aborted) bad("County loading cancelled");
       onStatus?.("COUNTY "+geoid+" / "+id.toUpperCase()+(cacheOnly?" / CACHE":" / CENSUS"));
       try {
-        const parsed=await packageFor(geoid,id,cacheOnly,signal);
+        const parsed=await packageFor(geoid,id,cacheOnly,signal,clipRings);
         if (signal?.aborted) bad("County loading cancelled");
         report.sourceIds.push(id);report.features+=parsed.features;
         onLayer?.(id,parsed);
@@ -335,12 +462,15 @@
         report.errors.push(id+": "+(error instanceof Error?error.message:"unavailable"));
       }
     }
-    if (!report.sourceIds.length)
+    if (!report.sourceIds.some(id => id !== "tiger-pointlm"))
       bad("No county source loaded: "+report.errors.join(" | ").slice(0,130));
     return report;
   }
 
   window.RustBoyCounty=Object.freeze({
-    load,active,sources,parsePackage,validGeoid,sourceIds:SOURCES
+    load,active,boundary,sources,parsePackage,validGeoid,sourceIds:SOURCES,
+    contains:(rings,lon,lat) => finite(lon) && finite(lat) &&
+      Math.abs(lon)<=180 && Math.abs(lat)<=90 &&
+      insideCounty(lon,lat,countyRings(rings))
   });
 })();

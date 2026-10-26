@@ -3,22 +3,20 @@
 //! This is a local companion window, not an external web service. Profiles are
 //! declarative. No hardware, camera, console, GNSS or TAK transport is opened
 //! by browsing the dashboard or selecting a role.
+mod messenger_routes;
+mod network_routes;
+mod task_routes;
+
 use crate::county_cache::{self, CountyCache};
-use crate::peer;
+use crate::zip_index::ZipIndex;
 use crate::radio_output::available_outputs;
 use crate::radio_playback::NativeRadioEngine;
-use pipboy_core::message_pace::{PaceStore, Tier};
-use pipboy_core::messenger::{valid_text, Direction, MessageStore};
 use pipboy_core::network_health;
-use pipboy_core::network_probe;
 use pipboy_core::network_suite;
-use pipboy_core::peers::PeerStore;
 use pipboy_core::radio_directory::curated_stations;
 use pipboy_core::radio_presets::{MoveDirection, RadioPresetStore, RadioPresets};
 use pipboy_core::reclamation::{NewSite, SiteStatus, SiteStore};
 use pipboy_core::scout_gis::{distance_meters, waypoint, Point};
-use pipboy_core::tasks::{NewTask, Status, TaskStore};
-use pipboy_core::unifi;
 use pipboy_core::workbench::{inspect_hex, tool, WorkbenchStore, PALETTE, PRESETS};
 use serde_json::{json, Value};
 use std::collections::BTreeMap;
@@ -41,12 +39,11 @@ const JS: &str = include_str!("../assets/dashboard.js");
 const MICRO_HTML: &str = include_str!("../assets/micro.html");
 const MICRO_CSS: &str = include_str!("../assets/micro.css");
 const MICRO_JS: &str = include_str!("../assets/micro.js");
-const BOSTON_BASE_JS: &str = include_str!("../assets/boston-base.js");
-const BOSTON_MAP_JS: &str = include_str!("../assets/boston-map.js");
 const MAP_JS: &str = include_str!("../assets/map.js");
 const MAP_IMPORT_JS: &str = include_str!("../assets/map-import.js");
 const MAP_ONLINE_JS: &str = include_str!("../assets/map-online.js");
 const COUNTY_JS: &str = include_str!("../assets/map-county.js");
+const ZIP_JS: &str = include_str!("../assets/map-zip.js");
 const MAP_CSS: &str = include_str!("../assets/map.css");
 const NETWORK_JS: &str = include_str!("../assets/network.js");
 const NETWORK_CSS: &str = include_str!("../assets/network.css");
@@ -279,6 +276,13 @@ fn str_field<'a>(body: &'a Value, key: &str) -> Result<&'a str, Response> {
         .ok_or_else(|| Response::error(422, "Missing or invalid string field"))
 }
 
+fn positive_integer(body: &Value, key: &str) -> Result<u64, Response> {
+    body.get(key)
+        .and_then(Value::as_u64)
+        .filter(|value| *value > 0)
+        .ok_or_else(|| Response::error(422, "Missing or invalid task ID/revision"))
+}
+
 fn state(store: &WorkbenchStore) -> Result<Response, Response> {
     let active = store.load().map_err(|_| {
         Response::error(
@@ -487,6 +491,100 @@ fn county_package(req: &Request, store: &WorkbenchStore) -> Result<Response, Res
     Ok(Response::new(200, "application/zip", bytes))
 }
 
+fn county_boundary(req: &Request, store: &WorkbenchStore) -> Result<Response, Response> {
+    let body = parse_json_body(req, &["geoid", "confirm", "cache_only"])?;
+    let geoid = str_field(&body, "geoid")?;
+    let cache_only = body.get("cache_only").and_then(Value::as_bool) == Some(true);
+    let confirm = body.get("confirm").and_then(Value::as_bool) == Some(true);
+    if !confirm && !cache_only {
+        return Err(Response::error(
+            403,
+            "Confirm Census county boundary acquisition",
+        ));
+    }
+    let boundary = county_cache(store)
+        .boundary(geoid, !cache_only && confirm)
+        .map_err(|error| match error.kind() {
+            io::ErrorKind::NotFound => Response::error(404, "No cached county boundary"),
+            io::ErrorKind::InvalidInput => Response::error(422, "Invalid county boundary or GEOID"),
+            io::ErrorKind::WouldBlock => {
+                Response::error(409, "County download already in progress")
+            }
+            _ => Response::error(409, "Census boundary unavailable; existing cache preserved"),
+        })?;
+    Ok(Response::json(200, &boundary))
+}
+
+fn zip_index(store: &WorkbenchStore) -> ZipIndex {
+    ZipIndex::new(
+        store
+            .path()
+            .parent()
+            .unwrap_or_else(|| std::path::Path::new("."))
+            .join("geo_index"),
+    )
+}
+
+fn zip_lookup(req: &Request, store: &WorkbenchStore) -> Result<Response, Response> {
+    let body = parse_json_body(req, &["zip", "confirm", "cache_only"])?;
+    let zip = str_field(&body, "zip")?;
+    let cache_only = body.get("cache_only").and_then(Value::as_bool) == Some(true);
+    let confirm = body.get("confirm").and_then(Value::as_bool) == Some(true);
+    if !confirm && !cache_only {
+        return Err(Response::error(
+            403,
+            "ZIP relationship lookup requires confirmation",
+        ));
+    }
+    let result = zip_index(store)
+        .resolve_zip(zip, !cache_only && confirm)
+        .map_err(|error| match error.kind() {
+            io::ErrorKind::NotFound => Response::error(404, "ZCTA index not cached"),
+            io::ErrorKind::InvalidInput => Response::error(422, "Invalid ZIP or Census ZCTA index"),
+            io::ErrorKind::WouldBlock => Response::error(409, "Census lookup download in progress"),
+            _ => Response::error(
+                409,
+                "Census ZCTA source unavailable; existing cache preserved",
+            ),
+        })?;
+    Ok(Response::json(200, &result))
+}
+
+fn county_zips(req: &Request, store: &WorkbenchStore) -> Result<Response, Response> {
+    let body = parse_json_body(req, &["geoid", "offset", "confirm", "cache_only"])?;
+    let geoid = str_field(&body, "geoid")?;
+    let offset = match body.get("offset") {
+        None => 0,
+        Some(value) => value
+            .as_u64()
+            .filter(|offset| *offset <= 80_000)
+            .ok_or_else(|| Response::error(422, "Invalid county ZIP page offset"))?
+            as usize,
+    };
+    let cache_only = body.get("cache_only").and_then(Value::as_bool) == Some(true);
+    let confirm = body.get("confirm").and_then(Value::as_bool) == Some(true);
+    if !confirm && !cache_only {
+        return Err(Response::error(
+            403,
+            "County ZCTA lookup requires confirmation",
+        ));
+    }
+    let result = zip_index(store)
+        .county_zctas(geoid, offset, !cache_only && confirm)
+        .map_err(|error| match error.kind() {
+            io::ErrorKind::NotFound => Response::error(404, "ZCTA index not cached"),
+            io::ErrorKind::InvalidInput => {
+                Response::error(422, "Invalid county or Census ZCTA index")
+            }
+            io::ErrorKind::WouldBlock => Response::error(409, "Census lookup download in progress"),
+            _ => Response::error(
+                409,
+                "Census ZCTA source unavailable; existing cache preserved",
+            ),
+        })?;
+    Ok(Response::json(200, &result))
+}
+
 fn reclamation_store(store: &WorkbenchStore) -> SiteStore {
     SiteStore::new(
         store
@@ -616,555 +714,6 @@ fn reclamation_change(req: &Request, store: &WorkbenchStore) -> Result<Response,
 }
 
 /// Task records are in a separate local file and survive job-template changes.
-fn task_store(workbench: &WorkbenchStore) -> TaskStore {
-    let root = workbench
-        .path()
-        .parent()
-        .unwrap_or_else(|| std::path::Path::new("."));
-    TaskStore::new(root.to_path_buf())
-}
-
-fn manager_role(store: &WorkbenchStore) -> Result<(String, bool), Response> {
-    let board = store
-        .load()
-        .map_err(|_| Response::error(409, "Workbench unavailable; original file preserved"))?;
-    let manager = board.slots.iter().any(|slot| slot.tool == "mission-board");
-    Ok((board.profile, manager))
-}
-
-fn tasks_read(store: &WorkbenchStore) -> Result<Response, Response> {
-    let (role, manager) = manager_role(store)?;
-    let task_store = task_store(store);
-    let mut board = task_store
-        .load()
-        .map_err(|_| Response::error(409, "Task board unavailable; original file preserved"))?;
-    if !manager {
-        board.tasks.retain(|task| task.role == role);
-    }
-    Ok(Response::json(
-        200,
-        &json!({
-            "board": board,
-            "manager": manager,
-            "role": role,
-            "delivery": "manual_handoff_only"
-        }),
-    ))
-}
-
-fn tasks_create(req: &Request, store: &WorkbenchStore) -> Result<Response, Response> {
-    let (_, manager) = manager_role(store)?;
-    if !manager {
-        return Err(Response::error(
-            403,
-            "Pin Task Control or load Overseer to create assignments",
-        ));
-    }
-    let body = parse_json_body(
-        req,
-        &[
-            "title", "details", "assignee", "role", "contact", "priority", "due",
-        ],
-    )?;
-    let task: NewTask = serde_json::from_value(body)
-        .map_err(|_| Response::error(422, "Invalid new task fields"))?;
-    let result = task_store(store).create(task).map_err(|_| {
-        Response::error(422, "Task validation or local storage failed; no task sent")
-    })?;
-    Ok(Response::json(200, &json!({"task": result, "sent": false})))
-}
-
-fn positive_integer(body: &Value, key: &str) -> Result<u64, Response> {
-    body.get(key)
-        .and_then(Value::as_u64)
-        .filter(|value| *value > 0)
-        .ok_or_else(|| Response::error(422, "Missing or invalid task ID/revision"))
-}
-
-fn tasks_change(req: &Request, store: &WorkbenchStore) -> Result<Response, Response> {
-    let body = parse_json_body(
-        req,
-        &[
-            "id",
-            "revision",
-            "operation",
-            "status",
-            "note",
-            "assignee",
-            "role",
-            "contact",
-        ],
-    )?;
-    let id = positive_integer(&body, "id")?;
-    let revision = positive_integer(&body, "revision")?;
-    let operation = str_field(&body, "operation")?;
-    let (role, manager) = manager_role(store)?;
-    let tasks = task_store(store);
-    let existing = tasks
-        .task(id)
-        .map_err(|_| Response::error(404, "Task not found"))?;
-    if !manager && existing.role != role {
-        return Err(Response::error(
-            403,
-            "Only the assigned role or Task Control can update this task",
-        ));
-    }
-    let changed = match operation {
-        "status" => {
-            let status: Status = serde_json::from_value(
-                body.get("status")
-                    .cloned()
-                    .ok_or_else(|| Response::error(422, "Missing task status"))?,
-            )
-            .map_err(|_| Response::error(422, "Invalid task status"))?;
-            let note = body.get("note").and_then(Value::as_str).unwrap_or("");
-            tasks.set_status(id, revision, status, note)
-        }
-        "reassign" if manager => {
-            let person = str_field(&body, "assignee")?;
-            let target = str_field(&body, "role")?;
-            let contact = body.get("contact").and_then(Value::as_str);
-            tasks.reassign(id, revision, person, target, contact)
-        }
-        "sent" if manager => tasks.mark_sent(id, revision),
-        "acknowledge" => tasks.acknowledge(id, revision),
-        _ => return Err(Response::error(403, "Operation restricted to Task Control")),
-    };
-    let task = changed.map_err(|error| {
-        if error.kind() == io::ErrorKind::AlreadyExists {
-            Response::error(409, "Task was edited elsewhere; refresh the board")
-        } else if error.kind() == io::ErrorKind::NotFound {
-            Response::error(404, "Task not found")
-        } else {
-            Response::error(422, "Task update invalid or storage unavailable")
-        }
-    })?;
-    Ok(Response::json(200, &json!({"task": task})))
-}
-
-fn tasks_handoff(req: &Request, store: &WorkbenchStore) -> Result<Response, Response> {
-    let (_, manager) = manager_role(store)?;
-    if !manager {
-        return Err(Response::error(
-            403,
-            "Task handoff is an Overseer/Task Control operation",
-        ));
-    }
-    let body = parse_json_body(req, &["id"])?;
-    let id = positive_integer(&body, "id")?;
-    let task = task_store(store)
-        .task(id)
-        .map_err(|_| Response::error(404, "Task not found"))?;
-    Ok(Response::json(
-        200,
-        &json!({"text": task.handoff(), "sent": false, "transport": "operator_controlled"}),
-    ))
-}
-
-fn peers_read(store: &WorkbenchStore) -> Result<Response, Response> {
-    let (_, manager) = manager_role(store)?;
-    if !manager {
-        return Err(Response::error(
-            403,
-            "Only Task Control can inspect paired destinations",
-        ));
-    }
-    let root = store
-        .path()
-        .parent()
-        .unwrap_or_else(|| std::path::Path::new("."));
-    let peers = PeerStore::new(root.to_path_buf());
-    let status = peer::safe_peers_from_store(&peers)
-        .map_err(|_| Response::error(409, "Peer roster unavailable; original file preserved"))?;
-    Ok(Response::json(200, &status))
-}
-
-fn device_send(req: &Request, store: &WorkbenchStore) -> Result<Response, Response> {
-    let (_, manager) = manager_role(store)?;
-    if !manager {
-        return Err(Response::error(
-            403,
-            "Load Overseer or explicitly pin Task Control",
-        ));
-    }
-    let body = parse_json_body(req, &["id", "revision", "alias", "confirm"])?;
-    if body.get("confirm").and_then(Value::as_bool) != Some(true) {
-        return Err(Response::error(
-            422,
-            "Explicit device-send confirmation required",
-        ));
-    }
-    let id = positive_integer(&body, "id")?;
-    let revision = positive_integer(&body, "revision")?;
-    let alias = str_field(&body, "alias")?;
-    let root = store
-        .path()
-        .parent()
-        .unwrap_or_else(|| std::path::Path::new("."));
-    let peers = PeerStore::new(root.to_path_buf());
-    let tasks = TaskStore::new(root.to_path_buf());
-    let result =
-        peer::send_from_store(&tasks, &peers, id, revision, alias).map_err(|_| {
-            Response::error(409,
-            "Device delivery failed or task changed; verify SSH peer and reload before retrying")
-        })?;
-    Ok(Response::json(
-        200,
-        &json!({
-            "task": result,
-            "transport": "openssh",
-            "stored_on_receiver": true,
-            "human_acknowledged": false
-        }),
-    ))
-}
-
-fn device_sync(req: &Request, store: &WorkbenchStore) -> Result<Response, Response> {
-    let (_, manager) = manager_role(store)?;
-    if !manager {
-        return Err(Response::error(
-            403,
-            "Only Task Control can refresh peer receipts",
-        ));
-    }
-    let body = parse_json_body(req, &["alias", "confirm"])?;
-    if body.get("confirm").and_then(Value::as_bool) != Some(true) {
-        return Err(Response::error(
-            422,
-            "Explicit receipt-sync confirmation required",
-        ));
-    }
-    let alias = str_field(&body, "alias")?;
-    let root = store
-        .path()
-        .parent()
-        .unwrap_or_else(|| std::path::Path::new("."));
-    let peers = PeerStore::new(root.to_path_buf());
-    let tasks = TaskStore::new(root.to_path_buf());
-    let changed = peer::sync_from_store(&tasks, &peers, alias).map_err(|_| {
-        Response::error(
-            409,
-            "Could not verify or process remote progress; local records preserved",
-        )
-    })?;
-    Ok(Response::json(
-        200,
-        &json!({"updated": changed, "source": "openssh_explicit_sync"}),
-    ))
-}
-
-fn messenger_store(store: &WorkbenchStore) -> MessageStore {
-    let root = store
-        .path()
-        .parent()
-        .unwrap_or_else(|| std::path::Path::new("."));
-    MessageStore::new(root.to_path_buf())
-}
-
-fn messenger_peers(store: &WorkbenchStore) -> PeerStore {
-    let root = store
-        .path()
-        .parent()
-        .unwrap_or_else(|| std::path::Path::new("."));
-    PeerStore::new(root.to_path_buf())
-}
-
-fn messenger_pace(store: &WorkbenchStore) -> PaceStore {
-    PaceStore::new(
-        store
-            .path()
-            .parent()
-            .unwrap_or_else(|| std::path::Path::new("."))
-            .into(),
-    )
-}
-
-fn message_tier(input: &Value) -> Result<Tier, Response> {
-    match input.get("tier") {
-        None => Ok(Tier::Primary),
-        Some(Value::String(value)) => {
-            Tier::parse(value).map_err(|_| Response::error(422, "Unknown PACE tier"))
-        }
-        _ => Err(Response::error(422, "PACE tier must be a string")),
-    }
-}
-
-fn messages_read(store: &WorkbenchStore) -> Result<Response, Response> {
-    let peers = messenger_peers(store)
-        .load()
-        .map_err(|_| Response::error(409, "Messenger pairing configuration unavailable"))?;
-    let book = messenger_store(store)
-        .load()
-        .map_err(|_| Response::error(409, "Messenger journal unavailable; original preserved"))?;
-    let aliases: Vec<&str> = peers.peers.iter().map(|peer| peer.alias.as_str()).collect();
-    let mut conversations: Vec<String> = aliases.iter().map(|id| (*id).to_owned()).collect();
-    for message in &book.messages {
-        if !conversations.contains(&message.peer) {
-            conversations.push(message.peer.clone());
-        }
-    }
-    conversations.sort();
-    let pace = messenger_pace(store);
-    let plans = conversations
-        .iter()
-        .map(|alias| pace.view(alias, aliases.contains(&alias.as_str())))
-        .collect::<std::io::Result<Vec<_>>>()
-        .map_err(|_| Response::error(409, "PACE configuration unavailable; original preserved"))?;
-    let storage = messenger_store(store)
-        .storage_mode()
-        .map_err(|_| Response::error(409, "Messenger encryption key unavailable"))?;
-    Ok(Response::json(
-        200,
-        &json!({
-            "schema_version": 1,
-            "device_id": peers.device_id,
-            "ready": peers.device_id.is_some() && !aliases.is_empty(),
-            "peers": aliases,
-            "conversations": conversations,
-            "messages": book.messages,
-            "transport": "pinned_openssh_explicit",
-            "storage": storage,
-            "pace": plans,
-            "e2ee": false,
-            "automatic_connections": false
-        }),
-    ))
-}
-
-fn messages_send(req: &Request, store: &WorkbenchStore) -> Result<Response, Response> {
-    let input = parse_json_body(req, &["alias", "body", "confirm", "tier"])?;
-    if input.get("confirm").and_then(Value::as_bool) != Some(true) {
-        return Err(Response::error(
-            422,
-            "Explicit Messenger send confirmation required",
-        ));
-    }
-    let alias = str_field(&input, "alias")?;
-    let body = str_field(&input, "body")?;
-    if !valid_text(body) {
-        return Err(Response::error(
-            422,
-            "Message must be 1-1024 UTF-8 bytes without control characters",
-        ));
-    }
-    let journal = messenger_store(store);
-    let peers = messenger_peers(store);
-    let tier = message_tier(&input)?;
-    let pace = messenger_pace(store);
-    let (message, stored) =
-        peer::queue_message_pace_from_store(&journal, &peers, Some(&pace), alias, body, tier)
-            .map_err(|_| {
-                Response::error(409, "Messenger device not paired or journal unavailable")
-            })?;
-    Ok(Response::json(
-        200,
-        &json!({
-            "message": message,
-            "stored_on_receiver": stored,
-            "held_locally": tier == Tier::Emergency,
-            "pace_tier": tier,
-            "transport": if tier == Tier::Emergency { "local_hold" } else { "pinned_openssh_explicit" },
-            "read_by_human": false
-        }),
-    ))
-}
-
-fn messages_retry(req: &Request, store: &WorkbenchStore) -> Result<Response, Response> {
-    let input = parse_json_body(req, &["id", "confirm", "tier"])?;
-    if input.get("confirm").and_then(Value::as_bool) != Some(true) {
-        return Err(Response::error(
-            422,
-            "Explicit Messenger retry confirmation required",
-        ));
-    }
-    let id = positive_integer(&input, "id")?;
-    let journal = messenger_store(store);
-    let entry = journal
-        .load()
-        .map_err(|_| Response::error(409, "Messenger journal unavailable"))?
-        .messages
-        .into_iter()
-        .find(|message| message.id == id && message.direction == Direction::Outgoing)
-        .ok_or_else(|| Response::error(404, "Outgoing message not found"))?;
-    let peers = messenger_peers(store);
-    let tier = message_tier(&input)?;
-    let message = peer::send_message_pace_from_store(
-        &journal,
-        &peers,
-        &messenger_pace(store),
-        id,
-        &entry.peer,
-        tier,
-    )
-    .map_err(|_| Response::error(409, "Messenger retry failed; queued message preserved"))?;
-    Ok(Response::json(
-        200,
-        &json!({
-            "stored_on_receiver": message.delivery == pipboy_core::messenger::Delivery::Stored,
-            "held_locally": tier == Tier::Emergency, "pace_tier": tier,
-            "message": message, "read_by_human": false
-        }),
-    ))
-}
-
-fn scan_network(req: &Request, store: &WorkbenchStore) -> Result<Response, Response> {
-    let body = parse_json_body(req, &["cidr", "confirm"])?;
-    if body.get("confirm").and_then(Value::as_bool) != Some(true) {
-        return Err(Response::error(
-            422,
-            "Confirm authorization for this private LAN scope",
-        ));
-    }
-    let cidr = str_field(&body, "cidr")?;
-    if cidr.len() > 32 {
-        return Err(Response::error(422, "LAN scope exceeds 32 bytes"));
-    }
-    let board = store
-        .load()
-        .map_err(|_| Response::error(409, "Workbench unavailable"))?;
-    if !board.slots.iter().any(|slot| slot.tool == "net-lab") {
-        return Err(Response::error(
-            409,
-            "Activate a role with NET ENGINEER first",
-        ));
-    }
-    let report = network_probe::scan(cidr, true)
-        .map_err(|_| Response::error(422, "Invalid network scope or scan already active"))?;
-    Ok(Response::json(
-        200,
-        &json!({
-            "kind": "network_scan",
-            "output": report.render_text(),
-            "report": report
-        }),
-    ))
-}
-
-fn unifi_request(req: &Request, store: &WorkbenchStore) -> Result<Response, Response> {
-    let body = parse_json_body(req, &["operation", "site", "cidr", "confirm"])?;
-    if body.get("confirm").and_then(Value::as_bool) != Some(true) {
-        return Err(Response::error(
-            422,
-            "Authorize this read-only UniFi controller request",
-        ));
-    }
-    let board = store
-        .load()
-        .map_err(|_| Response::error(409, "Workbench unavailable"))?;
-    if !board.slots.iter().any(|slot| slot.tool == "net-lab") {
-        return Err(Response::error(409, "Activate NET ENGINEER first"));
-    }
-    let operation = str_field(&body, "operation")?;
-    let site = if matches!(operation, "clients" | "compare") {
-        let value = str_field(&body, "site")?;
-        if !unifi::valid_site_id(value) {
-            return Err(Response::error(422, "Enter a valid UniFi site UUID"));
-        }
-        Some(value)
-    } else {
-        None
-    };
-    let scope = if operation == "compare" {
-        let value = str_field(&body, "cidr")?;
-        if value.len() > 32 || network_probe::NetworkScope::parse(value).is_err() {
-            return Err(Response::error(
-                422,
-                "Compare requires a private /24..../32 IPv4 CIDR",
-            ));
-        }
-        Some(value)
-    } else {
-        None
-    };
-    let read_error = |_| {
-        Response::error(
-        409,
-        "UniFi read-only HTTPS query failed; verify private controller configuration, trusted CA, API key and site ID"
-    )
-    };
-    match operation {
-        "sites" => {
-            let data = unifi::list_sites(true).map_err(read_error)?;
-            let mut output = format!("UNIFI / CONTROLLER SITES\nSITES: {}\n", data.sites.len());
-            for row in &data.sites {
-                output.push_str(&format!("{}  {}\n", row.id, row.name));
-            }
-            Ok(Response::json(
-                200,
-                &json!({
-                    "kind": "unifi_sites", "output": output, "inventory": data
-                }),
-            ))
-        }
-        "clients" => {
-            let data = unifi::list_clients(
-                site.ok_or_else(|| Response::error(422, "Site ID required"))?,
-                true,
-            )
-            .map_err(read_error)?;
-            let mut output = format!(
-                "UNIFI / CONTROLLER CONNECTED\nCLIENTS: {}  WITH IP: {}\n",
-                data.connected_clients, data.clients_with_ip
-            );
-            for client in data.clients.iter().take(60) {
-                output.push_str(&format!(
-                    "{}  {}  {}\n",
-                    client
-                        .ip_address
-                        .map(|ip| ip.to_string())
-                        .unwrap_or_else(|| "IP unknown".into()),
-                    client.connection_type,
-                    client.name
-                ));
-            }
-            if data.clients.len() > 60 {
-                output.push_str("Only first 60 shown; CLI --json provides complete inventory.\n");
-            }
-            output.push_str(&data.limitation);
-            Ok(Response::json(
-                200,
-                &json!({
-                    "kind": "unifi_clients", "output": output, "inventory": data
-                }),
-            ))
-        }
-        "compare" => {
-            let data = unifi::list_clients(
-                site.ok_or_else(|| Response::error(422, "Site ID required"))?,
-                true,
-            )
-            .map_err(read_error)?;
-            let report = network_probe::scan(
-                scope.ok_or_else(|| Response::error(422, "Private subnet required"))?,
-                true,
-            )
-            .map_err(|_| Response::error(409, "Private LAN scan unavailable or in progress"))?;
-            let comparison = unifi::compare_inventory(&report, &data);
-            let output = format!(
-                "NET ENGINEER / UNIFI CROSS-CHECK\nCONTROLLER CONNECTED: {}\nCONTROLLER IPv4: {}\nMATCHED RESPONSES: {}\nCONTROLLER IPV4 NOT PROBED: {}\nPROBED / NO CONTROLLER IP MATCH: {}\n\n{}\n\n{}",
-                comparison.controller_clients,
-                comparison.controller_with_ipv4,
-                comparison.matched_active_probe,
-                comparison.controller_not_probed,
-                comparison.active_probe_only,
-                comparison.note,
-                report.render_text()
-            );
-            Ok(Response::json(
-                200,
-                &json!({
-                    "kind": "unifi_comparison", "output": output,
-                    "inventory": data, "report": report, "comparison": comparison
-                }),
-            ))
-        }
-        _ => Err(Response::error(
-            422,
-            "Unsupported UniFi read-only operation",
-        )),
-    }
-}
-
 fn radio_preset_store(store: &WorkbenchStore) -> RadioPresetStore {
     RadioPresetStore::new(
         store
@@ -1468,18 +1017,11 @@ fn dispatch(req: &Request, store: &WorkbenchStore, port: u16) -> Response {
             "text/javascript; charset=utf-8",
             MAP_ONLINE_JS.as_bytes(),
         ),
-        ("GET", "/assets/boston-base.js") => Response::new(
-            200,
-            "text/javascript; charset=utf-8",
-            BOSTON_BASE_JS.as_bytes(),
-        ),
-        ("GET", "/assets/boston-map.js") => Response::new(
-            200,
-            "text/javascript; charset=utf-8",
-            BOSTON_MAP_JS.as_bytes(),
-        ),
         ("GET", "/assets/map-county.js") => {
             Response::new(200, "text/javascript; charset=utf-8", COUNTY_JS.as_bytes())
+        }
+        ("GET", "/assets/map-zip.js") => {
+            Response::new(200, "text/javascript; charset=utf-8", ZIP_JS.as_bytes())
         }
         ("GET", "/assets/map.js") => {
             Response::new(200, "text/javascript; charset=utf-8", MAP_JS.as_bytes())
@@ -1528,6 +1070,9 @@ fn dispatch(req: &Request, store: &WorkbenchStore, port: u16) -> Response {
             .map(|value| Response::json(200, &value))
             .unwrap_or_else(|_| Response::error(409, "County cache unavailable")),
         ("POST", "/api/map/package") => county_package(req, store).unwrap_or_else(|error| error),
+        ("POST", "/api/map/boundary") => county_boundary(req, store).unwrap_or_else(|error| error),
+        ("POST", "/api/map/zip") => zip_lookup(req, store).unwrap_or_else(|error| error),
+        ("POST", "/api/map/county-zips") => county_zips(req, store).unwrap_or_else(|error| error),
         ("GET", "/api/state") => state(store).unwrap_or_else(|error| error),
         ("GET", "/api/radio") => radio_state(store),
         ("POST", "/api/radio") => radio_command(req, store).unwrap_or_else(|error| error),
@@ -1544,18 +1089,38 @@ fn dispatch(req: &Request, store: &WorkbenchStore, port: u16) -> Response {
         ("POST", "/api/reclamation/change") => {
             reclamation_change(req, store).unwrap_or_else(|error| error)
         }
-        ("GET", "/api/tasks") => tasks_read(store).unwrap_or_else(|error| error),
-        ("GET", "/api/peers") => peers_read(store).unwrap_or_else(|error| error),
-        ("GET", "/api/messages") => messages_read(store).unwrap_or_else(|error| error),
-        ("POST", "/api/messages/send") => messages_send(req, store).unwrap_or_else(|error| error),
-        ("POST", "/api/messages/retry") => messages_retry(req, store).unwrap_or_else(|error| error),
-        ("POST", "/api/net/scan") => scan_network(req, store).unwrap_or_else(|error| error),
-        ("POST", "/api/net/unifi") => unifi_request(req, store).unwrap_or_else(|error| error),
-        ("POST", "/api/peer/send") => device_send(req, store).unwrap_or_else(|error| error),
-        ("POST", "/api/peer/sync") => device_sync(req, store).unwrap_or_else(|error| error),
-        ("POST", "/api/tasks/create") => tasks_create(req, store).unwrap_or_else(|error| error),
-        ("POST", "/api/tasks/change") => tasks_change(req, store).unwrap_or_else(|error| error),
-        ("POST", "/api/tasks/handoff") => tasks_handoff(req, store).unwrap_or_else(|error| error),
+        ("GET", "/api/tasks") => task_routes::tasks_read(store).unwrap_or_else(|error| error),
+        ("GET", "/api/peers") => task_routes::peers_read(store).unwrap_or_else(|error| error),
+        ("GET", "/api/messages") => {
+            messenger_routes::messages_read(store).unwrap_or_else(|error| error)
+        }
+        ("POST", "/api/messages/send") => {
+            messenger_routes::messages_send(req, store).unwrap_or_else(|error| error)
+        }
+        ("POST", "/api/messages/retry") => {
+            messenger_routes::messages_retry(req, store).unwrap_or_else(|error| error)
+        }
+        ("POST", "/api/net/scan") => {
+            network_routes::scan_network(req, store).unwrap_or_else(|error| error)
+        }
+        ("POST", "/api/net/unifi") => {
+            network_routes::unifi_request(req, store).unwrap_or_else(|error| error)
+        }
+        ("POST", "/api/peer/send") => {
+            task_routes::device_send(req, store).unwrap_or_else(|error| error)
+        }
+        ("POST", "/api/peer/sync") => {
+            task_routes::device_sync(req, store).unwrap_or_else(|error| error)
+        }
+        ("POST", "/api/tasks/create") => {
+            task_routes::tasks_create(req, store).unwrap_or_else(|error| error)
+        }
+        ("POST", "/api/tasks/change") => {
+            task_routes::tasks_change(req, store).unwrap_or_else(|error| error)
+        }
+        ("POST", "/api/tasks/handoff") => {
+            task_routes::tasks_handoff(req, store).unwrap_or_else(|error| error)
+        }
         ("POST", "/api/profile") => {
             let result = (|| {
                 let body = parse_json_body(req, &["id", "confirm"])?;
@@ -1655,7 +1220,8 @@ fn serve_client(mut stream: TcpStream, store: &WorkbenchStore, port: u16) -> io:
 
 #[cfg(target_os = "macos")]
 fn open_browser(url: &str) {
-    if let Err(error) = std::process::Command::new("open").arg(url).spawn() {
+    let mut command = pipboy_core::process_safety::isolated_command("open");
+    if let Err(error) = command.arg(url).spawn() {
         eprintln!("Could not open the browser automatically: {error}");
     }
 }
@@ -1724,7 +1290,9 @@ pub fn run(args: Vec<String>) -> Result<(), Box<dyn Error>> {
 
 #[cfg(test)]
 mod tests {
+    use super::task_routes::task_store;
     use super::*;
+    use pipboy_core::tasks::Status;
     use std::fs;
 
     fn request(method: &str, path: &str, body: Value) -> Request {
@@ -2328,6 +1896,26 @@ mod tests {
     }
 
     #[test]
+    fn task_peer_routes_reject_cross_origin_before_any_storage() {
+        let dir = tempfile::tempdir().unwrap();
+        let store = WorkbenchStore::new(dir.path().join("private/workbench.json"));
+        for path in [
+            "/api/tasks/create",
+            "/api/tasks/change",
+            "/api/tasks/handoff",
+            "/api/peer/send",
+            "/api/peer/sync",
+        ] {
+            let mut req = request("POST", path, json!({}));
+            req.headers
+                .insert("origin".into(), "http://untrusted.invalid".into());
+            let response = dispatch(&req, &store, 8765);
+            assert_eq!(response.status, 403, "cross-origin route {path}");
+            assert!(!dir.path().join("private").exists());
+        }
+    }
+
+    #[test]
     fn messenger_api_requires_confirmation_and_never_auto_connects() {
         let dir = tempfile::tempdir().unwrap();
         let store = WorkbenchStore::new(dir.path().join("private/workbench.json"));
@@ -2371,6 +1959,193 @@ mod tests {
     }
 
     #[test]
+    fn network_routes_require_same_origin_and_explicit_consent() {
+        let temp = tempfile::tempdir().unwrap();
+        let store = WorkbenchStore::new(temp.path().join("private/workbench.json"));
+        for (path, body) in [
+            (
+                "/api/net/scan",
+                json!({"cidr":"192.168.1.0/24","confirm":true}),
+            ),
+            (
+                "/api/net/unifi",
+                json!({"operation":"sites","confirm":true}),
+            ),
+        ] {
+            let mut req = request("POST", path, body);
+            req.headers
+                .insert("origin".into(), "https://untrusted.invalid".into());
+            assert_eq!(dispatch(&req, &store, 8765).status, 403, "{path}");
+            assert!(!temp.path().join("private").exists());
+        }
+        for (path, body) in [
+            ("/api/net/scan", json!({"cidr":"192.168.1.0/24"})),
+            ("/api/net/unifi", json!({"operation":"sites"})),
+        ] {
+            assert_eq!(
+                dispatch(&request("POST", path, body), &store, 8765).status,
+                422,
+                "missing confirmation: {path}"
+            );
+            assert!(!temp.path().join("private").exists());
+        }
+        let mut invalid_type = request(
+            "POST",
+            "/api/net/scan",
+            json!({"cidr":"192.168.1.0/24","confirm":true}),
+        );
+        invalid_type
+            .headers
+            .insert("content-type".into(), "text/plain".into());
+        assert_eq!(dispatch(&invalid_type, &store, 8765).status, 415);
+        assert!(!temp.path().join("private").exists());
+    }
+
+    #[test]
+    fn network_routes_reject_unpinned_network_tools_before_probing() {
+        let temp = tempfile::tempdir().unwrap();
+        let store = WorkbenchStore::new(temp.path().join("private/workbench.json"));
+        assert_eq!(
+            dispatch(
+                &request(
+                    "POST",
+                    "/api/net/scan",
+                    json!({"cidr":"192.168.1.0/24","confirm":true})
+                ),
+                &store,
+                8765
+            )
+            .status,
+            409
+        );
+        assert_eq!(
+            dispatch(
+                &request(
+                    "POST",
+                    "/api/net/unifi",
+                    json!({"operation":"sites","confirm":true})
+                ),
+                &store,
+                8765
+            )
+            .status,
+            409
+        );
+        assert!(!temp.path().join("private").exists());
+    }
+
+    #[test]
+    fn network_routes_validate_activated_scopes_without_external_access() {
+        let temp = tempfile::tempdir().unwrap();
+        let store = WorkbenchStore::new(temp.path().join("private/workbench.json"));
+        assert!(store.apply_preset("head-engineer").unwrap());
+        let test_cases = [
+            (
+                "/api/net/scan",
+                json!({"cidr":"123456789012345678901234567890123","confirm":true}),
+            ),
+            (
+                "/api/net/unifi",
+                json!({"operation":"unsupported","confirm":true}),
+            ),
+            (
+                "/api/net/unifi",
+                json!({"operation":"clients","site":"invalid","confirm":true}),
+            ),
+            (
+                "/api/net/unifi",
+                json!({
+                    "operation":"compare",
+                    "site":"00000000-0000-0000-0000-000000000001",
+                    "cidr":"8.8.8.8/32",
+                    "confirm":true
+                }),
+            ),
+        ];
+        for (path, body) in test_cases {
+            assert_eq!(
+                dispatch(&request("POST", path, body), &store, 8765).status,
+                422,
+                "{path}"
+            );
+        }
+        assert!(!temp.path().join("private/messages.json").exists());
+        assert!(!temp.path().join("private/peers.json").exists());
+    }
+
+    #[test]
+    fn messenger_routes_reject_cross_origin_and_host_before_local_storage() {
+        let temp = tempfile::tempdir().unwrap();
+        let store = WorkbenchStore::new(temp.path().join("private/workbench.json"));
+        for path in ["/api/messages/send", "/api/messages/retry"] {
+            let mut req = request(
+                "POST",
+                path,
+                json!({"alias":"scout-one", "body":"Hello", "id":1, "confirm":true}),
+            );
+            req.headers
+                .insert("origin".into(), "https://untrusted.invalid".into());
+            assert_eq!(dispatch(&req, &store, 8765).status, 403, "{path}");
+            assert!(!temp.path().join("private").exists());
+        }
+        let mut wrong_host = request("GET", "/api/messages", Value::Null);
+        wrong_host
+            .headers
+            .insert("host".into(), "non-loopback.invalid".into());
+        assert_eq!(dispatch(&wrong_host, &store, 8765).status, 403);
+        assert!(!temp.path().join("private").exists());
+    }
+
+    #[test]
+    fn messenger_routes_preserve_confirmation_tier_and_payload_validation() {
+        let temp = tempfile::tempdir().unwrap();
+        let store = WorkbenchStore::new(temp.path().join("private/workbench.json"));
+        let requests = [
+            (
+                "/api/messages/send",
+                json!({"alias":"scout-one","body":"Hello"}),
+                422,
+            ),
+            (
+                "/api/messages/send",
+                json!({"alias":"scout-one","body":"Hello","confirm":true,"tier":99}),
+                422,
+            ),
+            (
+                "/api/messages/send",
+                json!({"alias":"scout-one","body":"Hello","confirm":true,"tier":"unknown"}),
+                422,
+            ),
+            (
+                "/api/messages/send",
+                json!({"alias":"scout-one","body":"\u{1b}","confirm":true}),
+                422,
+            ),
+            ("/api/messages/retry", json!({"id":1}), 422),
+            ("/api/messages/retry", json!({"id":0,"confirm":true}), 422),
+            ("/api/messages/retry", json!({"id":1,"confirm":true}), 404),
+        ];
+        for (path, body, expected) in requests {
+            assert_eq!(
+                dispatch(&request("POST", path, body), &store, 8765).status,
+                expected,
+                "{path}"
+            );
+            assert!(!temp.path().join("private").exists());
+        }
+        let mut wrong_type = request(
+            "POST",
+            "/api/messages/send",
+            json!({"alias":"scout-one","body":"Hello","confirm":true}),
+        );
+        wrong_type
+            .headers
+            .insert("content-type".into(), "text/plain".into());
+        assert_eq!(dispatch(&wrong_type, &store, 8765).status, 415);
+        assert!(!temp.path().join("private").exists());
+    }
+
+    #[test]
     fn county_source_api_is_allowlisted_local_and_explicit() {
         let temp = tempfile::tempdir().unwrap();
         let store = WorkbenchStore::new(temp.path().join("state"));
@@ -2381,7 +2156,8 @@ mod tests {
         );
         assert_eq!(index.status, 200);
         let sources: Value = serde_json::from_slice(&index.body).unwrap();
-        assert_eq!(sources["sources"].as_array().unwrap().len(), 3);
+        assert_eq!(sources["sources"].as_array().unwrap().len(), 4);
+        assert_eq!(sources["sources"][3]["id"], "tiger-pointlm");
         let cache = dispatch(&request("GET", "/api/map/cache", Value::Null), &store, 8765);
         assert_eq!(cache.status, 200);
         let manifest: Value = serde_json::from_slice(&cache.body).unwrap();
@@ -2443,6 +2219,109 @@ mod tests {
     }
 
     #[test]
+    fn county_boundary_api_requires_consent_and_restores_validated_cache() {
+        let temp = tempfile::tempdir().unwrap();
+        let store = WorkbenchStore::new(temp.path().join("state"));
+        let cases = [
+            (json!({"geoid":"25025"}), 403),
+            (json!({"geoid":"../../bad","confirm":true}), 422),
+            (json!({"geoid":"25025","cache_only":true}), 404),
+        ];
+        for (body, expected) in cases {
+            let response = dispatch(&request("POST", "/api/map/boundary", body), &store, 8765);
+            assert_eq!(response.status, expected);
+            assert!(!temp.path().join("state/county_cache").exists());
+        }
+        let mut hostile = request(
+            "POST",
+            "/api/map/boundary",
+            json!({"geoid":"25025","confirm":true}),
+        );
+        hostile
+            .headers
+            .insert("origin".to_owned(), "https://untrusted.invalid".to_owned());
+        assert_eq!(dispatch(&hostile, &store, 8765).status, 403);
+        assert!(!temp.path().join("state/county_cache").exists());
+
+        let dir = temp.path().join("state/county_cache");
+        std::fs::create_dir_all(&dir).unwrap();
+        let fixture = json!({
+            "type":"FeatureCollection",
+            "features":[{
+                "type":"Feature", "properties":{"GEOID":"25025","NAME":"Suffolk"},
+                "geometry":{"type":"Polygon","coordinates":[
+                    [[-71.2,42.3],[-71.0,42.3],[-71.0,42.5],[-71.2,42.3]]
+                ]}
+            }]
+        });
+        std::fs::write(dir.join("boundary_2025_25025.geojson"), fixture.to_string()).unwrap();
+        let cached_req = request(
+            "POST",
+            "/api/map/boundary",
+            json!({"geoid":"25025","cache_only":true}),
+        );
+        let cached = dispatch(&cached_req, &store, 8765);
+        assert_eq!(cached.status, 200);
+        let data: Value = serde_json::from_slice(&cached.body).unwrap();
+        assert_eq!(data["geoid"], "25025");
+        assert_eq!(data["cache_hit"], true);
+        assert_eq!(data["network_used"], false);
+        assert_eq!(data["paths"][0].as_array().unwrap().len(), 4);
+        assert_eq!(dispatch(&cached_req, &store, 8765).status, 200);
+        let selected = dispatch(&request("GET", "/api/map/cache", Value::Null), &store, 8765);
+        assert_eq!(selected.status, 200);
+        // Reading a cached boundary never silently activates a county selection.
+        let metadata: Value = serde_json::from_slice(&selected.body).unwrap();
+        assert_eq!(metadata["active_geoid"], Value::Null);
+    }
+
+    #[test]
+    fn zip_lookup_api_is_local_consent_gated_and_offline_first() {
+        let tmp = tempfile::tempdir().unwrap();
+        let store = WorkbenchStore::new(tmp.path().join("state/data.json"));
+        let cases = [
+            ("/api/map/zip", json!({"zip":"02360"}), 403),
+            ("/api/map/zip", json!({"zip":"0236","confirm":true}), 422),
+            (
+                "/api/map/zip",
+                json!({"zip":"02360","cache_only":true}),
+                404,
+            ),
+            ("/api/map/county-zips", json!({"geoid":"25023"}), 403),
+            (
+                "/api/map/county-zips",
+                json!({"geoid":"../../","confirm":true}),
+                422,
+            ),
+            (
+                "/api/map/county-zips",
+                json!({"geoid":"25023","offset":-1,"cache_only":true}),
+                422,
+            ),
+            (
+                "/api/map/county-zips",
+                json!({"geoid":"25023","cache_only":true}),
+                404,
+            ),
+        ];
+        for (path, body, expected) in cases {
+            let response = dispatch(&request("POST", path, body), &store, 8765);
+            assert_eq!(response.status, expected, "{path}");
+            assert!(!tmp.path().join("state/geo_index").exists());
+        }
+        let mut bad_origin = request(
+            "POST",
+            "/api/map/zip",
+            json!({"zip":"02360","confirm":true}),
+        );
+        bad_origin
+            .headers
+            .insert("origin".to_owned(), "https://untrusted.invalid".to_owned());
+        assert_eq!(dispatch(&bad_origin, &store, 8765).status, 403);
+        assert!(!tmp.path().join("state/geo_index").exists());
+    }
+
+    #[test]
     fn csp_headers_deny_external_scripts_and_framing() {
         let response = Response::new(200, "text/plain", b"ok".to_vec());
         let header = format!(
@@ -2460,6 +2339,9 @@ mod tests {
         assert!(MAP_ONLINE_JS.contains("https://overpass-api.de/api/interpreter"));
         assert!(MICRO_HTML.contains("/assets/map-online.js"));
         assert!(HTML.contains("/assets/map-online.js"));
+        assert!(HTML.contains("/assets/map-zip.js"));
+        assert!(MICRO_HTML.contains("/assets/map-zip.js"));
+        assert!(ZIP_JS.contains("/api/map/zip"));
         assert!(MAP_IMPORT_JS.contains("parseRustGIS"));
         assert!(MAP_IMPORT_JS.contains("readPackage"));
         assert!(MICRO_HTML.contains("/assets/map-import.js"));

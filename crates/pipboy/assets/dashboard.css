@@ -240,3 +240,305 @@ dialog::backdrop { background:#000c; backdrop-filter:blur(4px); }
   .job-station-summary { padding:8px; }
   .job-command-panel .task-specs { grid-template-columns:1fr; }
 }
+
+
+/* One-screen operator contract: navigation pages replace long document flow. */
+html, body { height:100%; overflow:hidden; }
+.app-shell { height:100dvh; min-height:0; overflow:hidden; }
+.pane-tabs { display:none; }
+.dashboard { min-height:0; overflow:hidden; }
+.role-panel, .main-panel, .detail-panel { min-height:0; overflow:hidden; }
+.role-list { flex:1 1 auto; min-height:0; overflow:hidden; }
+.role-card { min-height:0; flex:1 1 0; padding:6px 8px; }
+.role-panel .panel-top { padding:11px 12px 8px; }
+.role-panel-bottom, .detail-foot { display:none; }
+.main-panel { display:flex; flex-direction:column; gap:8px; overflow:hidden; padding:12px; }
+.workspace-head { flex:none; }
+.workspace-head h1 { font-size:clamp(17px,1.6vw,22px); margin:2px 0 3px; }
+.workspace-subtitle { display:none; }
+.hud-strip { flex:none; margin-top:0; padding:7px 0; gap:5px; }
+.hud-strip .tiny-label { margin-bottom:2px; }
+.workspace-stage { flex:1 1 0; display:flex; flex-direction:column; min-height:0; min-width:0; }
+.stage-tabs { display:flex; gap:5px; flex:none; margin-bottom:8px; }
+.stage-tabs button, .pane-tabs button, .deck-button { border:1px solid var(--border-lit); border-radius:5px; background:#15241a; color:var(--text); font:700 10px var(--mono); padding:8px 11px; min-height:36px; cursor:pointer; }
+.stage-tabs button[aria-pressed="true"], .pane-tabs button[aria-pressed="true"] { background:var(--lime); color:#152119; }
+.stage-surface:not([hidden]) { display:flex; flex-direction:column; flex:1 1 0; min-height:0; min-width:0; overflow:hidden; }
+.stage-surface > .section-heading { flex:none; margin:2px 0 8px; }
+.module-grid { flex:1 1 0; min-height:0; overflow:hidden; grid-template-columns:repeat(3,minmax(0,1fr)); grid-template-rows:repeat(2,minmax(0,1fr)); align-items:stretch; }
+.module-card { min-height:0; padding:9px; gap:5px; }
+.deck-pager { display:flex; flex:none; min-height:42px; justify-content:space-between; align-items:center; gap:8px; padding:3px 0; }
+.deck-pager:empty { min-height:0; padding:0; }
+.deck-button { min-width:82px; min-height:36px; }
+.deck-button:disabled { opacity:.35; cursor:default; }
+.deck-count { font:11px var(--mono); color:var(--lime); }
+.custom-palette { border-top:0; margin:0; }
+.palette-grid { display:grid; flex:1 1 0; min-height:0; grid-template-columns:repeat(2,minmax(0,1fr)); grid-template-rows:repeat(3,minmax(0,1fr)); overflow:hidden; }
+.palette-button { min-height:0; }
+.extension-content { flex:1 1 0; min-height:0; overflow:hidden; }
+.rb-map-desktop-host { height:100%; min-height:0; }
+.stage-surface[data-stage="messages"] .rb-msg-desktop-dock { flex:1; min-height:0; margin-top:0; overflow:auto; }
+.detail-header { padding:12px; }
+.detail-header h2 { font-size:16px; margin:3px 0; }
+.detail-header > p { display:none; }
+.detail-status { margin-top:6px; }
+.testbench, #network-workspace { min-height:0; flex:1 1 0; overflow:auto; padding:8px 11px; }
+.statusbar { min-height:20px; }
+@media(max-height:650px) {
+  .masthead { min-height:42px; padding:0 8px; }
+  .brand-mark { width:34px; height:34px; }
+  .brand-copy strong { font-size:15px; }
+  .panel-top .eyebrow,.role-panel-bottom { display:none; }
+  .workspace-head .eyebrow { display:none; }
+  .hud-strip { padding:4px 0; }
+  .role-desc { display:none; }
+  .section-heading { margin:2px 0 5px; }
+  .module-glyph { font-size:16px; }
+  .module-category { margin-top:1px; }
+  .stage-tabs { margin-bottom:4px; }
+}
+@media(max-width:1100px) {
+  body { overflow:hidden; }
+  .app-shell { height:100dvh; min-height:0; padding:5px; }
+  .pane-tabs { display:flex; flex:none; gap:5px; }
+  .pane-tabs button { flex:1; min-height:38px; }
+  .dashboard { display:block; flex:1 1 0; min-height:0; }
+  .dashboard > .panel { display:none; height:100%; overflow:hidden; }
+  .dashboard[data-pane="roles"] > .role-panel { display:flex; }
+  .dashboard[data-pane="workspace"] > .main-panel { display:flex; }
+  .dashboard[data-pane="inspector"] > .detail-panel { display:flex; }
+  .role-panel { min-height:0; }
+  .role-list { flex-direction:column; overflow:hidden; padding:7px; }
+  .role-card { width:100%; flex:1 1 0; min-height:0; }
+  .main-panel { padding:9px; }
+  .detail-panel { overflow:hidden; }
+  .testbench { overflow:auto; }
+  .statusbar { display:none; }
+}
+@media(max-width:600px) {
+  .masthead { min-height:38px; }
+  .hud-strip { grid-template-columns:repeat(4,minmax(0,1fr)); gap:3px; }
+  .hud-strip > div { border-right:0; padding-right:0; }
+  .hud-strip strong { font-size:9px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .hud-strip .tiny-label { font-size:8px; }
+  .stage-tabs button { padding:6px; flex:1; min-width:0; }
+  .module-grid { grid-template-columns:repeat(2,minmax(0,1fr)); grid-template-rows:repeat(3,minmax(0,1fr)); }
+  .module-card { padding:7px; }
+  .module-glyph { font-size:14px; }
+  .module-name { font-size:11px; }
+  .module-category { font-size:8px; }
+}
+@media (pointer:coarse) {
+  .deck-button,.stage-tabs button,.pane-tabs button { min-height:44px; }
+}
+
+
+/* Focused viewport pass: each workspace has a fixed header and one active body. */
+.extension-content { display:flex; flex-direction:column; min-height:0; }
+.extension-tabs { display:flex; flex:none; gap:5px; padding:5px; border-bottom:1px solid var(--border); }
+.extension-tabs button { flex:1; min-width:0; border:1px solid var(--border-lit); border-radius:4px; background:#122219; color:var(--text); min-height:35px; padding:6px 8px; font:700 11px var(--mono); cursor:pointer; }
+.extension-tabs button[aria-pressed="true"] { background:var(--lime); color:#152119; }
+.extension-tabs button:focus-visible { outline:2px solid var(--lime); outline-offset:1px; }
+.extension-focused-body { flex:1 1 0; min-height:0; min-width:0; display:flex; flex-direction:column; overflow:hidden; }
+.extension-focused-body > .rb-map-desktop-host { flex:1 1 0; min-height:0; height:100%; }
+.extension-focused-body > .rb-reclamation-desktop,
+.extension-focused-body > .job-assignments { flex:1 1 0; min-height:0; overflow:auto; }
+.extension-content > .camera-wall { flex:1 1 0; min-height:0; overflow:hidden; display:flex; flex-direction:column; padding:8px; }
+.extension-content > .camera-wall .camera-grid { flex:1 1 0; min-height:0; grid-template-rows:repeat(2,minmax(0,1fr)); }
+.extension-content > .camera-wall .camera-cell { min-height:0; aspect-ratio:auto; }
+.extension-content > .camera-wall.focused .camera-cell { min-height:0; aspect-ratio:auto; height:100%; }
+.extension-content > .camera-wall.focused .camera-grid { display:block; }
+.extension-content > .camera-wall-heading { flex:none; }
+.extension-content > .job-command-panel, .extension-content > .job-station-summary { flex:1 1 0; min-height:0; overflow:auto; }
+.inspector-return { display:none; color:var(--lime); background:#15251a; border:1px solid var(--border-lit); border-radius:5px; padding:7px 10px; font:700 11px var(--mono); cursor:pointer; min-height:36px; margin-bottom:9px; }
+@media(max-width:1100px) {
+  .inspector-return { display:block; align-self:flex-start; }
+}
+@media(max-height:480px) {
+  .app-shell { gap:4px; padding:4px; }
+  .main-panel { gap:4px; padding:6px; }
+  .masthead { min-height:32px; }
+  .masthead-right { gap:6px; }
+  .brand-mark { width:28px; height:28px; font-size:13px; }
+  .brand-copy strong { font-size:13px; }
+  .brand-copy > span { display:none; }
+  .status-chip { padding:4px 6px; }
+  .workspace-head h1 { font-size:15px; margin:0; }
+  .workspace-actions { flex-direction:row; align-items:center; gap:5px; }
+  .workspace-actions .primary-button { min-height:32px; padding:5px 8px; font-size:10px; }
+  .hud-strip { display:none; }
+  .stage-tabs { margin-bottom:3px; }
+  .stage-tabs button { min-height:32px; padding:4px 5px; font-size:9px; }
+  .module-grid { grid-template-rows:repeat(2,minmax(0,1fr)); }
+  .palette-grid { grid-template-rows:repeat(2,minmax(0,1fr)); }
+  .role-card { min-height:44px; }
+  .role-panel .panel-top { padding:5px 10px; }
+  .role-panel .panel-top h2 { margin:0; }
+  .role-panel .panel-top p { display:none; }
+  .section-heading { margin:0 0 3px!important; }
+  .deck-pager { min-height:38px; }
+  .module-card { gap:2px; }
+  .module-top { align-items:center; }
+  .module-card .module-category { display:none; }
+  .detail-header { padding:7px; }
+  .detail-header h2 { font-size:14px; }
+  .detail-header .eyebrow { display:none; }
+  .inspector-return { margin-bottom:4px; min-height:32px; }
+}
+@media(max-width:1100px) and (max-height:480px) {
+  .pane-tabs button { min-height:32px; padding:4px; font-size:10px; }
+  .module-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+}
+@media(pointer:coarse) {
+  .inspector-return,.extension-tabs button { min-height:44px; }
+  .role-card { min-height:44px; }
+}
+
+
+/* Unified role-independent shell: profile choice lives only in Settings. */
+.dashboard { grid-template-columns:minmax(0,2.35fr) minmax(270px,1fr); }
+.dashboard > .main-panel { grid-column:1; }
+.dashboard > .detail-panel { grid-column:2; }
+.settings-surface { gap:7px; }
+.settings-surface .role-panel {
+  flex:1 1 0; display:flex; flex-direction:column;
+  min-width:0; min-height:0; overflow:hidden; background:transparent;
+}
+.settings-surface .role-panel .panel-top { flex:none; padding:2px 0 6px; border:0; }
+.settings-surface .role-panel .panel-top h2 { margin:0; font-size:13px; }
+.settings-surface .role-panel .panel-top p { display:none; }
+.settings-surface .role-list {
+  flex:1 1 0; display:grid; grid-template-columns:repeat(3,minmax(0,1fr));
+  grid-template-rows:repeat(2,minmax(0,1fr)); align-items:stretch; gap:6px;
+  padding:0; min-height:0; overflow:hidden;
+}
+.settings-surface .role-list .role-card {
+  display:flex; align-items:center; width:100%; height:100%; min-width:0;
+  min-height:0; padding:7px; overflow:hidden; border-color:var(--border);
+}
+.settings-surface .role-list .role-activated { flex:none; }
+.settings-surface .role-panel-bottom { display:none; }
+.settings-profile-summary, .settings-choice {
+  flex:none; display:flex; align-items:center; justify-content:space-between;
+  gap:10px; padding:8px 10px; background:#101d15; border:1px solid var(--border);
+  border-radius:6px; min-height:43px;
+}
+.settings-profile-summary strong { display:block; font:700 12px var(--mono); color:var(--lime); }
+.settings-profile-summary .tiny-label { margin-bottom:2px; }
+.settings-choice { background:transparent; padding:5px 0; border:0; min-height:44px; }
+.settings-choice > span { font:11px var(--mono); color:var(--sub); min-width:0; overflow:hidden; text-overflow:ellipsis; }
+.settings-choice .primary-button { flex:none; white-space:nowrap; min-width:100px; }
+.stage-surface[data-stage="settings"] > .section-heading { margin:0; }
+.custom-palette .section-heading { display:flex; align-items:center; justify-content:space-between; gap:7px; }
+.custom-palette .section-heading .secondary-button { min-height:36px; padding:6px 10px; }
+@media(max-width:1100px) {
+  .dashboard { display:block; }
+  .settings-surface .role-list { grid-template-columns:repeat(2,minmax(0,1fr)); grid-template-rows:repeat(3,minmax(0,1fr)); }
+}
+@media(max-height:480px) {
+  .settings-surface { gap:3px; }
+  .settings-surface .role-panel .panel-top { display:none; }
+  .settings-surface .role-list { grid-template-rows:minmax(44px,1fr); gap:3px; }
+  .settings-surface .role-list .role-card { padding:4px; }
+  .settings-surface .role-number { width:23px; height:23px; font-size:10px; }
+  .settings-surface .role-title { font-size:10px; }
+  .settings-surface .role-desc { display:none; }
+  .settings-profile-summary { display:none; }
+  .settings-profile-summary .tiny-label { display:none; }
+  .settings-profile-summary strong { font-size:10px; }
+  .settings-choice { padding:2px 0; min-height:33px; }
+  .settings-choice > span { font-size:9px; }
+  .settings-choice .primary-button { padding:5px 7px; min-height:31px; font-size:10px; }
+  .settings-surface .deck-pager { min-height:32px; }
+  .settings-surface .deck-button { min-height:29px; }
+}
+@media(pointer:coarse) {
+  .settings-choice .primary-button, .settings-surface .role-card,
+  .settings-profile-summary .secondary-button { min-height:44px; }
+}
+/* Keep Settings reachable from both viewport classes with no role sidebar. */
+
+/* Desktop declutter: preserve focused Settings/VIEW/MESSAGES navigation. */
+.brand-copy > span { font-size:9px; letter-spacing:.1em; }
+.masthead-right { gap:8px; }
+.workspace-head .eyebrow { letter-spacing:.08em; }
+.hud-strip { grid-template-columns:1fr .75fr 1.15fr; gap:6px; }
+.hud-strip .access-stat { border-right:0; }
+.hud-strip strong { font-size:10px; }
+.stage-surface > .section-heading { margin:2px 0 6px; }
+.module-card {
+  flex-direction:row; justify-content:flex-start; align-items:center;
+  gap:10px; border-radius:8px; padding:7px 10px; overflow:hidden;
+}
+.module-top {
+  flex:none; display:flex; align-items:center; justify-content:center;
+  font:18px/1 var(--mono); color:var(--lime);
+}
+.module-name { font-size:12px; line-height:1.25; overflow-wrap:anywhere; }
+.module-category { margin-top:3px; font-size:9px; }
+.empty-state { padding:12px; }
+.settings-surface .role-list .role-card { gap:7px; padding:6px 8px; }
+.settings-surface .role-panel .panel-top { padding:0 0 5px; }
+.settings-surface .role-panel .panel-top h2 { font-size:14px; }
+.settings-surface .role-title { font-size:12px; line-height:1.25; }
+.settings-surface .role-number { width:27px; height:27px; font-size:11px; }
+.settings-surface .role-activated { font-size:8px; }
+.settings-choice > span { font-size:11px; }
+.detail-header { padding:10px 12px; }
+.detail-header h2 { margin:4px 0 6px; }
+.detail-status { margin-top:5px; }
+.detail-header .copy-disclosure { margin-top:8px; }
+.copy-disclosure summary {
+  cursor:pointer; color:var(--sub); font:11px/1.35 var(--mono);
+}
+.copy-disclosure summary:hover { color:var(--lime); }
+.copy-disclosure summary:focus-visible {
+  outline:2px solid var(--lime); outline-offset:3px; border-radius:3px;
+}
+.copy-disclosure[open] summary { color:var(--lime); }
+.copy-disclosure p {
+  display:block; margin:7px 0 0; color:var(--sub);
+  font-size:11px; line-height:1.45;
+}
+.detail-info p { max-height:100px; overflow:auto; }
+.detail-foot {
+  display:block; flex:none; padding:8px 12px;
+  border-top:1px solid var(--border);
+}
+.detail-foot .copy-disclosure { margin:0; }
+.detail-handoff { padding:9px 12px; }
+.detail-handoff code { margin:6px 0 0; }
+.stage-tabs button { letter-spacing:.02em; }
+@media(min-height:481px) {
+  .module-grid { grid-template-rows:repeat(2,minmax(48px,60px)); align-content:start; }
+  .module-card { min-height:48px; }
+}
+@media(max-width:600px) and (min-height:481px) {
+  .module-grid { grid-template-rows:repeat(3,minmax(48px,58px)); }
+}
+@media(max-height:480px) {
+  /* Keep mainline four-card/short-screen geometry; do not force 44px rows. */
+  .module-grid { grid-template-rows:repeat(2,minmax(0,1fr)); }
+  .module-card { min-height:0; padding:3px 6px; gap:3px; }
+  .settings-surface .role-list .role-card { padding:4px; }
+  .detail-header .copy-disclosure { margin-top:4px; }
+  .detail-info p { max-height:55px; }
+  .detail-foot { padding:4px 8px; }
+}
+@media (max-height:480px) and (pointer:coarse) {
+  .settings-surface .role-card, .settings-surface .deck-button,
+  .settings-choice .primary-button { min-height:44px; }
+}
+
+/* Keep Custom's manual tool editor reachable even when the short-height
+   Settings summary is hidden to preserve 44px station targets. */
+.settings-choice #open-palette { flex:none; min-width:0; min-height:36px; }
+@media(max-height:480px) {
+  .settings-choice { gap:5px; }
+  .settings-choice > span { flex:1 1 0; min-width:0; }
+  .settings-choice #open-palette {
+    min-height:33px; padding:4px 6px; font-size:9px; white-space:nowrap;
+  }
+}
+@media(pointer:coarse) {
+  .settings-choice #open-palette { min-height:44px; }
+}

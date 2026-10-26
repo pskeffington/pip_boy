@@ -66,8 +66,8 @@ function fixture(layer,geoid="25025",compress=false){
  return zip({[stem+".shp"]:shpFile,[stem+".dbf"]:dbf(
    layer==="roads"?"Massachusetts Avenue":layer==="areawater"?"Boston Harbor":"Charles River")},compress);
 }
-const sourceIds=["tiger-roads","tiger-areawater","tiger-linearwater"];
-const calls=[],bundles=Object.fromEntries(sourceIds.map(id=>[id,fixture(id.slice(6))]));
+const sourceIds=["tiger-roads","tiger-areawater","tiger-linearwater","tiger-pointlm"];
+const calls=[],bundles=Object.fromEntries(sourceIds.slice(0,3).map(id=>[id,fixture(id.slice(6))]));
 const manifest={
  schema:1,vintage:"2025",sources:sourceIds.map(id=>({id})),limits:{max_zip_bytes:12582912}
 };
@@ -119,6 +119,7 @@ async function main(){
  const layers=[];
  const r=await window.RustBoyCounty.load("25025",{onLayer:(id,part)=>layers.push([id,part.features])});
  assert.equal(r.features,3);assert.equal(r.errors.length,0);assert.equal(layers.length,3);
+ assert.ok(r.warnings.some(x=>x.includes("POINTLM hidden")),"Offline landmarks need polygon");
  assert.equal(calls.filter(c=>c.url==="/api/map/sources").length,1);
  assert.equal(calls.filter(c=>c.url==="/api/map/package").length,3);
  const active=await window.RustBoyCounty.active();
@@ -177,4 +178,5 @@ async function main(){
  assert.equal(map.countyShapes.length,0,"unmount discards decoded county geometry");
  console.log("County source registry: bounded 2025 ZIP, SHP/DBF, raw geometry, offline cache: PASS");
 }
-main().catch(error=>{console.error(error);process.exitCode=1;});
+if(require.main===module)main().catch(error=>{console.error(error);process.exitCode=1;});
+module.exports={fixture,zip,dbf};

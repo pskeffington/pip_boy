@@ -67,7 +67,7 @@
   .rb-map-sites summary { padding:2px; }
 }
 
-/* Original Rust-Boy phosphor cartography. Geometry is actual Boston SAM data. */
+/* Original Rust-Boy phosphor cartography over verified source geometry. */
 .rb-map-stage::after { content:""; position:absolute; inset:0; z-index:2;
   pointer-events:none; opacity:.14;
   background:repeating-linear-gradient(to bottom, transparent 0px,
@@ -98,3 +98,74 @@
   .rb-map-gps-help summary { padding:2px 5px; }
   .rb-map-gps-help-text { max-height:68px; overflow-y:auto; }
 }
+
+/* Compact MAP: keep the chart visible while secondary sources remain reachable. */
+.rb-map-tools { flex:none; min-width:0; border-top:1px solid #345439; color:#c6e9b4; font-size:10px; }
+.rb-map-tools summary { cursor:pointer; padding:3px 5px; font-weight:bold; }
+.rb-map-extra { display:flex; gap:4px; flex-wrap:wrap; padding:4px; max-height:96px; overflow:auto; }
+.rb-map-toolbar .rb-map-button { flex:1 0 auto; min-width:36px; }
+.rb-map-toolbar .rb-map-button:focus-visible, .rb-map-tools summary:focus-visible {
+  outline:2px solid #dbf4b2; outline-offset:1px;
+}
+@media (max-width:520px) {
+  .rb-map-toolbar .rb-map-button { min-height:38px; padding:5px 7px; font-size:11px; }
+  .rb-map-toolbar { flex-wrap:wrap; max-height:none; overflow:visible; }
+}
+@media (max-height:360px) {
+  .rb-map-toolbar .rb-map-button { min-height:34px; }
+  .rb-map-toolbar { flex-wrap:nowrap; overflow-x:auto; overflow-y:hidden; max-height:none; }
+  .rb-map-toolbar .rb-map-button { flex:0 0 auto; }
+  .rb-map-stage { min-height:70px; }
+  .rb-map-extra { max-height:70px; }
+}
+
+/* Official Census map layers: collapsed by default, keyboard/touch reachable. */
+.rb-map-layers { flex:none; min-width:0; border-top:1px solid #406443;
+  font:10px ui-monospace, Consolas, monospace; color:#c5e7ae; }
+.rb-map-layers summary { cursor:pointer; padding:3px 5px; font-weight:700; }
+.rb-map-layers summary:focus-visible, .rb-map-layer-button:focus-visible {
+  outline:2px solid #e9f4bd; outline-offset:1px;
+}
+.rb-map-layer-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:4px; padding:4px; }
+.rb-map-layer-button { min-width:0; min-height:36px; padding:5px 3px;
+  white-space:nowrap; }
+.rb-map-layer-muted { color:#8ba48b; border-color:#384b3d; background:#0d1a12; }
+.rb-map-layer-button[aria-pressed="true"] { border-color:#9fcf7f; }
+@media (max-width:520px) {
+  .rb-map-layer-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .rb-map-layer-button { min-height:38px; font-size:10px; }
+}
+@media (max-height:360px) {
+  .rb-map-layer-grid { max-height:86px; overflow:auto; }
+  .rb-map-layers summary { padding:2px 4px; }
+}
+
+/* One-tap ZIP entry; panel is collapsed by default to preserve map pixels. */
+.rb-map-zip { flex:none; min-width:0; max-height:156px; overflow-y:auto;
+  border:1px solid #456a45; padding:4px; background:#0e2114;
+  color:#c3ecad; font:10px ui-monospace,Consolas,monospace; }
+.rb-map-zip[hidden] { display:none; }
+.rb-map-zip-form { display:flex; gap:5px; align-items:stretch; }
+.rb-map-zip-form input { min-width:0; flex:1 1 90px; width:95px; border:1px solid #71966a;
+  border-radius:3px; background:#08180e; color:#f0ffdd; padding:5px 8px;
+  font:12px ui-monospace,Consolas,monospace; letter-spacing:.09em; }
+.rb-map-zip-form .rb-map-button { min-height:36px; flex:1 1 110px; }
+.rb-map-zip input:focus-visible, .rb-map-zip button:focus-visible {
+  outline:2px solid #eaffb8;outline-offset:1px; }
+.rb-map-zip-status { padding:4px 0; white-space:normal; overflow-wrap:anywhere;
+  line-height:1.35; color:#e1df9c; }
+.rb-map-zip-candidates { display:flex;flex-wrap:wrap;gap:4px;
+  max-height:68px;overflow-y:auto; }
+.rb-map-zip-choice { min-height:36px;flex:1 1 150px;text-align:left; }
+.rb-map-zip-pager { display:flex; gap:4px; align-items:center; padding:2px 0; }
+.rb-map-zip-pager .rb-map-button { min-height:34px;flex:1 1 auto; }
+.rb-map-zip-list { white-space:pre-wrap; overflow-wrap:anywhere;
+  color:#c1eaba;max-height:50px;overflow-y:auto; }
+@media (max-height:360px) {
+  .rb-map-zip { max-height:112px; }
+  .rb-map-zip-form .rb-map-button, .rb-map-zip-pager .rb-map-button {
+    min-height:34px;
+  }
+}
+\n.rb-map-zip-list-heading { padding:3px 0; font-weight:bold; }\n.rb-map-zip-list-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:4px; }\n.rb-map-zip-list-item { min-height:38px; padding:4px; font-size:12px; letter-spacing:.04em; }\n

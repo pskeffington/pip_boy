@@ -2,7 +2,7 @@ name: Rust-Boy quality gates
 
 on:
   push:
-    branches: [main, "feat/**"]
+    branches: [main, "feat/**", "chore/**"]
   pull_request:
   workflow_dispatch:
 
@@ -24,6 +24,14 @@ jobs:
           python3 tools/validate_catalog.py
           python3 tools/validate_roles.py
           python3 tools/validate_rust_version.py
+          python3 tools/validate_repo.py
+          python3 tools/test_validate_repo.py
+          python3 tools/validate_component_index.py
+          python3 tools/test_component_index.py
+          python3 tools/validate_security.py
+          python3 tools/test_validate_security.py
+          python3 tools/run_smokes.py --check
+          python3 tools/test_run_smokes.py
 
   rust:
     name: Rust ${{ matrix.toolchain }}
@@ -69,30 +77,49 @@ jobs:
           node --check crates/pipboy/assets/network.js
           node tools/test_network_ui.cjs
           node --check crates/pipboy/assets/dashboard.js
+          node tools/test_desktop_focus_ui.cjs
           node --check crates/pipboy/assets/radio-ui.js
           node tools/test_radio_ui.cjs
           node --check crates/pipboy/assets/micro.js
+          node tools/test_micro_ui.cjs
           node --check crates/pipboy/assets/tasks.js
-          node --check crates/pipboy/assets/boston-base.js
-          node --check crates/pipboy/assets/boston-map.js
           node --check crates/pipboy/assets/map.js
           node --check crates/pipboy/assets/map-import.js
           node --check crates/pipboy/assets/map-online.js
           node --check crates/pipboy/assets/map-county.js
+          node --check crates/pipboy/assets/map-zip.js
+          node tools/test_map_zip.cjs
           node tools/test_rustgis_map_import.cjs
           node tools/test_rustgis_map_view.cjs
           node --check crates/pipboy/assets/messenger.js
           node tools/test_messenger_ui.cjs
           node tools/test_map_gps_permissions.cjs
-          node tools/test_boston_map.cjs
+          node tools/test_map_boot.cjs
+          node tools/test_pointlm_ingestion.cjs
           node tools/test_reclamation_map.cjs
           node tools/test_county_map.cjs
           node tools/test_county_sources.cjs
+          node tools/test_county_boundary_cache.cjs
+          node tools/test_map_layers.cjs
           node tools/test_rustgis_online.cjs
           node tools/test_rustgis_online_view.cjs
+      - name: One-screen desktop dashboard Chromium acceptance
+        if: matrix.toolchain == 'stable'
+        run: |
+          node --check tools/fixtures/dashboard-viewport-probe.js
+          node --check tools/test_dashboard_viewport.cjs
+          node tools/test_dashboard_viewport.cjs
+      - name: Desktop concise focus Chromium acceptance
+        if: matrix.toolchain == 'stable'
+        run: node tools/test_desktop_viewport.cjs
       - name: Network Engineer real Chromium viewport acceptance
         if: matrix.toolchain == 'stable'
         run: node tools/test_network_viewport.cjs
+      - name: MAP real Chromium 480x320 layer acceptance
+        if: matrix.toolchain == 'stable'
+        run: |
+          node --check tools/test_map_viewport.cjs
+          node tools/test_map_viewport.cjs
       - name: RADIO micro real Chromium viewport acceptance
         if: matrix.toolchain == 'stable'
         run: node tools/test_radio_viewport.cjs
@@ -111,25 +138,7 @@ jobs:
         if: matrix.toolchain == 'stable'
         run: |
           cargo build --workspace --locked
-          python3 tools/smoke_runtime.py
-          python3 tools/smoke_notes.py
-          python3 tools/smoke_permissions.py
-          python3 tools/smoke_simulator.py
-          python3 tools/smoke_replay.py
-          python3 tools/smoke_transport.py
-          python3 tools/smoke_mock_adapters.py
-          python3 tools/smoke_native_cli.py
-          python3 tools/smoke_broker.py
-          python3 tools/smoke_game.py
-          python3 tools/smoke_workbench.py
-          python3 tools/smoke_network.py
-          python3 tools/smoke_network_health.py
-          python3 tools/smoke_scout.py
-          python3 tools/smoke_dashboard.py
-          python3 tools/smoke_micro.py
-          python3 tools/smoke_tasks.py
-          python3 tools/smoke_peer.py
-          python3 tools/smoke_messenger_protocol.py
+          python3 tools/run_smokes.py linux
 
   native:
     name: Native ${{ matrix.os }}
@@ -160,27 +169,20 @@ jobs:
       - name: Offline preferences and virtual-device smoke
         shell: bash
         run: |
-          ${{ matrix.python }} tools/smoke_permissions.py
-          ${{ matrix.python }} tools/smoke_simulator.py
-          ${{ matrix.python }} tools/smoke_replay.py
-          ${{ matrix.python }} tools/smoke_transport.py
-          ${{ matrix.python }} tools/smoke_mock_adapters.py
-          ${{ matrix.python }} tools/smoke_native_cli.py
-          ${{ matrix.python }} tools/smoke_broker.py
-          ${{ matrix.python }} tools/smoke_game.py
-          ${{ matrix.python }} tools/smoke_workbench.py
-          ${{ matrix.python }} tools/smoke_network.py
-          ${{ matrix.python }} tools/smoke_network_health.py
-          ${{ matrix.python }} tools/smoke_scout.py
-          ${{ matrix.python }} tools/smoke_dashboard.py
-          ${{ matrix.python }} tools/smoke_micro.py
-          ${{ matrix.python }} tools/smoke_tasks.py
-          ${{ matrix.python }} tools/smoke_peer.py
-          ${{ matrix.python }} tools/smoke_messenger_protocol.py
+          ${{ matrix.python }} tools/run_smokes.py native
       - name: Native macOS terminal PTY journey
         if: matrix.os == 'macos-latest'
         shell: bash
         run: python3 tools/smoke_runtime.py
+      - name: Install macOS MAP JavaScript test runtime
+        if: matrix.os == 'macos-latest'
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Mac-first local MAP acceptance
+        if: matrix.os == 'macos-latest'
+        shell: bash
+        run: bash scripts/test-map-macos.command --verify
       - name: Native Windows ConPTY terminal journey
         if: matrix.os == 'windows-latest'
         shell: pwsh

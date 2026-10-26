@@ -4,6 +4,12 @@
 
 NET ENGINEER is distinct from the fully offline DIAG evidence-ingestion pipeline. It is a real opt-in IPv4 network probe built in Rust, not a simulation or a CIDR-only button.
 
+## Source ownership and authorization
+
+`crates/pipboy/src/dashboard/network_routes.rs` now contains the `POST /api/net/scan` and `POST /api/net/unifi` HTTP adapter functions. The original `dashboard.rs` remains the only local web server, enforces exact Host/Origin and request bounds, and dispatches commands only after a user action. Both handlers still require `confirm:true` and an active `net-lab` tool. CIDR authorization and finite probing are owned by `pipboy-core::network_probe`; the UniFi adapter performs read-only controller queries with strict site ID validation. This code-organization pass introduces no automatic probing, new UniFi credential path or cross-device relay.
+
+Offline dashboard tests reject malicious origins, missing consent, unpinned roles and malformed site/scope parameters before any network operation can run. End-to-end UniFi controller behavior still requires separate owner-authorized Mac field testing; physical Pi compatibility remains unverified.
+
 ## Operator quick start
 
 ```bash

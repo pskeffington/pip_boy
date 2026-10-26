@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#0b100f">
-  <title>Rust-Boy // Field Workbench</title>
+  <title>Rust-Boy · Desktop</title>
   <meta name="description" content="Rust-Boy offline-first local field dashboard">
   <link rel="stylesheet" href="/assets/dashboard.css">
   <link rel="stylesheet" href="/assets/map.css">
@@ -19,9 +19,8 @@
   <script defer src="/assets/messenger.js"></script>
   <script defer src="/assets/map-import.js"></script>
   <script defer src="/assets/map-online.js"></script>
-  <script defer src="/assets/boston-base.js"></script>
-  <script defer src="/assets/boston-map.js"></script>
   <script defer src="/assets/map-county.js"></script>
+  <script defer src="/assets/map-zip.js"></script>
   <script defer src="/assets/map.js"></script>
   <script defer src="/assets/radio-ui.js"></script>
   <script defer src="/assets/dashboard.js"></script>
@@ -34,69 +33,82 @@
         <span class="brand-mark" aria-hidden="true">RB<span class="brand-tick">/</span></span>
         <div class="brand-copy">
           <strong>RUST–BOY</strong>
-          <span>FIELD WORKBENCH <span class="version">/ LAB 01</span></span>
+          <span>DESKTOP CONSOLE</span>
         </div>
       </div>
       <div class="masthead-right">
-        <span class="status-chip" id="server-status"><span class="live-dot" aria-hidden="true"></span> LOCAL / STARTING</span>
-        <a href="/micro" class="mini-button" title="Open handheld micro shell">MICRO ↗</a>
-        <span class="edition">RUST 1.90+ · LOOPBACK</span>
+        <span class="status-chip" id="server-status"><span class="live-dot" aria-hidden="true"></span> STARTING</span>
+        <a href="/micro" class="mini-button" title="Open handheld view">HANDHELD ↗</a>
         <button type="button" class="icon-button" id="refresh-state" title="Reload saved workspace" aria-label="Reload saved workspace">↻</button>
       </div>
     </header>
 
-    <div class="dashboard">
-      <aside class="role-panel panel" aria-labelledby="templates-heading">
-        <div class="panel-top">
-          <span class="eyebrow">01 / OPERATOR</span>
-          <h2 id="templates-heading">Job templates</h2>
-          <p>Choose a station to preview its tools.</p>
-        </div>
-        <nav id="role-list" class="role-list" aria-label="Vault-Tec-inspired job profiles"></nav>
-        <div class="role-panel-bottom">
-          <span class="small-square" aria-hidden="true"></span>
-          <span>07 ready-made <span class="dim">/</span> 01 custom</span>
-        </div>
-      </aside>
-
+    <nav class="pane-tabs" aria-label="Desktop workspace panels">
+      <button type="button" data-pane-target="workspace" aria-pressed="true">WORKSPACE</button>
+      <button type="button" data-pane-target="inspector" aria-pressed="false">INSPECTOR</button>
+    </nav>
+    <div class="dashboard" data-pane="workspace">
       <main class="main-panel panel" id="workspace" tabindex="-1">
         <div class="workspace-head">
           <div>
-            <div class="eyebrow"><span class="signal-square" aria-hidden="true"></span> 02 / WORKSPACE <span class="divider-inline">/</span> <span id="view-mode">ACTIVE STATION</span></div>
-            <h1 id="workspace-title">Loading dashboard</h1>
-            <p class="workspace-subtitle" id="workspace-subtitle">Preparing the local workbench.</p>
-          </div>
-          <div class="workspace-actions">
-            <span class="active-pill" id="active-label">INITIALIZING</span>
-            <button class="primary-button" id="load-role" type="button" disabled>Load template</button>
+            <div class="eyebrow">WORKSPACE <span class="divider-inline">/</span> <span id="view-mode">ACTIVE</span></div>
+            <h1 id="workspace-title">Loading</h1>
+            <p class="workspace-subtitle" id="workspace-subtitle">Local workbench.</p>
           </div>
         </div>
 
-        <div class="hud-strip" aria-label="Current workbench status">
-          <div><span class="tiny-label">ROLE</span><strong id="status-role">—</strong></div>
-          <div><span class="tiny-label">MODULES</span><strong id="status-modules">—</strong></div>
-          <div><span class="tiny-label">LINK</span><strong class="positive">LOCAL ONLY</strong></div>
-          <div><span class="tiny-label">PERMISSIONS</span><strong class="dim">NO AUTO GRANTS</strong></div>
+        <div class="hud-strip" aria-label="Workspace status">
+          <div><span class="tiny-label">STATION</span><strong id="status-role">—</strong></div>
+          <div><span class="tiny-label">TOOLS</span><strong id="status-modules">—</strong></div>
+          <div class="access-stat"><span class="tiny-label">ACCESS</span><strong class="positive">LOCAL · MANUAL</strong></div>
         </div>
 
-        <section class="module-section" aria-labelledby="modules-heading">
+        <div class="workspace-stage" id="workspace-stage">
+          <nav class="stage-tabs" aria-label="Workspace pages">
+            <button type="button" data-stage-target="modules" aria-pressed="true">MODULES</button>
+            <button type="button" data-stage-target="viewport" aria-pressed="false">VIEWPORT</button>
+            <button type="button" data-stage-target="messages" aria-pressed="false">MESSAGES</button>
+            <button type="button" data-stage-target="settings" aria-pressed="false">SETTINGS</button>
+          </nav>
+        <section class="module-section stage-surface" data-stage="modules" aria-labelledby="modules-heading">
           <div class="section-heading">
-            <h2 id="modules-heading">Module deck</h2>
-            <span class="section-counter" id="module-count">00 MODULES</span>
+            <h2 id="modules-heading">Tools</h2>
+            <span class="section-counter" id="module-count">0</span>
           </div>
           <div id="module-grid" class="module-grid" aria-live="polite"></div>
-          <div id="custom-palette" class="custom-palette" hidden>
-            <div class="section-heading">
-              <h3>Tool palette <span class="dim">/ CUSTOM ONLY</span></h3>
-            </div>
-            <div id="palette-grid" class="palette-grid"></div>
+          <div id="module-pager" class="deck-pager" aria-label="Module pages"></div>
+        </section>
+        <section class="settings-surface stage-surface" data-stage="settings" aria-label="Device settings" hidden>
+          <div class="section-heading"><h2>Settings</h2><span class="section-counter">LOCAL</span></div>
+          <div class="settings-profile-summary">
+            <div><span class="tiny-label">ACTIVE STATION</span><strong id="settings-current-role">—</strong></div>
+          </div>
+          <div class="role-panel" aria-labelledby="templates-heading">
+        <div class="panel-top">
+          <h2 id="templates-heading">Stations</h2>
+        </div>
+        <nav id="role-list" class="role-list" aria-label="Job stations"></nav>
+        <div id="role-pager" class="deck-pager" aria-label="Station pages"></div>
+      </div>
+          <div class="settings-choice">
+            <span id="settings-selection" aria-live="polite">Select a station.</span>
+            <button id="open-palette" type="button" class="secondary-button" hidden>EDIT CUSTOM TOOLS</button>
+            <button class="primary-button" id="load-role" type="button" disabled>LOAD PROFILE</button>
           </div>
         </section>
+        <section id="custom-palette" class="custom-palette stage-surface" data-stage="palette" aria-label="Custom tool palette" hidden>
+            <div class="section-heading">
+              <button id="palette-back" type="button" class="secondary-button">◀ SETTINGS</button>
+              <h3>Add tools</h3>
+            </div>
+            <div id="palette-grid" class="palette-grid"></div>
+            <div id="palette-pager" class="deck-pager" aria-label="Available tool pages"></div>
+        </section>
 
-        <section class="extension-section" aria-labelledby="extension-heading">
+        <section class="extension-section stage-surface" data-stage="viewport" aria-labelledby="extension-heading" hidden>
           <div class="section-heading">
-            <h2 id="extension-heading">Module viewport</h2>
-            <span class="section-counter">EXPANSION PORT</span>
+            <h2 id="extension-heading">Active view</h2>
+            
           </div>
           <div id="extension-content" class="extension-content"></div>
         </section>
@@ -107,61 +119,67 @@
           </div>
           <div id="radio-dock"></div>
         </section>
-        <section class="extension-section" aria-labelledby="messenger-heading">
+        <section class="extension-section stage-surface" data-stage="messages" aria-labelledby="messenger-heading" hidden>
           <div class="section-heading">
-            <h2 id="messenger-heading">Messenger</h2>
-            <span class="section-counter">DEVICE TO DEVICE / OPENSSH</span>
+            <h2 id="messenger-heading">Messages</h2>
+            <span class="section-counter">MANUAL</span>
           </div>
           <div id="messenger-dock" class="rb-msg-root rb-msg-desktop-dock"></div>
         </section>
+        </div>
       </main>
 
       <aside class="detail-panel panel" aria-labelledby="details-heading">
         <div class="panel-top detail-header">
-          <span class="eyebrow">03 / MODULE INSPECTOR</span>
-          <h2 id="details-heading">Select a module</h2>
-          <p id="detail-description">Choose a module tile to inspect its capabilities and run a local test.</p>
+          <button class="inspector-return" id="inspector-return" type="button">◀ TOOLS</button>
+          <span class="eyebrow">INSPECTOR</span>
+          <h2 id="details-heading">Select a tool</h2>
           <div id="detail-status" class="detail-status"></div>
+          <details id="detail-info" class="copy-disclosure">
+            <summary>About this tool</summary>
+            <p id="detail-description">Select a tool for details.</p>
+          </details>
         </div>
         <div id="network-workspace" class="testbench" hidden></div>
         <div id="testbench" class="testbench" hidden>
           <div class="section-heading">
-            <h3>Interactive lab</h3>
+            <h3>Controls</h3>
             <span class="section-counter" id="lab-type">OFFLINE</span>
           </div>
           <form id="lab-form">
             <div id="lab-fields" class="lab-fields"></div>
-            <button type="submit" id="run-test" class="primary-button full">Run local test</button>
+            <button type="submit" id="run-test" class="primary-button full">Run</button>
           </form>
           <div class="output-head">
             <span>OUTPUT / <span id="output-kind">IDLE</span></span>
             <button type="button" id="copy-output" class="mini-button" disabled>Copy</button>
           </div>
-          <pre id="lab-output" aria-live="polite" aria-label="Offline tool result">Awaiting explicit action.</pre>
+          <pre id="lab-output" aria-live="polite" aria-label="Offline tool result">Ready.</pre>
         </div>
         <div id="detail-handoff" class="detail-handoff" hidden>
-          <div class="eyebrow">COMMAND / MANUAL ACTION</div>
+          <div class="eyebrow">MANUAL ACTION</div>
           <code id="manual-command"></code>
-          <p>No command is executed by opening a template or selecting a module.</p>
         </div>
         <div class="detail-foot">
-          <span class="tiny-label">SECURITY BOUNDARY</span>
-          <p>Workbench presets configure layout only. Hardware, console, and network integrations require separate authorization.</p>
+          <details class="copy-disclosure">
+            <summary>Safety &amp; access</summary>
+            <p>Templates arrange tools only. Network and hardware actions need separate authorization.</p>
+          </details>
         </div>
       </aside>
     </div>
 
     <footer class="statusbar">
-      <div><span class="footer-pip" aria-hidden="true">◆</span> LOCAL FIELD OS <span class="status-separator">/</span> <span id="footer-message">No external services connected</span></div>
-      <div class="footer-shortcuts">ALT + ↑↓: TEMPLATES <span class="status-separator">/</span> ALT + ENTER: LOAD <span class="status-separator">/</span> ESC: BACK</div>
+      <div><span class="footer-pip" aria-hidden="true">◆</span> <span id="footer-message">Local · ready</span></div>
+      <div class="footer-shortcuts">SETTINGS: STATION <span class="status-separator">·</span> ESC: BACK</div>
     </footer>
   </div>
 
   <dialog id="confirm-dialog" aria-labelledby="confirm-title">
     <form method="dialog" class="dialog-body">
-      <span class="eyebrow">EXPLICIT OPERATOR ACTION</span>
-      <h2 id="confirm-title">Load this profile?</h2>
-      <p id="confirm-description">This replaces pinned modules in the current workbench. Notes and saved permission preferences are not changed.</p>
+      <span class="eyebrow">CONFIRM CHANGE</span>
+      <h2 id="confirm-title">Load station?</h2>
+      <p id="confirm-description">Replace pinned tools? Notes and permissions remain unchanged.</p>
       <div class="dialog-buttons">
         <button type="submit" value="cancel" class="secondary-button">Cancel</button>
         <button type="submit" value="replace" class="primary-button">Replace modules</button>

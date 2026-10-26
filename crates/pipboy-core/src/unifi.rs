@@ -8,13 +8,14 @@
 //! GET /integration/v1/sites/{uuid}/clients (paginated).
 //! UniFi OS adds /proxy/network before /integration/v1.
 
+use crate::process_safety::isolated_command;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::collections::HashSet;
 use std::env;
 use std::io::Write;
 use std::net::{IpAddr, Ipv4Addr};
 use std::path::PathBuf;
-use std::process::{Command, Stdio};
+use std::process::Stdio;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 const PAGE_SIZE: usize = 200;
@@ -104,7 +105,7 @@ impl UniFiConfig {
             "https://{}:{}{}{}",
             self.controller, self.port, self.prefix, relative
         );
-        let mut command = Command::new("curl");
+        let mut command = isolated_command("curl");
         command.args([
             "--disable",
             "--silent",

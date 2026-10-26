@@ -8,6 +8,136 @@
 - Reduce handheld RADIO density with shared transport and volume row, favorites filtering, touch-sized controls and overlay output/recovery settings. An explicit lost-output UI regression hides nonessential ordering actions.
 - Add Node regression for favorites, selection and no-autoplay; add a headless Chromium 480×320 geometry gate with synthetic ready, favorites, playing, settings and output-loss states. Real Mac/Pi touch, field audio, Bluetooth faults and final CI remain separate acceptance gates.
 
+## 2026-10-26 — Handheld touch paging refinement
+
+- Size tool decks from content height, reserving DATA/Custom action rows on compact screens; retain access to every pinned tool and keep pager focus after navigation.
+- Use 44px launcher, pager and profile targets; show two profiles per page on short screens. Paging preserves the staged profile until explicit selection and loading.
+- Return from the Custom palette to Settings with Back/Escape and suppress the startup success popup. Resize does not rebuild open tool editors.
+- Add offline production-JavaScript journeys to CI. Rendered geometry and physical touchscreen acceptance remain separate checks.
+
+## 2026-10-26 — Focused desktop copy cleanup (CI pending)
+
+- Preserve the latest role-independent two-pane desktop and paged **TOOLS / VIEW / MESSAGES / SETTINGS** layout; station changes remain exclusively in Settings. Remove repetitive template paragraphs, redundant status tiles, oversized module-card contents and long visible guidance.
+- Retain complete Rust metadata through hover tooltips, collapsed **About this tool** and **Safety & access** sections, and existing confirmation dialogs. Keep short-screen station paging and the dedicated micro HUD intact.
+- Defer the local Messenger status read until the user opens MESSAGES. No automatic sending, network connections or device access.
+- Register offline DOM and real Chromium focus/layout tests while retaining MAP, Security/Scout, Settings preview, Custom and browser acceptance gates.
+
+
+## 2026-10-26 — ZIP↔county GIS lookups (Mac-first)
+
+- Add compact ZIP entry to MAP: operator-supplied five-digit ZIP → Census 2020 ZCTA relationship → 2025 county boundary and GIS packages by verified GEOID. No synthetic ZIP centroids or implicit GPS.
+- Include reverse COUNTY ZIPs listing of intersecting 2020 ZCTA areas with 12-row paging. For multi-county ZIPs, expose each Census intersection and require explicit selection.
+- Add strictly allowlisted national Census 2020 relationship download on first explicit request, validated and cached locally under a 9 MiB budget; no submitted ZIP, GPS or site record is forwarded to the remote Census host.
+- Preserve last-good GIS on failed replacement; add Rust and JS tests for ambiguity, offline mode, consent, leading-zero ZIPs, and no ZCTA cases. Crosswalk is not current USPS ZIP validation.
+- Mac operator acceptance and real Census availability remain open field gates.
+
+## 2026-10-26 — NET ENGINEER dashboard route separation (PR #48; five-job CI passed)
+
+- Extract the opt-in private LAN scan and read-only UniFi HTTP handlers to `crates/pipboy/src/dashboard/network_routes.rs`, retaining original `/api/net/scan` and `/api/net/unifi` paths, JSON responses, parent loopback gate and Rust core network/controller policy.
+- Add offline Rust regressions for cross-origin requests, missing confirmation, unavailable `net-lab`, invalid CIDR and UniFi site inputs, with no unauthorized network activity.
+- Update the ownership index and developer/operator documentation. Merged to `main` as `870c975b` after all five CI jobs passed; field acceptance remains separate.
+
+
+## 2026-10-26 — Privacy and credential-isolation audit (CI pending)
+
+- Review tracked files, local HTTP API, notes/tasks/messages/GIS storage, UniFi credentials, native subprocesses and browser provider requests for leakage paths. Record severity and limitations in the security review.
+- Strip recognized API/cloud credentials from all runtime external-process environments while preserving platform binary behavior and user consent gates.
+- Add a repository-level privacy gate for tracked operator artifacts, private key material, strong token patterns and unreviewed child-process constructors; diagnostics never print matched secrets.
+- Expand `.gitignore` for private Rust-Boy data and key/location-export formats. Do not move, migrate or purge existing user records.
+
+## 2026-10-26 — Mac-native offline county cache integrity audit
+
+- Add a read-only MAP cache audit using the actual Rust dashboard on a temporary loopback port, with only `cache_only:true`, `confirm:false` requests. Never sends GPS coordinates, source URLs or live network fetches.
+- Verify the active Census GEOID/boundary, bound original ZIP filenames and entries, uncompressed budgets, SHP/DBF presence, and full CRC streaming. Report complete, partial, empty or invalid caches without modifying stored data.
+- Add real-Rust loopback synthetic tests for cold/partial/valid/corrupted cache cases, wired into Mac `--verify`; expose `--audit-cache` / `--json` for operator-run offline restart checks.
+- Keep the test home separate, with no default city and no new physical Pi hardware requirement. Live provider interoperability and user-Mac acceptance remain field gates.
+
+## 2026-10-26 — Mac-first native MAP acceptance harness
+
+- Add a dedicated macOS Rust MAP launcher and a repeatable offline verification entrypoint (native Cargo build, county-cache Rust tests, temporary localhost HTTP smoke and map/GPS/source JavaScript regressions).
+- Keep local test data separate from the normal workbench and persistent across operator-controlled restarts; port 0 avoids hardcoded listener conflicts, while all network map ingestion remains explicitly operator-triggered.
+- Surface per-frame local canvas rendering last/p95 (bounded 60-frame ring) separately from client source delivery/decoding time in DATA SOURCES; no analytics uploads or fabricated FPS.
+- Extend browser viewport testing to discover Mac Chrome installations and add macOS CI execution of the Mac-first verification entrypoint. Physical user-Mac, live Census availability and browser GPS acceptance remain open until performed.
+- Clarify Mac-first / Pi-later program sequencing in top-level operator navigation.
+
+## 2026-10-26 — Messenger/PACE route ownership extraction (PR #45; five-job CI passed)
+
+- Isolate `GET /api/messages`, `POST /api/messages/send` and `POST /api/messages/retry` in `dashboard/messenger_routes.rs` while retaining the original same-origin loopback router, request bounds, confirmation checks, PACE policy and explicit native SSH transport.
+- Add Rust regression tests for hostile Origin/Host, disabled implicit delivery, invalid tiers/payloads, and unknown outgoing message IDs without creating private stores.
+- Assign the new entrypoint to the Messenger/PACE component index; document code ownership, unchanged API paths and outstanding hardware acceptance. Merged as `c96d3943` after all five CI jobs passed on reconciled head `da650c89`.
+
+
+## 2026-10-26 — Dashboard Task Control route separation (PR #43; five-job CI passed)
+
+- Extract Task Control and explicitly confirmed peer-send/sync HTTP handlers from the monolithic dashboard server to `crates/pipboy/src/dashboard/task_routes.rs`, without changing public URLs, local storage, validation or native SSH boundaries.
+- Preserve parent loopback host/origin checks; add a table-driven regression asserting all Task/peer POST endpoints reject cross-origin requests before writing stores.
+- Assign the new route module to Task Control in the versioned component index and update the architecture/repository navigation guides. Merged into `main` as `60c066ac` after all five CI jobs passed.
+
+
+## 2026-10-26 — MAP layer controls and indexed handheld renderer
+
+- Add independent touch/keyboard ON/OFF switches for official Census roads, combined water, clipped landmarks and county border without modifying authoritative cached data or initiating location/provider calls.
+- Index each validated county source by geographic feature bounds for viewport-only drawing, with finite reference budgets and conservative full-scan fallback at the world seam or for extended/missing envelopes.
+- Preselect only MTFCC major roads at low zoom, suppress point landmarks until usable scale, coalesce touch redraws and reuse the per-frame Mercator camera transform. Keep all original source geometry intact.
+- Prioritize named landmarks ahead of street labels and apply small-screen collision avoidance; report loaded, candidate and drawn Census features in DATA SOURCES.
+- Gate a deterministic 20,000-feature test covering category filtering, offline source preservation, viewport candidate reductions, point-name visibility, no new network/GPS actions and session settings. Physical GNSS and Raspberry Pi FPS remain unverified.
+- Gate real headless Chromium layout at 480x320, 800x480 and 320x568 with collapsed/expanded layer controls, canvas height, touch-target size, accessible button state and zero implicit provider calls.
+
+
+## 2026-10-26 — Recursive documentation integrity (CI pending)
+
+- Extend the public Markdown auditor to nested guides in `docs/` and `catalog/` and optional `data/` index documentation, without crawling operator files.
+- Check reference-style link definitions as well as ordinary inline links; ignore footnotes, empty links, and fenced examples.
+- Add four offline regressions for nested guides, future public data folders, reference definitions, and empty/footnote input (13 total).
+
+
+## 2026-10-26 — Repository/code hygiene (PR #37; five CI jobs passed)
+
+- Add explicit repository ownership and maintenance guidance, link root documentation, and apply editor/line-ending conventions without relocating runtime data.
+- Consolidate Python validation assertions, make native CLI help navigable by functional group, and add offline public-Markdown link auditing (including directory containment, symlink, stale-reference, and mandatory-link checks) with nine regression tests.
+- Repair retired Boston-basemap references in branding and field/lore guides; preserve the county-first MAP and official offline county-boundary cache.
+- Keep standalone radio, communications, and public-data-index feature branches isolated.
+
+
+## 2026-10-26 — Shared CI smoke-test roster (validation pending)
+
+- Consolidate two repeated CI Python smoke-test lists into one audited, deterministic runner: 19 checks on Linux stable and 17 on the macOS/Windows native matrix, preserving their original execution order.
+- Keep native macOS PTY and Windows ConPTY tests as separate platform-specific steps; do not add radio, network or device permissions.
+- Fail closed on missing, unclassified, duplicated or symlinked scripts; add `--check` and `--list` without running any test files.
+- Add 11 local regression tests for roster integrity, invocation order, current-interpreter execution and fail-fast behavior. Catalog CI now checks inventory drift before Rust jobs.
+
+
+## 2026-10-26 — Recursive documentation integrity (PR #40; five CI jobs passed)
+
+- Extend the public Markdown auditor to nested guides in `docs/` and `catalog/` and optional `data/` index documentation, without crawling operator files.
+- Check reference-style link definitions as well as ordinary inline links; ignore footnotes, empty links, and fenced examples.
+- Add four offline regressions for nested guides, future public data folders, reference definitions, and empty/footnote input (13 total).
+
+
+## 2026-10-26 — Repository/code hygiene (PR #37; five CI jobs passed)
+
+- Add explicit repository ownership and maintenance guidance, link root documentation, and apply editor/line-ending conventions without relocating runtime data.
+- Consolidate Python validation assertions, make native CLI help navigable by functional group, and add offline public-Markdown link auditing (including directory containment, symlink, stale-reference, and mandatory-link checks) with nine regression tests.
+- Repair retired Boston-basemap references in branding and field/lore guides; preserve the county-first MAP and official offline county-boundary cache.
+- Keep standalone radio, communications, and public-data-index feature branches isolated.
+
+
+## 2026-10-26 — Offline county-boundary and landmark ingestion
+
+- Add a fixed-host, GEOID-only TIGERweb boundary fetch, bound to an explicit COUNTY action and strict geographic/JSON limits; atomically cache and revalidate raw Census GeoJSON.
+- Restore source county polygons with roads, waterways and county-clipped state POINTLM landmarks on cold offline MAP startup, without a GPS prompt or remote request. Missing or invalid boundary caches fail closed.
+- Enforce the four-county cache budget for both county archives and stored boundary sources. Add dedicated Rust API and browser integration tests covering consent, offline caching, mismatched GEOIDs, and landmark clipping.
+- Retain Census 2025 vintage, truthful source status and last-good geometry. Live provider interoperability and Pi field hardware acceptance remain open.
+
+
+## 2026-10-26 — County-first map ingest (PR #36; release gate pending)
+
+- Remove bundled demonstration-city geometry, routes, source credits, build generator and fixtures from the normal deliverable. MAP starts on an unlocated reference grid rather than a fictional default position.
+- Ingest source-derived 2025 Census All Roads, Areal Water and Linear Water by explicit county selection. Add state POINTLM as an allowlisted optional source; only named points strictly inside the resolved Census county polygon are displayed, including proper hole exclusion. Skip these points on a cold offline restore without an authoritative polygon.
+- Preserve previously validated county geography during source replacement failures. Keep source/vintage and partial-source reporting visible; do not silently substitute OpenStreetMap or ping external services on MAP entry.
+- Keep 480×320 primary navigation controls visible and move infrequent import/provider actions into expandable MAP tools. Add FIT and no-demo/point-clipping regression gates.
+- Hardware GNSS, real provider/large-county compatibility and touchscreen acceptance remain open; no certified navigation capability is claimed.
+
 ## 2026-10-26 — Handheld 480×320 viewport verification (PR #34)
 
 - Move STOP REFRESH and current watch status above long network results so critical controls remain within the initial handheld viewport; keep the large page controls reachable while scrolling.

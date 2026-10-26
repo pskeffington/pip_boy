@@ -8,7 +8,16 @@ Both browser shells mount `assets/network.js` with the catalog from `/api/state`
 
 Rust-Boy is the public name of the modular console. The repository, executable, crate names, and data paths retain their existing `pip_boy`/`pipboy` identifiers for compatibility; see [BRANDING.md](../BRANDING.md).
 
+## Network Engineer HTTP adapter boundary
+
+`crates/pipboy/src/dashboard/network_routes.rs` owns the existing explicit HTTP handlers `POST /api/net/scan` and `POST /api/net/unifi`. The single `dashboard.rs` loopback listener continues to enforce exact Host, same-origin POST and JSON body bounds **before** either handler. `pipboy-core::network_probe` still validates private CIDR and performs bounded, confirmed LAN scanning; `pipboy-core::unifi` retains read-only HTTPS/controller policy, and the OS subprocess credential-isolation layer remains unchanged. Role selection alone or opening NET ENGINEER does not initiate probes, fetch controller data or grant network permissions.
+
+The extraction changes source organization only. It does not create another listener, duplicate credentials, expand the allowed scan scope, or certify a real UniFi controller or Raspberry Pi hardware. Dashboard and existing network/UniFi smoke tests enforce the contract.
+
 ## Engineering navigation
+
+- [Organizational optimization research](ORGANIZATIONAL_OPTIMIZATION.md): evidence matrix, code concentration, component accountability and Mac-to-Pi sequencing.
+- [Architecture decision 0001](adr/0001-mac-first-portable-core.md): single portable Rust workspace with separately accepted hardware adapters.
 
 - [Object model](OBJECT_MODEL.md): traits, runtime registry, permission policy, typed data proposals and lifecycle.
 - [Module catalog](MODULE_CATALOG.md): 27 scoped modules and their dependency/acceptance gates.
@@ -24,6 +33,8 @@ A separate `pipboy-core::peers` private config holds local device labels, truste
 The sender's status, authenticated SSH delivery receipt, receiving device's manual acknowledgment and receiver-reported progress remain distinct. Job template selection grants no SSH privilege and triggers no networking. See [peer transport guide](PEER_TASK_TRANSPORT.md).
 
 ## Task Control data and operational boundaries
+
+The dashboard's `crates/pipboy/src/dashboard/task_routes.rs` contains the operator-facing Task Control and explicit peer-delivery route handlers. `dashboard.rs` retains the single loopback-host / same-origin request gate and dispatch table; the extracted module uses those shared request/response contracts, not a second server, storage schema or permission mechanism. The native SSH bridge remains `crates/pipboy/src/peer.rs`. Existing endpoint paths and error/status behavior are preserved by dashboard unit and smoke tests.
 
 The Rust `pipboy-core::tasks` module persists a distinct, versioned `tasks.json` board under `PIPBOY_HOME`; the `workbench.json` file still stores role/pin configuration only. Task create/update requests use the existing loopback API but **never** start a communication channel. A reusable browser component `assets/tasks.js` powers both desktop and handheld mission boards. Overseer/Custom with `mission-board` pinned sees the full local manager board; other job profiles see only their locally assigned queue. These UI scopes are **not authenticated role-based access control**.
 
@@ -134,6 +145,10 @@ No release marked production-ready until CI, hardware simulation, terminal resto
 ## Console rendering
 
 `console.rs` owns pure navigation and frame rendering; it opens no files or collectors. `tui.rs` maps terminal events to actions and manages telemetry and explicit note reloads. Collections use an item selector and a separately scrollable detail pane. Notes load on entering NOTES or pressing R; ordinary redraws reuse the in-memory list. See [console controls and size behavior](CONSOLE.md).
+
+## Messenger/PACE HTTP adapter boundary
+
+`crates/pipboy/src/dashboard/messenger_routes.rs` now owns the three Messenger HTTP handlers: read `GET /api/messages`, explicitly confirmed `POST /api/messages/send`, and explicitly confirmed `POST /api/messages/retry`. The parent `dashboard.rs` remains the sole loopback server, HTTP request parser and Host/Origin security gate; the extraction adds no new listener, permissions or transport. `pipboy-core::messenger` and `pipboy-core::message_pace` continue to own the journal, envelope and PACE policy. Pinned-identity OpenSSH actions remain in `crates/pipboy/src/peer.rs`, invoked only after validated operator actions. Reading LINK never initiates network delivery. These boundaries are covered by dashboard route tests and existing Messenger/peer smoke tests; independent physical bearer verification remains open.
 
 ## Messenger canonical transport and encrypted queue
 

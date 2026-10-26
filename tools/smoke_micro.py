@@ -91,6 +91,12 @@ with tempfile.TemporaryDirectory() as work:
         assert b'root.classList.add("micro-home")' in js
         assert b'data-depth="root"' in css and b'overflow:hidden' in css
         assert b'id="role-prev"' in html and b'id="role-next"' in html
+        assert b'id="role-switch"' not in html, "Role switch must not appear in header"
+        assert b'FIELD TERMINAL' in html, "All roles must share the same header"
+        assert b'button("CHANGE PROFILE", openRoles' in js, "Role switch must remain in SETUP"
+        assert b'ui.roleSwitch.addEventListener' not in js
+        assert b'button("TOOLS", () => setTab("gear")' in js
+        assert b'button("MAP", () => setTab("map")' in js
         assert b"LOAD ROLE" in js
         assert b"MutationObserver(ensureVisible)" in js
         assert b'micro-overflow[data-depth="root"]' in css
@@ -101,8 +107,6 @@ with tempfile.TemporaryDirectory() as work:
         assert b"MAILTO:" not in js.upper()
         assert b"/assets/map.js" in html and b"/assets/map-import.js" in html
         for asset, marker in [
-            ("/assets/boston-base.js", b"City of Boston Street Segments"),
-            ("/assets/boston-map.js", b"City of Boston SAM"),
             ("/assets/map.js", b"watchPosition"),
             ("/assets/map-import.js", b"parseRustGIS"),
             ("/assets/map.css", b".rb-map"),

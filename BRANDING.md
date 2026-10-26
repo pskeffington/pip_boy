@@ -22,7 +22,7 @@ Do not invent a general-purpose `rust-boy` CLI or a new storage path: the intera
 
 Micro mode uses an original dark-green field monitor treatment with subtle scanlines, restrained glow, legible monospaced status text and a six-tab lower rail. It conveys the **retro-futurist wrist computer** category without cloning a copyrighted game interface, importing art, or implying endorsement by Bethesda/Vault-Tec. Static fixtures must state when there is no camera frame, GIS renderer, GNSS or power sensor. The screen remains keyboard/touch usable with effects disabled for accessibility.
 
-See the [micro UI operator guide](docs/MICRO_UI.md), [lore naming crosswalk](docs/LORE_NAMING.md) and [Boston source policy](docs/BOSTON_BASEMAP.md).
+See the [micro UI operator guide](docs/MICRO_UI.md), [lore naming crosswalk](docs/LORE_NAMING.md) and [county source policy](docs/COUNTY_SOURCES.md).
 
 ## Dashboard visual identity
 
@@ -60,7 +60,7 @@ These are design intentions, not an assertion that contrast or accessibility com
 
 **Typography:** system monospace for command outputs and instrument readouts; accessible system sans-serif for prose and long-form documentation. Do not bundle commercial or game-specific fonts.
 
-**Map provenance:** Only actual Boston SAM street geometry and traceable real GIS layers are drawn; stylization must never fabricate landmarks, paths or gameplay locations.
+**Map provenance:** MAP begins on an unlocated reference grid. Only source-derived county roads, water, bounded state landmarks, or explicitly imported real GIS layers are drawn; stylization must never fabricate landmarks, paths, or gameplay locations.
 
 **Motion:** static by default. Any CRT/scanline aesthetic must be optional, low-intensity, and disabled in reduced-motion mode. Never sacrifice clarity to imitate a game UI.
 

@@ -3,10 +3,11 @@
 //! Scopes must be RFC1918 IPv4 /24 to /32 and operator-confirmed.
 //! Detected hosts are not an authoritative inventory.
 
+use crate::process_safety::isolated_command;
 use serde::{Deserialize, Serialize};
 use std::io;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr, TcpStream, UdpSocket};
-use std::process::{Command, Stdio};
+use std::process::Stdio;
 use std::sync::{
     atomic::{AtomicBool, AtomicUsize, Ordering},
     Mutex,
@@ -170,7 +171,7 @@ fn parse_ping_rtt(output: &str) -> Option<f64> {
 }
 
 fn ping_once(address: Ipv4Addr) -> Option<f64> {
-    let mut cmd = Command::new("ping");
+    let mut cmd = isolated_command("ping");
     #[cfg(target_os = "windows")]
     cmd.args(["-n", "1", "-w", "900"]);
     #[cfg(target_os = "macos")]
@@ -310,7 +311,7 @@ fn neighbors(scope: NetworkScope) -> Vec<Ipv4Addr> {
     if let Ok(text) = std::fs::read_to_string("/proc/net/arp") {
         return parse_neighbor_ips(&text, scope);
     }
-    let mut command = Command::new("arp");
+    let mut command = isolated_command("arp");
     #[cfg(target_os = "windows")]
     command.arg("-a");
     #[cfg(not(target_os = "windows"))]

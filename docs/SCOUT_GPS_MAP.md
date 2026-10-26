@@ -1,97 +1,63 @@
-# Rust-Boy | Native RustGIS map data + opt-in GPS
+# Rust-Boy | Location-driven MAP and RustGIS interchange
 
-**Boston basemap development:** Rust-Boy's independent Web Mercator viewer now supports a bundled, **real City of Boston SAM street-centreline extract** that loads by default when present, plus separately imported RustGIS/GeoJSON. The Boston subset is not the complete city, a native RustGIS raster renderer or Fallout's fictional map. See [Boston source and limitations](BOSTON_BASEMAP.md).
+Rust-Boy's MAP is an **offline-first field reference viewer**. The Fallout-inspired phosphor display is a rendering style; the geography comes from real, identified source records. No city, roadway, landmark, or GPS position is invented or preselected. The first MAP screen is an **unlocated reference grid**, not a demonstration region. No external provider is contacted on MAP entry.
 
-## On RustGIS: export the field map
+## First-run operator sequence
 
-Preferred interchange: **Publish > Save As > Map File** (`.rgismap`). This is native RustGIS JSON, containing map layers and their embedded feature tables. A normal RustGIS **project save** (`.rgis`) is also accepted: Rust-Boy reads its active map. For a field-sized/portable package, use **Publish > Package > Mobile Map** (`.rgismpk`); Rust-Boy reads the embedded `.rgismap` from the ZIP archive. **Publish > Package > Project** (`.rgispkg`) is accepted too. An individual saved layer file (`.rgislyr`) and WGS84 GeoJSON exports still work.
+1. Open **MAP**. It starts with `CENTER UNSET / GRID ONLY` unless the local device has an earlier county ZIP cache or the current browser session already holds an imported layer.
+2. Press **GPS ON** to request browser location, or **CENTER** to provide WGS84 latitude and longitude manually. The manually entered point is never represented as a GPS reading. A saved GPS fix is not written to Rust-Boy storage; GPS watches stop on MAP exit.
+3. Press **COUNTY** to explicitly permit a location-to-county lookup with U.S. Census TIGERweb. That provider receives the *chosen* location. If the operator set a manual center, it takes precedence over a currently available GPS fix.
+4. The resolved county GEOID is passed to the **local** allowlisted Census package service. No raw position is passed to the package service, which retrieves **2025 All Roads**, **Areal Water**, and **Linear Water** records for the selected county. The viewer displays genuine centerlines, polygons, names, classifications and source vintage. A fourth source, state-level **Point Landmarks**, is shown **only after the returned points have been clipped to the verified county polygon**.
+5. Use **FIT** to frame available geography and **+/-** to zoom. Finger drag pans and disables follow. **RECENTER** returns to the live browser fix when one is available. Roads, water and landmark symbols use Rust-Boy's green/amber phosphor style, without fictional geometries.
 
-RustGIS writes vector geometry as WGS84 longitude/latitude (including when a layer's `dataset.crs` refers to its *original* source system); Rust-Boy projects these geometries into EPSG:3857 for its own map display. A layer marked `crs_incomplete` is refused because its coordinates are not trustworthy. Native project map order, visible layers, source references, groups hidden by visibility, and supported single-symbol colors are preserved.
+The 480×320 primary bar contains GPS, FOLLOW/RECENTER, CENTER, **ZIP**, COUNTY, FIT and zoom. Census visibility toggles are grouped beneath the collapsed **LAYERS** disclosure. Secondary **RUSTGIS**, **SITES**, **WEB**, and **GIS** actions are under **TOOLS / MAP SOURCES**. Controls are designed for finger access and keyboard focus, but final physical touchscreen acceptance remains outstanding.
 
-**Only embedded vector feature data is currently drawn.** A project that references external GeoPackage/PostGIS/GeoParquet sources, linked rasters, RustGIS's built-in world backdrop, or tile URLs is **not** self-sufficient in Rust-Boy. Those layers are reported as excluded; they are never fetched silently. A map made only of those sources fails with an explicit import error; the separately sourced Boston street basemap can remain visible below the invalid import.
+## ZIP → County GIS and reverse county ZIP lookup
 
-For truly portable, authoritative geography, load the appropriate public-agency/source layers in RustGIS, narrow the area and choose an embedded vector map or export separate, WGS84 GeoJSON features. **RustGIS is the GIS tool, not the data authority.** Record the underlying data producer, dataset date, license, accuracy, and layer purpose. Rust-Boy's DATA SOURCES view lists the retained `dataset.source` names; a missing source is marked *Not specified*, not assumed official.
+Press **ZIP**, enter five digits and choose **FIND COUNTY**. Rust-Boy consults the locally cached U.S. Census 2020 ZCTA-to-county relationship index (downloaded from a fixed Census URL on the first explicit request), then loads **2025 county GIS** by validated county GEOID. One matching county proceeds directly; where a ZCTA intersects several counties, the operator must choose. Open ZIP → **COUNTY ZIPs** after selecting a county to view its associated ZCTA areas in pages of 12. The current county GIS remains available if a new ZIP does not resolve or fails to load.
 
-## Run in Rust-Boy
+ZIP codes, Census ZCTAs, USPS postal towns and legal county boundaries are not equivalent. The ZIP input is **not a GPS fix**, and Rust-Boy uses a verified county boundary as the map frame, not a guessed ZIP centroid. ZIP requests go only to the loopback Rust server; the remote Census lookup downloads a **national static crosswalk**, never the entered ZIP or coordinates. See the [bidirectional ZIP/County source and limitations](ZIP_COUNTY_LOOKUP.md).
 
-```bash
-git clone https://github.com/pskeffington/pip_boy.git
-cd pip_boy
-cargo run --locked -p pipboy -- dashboard --micro --open
-```
+## Offline layer controls and field rendering
 
-Open **MAP** and press **RUSTGIS** to select `.rgismap`, `.rgis`, `.rgislyr`, `.rgismpk`, `.rgispkg`, or `.geojson`. The map uses a project camera center/zoom if available. **GPS ON** requests browser location permission, then **FOLLOW** centers on the live fix without altering map feature coordinates. GPS is *never* activated by selecting a map. You can drag/touch pan, zoom, and manually enter a center (marked as *not* GPS).
+On the 480×320 display, expand **LAYERS / 4 OF 4 VISIBLE** (initially closed). Four 38-pixel touch controls independently toggle **ROADS**, **WATER**, **LANDMARKS** and **BORDER**. Each control announces **ON/OFF** and its actual pressed state for keyboard/screen-reader use. **WATER** groups the official Census areal and linear waterways; **BORDER** affects only the verified Census county boundary. Imported RustGIS geometry, an explicitly activated OSM reference, and locally held Reclamation site markers are separate overlays and are not hidden by these Census-specific switches. A layer may be ON but unavailable when its source is not cached or validated.
 
-Expand **DATA SOURCES** under the map to see visible imported layers, per-layer feature counts, original source references and unavailable-layer warnings. WGS84 geometry, GPS and accuracy circle share the same screen projection. No files, coordinates or photos are uploaded by Rust-Boy. Switching away from MAP **stops the GPS watch and discards the fix**, while retaining the imported vector geography only in volatile browser page memory for fast return to MAP. The **CLEAR MAP** control erases the temporary imported/online copy, not the installed Boston base; **BOS OFF** hides Boston. Reloading/closing the page clears temporary imports and GPS fixes.
+These controls **only affect rendering**. OFF never deletes county ZIPs, stops GPS, requests new network access, changes county GEOID, or changes source attribution. FIT frames only enabled, already-loaded county features and otherwise falls back to the enabled county border or available imported GIS. Switch settings remain in volatile page memory between MAP tab visits; restarting the browser restores all four to ON. No location or layer preference is written to a server.
+
+**Rendering performance:** On ingestion, Rust-Boy builds a conservative grid index from each validated Census feature's source envelope. The renderer selects nearby features rather than scanning an entire county for each pan/zoom. It limits index references and scans oversized features conservatively instead of dropping geometry. At overview zoom, minor roads and point landmarks are intentionally suppressed, while major roads and water remain. Full geometry is retained in memory/cache for zoom-in. When the view spans the antimeridian or most of the world, the renderer falls back to its full visibility checks, preserving wrapped geometry. Touch-motion redraws are coalesced to one animation frame; the center projection is reused for all vertices. Landmark labels take precedence over road names, with an explicit small-display collision budget.
+
+**DATA SOURCES** continues to report all loaded source counts irrespective of layer visibility, and additionally reports enabled categories and viewport candidate/drawn counts. These are inspection diagnostics, not timing benchmarks or guarantees of Raspberry Pi frame rate.
+
+## What data is acquired?
+
+See [County source catalog and acquisition contract](COUNTY_SOURCES.md) for exact 2025 archive paths, geographic scope, safety limits, and validation. U.S. Census TIGER/Line features are **reference GIS**, not a live road-condition feed or certified nautical map. TIGER raw geographic coordinates use NAD83, displayed without a formal datum transformation; high-accuracy survey or coastal navigation requires a suitable independently validated data source.
+
+**Area roads and water** are cached on the local device as their original ZIPs. The native Rust host also caches the separately fetched county boundary as raw TIGERweb GeoJSON, after strict GEOID and geometry validation. Re-entering MAP can decode the most recently selected cached county without geolocation or remote requests. Loading the same county again reuses its archives. A failed replacement does not remove previously verified map geometry. Source status distinguishes fully loaded layers, partial coverage and absent optional layers.
+
+**Point landmarks** are published by Census as a **state-level** archive, not as a county ZIP. Rust-Boy downloads the allowlisted state archive under a county-specific local cache key, parses actual POINT records, and filters them with the Census county polygon. The Rust host now independently fetches and stores the verified GEOID polygon so those in-county points can be restored after a cold offline restart. If the polygon is not cached or fails validation, state points stay hidden; bounding boxes and guessed membership are never county verification. Landmark names and classes come from source attributes, not inference. No facility's operating status is implied.
+
+**WEB ON** is an independent, explicit option for OpenStreetMap/Overpass reference layers (amenities, paths, buildings, parks and other mapped objects). The user-selected viewport is sent to the provider; OSM is community-maintained, **not the U.S. Census or an authoritative substitute**. No automatic OSM fallback occurs when Census downloads fail. WEB OFF keeps the last fetched reference in browser memory but stops further network fetches.
+
+## RustGIS local interchange
+
+Open **TOOLS / MAP SOURCES → RUSTGIS** and select `.rgismap`, `.rgis`, `.rgislyr`, `.rgismpk`, `.rgispkg`, or GeoJSON. RustGIS map/project formats preserve supported embedded WGS84 vector layers, project camera, layer visibility, basic symbology, source labels and warnings. RustGIS external data links, raster tiles and PostGIS/GeoPackage dependencies are not magically downloaded; export embedded vector geometry for portable operation.
+
+The displayed **DATA SOURCES** view exposes dataset names, source origin, feature counts, datum, vintage, partial-source restrictions and OSM attribution. The source's agency is the authority for the data; RustGIS itself is a GIS authoring tool, not a data provenance authority. Import failures leave last-good geometry on screen.
+
+## Failure cases / field limitations
+
+- **GPS denied/unsupported:** use manual CENTER; GPS HELP identifies the browser permission, OS Location Services, secure-origin and location-provider checks. Coordinates typed by hand are labeled manual.
+- **No connection:** locally cached county boundaries, roads/water, clipped landmarks and imported RustGIS continue to work. A landmark layer remains hidden if its boundary cache is missing. A fresh area requires connectivity or a user-supplied offline GIS package.
+- **County lookup failure or oversized dataset:** previous map remains visible; the status reports an unavailable or partial source rather than silently replacing it with a grid.
+- **Local landmarks without a verified county polygon:** no landmark symbols are rendered, even from a cached state ZIP.
+- **Privacy:** geolocation requires direct user action; no background GPS tracking, web provider ping or external map-area request on MAP entry. COUNTY and WEB use separate explicit consent. Local Reclamation site positions are not exposed to Census or Overpass.
+- **Navigation:** this is cartographic situational awareness, not a road-routing engine, surveyed shoreline product, emergency navigation certification or full native RustGIS renderer.
+
+### Verification
+
+**Offline cache audit:** After acquiring a county by explicit operator action, run `bash scripts/test-map-macos.command --audit-cache`. This invokes the native Rust cache-only API, checks county boundary and stored ZIP CRC/structure without network, and reports complete/partial/corrupt state. See [Mac MAP test procedure](MAC_MAP_TESTING.md#audit-the-real-saved-county-without-a-network-connection). 
+
+**Active test target is the Mac**, using the native Rust `pipboy` service and a local browser. Run `bash scripts/test-map-macos.command --verify`, then `--launch` and follow the [Mac MAP acceptance checklist](MAC_MAP_TESTING.md). The separate Mac test home deliberately preserves the downloaded county cache between restarts. The DATA SOURCES panel now records bounded local-only canvas draw timing (last and rolling p95) and a separate source-delivery duration; these are not FPS measurements. Physical Pi hardware acceptance is deferred.
 
 
-## Online roads and basic features (new: RustGIS-aligned connector)
-
-RustGIS already supports **osm.download** presets through the Overpass API. Rust-Boy's web reference overlay uses the **same provider and basic categories**, without embedding RustGIS's full query/relations engine: roads/paths (`highway`), waterways, water bodies, buildings, public parks, amenity and tourism landmarks. This is **OpenStreetMap community reference data, not an official or government-validated road inventory**; native RustGIS files and the source's own authority remain primary.
-
-**On entering MAP with bundled Boston geometry, there is no automatic external ping.** If that bundled source is missing, the preexisting grid-only fallback may check online reachability with one small GET to `https://overpass-api.de/api/status` (reused for up to ten minutes). That reachability ping sends **no map coordinates, GPS fix, map features, or stored notes**, but does reveal the device's IP address, the local browser origin (as a Referer required by the public Overpass operator), and basic connection metadata to the service. If the provider is unavailable, offline navigation is unaffected.
-
-**To retrieve roads**, tap **WEB ON**. This separate opt-in sends the coordinates of the *currently displayed map area* to `https://overpass-api.de/api/interpreter`; the area may reveal the device's approximate location if the map is following its GPS fix. The service combines the categories into a single bounded Overpass QL request (same preset taxonomy as RustGIS). At zoom below 12.5 it requests that the operator first zoom in or activate GPS. The OSM reference features render **under** imported RustGIS geometry; the local layer is never replaced by an OSM copy. Tap **SYNC** to check the area again; **WEB OFF** stops new requests but keeps the previously fetched shapes as a temporary offline reference.
-
-Network protection: at most one small area per request (roughly 0.044° wide and 0.038° tall), 1,800 returned elements, up to 50,000 geometry vertices and 4 MiB response payload; at most eight data requests per page lifetime, a two-minute minimum interval, and longer backoff for server-busy or rate-limit responses. No rapid-fire requests during pan or zoom, no blind retry loop, and no hidden GPS broadcasts. A new GPS fix that moves outside the cached reference area may request a refresh **only while WEB ON** and subject to those limits. The provider is public shared infrastructure and may refuse or throttle requests.
-
-The visible map attribution **© OpenStreetMap contributors · ODbL** links to [OpenStreetMap copyright](https://www.openstreetmap.org/copyright). The collapsible DATA SOURCES manifest distinguishes the online OSM reference from local source names, lists the source area, fetch timestamp, categories and warnings. Raster imagery, route planning, OSM multipolygon relations and a full RustGIS `osm.download` geometry/attribute parser remain out of scope. For production-scale usage, prefer a self-hosted/licensed data service or bundled regional extracts to avoid burdening shared Overpass servers.
-
-**Disconnect and cleanup:** Failed pings or data retrievals never erase the last good map or native layers. The last successful online map geometry is held in **browser memory only**, including across MAP tab switches. Browser page reload, closing the page, or the **CLEAR MAP** action removes it. WEB ON consent and live GPS watches do not persist across tab switches. No network secrets or user position are written to Rust-Boy's Rust workbench store.
-
-## Supported data and safety limits
-
-- Native `.rgis`, `.rgismap`, `.rgislyr`: JSON up to **12 MiB**; 128 layers, 8,000 features and 120,000 vertices. Active map from a project is selected. GeoJSON retains its stricter **2 MiB** input cap.
-- RustGIS ZIP packages: **32 MiB** maximum archive; only one embedded `.rgis` or `.rgismap` JSON is unpacked; size, CRC and path are checked. Supports ZIP stored and raw Deflate compression with a browser implementing `DecompressionStream("deflate-raw")`. If the browser does not support it, extract the `.rgismap` with a ZIP tool and import that. No archive paths are written to disk.
-- Native geometries: Point, MultiPoint, multipart Line and multipart Polygon; WGS84 coordinates are strictly validated. Multi-layer drawing is back-to-front, following RustGIS's zero-index-on-top layer contract. Only `Single` symbology is reflected in the canvas; complex classified rendering, labels/scale gates and layer graphics are not guaranteed identical to RustGIS.
-- GeoJSON: Point, MultiPoint, LineString, MultiLineString, Polygon, MultiPolygon and GeometryCollection, including FeatureCollections. GeoJSON positions are **[longitude, latitude]**.
-- Browser location may be derived from Wi-Fi/IP rather than a physical GNSS receiver. The Raspberry Pi needs an actual browser geolocation provider; USB/serial NMEA input requires a future separately authorized Rust device broker.
-- Browser/OS location services may use their own external positioning providers. Rust-Boy itself makes **no** location API posts, remote map tile downloads, hidden GPS recordings, TAK broadcasts or background network discoveries.
-- North-up, EPSG:3857 map, no route planning, no raster terrain, no offline raster tile cache, no survey certification. An unreferenced `basemap: Paper` preference in a RustGIS project does not carry actual world geography.
-
-## Verification
-
-```bash
-node --check crates/pipboy/assets/map-import.js
-node --check crates/pipboy/assets/map.js
-node --check crates/pipboy/assets/map-online.js
-node tools/test_rustgis_online.cjs
-node tools/test_rustgis_online_view.cjs
-node tools/test_rustgis_map_import.cjs
-node tools/test_rustgis_map_view.cjs
-cargo fmt --all -- --check
-cargo check --workspace --all-targets --locked
-cargo test --workspace --locked
-python3 tools/smoke_dashboard.py
-python3 tools/smoke_micro.py
-```
-
-The Node tests cover real RustGIS serde-style geometries, projects' active maps, layer ordering, source metadata, CRS refusals, ZIP stored/Deflate extraction and CRC rejection. **Browser integration, actual RustGIS-exported field layers, Raspberry Pi 480×320 display, GPS precision and native RustGIS renderer/raster acceptance still require manual field tests.** To confirm alignment, import a known authoritative road/parcel/trail layer and compare a recorded surveyed position with the same map in RustGIS.
-
-## Reclamation site markers (manual-only)
-
-From the Reclamation Field Kit, select **MAP** on a recorded site or open **MAP → SITES**. This is a separate, operator-requested local overlay of up to 256 saved manual WGS84 points. A visible marker and its paged, keyboard-accessible list can select/center a site; **no basemap is required** to see site markers on the coordinate grid. The marker feed excludes notes; no server request for it occurs just by opening MAP.
-
-Saved sites are **not** browser GPS fixes, verified survey-grade positions or official RustGIS reference layers. Site-derived centers disable the WEB reference lookup, and **WEB ON** stays blocked while site records are visible. Close SITES to restore the previous center, then explicitly use a manual center or imported layer before opting in to web reference. On closing or navigating away, marker records and selection are discarded from browser map memory. Field verification on Pi/RustGIS remains open.
-
-## Real county boundary and local-road context (2026-10)
-
-The map retains its bundled real Boston street snapshot as its offline landing page. **COUNTY** is a per-map-session operator action: after a browser GPS fix or manual **CENTER**, it requests the containing U.S. county polygon from the U.S. Census Bureau TIGERweb `State_County/MapServer/37` (ACS 2025 geography), with the selected WGS84 coordinate sent to the Census server. It draws the returned county boundary in amber over the current map. County outlines are legal/statistical boundaries, **not precise coastline or shoreline datasets**, and may extend into water. No invented shoreline is substituted.
-
-When the county lookup succeeds at zoom 13+, the existing opt-in Overpass mechanism loads a **bounded viewport** of roads, waterways, water polygons, parks, buildings and points of interest; it is not a complete county road inventory. At lower zoom, raise the zoom to 13+ and explicitly enable WEB. Use a separately acquired licensed/authoritative county road package or RustGIS GeoJSON for comprehensive county coverage. DATA SOURCES identifies the Census vintage and OSM reference. Network/service failures retain the Boston map or imported offline geometry; no boundary is fabricated. **COUNTY OFF** cancels the active Census request. Showing private saved sites cancels county lookup and disables WEB.
-
-A county polygon is not a shoreline trace. For Boston Harbor and other shorelines, import real, documented hydrography or coastline vectors (for example a suitable NOAA or USGS layer) as a separate source. The current pass does **not** claim a fully covered county cache, county-sized OSM download, automated road clipping, or verified coastline.
-
-## County-wide source-bounded acquisition
-
-The handheld uses the approved [county source list](COUNTY_SOURCES.md) after COUNTY resolves a valid TIGERweb GEOID from an explicitly authorized GPS fix or manual center. The native loopback server downloads county-wide **TIGER 2025 All Roads, Areal Water and Linear Water ZIPs** with strict source/size/time limits. The reader validates original NAD83 shapefile geometry (no precise datum shift to WGS84 is performed) and retains successful packages for automatic **offline cache-only loading** on subsequent MAP mounts. No device location is sent to the archive endpoint; the county GEOID is sent. OSM WEB remains separately opt-in. A county outline is not a surveyed coastline, and any missing/oversized source is marked partial rather than synthesized.
-
-## GPS denied despite system Location Services being on
-
-**GPS ON** calls the browser's native Geolocation API on the explicitly opened loopback page, not the Census or OSM services. A browser error code **1** indicates permission denial by the browser, operating system or page Permissions-Policy; it is **not** a map projection or county failure. Browser/OS approval is separate from the GIS source list. Rust-Boy cannot override, automate around or silently re-prompt a denied browser permission.
-
-A failed attempt now displays a compact **GPS HELP** section. Open it to inspect the read-only browser geolocation permission state (\`denied\`, \`prompt\`, \`granted\` or \`unknown\`), which is never taken as proof that the OS location provider is working. The helper distinguishes denied, unavailable, timeout, insecure context and page policy errors. **GPS ON** is the only action that requests location; retries are manually initiated, no fix is stored, and late callbacks from cancelled requests are rejected. The initial watch uses a standard-accuracy, 20-second acquisition to accommodate Wi-Fi-positioned desktop browsers as well as handheld GPS providers; the reported accuracy remains visible.
-
-For Firefox, use the page/site permission icon in the address bar, clear any blocked Location entry, and retry. Or open **Settings → Privacy & Security → Permissions → Location → Settings** and allow the exact local origin, e.g. \`http://127.0.0.1:8765\` (the port can change if launched with a custom port). Check that **Block new requests asking to access your location** is disabled. On macOS, separately enable Firefox in **System Settings → Privacy & Security → Location Services** and restart Firefox if the operating-system permission was changed. A browser permission state of \`granted\` with error code 1 often warrants checking the OS/app gate. If local device hardware/browser cannot provide location, **CENTER** remains a fully functional manual fallback; it is never labeled as GPS.
-
-Browser API details: [MDN GeolocationPositionError](https://developer.mozilla.org/en-US/docs/Web/API/GeolocationPositionError), [MDN Permissions API](https://developer.mozilla.org/en-US/docs/Web/API/Permissions_API) and [Mozilla site permissions](https://support.mozilla.org/en-US/kb/site-permissions-panel).
+`node tools/test_map_boot.cjs`, `node tools/test_map_layers.cjs`, `node tools/test_map_viewport.cjs` (headless Chromium), `node tools/test_county_sources.cjs`, `node tools/test_pointlm_ingestion.cjs`, `node tools/test_map_gps_permissions.cjs`, `node tools/test_county_map.cjs`, and Rust/Cargo CI check unattended boot behavior, allowlisted acquisition, clipping, no network fallback, source controls, and offline restoration. Real Census endpoint, Raspberry Pi GNSS and 480×320 physical touchscreen acceptance remain separate gates.

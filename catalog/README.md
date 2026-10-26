@@ -4,6 +4,7 @@ These version-controlled JSON files document **engineering evidence and planned 
 
 | Manifest | Contents |
 | --- | --- |
+| [`component_index.json`](component_index.json) | Mainline component ownership, entrypoint references, tests, documentation and hardware acceptance gates |
 | [`literature.json`](literature.json) | 37 cited research/official-source records with IDs, limitations and engineering implications |
 | [`module_plan.json`](module_plan.json) | 27 module definitions: 3 implemented module sources with additional acceptance gates, 24 planned modules |
 | [`sources.json`](sources.json) | Curated external GitHub/reference projects and licensing dispositions |

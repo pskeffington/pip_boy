@@ -1,5 +1,13 @@
 # Rust-Boy | Micro handheld shell
 
+## Height-aware tool pages
+
+GEAR, DATA and the Custom palette size their pages from the available viewport height. Below 260 CSS pixels of content space, GEAR shows four tools; DATA and the palette show two so their leading action and pager fit alongside the tiles. Larger screens show six tools (four for the palette). Tool tiles, launcher actions and pagers retain a 44px minimum height. Resizing keeps the page containing the first visible tool and does not rebuild an open tool editor. Accessibility overflow recovery remains available.
+
+SETUP profile selection shows two profiles per page on screens at most 400 CSS pixels tall and four otherwise, with 44px role/action targets. Paging does not change the staged selection or apply a profile. Back/Escape from the Custom palette returns to Settings. Startup reads local state without a success popup covering the controls; explicit Reload still reports completion.
+
+`node tools/test_micro_ui.cjs` exercises production JavaScript with synthetic DOM/API fixtures: complete paged tool access, focus retention at page boundaries, staged profile selection, resize preservation and Back. It does not measure rendered geometry or certify physical touch behavior.
+
 ## Back navigation and temporary drafts
 
 Back/Escape returns from a result to its inputs before leaving a tool. Network inputs return to the tool menu; the next Back exits the module. Local input drafts survive tab navigation and GIS-mode changes within this browser session, scoped by role/tool/mode. They are not written to disk and clear on reload. Completed local results focus EDIT INPUTS; editing focuses the first field. Detached requests cannot update the current status or show stale errors.
@@ -47,7 +55,7 @@ No physical screen, Raspberry Pi graphics stack, battery sensor or refresh-rate 
 
 ## Minimal screen contract
 
-**STAT:** one role label, quick action and real Open/Late/Blocked counts. No repeated job name or empty sensor graphic. **GEAR/DATA:** up to six tools per page. **SETUP:** change role, switch CRT effects, reload; Custom's palette has four modules per page. **Role picker:** four options per page, Custom last. **TASK CONTROL:** two assignments per page, two-step creation, Info/Text (when present)/Status/Device/Log tabs and an Assign tab when allowed. **MAP:** default real central-Boston SAM street geometry shown offline in original phosphor styling, plus imported RustGIS vectors, Reclamation markers, opt-in GPS and separately labeled WEB ON OSM reference. **LINK:** disconnected Security camera screens still show NO SIGNAL; no fabricated feeds. **Local labs:** input and result on separate screens. The primary frame normally does not vertically scroll at 480×320; the renderer restores scrolling if browser zoom, larger fonts, or unexpected content would clip controls. Deep results can also scroll.
+**STAT:** the same TOOLS / MAP quick actions and real Open/Late/Blocked counts for every profile. Profile identity lives under SETUP; no top-bar role selector or repeated job name. **GEAR/DATA:** up to six tools per page. **SETUP:** change role, switch CRT effects, reload; Custom's palette has four modules per page. **Role picker:** four options per page, Custom last. **TASK CONTROL:** two assignments per page, two-step creation, Info/Text (when present)/Status/Device/Log tabs and an Assign tab when allowed. **MAP:** an unlocated offline reference grid, explicitly loaded county TIGER geometry, cached county layers, imported RustGIS vectors, Reclamation markers, opt-in GPS and a separately labeled WEB ON reference. **LINK:** disconnected Security camera screens still show NO SIGNAL; no fabricated feeds. **Local labs:** input and result on separate screens. The primary frame normally does not vertically scroll at 480×320; the renderer restores scrolling if browser zoom, larger fonts, or unexpected content would clip controls. Deep results can also scroll.
 
 ## LINK Messenger
 
@@ -65,7 +73,7 @@ See [Task Control and manual dispatch](TASK_CONTROL.md). Neither the task HUD no
 
 ## Operation
 
-**Tabs** (large bottom controls): **STAT** current profile/local status and shortcuts; **GEAR** pins and tool launcher; **MAP** local WGS84 map viewport with imported RustGIS vector layers and explicit browser geolocation (GIS waypoint/distance lab available when pinned); **DATA** local reference and research tools; **LINK** disconnected transport summary, or Security Chief's four-camera mock interaction; **SETUP** role switch, CRT effects toggle, reload and Custom tool palette.
+**Tabs** (large bottom controls): **STAT** universal quick access, local status, and duties; **GEAR** pins and tool launcher; **MAP** local WGS84 map viewport with imported RustGIS vector layers and explicit browser geolocation (GIS waypoint/distance lab available when pinned); **DATA** local reference and research tools; **LINK** disconnected transport summary, or Security Chief's four-camera mock interaction; **SETUP** role switch, CRT effects toggle, reload and Custom tool palette.
 
 **Keyboard:** 1–6 jumps directly to pages when not editing a text field; **Escape** exits a focused module or camera, then returns to STAT. In Network Engineer only, Up/Down changes focus, Left/Right or PageUp/PageDown turns tool/result pages, and Enter/Space activates the focused control. Standard Tab/Shift+Tab focus and Enter/Space activate controls. Security Chief LINK uses **1–4** for camera placeholder focus; Escape returns to the four-tile grid. The role selector uses a four-at-a-time pager for all seven presets with **Custom last**.
 
@@ -97,14 +105,19 @@ The new smoke script starts an actual Rust loopback server with `--micro --port 
 
 **Next:** verify RustGIS vector import, GPS consent and online OSM reference at handheld size; native RustGIS raster rendering, hardware GNSS and TAK/camera transport remain separately gated.
 
-## Offline Boston base, RustGIS import and GPS map
+## County-first offline cache, RustGIS import and GPS map
 
-MAP mounts the shared [RustGIS-native map and GPS viewer](SCOUT_GPS_MAP.md): explicit browser GPS permission, native RustGIS JSON/map/mobile-package and GeoJSON imports, source manifest, follow, accuracy, and pan/zoom. With the built-in Boston base active, MAP opens without an outbound ping. Tapping **WEB ON** separately permits bounded Overpass area queries; saved-site views continue to block them. These are real-source city road records, not the official Fallout map. This is **community reference geography**, not a substitute for imported authoritative layers. It does not embed native RustGIS, supply remote raster tiles or open USB serial GNSS. [Boston data provenance](BOSTON_BASEMAP.md) · [Lore naming](LORE_NAMING.md).
+MAP mounts the shared [RustGIS-native map and GPS viewer](SCOUT_GPS_MAP.md), supporting explicit browser GPS permission, manual location selection, RustGIS/GeoJSON imports, source manifests, follow, accuracy, and pan/zoom. It starts on an unlocated grid, without an outbound request. **COUNTY** retrieves source-derived Census roads and water features only after the operator chooses a location and explicitly requests county data; cached, validated county geometry remains available offline. A separate **WEB ON** control allows bounded external reference queries, while saved-site privacy constraints remain in force. There is no bundled demonstration-city basemap, fictional geography, navigational certification, native RustGIS renderer, remote raster layer, or USB serial GNSS integration. [County data provenance](COUNTY_SOURCES.md) · [Lore naming](LORE_NAMING.md).
 
 LINK now includes a compact [PACE route selector](PACE_MESSAGING.md) beside DEVICE.
 Primary/Alternate send only on explicit actions; Contingency is disabled and
 Emergency queues locally. Its banner states P/A share a LAN, C is receive-only
 and E holds locally. History encryption labels follow the actual queue mode.
+
+
+## Uniform role-independent shell (October 26, 2026)
+
+The top bar is fixed RB / FIELD TERMINAL and is **not a clickable profile selector**. All roles display the same STAT / GEAR / MAP / DATA / LINK / SETUP tab rail, and STAT always begins with TOOLS and MAP. SETUP → CHANGE PROFILE is the only handheld entry to profile selection; its staged selection and explicit LOAD ROLE remain separate from tool execution. GEAR and DATA show tools from the active pinned workbench; DUTIES is reachable through DATA for all roles and follows their allowed task scope. Security camera and Overseer task functionality remain role-specific tools within the same shell. The desktop counterpart uses its fixed MODULES / VIEWPORT / MESSAGES / SETTINGS navigation and the same persisted profile API.
 
 ## Native RADIO in the handheld HUD
 

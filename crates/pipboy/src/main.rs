@@ -34,10 +34,48 @@ mod scout;
 mod status;
 mod tui;
 mod workbench;
+mod zip_index;
 
 fn help() {
     println!("{PRODUCT_NAME} | {PRODUCT_DESCRIPTOR}");
-    println!("usage: {CLI_COMMAND} [dashboard [--port PORT] [--open] [--micro]|peer <init|trust|add|list|send|sync|message-send|message-status|message-retry|message-retry-local|message-key-init|meshtastic-capture|pace-show|pace-local|message-pace>|scout geo <waypoint|distance|inspect>|workbench <list|profiles|use|palette|add|remove|rename|clear|bytes|net>|radio <capabilities|source|stations [--check-ip]|check STATION_ID --confirm|probe STATION_ID --confirm|listen STATION_ID --confirm [--seconds 1..300]|simulate FREQ_HZ MODE>|game (--discover-ps4 --confirm [--json] | (--connect IP:PORT | --playstation IP | --ps4 IP) --confirm [--snapshot|--diagnose|--observe-seconds N])|tui|status [--details] [--json]|sample [--count N --interval-ms MS --details]|sources [query]|modules|plan [G0..G4]|evidence [query]|doctor|net <scan|watch> <local|PRIVATE_CIDR> --confirm [--json] | net unifi <sites|clients SITE|compare SITE CIDR> --confirm [--json]|diag <host [--json]|ingest FILE --asset ID --confirm-authorized [--json]>|permissions <list|request KEY|deny KEY|clear KEY>|simulate <list|run ID [--confirm]|replay ID SCENARIO [--confirm]|transport ID --count N --capacity N [--confirm]|adapter <input|display|serial> [--confirm]>|notes <list|add TEXT|search QUERY|export|import FILE>|help]");
+    println!("usage: {CLI_COMMAND} <command> [options]");
+    for line in [
+        "",
+        "INTERFACES",
+        "  tui                                terminal console (default)",
+        "  dashboard [--port PORT] [--open] [--micro]",
+        "  game --discover-ps4 --confirm [--json]",
+        "  game (--connect IP:PORT | --playstation IP | --ps4 IP) --confirm",
+        "       [--snapshot|--diagnose|--observe-seconds N]",
+        "",
+        "STATUS & OFFLINE DATA",
+        "  status [--details] [--json]",
+        "  sample [--count N --interval-ms MS --details]",
+        "  sources [query] | modules | plan [G0..G4] | evidence [query]",
+        "  notes <list|add TEXT|search QUERY|export|import FILE>",
+        "  scout geo <waypoint|distance|inspect>",
+        "  workbench <list|profiles|use|palette|add|remove|rename|clear|bytes|net>",
+        "  radio <capabilities|source|stations [--check-ip]|check STATION_ID --confirm>",
+        "  radio <probe STATION_ID --confirm|listen STATION_ID --confirm [--seconds 1..300]>",
+        "  radio simulate FREQ_HZ MODE",
+        "",
+        "NETWORK & COMMUNICATIONS (explicit authorization required)",
+        "  net <scan|watch> <local|PRIVATE_CIDR> --confirm [--json]",
+        "  net unifi <sites|clients SITE|compare SITE CIDR> --confirm [--json]",
+        "  peer <init|trust|add|list|send|sync|message-send|message-status>",
+        "  peer <message-retry|message-retry-local|message-key-init>",
+        "  peer <meshtastic-capture|pace-show|pace-local|message-pace>",
+        "",
+        "DIAGNOSTICS & DEVELOPMENT",
+        "  diag <host [--json]|ingest FILE --asset ID --confirm-authorized [--json]>",
+        "  permissions <list|request KEY|deny KEY|clear KEY>",
+        "  simulate <list|run ID [--confirm]|replay ID SCENARIO [--confirm]>",
+        "  simulate transport ID --count N --capacity N [--confirm]",
+        "  simulate adapter <input|display|serial> [--confirm]",
+        "  doctor | help | --help",
+    ] {
+        println!("{line}");
+    }
 }
 
 fn main() {

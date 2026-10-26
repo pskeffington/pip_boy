@@ -48,14 +48,7 @@ const navigator = {
 const window = {
   isSecureContext:true,devicePixelRatio:1,requestAnimationFrame(fn){fn();},
   addEventListener(){},removeEventListener(){},
-  RustBoyBoston:{load(){
-    return {
-      center:{lon:-71.06,lat:42.36},
-      bounds:[-71.14,42.309,-70.99,42.399],
-      featureCount:0,vertexCount:0,shapes:[],labelShapes:[],
-      source:{origin_url:"https://data.boston.gov",source_blob_sha:"fake-fixture"}
-    };
-  }}
+
 };
 const renderer = fs.readFileSync(path.join(__dirname,
   "../crates/pipboy/assets/map.js"),"utf8");
@@ -76,6 +69,8 @@ async function main(){
   assert.equal(positions.length,0,"Mount never requests browser location");
   assert.equal(map.gpsHelp.hidden,true,"No intrusive GPS help until failure");
   assert.equal(map.fix,null);
+  map.latitude.value="42.36";map.longitude.value="-71.06";
+  map.manual.listeners.submit[0]({preventDefault(){}});
   click(map.locate);
   assert.equal(positions.length,1);
   assert.equal(map.gpsState,"WAITING FOR BROWSER LOCATION");
@@ -130,6 +125,12 @@ async function main(){
   map.latitude.value="41.8";map.longitude.value="-70.7";
   map.manual.listeners.submit[0]({preventDefault(){}});
   assert.equal(map.center.lon,-70.7);
+  assert.equal(map.centerSelected,true,"Manual center is an explicit county target");
+  assert.ok(map.tools && map.tools.tag==="details","Advanced tools stay accessible but collapsed");
+  assert.ok(map.fitButton && map.fitButton.listeners.click?.length,
+    "MAP has an accessible fit-to-geography action");
+  assert.ok(map.tools.children[1].children.some(node=>node.textContent==="RUSTGIS"),
+    "RustGIS source import remains available in tools");
   positions[2].success(position(10,10));
   assert.equal(map.fix,null);
   assert.equal(map.center.lon,-70.7,"Late callbacks cannot overwrite manual center");
