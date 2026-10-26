@@ -339,7 +339,13 @@ mod tests {
         assert_eq!(source("tiger-areawater").unwrap().1, "areawater");
         assert_eq!(source("tiger-linearwater").unwrap().1, "linearwater");
         assert_eq!(source("tiger-pointlm").unwrap().1, "pointlm");
-        assert_eq!(CountyCache::remote_name("25025", "pointlm"), "tl_2025_25_pointlm.zip");
-        assert_eq!(CountyCache::name("25025", "pointlm"), "tl_2025_25025_pointlm.zip");
+        assert_eq!(
+            CountyCache::remote_name("25025", "pointlm"),
+            "tl_2025_25_pointlm.zip"
+        );
+        assert_eq!(
+            CountyCache::name("25025", "pointlm"),
+            "tl_2025_25025_pointlm.zip"
+        );
     }
 }
