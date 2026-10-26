@@ -2037,6 +2037,61 @@ mod tests {
     }
 
     #[test]
+    fn county_boundary_api_requires_consent_and_restores_validated_cache() {
+        let temp = tempfile::tempdir().unwrap();
+        let store = WorkbenchStore::new(temp.path().join("state"));
+        let cases = [
+            (json!({"geoid":"25025"}), 403),
+            (json!({"geoid":"../../bad","confirm":true}), 422),
+            (json!({"geoid":"25025","cache_only":true}), 404),
+        ];
+        for (body, expected) in cases {
+            let response = dispatch(&request("POST", "/api/map/boundary", body), &store, 8765);
+            assert_eq!(response.status, expected);
+            assert!(!temp.path().join("state/county_cache").exists());
+        }
+        let mut hostile = request(
+            "POST", "/api/map/boundary",
+            json!({"geoid":"25025","confirm":true}),
+        );
+        hostile.headers.insert(
+            "origin".to_owned(), "https://untrusted.invalid".to_owned()
+        );
+        assert_eq!(dispatch(&hostile, &store, 8765).status, 403);
+        assert!(!temp.path().join("state/county_cache").exists());
+
+        let dir = temp.path().join("state/county_cache");
+        std::fs::create_dir_all(&dir).unwrap();
+        let fixture = json!({
+            "type":"FeatureCollection",
+            "features":[{
+                "type":"Feature", "properties":{"GEOID":"25025","NAME":"Suffolk"},
+                "geometry":{"type":"Polygon","coordinates":[
+                    [[-71.2,42.3],[-71.0,42.3],[-71.0,42.5],[-71.2,42.3]]
+                ]}
+            }]
+        });
+        std::fs::write(dir.join("boundary_2025_25025.geojson"),
+            fixture.to_string()).unwrap();
+        let request = request("POST", "/api/map/boundary",
+            json!({"geoid":"25025","cache_only":true}));
+        let cached = dispatch(&request, &store, 8765);
+        assert_eq!(cached.status, 200);
+        let data: Value = serde_json::from_slice(&cached.body).unwrap();
+        assert_eq!(data["geoid"], "25025");
+        assert_eq!(data["cache_hit"], true);
+        assert_eq!(data["network_used"], false);
+        assert_eq!(data["paths"][0].as_array().unwrap().len(), 4);
+        assert_eq!(dispatch(&request, &store, 8765).status, 200);
+        let selected = dispatch(
+            &request("GET", "/api/map/cache", Value::Null), &store, 8765);
+        assert_eq!(selected.status, 200);
+        // Reading a cached boundary never silently activates a county selection.
+        let metadata: Value = serde_json::from_slice(&selected.body).unwrap();
+        assert_eq!(metadata["active_geoid"], Value::Null);
+    }
+
+    #[test]
     fn csp_headers_deny_external_scripts_and_framing() {
         let response = Response::new(200, "text/plain", b"ok".to_vec());
         let header = format!(
