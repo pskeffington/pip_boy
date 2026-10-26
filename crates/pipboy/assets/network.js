@@ -106,6 +106,8 @@ window.RustBoyNetwork = (() => {
           document.querySelector?.("dialog[open]") ||
           event.altKey || event.ctrlKey || event.metaKey || event.repeat) return;
       const target = event.target;
+      if (target && root.contains && !root.contains(target) &&
+          target !== document.body && target !== document.documentElement) return;
       if (target?.isContentEditable) return;
       const tag = String(target?.tagName || "").toUpperCase();
       // Do not steal arrows from text editing, selection or number inputs.
