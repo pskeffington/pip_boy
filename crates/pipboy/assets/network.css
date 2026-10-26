@@ -27,14 +27,32 @@
 .net-output { white-space:pre-wrap; overflow-wrap:anywhere; margin:0; max-height:300px; overflow:auto; font:11px/1.5 ui-monospace,monospace; }
 .net-details summary { font-size:10px; cursor:pointer; }
 .net-details .net-output { margin-top:8px; }
-.net-pager { justify-content:space-between; }
+.net-pager { justify-content:space-between; gap:8px; width:100%; }
+.net-pager .net-page-arrow {
+  flex:0 0 auto; min-width:84px; min-height:48px; padding:8px 12px;
+  border-color:#74ab70; background:#193920; color:#d5ffc7;
+  font-size:12px; font-weight:800; touch-action:manipulation;
+}
+.net-pager .net-page-arrow:active:not(:disabled) { background:#315c34; }
+.net-pager .net-page-index {
+  flex:1; min-width:65px; text-align:center; white-space:nowrap;
+  color:#c8f2b6; font-size:12px; font-weight:700; letter-spacing:.03em;
+}
+.net-compact .net-pager .net-page-arrow {
+  min-width:84px; min-height:48px; padding:8px 10px; font-size:12px;
+}
+@media (pointer:coarse) {
+  .net-pager .net-page-arrow { min-width:90px; min-height:52px; }
+}
 .net-error { color:#f6b2a6; overflow-wrap:anywhere; }
 .net-compact { gap:5px; }
 .net-compact .net-menu { gap:4px; }
 .net-compact .net-tile { min-height:39px; padding:4px; font-size:10px; gap:3px; }
-.net-compact .net-button { min-height:27px; padding:4px 7px; }
-.net-compact .net-field input { min-height:28px; padding:4px; }
+.net-compact .net-button { min-height:44px; padding:6px 9px; }
+.net-compact .net-field input { min-height:44px; padding:7px; }
 .net-compact .net-form { gap:5px; }
+.net-compact .net-check { min-height:44px; }
+.net-compact .net-details summary { display:flex; align-items:center; min-height:44px; }
 .net-compact .net-result-row { padding:3px 0; }
 @media (max-width:340px) { .net-menu { grid-template-columns:repeat(2,minmax(0,1fr)); } }
 
@@ -52,9 +70,9 @@
 .net-landing .net-tile-title { font-size:13px; }
 .net-landing .net-tile-detail { font-size:10px; color:#c4e2b2; }
 .net-landing .net-tile-mode { font-size:9px; color:#9dbd8f; }
-.net-launch-footer { display:flex; align-items:center; justify-content:space-between; gap:12px; min-height:32px; }
+.net-launch-footer { display:flex; align-items:center; justify-content:space-between; gap:12px; min-height:48px; }
 .net-page-hint { font-size:10px; color:#9fc796; }
-.net-launch-footer .net-pager { flex:1; max-width:260px; }
+.net-launch-footer .net-pager { flex:1; max-width:310px; }
 .net-compact .net-landing { gap:6px; }
 .net-compact .net-launch-head .net-caption { font-size:10px; }
 .net-compact .net-count { font-size:9px; }
@@ -66,9 +84,9 @@
 .net-compact .net-landing .net-tile-title { font-size:11px; }
 .net-compact .net-landing .net-tile-detail { font-size:9px; }
 .net-compact .net-landing .net-tile-mode { font-size:8px; }
-.net-compact .net-launch-footer { gap:6px; min-height:25px; }
+.net-compact .net-launch-footer { gap:6px; min-height:48px; }
 .net-compact .net-page-hint { font-size:9px; }
-.net-compact .net-launch-footer .net-pager { max-width:200px; }
+.net-compact .net-launch-footer .net-pager { max-width:none; width:100%; }
 @media (max-width:440px) {
   .net-landing .net-tile { min-height:62px; }
   .net-compact .net-landing .net-tile { min-height:57px; }
