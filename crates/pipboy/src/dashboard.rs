@@ -474,6 +474,25 @@ fn county_package(req: &Request, store: &WorkbenchStore) -> Result<Response, Res
     Ok(Response::new(200, "application/zip", bytes))
 }
 
+fn county_boundary(req: &Request, store: &WorkbenchStore) -> Result<Response, Response> {
+    let body = parse_json_body(req, &["geoid", "confirm", "cache_only"])?;
+    let geoid = str_field(&body, "geoid")?;
+    let cache_only = body.get("cache_only").and_then(Value::as_bool) == Some(true);
+    let confirm = body.get("confirm").and_then(Value::as_bool) == Some(true);
+    if !confirm && !cache_only {
+        return Err(Response::error(403, "Confirm Census county boundary acquisition"));
+    }
+    let boundary = county_cache(store)
+        .boundary(geoid, !cache_only && confirm)
+        .map_err(|error| match error.kind() {
+            io::ErrorKind::NotFound => Response::error(404, "No cached county boundary"),
+            io::ErrorKind::InvalidInput => Response::error(422, "Invalid county boundary or GEOID"),
+            io::ErrorKind::WouldBlock => Response::error(409, "County download already in progress"),
+            _ => Response::error(409, "Census boundary unavailable; existing cache preserved"),
+        })?;
+    Ok(Response::json(200, &boundary))
+}
+
 fn reclamation_store(store: &WorkbenchStore) -> SiteStore {
     SiteStore::new(
         store
@@ -1234,6 +1253,7 @@ fn dispatch(req: &Request, store: &WorkbenchStore, port: u16) -> Response {
             .map(|value| Response::json(200, &value))
             .unwrap_or_else(|_| Response::error(409, "County cache unavailable")),
         ("POST", "/api/map/package") => county_package(req, store).unwrap_or_else(|error| error),
+        ("POST", "/api/map/boundary") => county_boundary(req, store).unwrap_or_else(|error| error),
         ("GET", "/api/state") => state(store).unwrap_or_else(|error| error),
         ("GET", "/api/reclamation") => reclamation_read(store, false).unwrap_or_else(|error| error),
         ("GET", "/api/reclamation/map") => {
