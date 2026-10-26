@@ -180,7 +180,7 @@ pub(super) fn beacon_action(
 ) -> Result<Response, Response> {
     let input = confirmed(req, &["id", "confirm"])?;
     let aid = AidStore::new(root(store));
-    let _guard = dispatch_guard(&aid)?;
+    // A slow medical send must not prevent the independent local latch.
     // Commit activation/cancellation before attempting delivery. Failure cannot
     // erase the latch or imply the remote device has learned of cancellation.
     let state = match action {
@@ -199,7 +199,21 @@ pub(super) fn beacon_action(
             "Incident changed; refresh before transmitting",
         ));
     }
-    let delivery = beacon_delivery(store, &beacon);
+    let delivery = match aid.dispatch_lock() {
+        Ok(_guard) => {
+            if aid.load().map_err(|_| unavailable())?.beacon.as_ref() != Some(&beacon) {
+                return Err(Response::error(
+                    409,
+                    "Incident changed before delivery; refresh",
+                ));
+            }
+            beacon_delivery(store, &beacon)
+        }
+        Err(_) => {
+            json!({"status":"unconfirmed", "stored_on_receiver":false,
+            "human_acknowledged":false, "reason":"Another aid send is active; retry explicitly"})
+        }
+    };
     Ok(Response::json(
         200,
         &json!({"beacon":beacon, "delivery":delivery}),

@@ -145,6 +145,14 @@ sys.exit(result.returncode)
     try:
         config.update(doctor_peer='doctor-one', emergency_peer='doctor-one')
         post(port, 'config', {'config': config})
+        # An existing network dispatch cannot block local activation or cancellation.
+        import fcntl
+        with (medic / 'aid-dispatch.lock').open('a+b') as busy_dispatch:
+            fcntl.flock(busy_dispatch, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            busy_alarm = post(port, 'activate')
+            assert busy_alarm['beacon']['active'] and busy_alarm['delivery']['status'] == 'unconfirmed'
+            cancelled = post(port, 'cancel', {'id': busy_alarm['beacon']['id']})
+            assert cancelled['beacon']['active'] is False
         sent = post(port, 'nine-line', {'packet': packet})
         assert sent['stored_on_receiver'] and sent['read_by_doctor'] is False
         records = api(remote, 'GET', '/api/aid')[1]['records']
