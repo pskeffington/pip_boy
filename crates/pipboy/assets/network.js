@@ -69,8 +69,10 @@ window.RustBoyNetwork = (() => {
       };
       const previous = control("◀ PREV", () => go(-1));
       const next = control("NEXT ▶", () => go(1));
-      previous.classList.add("net-page-arrow", "net-page-prev");
-      next.classList.add("net-page-arrow", "net-page-next");
+      previous.classList.add("net-page-arrow");
+      previous.classList.add("net-page-prev");
+      next.classList.add("net-page-arrow");
+      next.classList.add("net-page-next");
       previous.disabled = page === 0;
       next.disabled = page + 1 === total;
       previous.setAttribute("aria-label", "Previous page");
