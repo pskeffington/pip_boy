@@ -1471,8 +1471,14 @@ mod tests {
         let temp = tempfile::tempdir().unwrap();
         let store = WorkbenchStore::new(temp.path().join("private/workbench.json"));
         for (path, body) in [
-            ("/api/net/scan", json!({"cidr":"192.168.1.0/24","confirm":true})),
-            ("/api/net/unifi", json!({"operation":"sites","confirm":true})),
+            (
+                "/api/net/scan",
+                json!({"cidr":"192.168.1.0/24","confirm":true}),
+            ),
+            (
+                "/api/net/unifi",
+                json!({"operation":"sites","confirm":true}),
+            ),
         ] {
             let mut req = request("POST", path, body);
             req.headers
