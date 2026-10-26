@@ -24,6 +24,8 @@ assert.ok(html.includes('data-stage="palette"') && html.includes('id="open-palet
   "Custom palette must remain available through Settings");
 for(const pane of ["workspace","inspector"])
   assert.ok(html.includes('data-pane-target="'+pane+'"'),"Missing narrow desktop pane "+pane);
+assert.ok(html.indexOf('id="open-palette"')>html.indexOf('class="settings-choice"'),
+  "Custom tool editor must stay in the visible Settings action row");
 assert.ok(!html.includes('data-pane-target="roles"'),
   "Profile selection must remain only in Settings");
 const messageStage=html.match(/<section\b[^>]*data-stage="messages"[^>]*>/)?.[0];
