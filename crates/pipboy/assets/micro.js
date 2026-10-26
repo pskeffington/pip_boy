@@ -144,6 +144,7 @@ function renderHeading() {
   const index = pages.indexOf(tab);
   ui.code.textContent = index < 0 ? "⚙" : String(index + 1).padStart(2, "0");
   const label = openedTool === "native-radio" ? "RADIO"
+    : openedTool === "location-settings" ? "LOCATION / MAP"
     : openedTool === "camera-grid" ? "CAMERAS"
     : openedTool === "secure-messenger" ? "MESSENGER"
     : openedTool === "assigned-duties" ? "ASSIGNED DUTIES"
@@ -304,6 +305,7 @@ function showMap() {
   if (window.RustBoyMap) {
     requestAnimationFrame(() => {
       if (holder.isConnected) window.RustBoyMap.mount(holder, {
+        navigationOnly: true,
         onTools: hasTool("geo-lab") ? () => openTool("geo-lab", "waypoint") : null,
         reclamation: hasTool("reclamation")
       });
@@ -385,7 +387,8 @@ function showConf() {
       document.body.classList.toggle("glow-off", reducedEffects);
       render();
     }, "micro-button"),
-    button("RELOAD", reload, "micro-button")
+    button("RELOAD", reload, "micro-button"),
+    button("LOCATION / MAP", () => { openedTool = "location-settings"; render(); }, "micro-button")
   );
   if (custom) effects.append(button("ADD TOOLS", () => { paletteOpen = true; render(); },
     "micro-button solid"));
@@ -494,6 +497,15 @@ function inputForm(root, id) {
 
 function showTool() {
   const root = panel();
+  if (openedTool === "location-settings") {
+    const host = make("div", "rb-map-settings-host");
+    root.append(host);
+    if (window.RustBoyMap?.mountSettings) window.RustBoyMap.mountSettings(host, {
+      reclamation: hasTool("reclamation")
+    });
+    else host.textContent = "LOCATION SETTINGS UNAVAILABLE";
+    return root;
+  }
   if (openedTool === "camera-grid") {
     root.append(sectionTop("CAMERAS", "0 / 4 LIVE"));
     const quad = make("div", "camera-grid");
@@ -596,7 +608,7 @@ function render() {
 async function reload({silent = false} = {}) {
   try {
     snapshot = await api("/api/state");
-    if (openedTool && !["native-radio", "secure-messenger", "assigned-duties", "camera-grid"].includes(openedTool) && !hasTool(openedTool)) openedTool = null;
+    if (openedTool && !["native-radio", "secure-messenger", "assigned-duties", "camera-grid", "location-settings"].includes(openedTool) && !hasTool(openedTool)) openedTool = null;
     focusedCamera = null;
     render();
     if (!silent) notify("SYNCED");

@@ -1230,6 +1230,7 @@
         view.zipStatus.textContent="ZCTA "+zip+" / GIS FAILED / PREVIOUS MAP KEPT";
         view.countyStatus="COUNTY GIS UNAVAILABLE / PREVIOUS MAP KEPT";
       }else{
+        if (view.root.className.includes("rb-map-settings")) stopGps(view);
         view.zipStatus.textContent="ZCTA "+zip+" → "+county.name.toUpperCase()+
           " / "+geoid+" / GIS READY";
       }
@@ -1626,6 +1627,20 @@
   function unmount() {
     if (!active) return;
     const view = active;
+    // Keep the accepted area and bounded geography in this page session only.
+    // A live fix is never retained; an opted-in visible map gets a fresh watch.
+    mapMemory = {
+      center: view.siteReturn ? { ...view.siteReturn.center } : { ...view.center },
+      zoom: view.siteReturn ? view.siteReturn.zoom : view.zoom,
+      shapes: view.shapes, layers: view.layers, warnings: view.warnings,
+      layerName: view.layerName, mapName: view.mapName, mapFormat: view.mapFormat,
+      onlineShapes: view.onlineShapes, webMeta: view.webMeta,
+      county: view.county, countyEnabled: view.countyEnabled,
+      countyPackage: view.countyPackage, countyShapes: view.countyShapes,
+      countyStatus: view.countyStatus, centerSelected: view.centerSelected,
+      countyLastLookup: view.countyLastLookup,
+      gpsRequested: view.watchId !== null || view.gpsPending
+    };
     // Cancels the GPS watch, clears the live fix, and invalidates late callbacks.
     stopGps(view);
     if (view.observer) view.observer.disconnect();
@@ -1641,13 +1656,6 @@
     clearCountyPackages(view);
     view.siteVersion++;
     if (view.siteAbort) view.siteAbort.abort();
-    mapMemory = (view.shapes.length || view.onlineShapes.length) ? {
-      center: view.siteReturn ? { ...view.siteReturn.center } : { ...view.center },
-      zoom: view.siteReturn ? view.siteReturn.zoom : view.zoom,
-      shapes: view.shapes, layers: view.layers, warnings: view.warnings,
-      layerName: view.layerName, mapName: view.mapName, mapFormat: view.mapFormat,
-      onlineShapes: view.onlineShapes, webMeta: view.webMeta
-    } : null;
     active = null;
     if (view.host.isConnected) view.host.replaceChildren();
   }
@@ -1655,7 +1663,9 @@
   function mount(host, options) {
     unmount();
     if (!host) return;
-    const root = make("section", "rb-map");
+    const settingsMode = Boolean(options && options.settingsMode);
+    const navigationOnly = Boolean(options && options.navigationOnly);
+    const root = make("section", "rb-map" + (settingsMode ? " rb-map-settings" : ""));
     root.setAttribute("aria-label", "Local WGS84 map with imported RustGIS GeoJSON layers");
     const toolbar = make("div", "rb-map-toolbar");
     const stage = make("div", "rb-map-stage");
@@ -1802,15 +1812,15 @@
       mapFormat: mapMemory ? mapMemory.mapFormat : "",
       onlineShapes: mapMemory ? mapMemory.onlineShapes || [] : [],
       webMeta: mapMemory ? mapMemory.webMeta || null : null,
-      county: null, countyEnabled: false, countyAbort: null, countyRequest: 0,
-      countyLastLookup:null,countyShapes:[],countyPackage:null,
+      county: mapMemory?.county || null, countyEnabled: Boolean(mapMemory?.countyEnabled), countyAbort: null, countyRequest: 0,
+      countyLastLookup:mapMemory?.countyLastLookup || null,countyShapes:mapMemory?.countyShapes || [],countyPackage:mapMemory?.countyPackage || null,
       countyLayerVisible:{...countyPreferences},layerButtons:null,
       layerPanel:null,layerSummary:null,renderStats:null,
       paintSamples:[],countyLoadTiming:null,
       paintQueued:false,frameCenter:null,frameScale:null,
       countyPackageAbort:null,countyPackageVersion:0,countyCacheReadVersion:0,
 
-      countyStatus:"COUNTY OFF / GPS OR CENTER REQUIRED",countyNode,countyButton:null,
+      countyStatus:mapMemory?.countyStatus || "COUNTY OFF / SET LOCATION IN SETTINGS",countyNode,countyButton:null,
       webEnabled: false, webBusy: false, webAbort: null,
       webProbeAbort: null, webProbePromise: null,
       webReconnect: null, webDisconnect: null, webStatus: "WEB OFF",
@@ -1819,7 +1829,7 @@
       fix: null, watchId: null, gpsState: "GPS OFF",
       gpsPending:false, gpsAttempt:0, gpsIssue:null, gpsPermission:"unknown",
       gpsHelp, gpsHelpSummary, gpsHelpText,
-      follow: !mapMemory, centerSelected:false, observer: null, windowResize: null, drag: null,
+      follow: !mapMemory || Boolean(mapMemory.gpsRequested), centerSelected:Boolean(mapMemory?.centerSelected), observer: null, windowResize: null, drag: null,
       locate: null, followButton: null,
       siteAccess: Boolean(options && options.reclamation),
       sitesVisible: false, sites: [], sitePage: 0, selectedSiteId: null,
@@ -1830,7 +1840,10 @@
     };
     active = view;
     view.locate = control("GPS ON", () => {
-      if (view.watchId === null && !view.gpsPending) startGps(view);
+      if (view.watchId === null && !view.gpsPending) {
+        if (settingsMode) view.countyEnabled = true;
+        startGps(view);
+      }
       else stopGps(view);
     }, "Enable or stop browser location with permission");
     view.followButton = control("FOLLOW", () => {
@@ -1875,7 +1888,9 @@
       "Zoom in");
     const zoomOut = control("-", () => { view.zoom = clamp(view.zoom - 1, MIN_ZOOM, MAX_ZOOM); refresh(view); },
       "Zoom out");
-    toolbar.append(view.locate, view.followButton, manualButton,zipButton,
+    if (settingsMode) toolbar.append(view.locate, manualButton, zipButton, view.countyButton);
+    else if (navigationOnly) toolbar.append(view.followButton, view.fitButton, zoomIn, zoomOut);
+    else toolbar.append(view.locate, view.followButton, manualButton,zipButton,
       view.countyButton, view.fitButton, zoomIn, zoomOut);
     const layerPanel=make("details","rb-map-layers");
     const layerSummary=make("summary","","LAYERS / 4 OF 4 VISIBLE");
@@ -1905,7 +1920,16 @@
     }
     tools.append(make("summary", "", "TOOLS / MAP SOURCES"), extra);
     view.tools = tools;
-    root.append(toolbar, layerPanel, tools, zipPanel, manual, stage, webStatusNode, countyNode, status, gpsHelp,
+    if (settingsMode) {
+      root.append(make("p", "rb-map-location-copy",
+        "Choose GPS, ZIP or coordinates once. County lookup sends the selected location to Census. GPS resumes only while Map or Location settings is open."));
+      apply.textContent = "LOAD AREA";
+      root.append(toolbar, zipPanel, manual, countyNode, status, gpsHelp, layerPanel,
+        tools, webStatusNode, sitePanel, sourceBox, file, stage);
+      stage.hidden = true;
+    } else if (navigationOnly) {
+      root.append(toolbar, stage, status);
+    } else root.append(toolbar, layerPanel, tools, zipPanel, manual, stage, webStatusNode, countyNode, status, gpsHelp,
       sitePanel, sourceBox, file);
     host.replaceChildren(root);
 
@@ -1920,6 +1944,7 @@
           Math.abs(lat) > 90 || Math.abs(lon) > 180) {
         view.gpsState = "INVALID MANUAL CENTER";
       } else {
+        if (settingsMode) stopGps(view);
         view.center = { lat, lon };
         view.follow = false;
         view.centerSelected = true;
@@ -1931,6 +1956,7 @@
         manual.hidden = true;
       }
       refresh(view);
+      if (settingsMode && view.gpsState==="MANUAL CENTER / NOT A FIX") view.countyEnabled = true;
       if (view.countyEnabled && view.gpsState==="MANUAL CENTER / NOT A FIX")
         void loadCounty(view,{lat,lon});
       else if (view.webEnabled) void webFetch(view);
@@ -2062,10 +2088,11 @@
       // Entering MAP performs no external requests (cache API is loopback-only).
       if (!view.siteAccess) pendingSiteFocus = null;
       if(!view.siteAccess || pendingSiteFocus===null)void restoreCachedCounty(view);
+      if ((settingsMode || navigationOnly) && mapMemory?.gpsRequested) startGps(view);
     });
     return view;
   }
 
   // Public surface is intentionally small. Import and GNSS data stay in memory.
-  window.RustBoyMap = Object.freeze({ mount, unmount, queueSiteFocus });
+  window.RustBoyMap = Object.freeze({ mount, mountSettings: (host, options) => mount(host, { ...options, settingsMode:true }), unmount, queueSiteFocus });
 })();

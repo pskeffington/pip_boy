@@ -542,3 +542,6 @@ html, body { height:100%; overflow:hidden; }
 @media(pointer:coarse) {
   .settings-choice #open-palette { min-height:44px; }
 }
+
+#location-settings-dialog { width:min(720px,calc(100vw - 24px)); max-height:calc(100dvh - 24px); overflow:auto; color:var(--text); background:#09190e; border:1px solid #51864c; }
+#location-settings-close { min-height:44px; margin-bottom:10px; }

@@ -21,6 +21,13 @@ const inside=(node,box)=>{
       document.querySelector(".topbar").getBoundingClientRect());
     for(const id of ["stat","role","data","map","radio","conf"]){
       setTab(id);await settle();
+      if(id === "map") {
+        if(ui.content.querySelector(".rb-map-manual,.rb-map-zip,.rb-map-layers,.rb-map-tools"))
+          throw Error("Location/source ingestion leaked onto Map");
+        const nav=ui.content.querySelector(".rb-map-toolbar");
+        if(!nav || nav.querySelectorAll("button").length !== 4)
+          throw Error("Map must only have four navigation controls");
+      }
       const box=ui.viewport.getBoundingClientRect();
       const header=document.querySelector(".topbar").getBoundingClientRect();
       if(header.height > 45 || Math.abs(box.top-header.bottom)>1)

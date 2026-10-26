@@ -366,6 +366,7 @@ function renderExtension() {
         requestAnimationFrame(() => {
           if (!map.isConnected || activeStage !== "viewport") return;
           window.RustBoyMap.mount(map, {
+            navigationOnly: true,
             reclamation: selectedAvailable() &&
               snapshot.active.slots.some((slot) => slot.tool === "reclamation")
           });
@@ -787,3 +788,15 @@ void reload({silent:true});
 
 // RADIO is explicitly mounted only via VIEWPORT → RADIO / IP. No autoplay,
  // background status polling, or permanently visible dock on dashboard launch.
+
+// Shared location ingestion is opened explicitly from universal Settings.
+byId("location-settings-open")?.addEventListener("click", () => {
+  const dialog = byId("location-settings-dialog");
+  if (!window.RustBoyMap?.mountSettings || !dialog) return;
+  dialog.showModal();
+  window.RustBoyMap.mountSettings(byId("location-settings-host"), {
+    reclamation: snapshot?.active.slots.some(slot => slot.tool === "reclamation")
+  });
+});
+byId("location-settings-close")?.addEventListener("click", () => byId("location-settings-dialog").close());
+byId("location-settings-dialog")?.addEventListener("close", () => window.RustBoyMap?.unmount());

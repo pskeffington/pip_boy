@@ -20,7 +20,7 @@ Technical contracts, architecture decisions, research provenance and validation 
 | [DIAG offline ingestion](DIAGNOSTICS.md) | Scoped fault-evidence JSONL intake and local host heuristics |
 | [Peer task transport](PEER_TASK_TRANSPORT.md) | Explicit OpenSSH Mac/Pi enrollment, restricted bridge, delivery and receipt sync |
 | [Overseer Task Control](TASK_CONTROL.md) | Persistent assignments, status, manual handoff and role queues |
-| [Micro handheld shell](MICRO_UI.md) | Single-row header, five universal sections, Rust-owned module categories and height-aware tool pages, touch pagers and compact Task Control |
+| [Micro handheld shell](MICRO_UI.md) | Universal location settings, single-row header, five universal sections, Rust-owned module categories and height-aware tool pages, touch pagers and compact Task Control |
 | [Graphical dashboard](DASHBOARD_UI.md) | Run local browser UI on Mac, load role templates, test offline tools and Custom |
 | [Native RADIO and station presets](RADIO_NATIVE_ROADMAP.md) | In-process IP playback, favorites, output selection, 480×320 screen checks and hardware release gates |
 | [Quick start](../README.md#quick-start) | Clone, build, run the terminal UI and inspect local status |
