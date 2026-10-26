@@ -237,7 +237,11 @@ fn interruptible_wait(cancelled: &AtomicBool, delay: Duration) -> bool {
         if cancelled.load(Ordering::Acquire) {
             return false;
         }
-        thread::sleep(until.saturating_duration_since(Instant::now()).min(Duration::from_millis(25)));
+        thread::sleep(
+            until
+                .saturating_duration_since(Instant::now())
+                .min(Duration::from_millis(25)),
+        );
     }
     !cancelled.load(Ordering::Acquire)
 }
