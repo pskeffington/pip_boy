@@ -61,3 +61,37 @@ cargo run -p pipboy -- radio source               # pure source selection, no pr
 A successful TCP connection proves only routability to the station publisher's HTTPS server; it does not verify HTTP/TLS, playlist resolution, station audio, or decode compatibility. The future player must validate the actual HTTPS playlist/stream on demand and report `checking`, `ready`, `playing`, `unavailable`, `error` separately. Never start playing or download audio merely because the user opened RADIO. Keep playlists cached with source provenance but never cache copyrighted audio without explicit permission. Do not conflate LAN IP with internet availability.
 
 **Next:** integrate a real hardware enumerator, bounded asynchronous HTTPS validation, a decoder with user-controlled start/stop, and the 480x320 radio station selector. On hardware disconnect, stop capture and offer IP fallback; on network loss retain SDR when available and show the last-curated directory as offline/unavailable rather than active stations.
+
+## User demo: curated IP radio (2026-10-26)
+
+Skylab Radio (UK) is included first, followed by the three SomaFM stations. Official Skylab broadcaster page: https://www.skylabradio.com/listen . The selected direct listen address is https://uksoutha.streaming.broadcast.radio:29690/skylab-radio-limited (the broadcaster's own listen page points to the same streaming host; runtime success still needs verification). Do not confuse this UK station with skylab-radio.com in Melbourne.
+
+```bash
+# List curated stations with no network request:
+cargo run -p pipboy -- radio stations
+
+# Explicit bounded network check for Skylab's publisher streaming host:
+cargo run -p pipboy -- radio check skylab --confirm
+
+# Demo: start a preinstalled VLC player, user-triggered only:
+cargo run -p pipboy -- radio listen skylab --confirm --player vlc
+
+# Alternative: platform default application for the stream URL:
+cargo run -p pipboy -- radio listen skylab --confirm
+
+# Try FFplay if it is installed:
+cargo run -p pipboy -- radio listen skylab --confirm --player ffplay
+```
+
+The `listen` command launches an external player and returns immediately; it **does not validate that audio has decoded or started playing**. VLC/FFplay must be installed and able to decode the station's format. Browser/system defaults may download an M3U or display it rather than play. Operator can stop playback in the chosen player. On a headless Pi, install a compatible local player or connect an audio frontend. No autoplay occurs on opening the radio module.
+
+`radio stations --check-ip` retains the earlier SomaFM publisher availability check; use `radio check skylab --confirm` for Skylab-specific networking. Both checks only test TCP reachability, not TLS, HTTP playlist resolution, audio quality, format, or stream availability.
+
+**Acceptance gates before mainline:**
+- Cargo build, formatting, Clippy and test matrix
+- Mac/Linux/ARM64 playback with real player, audio device and stream endpoint
+- HTTPS stream health/redirect validation and resilient playback errors
+- 480x320 in-app station UI with touch Play/Stop/volume and source state
+- Explicit redistribution/embedding licensing review for each broadcaster (SomaFM limits use to individual personal listening)
+
+Playback is initiated only by a user command. Never claim internet radio is a substitute for local RF emergency reception.
