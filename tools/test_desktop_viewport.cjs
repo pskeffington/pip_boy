@@ -15,10 +15,10 @@ const {spawn, spawnSync} = require("node:child_process");
 const root = path.resolve(__dirname, "..");
 const assets = path.join(root, "crates", "pipboy", "assets");
 const styles = ["dashboard.css", "map.css", "tasks.css",
-  "messenger.css", "network.css", "reclamation.css"];
+  "messenger.css", "network.css", "reclamation.css", "radio-ui.css"];
 const allowed = new Map(styles.map(name => ["/assets/" + name,
   [path.join(assets, name), "text/css; charset=utf-8"]]));
-for (const name of ["dashboard.js", "messenger.js"]) {
+for (const name of ["dashboard.js", "messenger.js", "radio-ui.js"]) {
   allowed.set("/assets/" + name,
     [path.join(assets, name), "text/javascript; charset=utf-8"]);
 }
@@ -74,16 +74,25 @@ function chromeBinary() {
 
 function fixturePage() {
   let html = fs.readFileSync(path.join(assets, "dashboard.html"), "utf8");
-  // Only load the desktop controller and Messenger widget: other independent
-  // subsystems run their own separate component and viewport acceptance tests.
+  // Load desktop, Messenger and the native radio control surface; all other
+  // subsystems run their own independent component/viewport acceptance tests.
   html = html.replace(/<script defer src="(\/assets\/[^"]+)"><\/script>/g,
-    (full,url) => ["/assets/dashboard.js","/assets/messenger.js"].includes(url) ? full : "");
+    (full,url) => ["/assets/dashboard.js","/assets/messenger.js",
+      "/assets/radio-ui.js"].includes(url) ? full : "");
   const mock = '<script>window.__fixtureRequests=[];' +
     'window.fetch=function(url,opts){' +
     'const method=opts&&opts.method||"GET";' +
     'window.__fixtureRequests.push({url:String(url),method});' +
     'if(url==="/api/state"&&method==="GET")return Promise.resolve({' +
     'ok:true,json:()=>Promise.resolve(' + JSON.stringify(state) + ')});' +
+    'if(url==="/api/radio"&&method==="GET")return Promise.resolve({' +
+    'ok:true,json:()=>Promise.resolve({source:"none",status:"stopped",' +
+    'station:null,volume:60,error:null,output:"system",output_available:true,' +
+    'output_failure:false,sdr:"not_connected",' +
+    'stations:[{id:"skylab",name:"Skylab Radio (UK)",genre:"Chillout",' +
+    'category:"CHILL",format:"Live",nominal_kbps:0}],' +
+    'presets:{schema_version:1,favorites:[],last_selected:null},' +
+    'outputs:[{id:"system",name:"System default",default:true,available:true}]})});' +
     'return Promise.resolve({ok:false,json:()=>Promise.resolve({error:"Fixture denies remote actions"})});' +
     '};</script>';
   html = html.replace("</head>", mock + "</head>");
@@ -114,6 +123,8 @@ function fixturePage() {
     'collapsedDetail:!document.getElementById("detail-info").open,',
     'messagesInitiallyHidden:document.querySelector(\'[data-stage="messages"]\').hidden,',
     'messageChildrenInitially:document.getElementById("messenger-dock").children.length,',
+    'radioHiddenInitially:document.getElementById("radio-dock").hidden,',
+    'radioUninitializedInitially:document.getElementById("radio-dock").children.length===0,',
     'mainRole:document.getElementById("workspace-title").textContent,',
     'selectedStation:document.getElementById("status-role").textContent,',
     'toolCount:document.getElementById("module-count").textContent,',
@@ -130,8 +141,26 @@ function fixturePage() {
     'document.querySelector(\'[data-stage-target="settings"]\').click();',
     'report.settingsAfterClick=!document.querySelector(\'[data-stage="settings"]\').hidden;',
     'report.stationHeightsInSettings=[...document.querySelectorAll(".role-card")].map(x=>x.getBoundingClientRect().height);',
+    'document.querySelector(\'[data-stage-target="viewport"]\').click();',
+    'const radio=document.getElementById("radio-dock");',
+    'const toggle=document.getElementById("radio-view-toggle");',
+    'report.radioClosedBeforeClick=radio.hidden&&radio.children.length===0;',
+    'toggle.click();',
+    'setTimeout(function(){',
+    'report.radioOpened=!radio.hidden&&radio.children.length>0&&',
+    'document.getElementById("extension-content").hidden;',
+    'report.radioHasPlay=!!radio.querySelector(".rb-radio-play");',
+    'report.radioRequests=[...window.__fixtureRequests];',
+    'const mainRect=main.getBoundingClientRect();',
+    'const radioRect=radio.getBoundingClientRect();',
+    'report.radioWithinMain=radioRect.top>=mainRect.top-1&&radioRect.bottom<=mainRect.bottom+1;',
+    'report.radioMainScroll=main.scrollHeight-main.clientHeight;',
+    'toggle.click();',
+    'report.radioClosedAfterClick=radio.hidden&&radio.children.length===0;',
+    'report.radioRequestsAfterClose=[...window.__fixtureRequests];',
     'document.getElementById("viewport-report").textContent=',
     'btoa(String.fromCharCode(...new TextEncoder().encode(JSON.stringify(report))));',
+    '},100);',
     '},140);',
     '}catch(e){document.getElementById("viewport-report").textContent=',
     'btoa(JSON.stringify({error:String(e)}));}',
@@ -214,6 +243,18 @@ function check(data,width,height) {
   assert.ok(data.messagesInitiallyHidden && data.messageChildrenInitially===0,
     "Messenger must not be open or mounted on initial desktop load");
   assert.ok(data.settingsInitiallyHidden,"Settings must not dominate initial workspace");
+  assert.ok(data.radioHiddenInitially && data.radioUninitializedInitially,
+    "Native radio must not mount or take up viewport space at dashboard startup");
+  assert.ok(data.radioClosedBeforeClick && data.radioOpened && data.radioHasPlay,
+    "VIEWPORT → RADIO must open the native radio control surface explicitly");
+  assert.ok(data.radioRequests.some(x=>x.url==="/api/radio"&&x.method==="GET"),
+    "Opening native radio must read local status");
+  assert.ok(data.radioRequests.every(x=>x.method==="GET"),
+    "Radio browsing must never open audio or mutate local preferences");
+  assert.ok(data.radioClosedAfterClick,
+    "Exiting native radio should unmount the UI and stop status polling");
+  assert.ok(data.radioWithinMain,
+    "The radio control surface must fit inside the one-screen workspace");
   assert.deepEqual(data.initialRequests,[{url:"/api/state",method:"GET"}],
     "Opening the desktop sent unexpected network requests");
   assert.ok(data.messagesAfterClick && data.messageChildrenAfterClick>0,

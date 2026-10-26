@@ -76,12 +76,29 @@ After explicitly downloading a county in MAP, run `bash scripts/test-map-macos.c
 | Scout maps | Mac-local native Rust service + location-driven county map; Census TIGER roads, waters, verified-county landmarks, RustGIS/GeoJSON imports, explicit GPS/OSM | Mac operator/browser/GPS acceptance, upstream RustGIS renderer, raster/terrain and later Pi hardware |
 | Host / Library / Notes | Local telemetry with quality labels, bundled references and offline notes | Production packaging and accessibility acceptance |
 | Fallout 4 companion | Read-only TCP protocol browser, diagnostics and bounded observation | Actual game-build/PlayStation interoperability |
-| Device simulation | Fixed fixtures, bounded queues and mock adapters | Physical GPIO, serial, SDR, BLE, mesh and camera integrations |
+| Radio / SDR (feature branch) | Native in-process IP playback, 10 curated stations, favorites/order/last selection, Bluetooth-ready OS output chooser and a receive-only simulated SDR contract | Real SDR receiver/DSP, individual stream checks, Pi speaker/touch and physical Bluetooth failure acceptance |\n| Device simulation | Fixed fixtures, bounded queues and mock adapters | Physical GPIO, serial, SDR, BLE, mesh and camera integrations |
 
 The separate `rust-boy-broker` prototype denies every physical-device request. Simulated success does not grant peripheral access.
 
-## Network Engineer
+## Radio / SDR development
 
+**Status:** Native IP radio is implemented on the draft `feat/radio-sdr-core` branch, not yet merged into `main`. The operator confirmed audible Skylab playback, Play/Stop, volume and OS-visible Bluetooth output selection on Mac. Rust-Boy uses Symphonia and CPAL inside the same native process; **no browser audio or external player** is launched. The physical SDR receiver/DSP remains a separate, not-yet-implemented milestone.
+
+From the micro HUD open **LINK → RADIO / IP**. Choose one of 10 publisher-referenced stations, press **PLAY** to begin an explicit HTTPS stream, and use **STOP** or volume controls. Tap **☆/★** to manage favorites, **ALL / ★ ONLY** to filter, and **SETTINGS** to select an OS-connected output or reorder favorites. A small local `radio-presets.json` file stores approved station IDs and the last selection—never audio, arbitrary URLs or an autoplay setting. Station listing and browsing do not start streaming.
+
+```bash
+cargo run --locked -p pipboy -- radio stations
+cargo run --locked -p pipboy -- radio check skylab --confirm
+cargo run --locked -p pipboy -- radio probe skylab --confirm
+cargo run --locked -p pipboy -- radio listen skylab --confirm --seconds 30
+./scripts/launch-micro.command
+node tools/test_radio_ui.cjs
+node tools/test_radio_viewport.cjs  # Requires Chromium; synthetic local fixture
+```
+
+A successful station probe only establishes that response bytes were received. Stream endpoints and applicable listening terms still need release review; publisher inclusion does not grant commercial redistribution permission. The 480×320 real-Chromium regression verifies synthetic layout and no autoplay, **not** audible sound, real Bluetooth recovery or Raspberry Pi hardware. See [RADIO engineering contract](docs/RADIO_SDR.md) and [native-radio roadmap](docs/RADIO_NATIVE_ROADMAP.md).
+
+## Network Engineer\n
 Load **Head Engineer → NET ENGINEER** on desktop or micro. Both views use the same Rust operation catalog and shared tool component. The handheld separates tool selection, inputs, authorization and results; large inventories have pages.
 
 **Handheld controls:** Network Engineer uses four tool tiles per page. Touch PREV/NEXT or use physical D-pad left/right (also PageUp/PageDown) to turn pages; up/down focuses controls in reading order. The browser's normal Enter/Space activates a focused control. Escape/Back returns to the prior screen. The focus ring remains visible without hover. Left/right arrow keys preserve caret editing in one-line inputs; up/down moves between fields and actions, while multi-line inputs and native selects keep their own arrow behavior. Opening a page or moving focus never starts a scan; active operations still require separate authorization. This is keyboard-emulated hardware support, not physical Raspberry Pi button acceptance. A Chromium layout acceptance script (`node tools/test_network_viewport.cjs`) now verifies the 480×320 screen and neighboring viewport sizes without ever probing a real network.
@@ -198,3 +215,7 @@ CI runs Linux stable, exact Rust 1.90.0, native macOS, native Windows and manife
 [Micro HUD](docs/MICRO_UI.md) · [Desktop dashboard](docs/DASHBOARD_UI.md) · [Roadmap](docs/ROADMAP.md) · [Architecture](docs/ARCHITECTURE.md) · [Changelog](CHANGELOG.md) · [Security](SECURITY.md) · [Branding](BRANDING.md) · [MIT license](LICENSE).
 
 Public brand: **Rust-Boy**. Compatibility names remain `pip_boy` (repository), `pipboy` (package/CLI) and `PIPBOY_HOME` (storage). No third-party game artwork or source is bundled.
+
+### RADIO from the Rust-Boy HUD
+
+Launch the micro HUD with `./scripts/launch-micro.command` or `cargo run --locked -p pipboy -- dashboard --micro`. Under **LINK → RADIO / IP**, select a station and explicitly press **PLAY**; Play/Stop and volume control native Rust audio. **☆/★** saves favorites, **★ ONLY** shows user-ordered presets, and **SETTINGS** manages output devices and ordering. Selection survives restart without autoplay. On desktop, select **VIEWPORT → RADIO / IP** to open the same native session and local preferences; it is not shown as an extra scrolling page. Mac speaker/Bluetooth playback has been demonstrated; expanded station availability and Pi hardware acceptance remain open.

@@ -24,6 +24,11 @@ mod game_discovery;
 mod game_view;
 mod network;
 mod peer;
+mod radio;
+mod radio_http;
+mod radio_net;
+mod radio_output;
+mod radio_playback;
 mod sampling;
 mod scout;
 mod status;
@@ -50,6 +55,9 @@ fn help() {
         "  notes <list|add TEXT|search QUERY|export|import FILE>",
         "  scout geo <waypoint|distance|inspect>",
         "  workbench <list|profiles|use|palette|add|remove|rename|clear|bytes|net>",
+        "  radio <capabilities|source|stations [--check-ip]|check STATION_ID --confirm>",
+        "  radio <probe STATION_ID --confirm|listen STATION_ID --confirm [--seconds 1..300]>",
+        "  radio simulate FREQ_HZ MODE",
         "",
         "NETWORK & COMMUNICATIONS (explicit authorization required)",
         "  net <scan|watch> <local|PRIVATE_CIDR> --confirm [--json]",
@@ -129,6 +137,7 @@ fn run() -> Result<(), Box<dyn Error>> {
         Some("diag") => diagnostics::run(args.collect()),
         Some("net") => network::run(args.collect()),
         Some("peer") => peer::run(args.collect()),
+        Some("radio") => radio::run(args.collect()),
         Some("scout") => scout::run(args.collect()),
         Some("dashboard") => dashboard::run(args.collect()),
         Some("workbench" | "bench") => workbench::run(args.collect()),

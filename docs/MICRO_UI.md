@@ -118,3 +118,13 @@ and E holds locally. History encryption labels follow the actual queue mode.
 ## Uniform role-independent shell (October 26, 2026)
 
 The top bar is fixed RB / FIELD TERMINAL and is **not a clickable profile selector**. All roles display the same STAT / GEAR / MAP / DATA / LINK / SETUP tab rail, and STAT always begins with TOOLS and MAP. SETUP → CHANGE PROFILE is the only handheld entry to profile selection; its staged selection and explicit LOAD ROLE remain separate from tool execution. GEAR and DATA show tools from the active pinned workbench; DUTIES is reachable through DATA for all roles and follows their allowed task scope. Security camera and Overseer task functionality remain role-specific tools within the same shell. The desktop counterpart uses its fixed MODULES / VIEWPORT / MESSAGES / SETTINGS navigation and the same persisted profile API.
+
+## Native RADIO in the handheld HUD
+
+From `./scripts/launch-micro.command`, open **LINK → RADIO / IP**. The panel lists curated Skylab Radio UK and SomaFM stations, Play/Stop, 10-point volume buttons, native status and errors. The Rust-Boy process—not the browser—owns the receiver and CPAL speaker output. The same session is visible in the desktop RADIO dock. RADIO does not autoplay, launch another application, or require a particular workbench profile; selecting a station alone never contacts a broadcaster. **STOP** ends playback even after returning to the LINK page. Verify on actual Mac/Pi audio hardware; browser/CI checks alone cannot certify sound.
+
+**RADIO R4.5:** The compact RADIO/ IP widget includes ☆/★ favorites, ALL/★ ONLY filtering, local ordered presets and last-selected restoration. SETTINGS exposes native output selection and favorite-order controls in an overlay. These actions are local and do not autoplay. Radio presets are stored only in the application data root; audio remains native. Physical 480×320 touch acceptance is pending.
+
+## Native output routing (Bluetooth-ready)
+
+RADIO displays an **AUDIO OUTPUT** selector listing CPAL's OS-visible outputs alongside **System default**. A Bluetooth headset or speaker appears after it has been paired and connected in the operating system; Rust-Boy does not initiate Bluetooth pairing, perform unauthorized scans, or claim control of device pairing. Selecting an output explicitly restarts the current station at the prior volume on the new native output. If the selected device disconnects, the error is exposed in RADIO; choose System default or a connected device to recover. The selector is also available when playback is stopped. User field validation is required for a Mac Bluetooth headset and for speaker handoff.

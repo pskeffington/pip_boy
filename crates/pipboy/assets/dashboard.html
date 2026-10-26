@@ -12,6 +12,7 @@
   <link rel="stylesheet" href="/assets/messenger.css">
   <link rel="stylesheet" href="/assets/network.css">
   <link rel="stylesheet" href="/assets/reclamation.css">
+  <link rel="stylesheet" href="/assets/radio-ui.css">
   <script defer src="/assets/network.js"></script>
   <script defer src="/assets/reclamation.js"></script>
   <script defer src="/assets/tasks.js"></script>
@@ -21,6 +22,7 @@
   <script defer src="/assets/map-county.js"></script>
   <script defer src="/assets/map-zip.js"></script>
   <script defer src="/assets/map.js"></script>
+  <script defer src="/assets/radio-ui.js"></script>
   <script defer src="/assets/dashboard.js"></script>
 </head>
 <body>
@@ -106,9 +108,11 @@
         <section class="extension-section stage-surface" data-stage="viewport" aria-labelledby="extension-heading" hidden>
           <div class="section-heading">
             <h2 id="extension-heading">Active view</h2>
-            
+            <button type="button" id="radio-view-toggle" class="secondary-button"
+              aria-controls="radio-dock" aria-pressed="false">RADIO / IP</button>
           </div>
           <div id="extension-content" class="extension-content"></div>
+          <div id="radio-dock" aria-label="Native IP radio" hidden></div>
         </section>
         <section class="extension-section stage-surface" data-stage="messages" aria-labelledby="messenger-heading" hidden>
           <div class="section-heading">

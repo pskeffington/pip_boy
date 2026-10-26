@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-10-26 — RADIO R4.5 favorites and 480×320 regression (draft PR #35)
+
+- Expand the approved HTTPS station directory to ten Skylab/SomaFM channels with provenance, categories and no claim of live broadcast availability or redistribution rights.
+- Add a versioned local Rust radio-presets store: up to 12 allowlisted favorites, explicit user order, last-selected station, no autoplay. Validate malformed/unknown IDs, use bounded atomic updates and preserve corrupt original data.
+- Expose same-origin metadata-only selection, favorite toggle and reorder actions; preserve the existing native Symphonia/CPAL Play/Stop/volume and OS-managed Bluetooth output routing.
+- Reduce handheld RADIO density with shared transport and volume row, favorites filtering, touch-sized controls and overlay output/recovery settings. An explicit lost-output UI regression hides nonessential ordering actions.
+- Add Node regression for favorites, selection and no-autoplay; add a headless Chromium 480×320 geometry gate with synthetic ready, favorites, playing, settings and output-loss states. Real Mac/Pi touch, field audio, Bluetooth faults and final CI remain separate acceptance gates.
+
 ## 2026-10-26 — Handheld touch paging refinement
 
 - Size tool decks from content height, reserving DATA/Custom action rows on compact screens; retain access to every pinned tool and keep pager focus after navigation.
