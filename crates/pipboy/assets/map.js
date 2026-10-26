@@ -1297,6 +1297,8 @@
       view.zipStatus.textContent="LOAD COUNTY BEFORE LISTING ZCTAS";return;
     }
     const version=++view.zipPageVersion;
+    view.zipListPrev.disabled=true;
+    view.zipListNext.disabled=true;
     view.zipList.textContent="COUNTY "+geoid+" / ZCTA INDEX LOADING";
     try {
       const result=await window.RustBoyZip.countyZctas(geoid,{
@@ -1310,7 +1312,8 @@
       view.zipList.replaceChildren();
       if(result.zctas.length){
         view.zipList.append(make("div","rb-map-zip-list-heading",
-          "2020 ZCTAs IN COUNTY "+geoid+" ("+result.total+")"));
+          "2020 ZCTAs / COUNTY "+geoid+" / "+(offset+1)+"-"+
+          (offset+result.zctas.length)+" OF "+result.total));
         const grid=make("div","rb-map-zip-list-grid");
         for(const zcta of result.zctas){
           const button=control(zcta,()=>{
