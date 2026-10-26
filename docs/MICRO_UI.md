@@ -1,5 +1,13 @@
 # Rust-Boy | Micro handheld shell
 
+## Height-aware tool pages
+
+GEAR, DATA and the Custom palette size their pages from the available viewport height. Below 260 CSS pixels of content space, GEAR shows four tools; DATA and the palette show two so their leading action and pager fit alongside the tiles. Larger screens show six tools (four for the palette). Tool tiles, launcher actions and pagers retain a 44px minimum height. Resizing keeps the page containing the first visible tool and does not rebuild an open tool editor. Accessibility overflow recovery remains available.
+
+SETUP profile selection shows two profiles per page on screens at most 400 CSS pixels tall and four otherwise, with 44px role/action targets. Paging does not change the staged selection or apply a profile. Back/Escape from the Custom palette returns to Settings. Startup reads local state without a success popup covering the controls; explicit Reload still reports completion.
+
+`node tools/test_micro_ui.cjs` exercises production JavaScript with synthetic DOM/API fixtures: complete paged tool access, focus retention at page boundaries, staged profile selection, resize preservation and Back. It does not measure rendered geometry or certify physical touch behavior.
+
 ## Back navigation and temporary drafts
 
 Back/Escape returns from a result to its inputs before leaving a tool. Network inputs return to the tool menu; the next Back exits the module. Local input drafts survive tab navigation and GIS-mode changes within this browser session, scoped by role/tool/mode. They are not written to disk and clear on reload. Completed local results focus EDIT INPUTS; editing focuses the first field. Detached requests cannot update the current status or show stale errors.

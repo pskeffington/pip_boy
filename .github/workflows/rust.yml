@@ -79,6 +79,7 @@ jobs:
           node --check crates/pipboy/assets/dashboard.js
           node tools/test_desktop_focus_ui.cjs
           node --check crates/pipboy/assets/micro.js
+          node tools/test_micro_ui.cjs
           node --check crates/pipboy/assets/tasks.js
           node --check crates/pipboy/assets/map.js
           node --check crates/pipboy/assets/map-import.js

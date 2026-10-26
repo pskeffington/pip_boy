@@ -399,3 +399,25 @@ small { font-size:11px; }
 @media(max-width:370px) {
   .terminal-brand { font-size:10px; }
 }
+
+/* Launcher paging reserves space for full-size touch controls, including DATA's
+   Duties row. Long editors retain the accessibility overflow fallback above. */
+.micro-pager .micro-button, .role-pager .micro-button {
+  min-width:84px; min-height:44px; padding:6px 10px;
+}
+.micro-pager { justify-content:space-between; gap:8px; }
+.micro-pager .micro-label { white-space:nowrap; font-variant-numeric:tabular-nums; }
+.profile-row, .dialog-actions .micro-button, .tiny-button { min-height:44px; }
+.tiny-button { min-width:44px; }
+.micro-device[data-depth="root"] .tile,
+.micro-device[data-depth="root"] .tool-pick,
+.micro-device[data-depth="root"] .micro-button { min-height:44px; }
+@media (max-height:540px) {
+  .dialog-wrap h2, .dialog-copy, .dialog-warning { display:none; }
+}
+@media (max-height:400px) {
+  .dialog-wrap { padding:6px; gap:3px; }
+  .roles-list { min-height:0; flex:0 0 auto; }
+  .dialog-summary { min-height:24px; padding:3px; }
+  .role-pager .micro-button { flex-basis:84px; }
+}
