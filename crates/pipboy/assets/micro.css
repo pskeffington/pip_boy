@@ -129,7 +129,7 @@ small { font-size:11px; }
 .preview-row { display:flex; gap:10px; justify-content:space-between; align-items:center; }
 .value-big { color:var(--rb-accent); font-size:18px; font-weight:800; }
 .custom-empty { border:1px dashed var(--rb-line); padding:15px; color:var(--rb-muted); font-size:12px; }
-.tab-rail { border-top:2px solid var(--rb-line); display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); background:#061407; }
+.tab-rail { border-top:2px solid var(--rb-line); display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); background:#061407; }
 .tab { min-width:0; border:0; border-right:1px solid var(--rb-line-soft); background:#081b0b; font-size:12px; line-height:1; font-weight:800; display:flex; flex-direction:column; gap:3px; align-items:center; justify-content:center; color:var(--rb-muted); padding:4px 0; min-height:49px; }
 .tab:last-child { border-right:0; }
 .tab[aria-current="page"] { color:#071b0a; background:var(--rb-accent); box-shadow:inset 0 4px 0 #e5ffc6; }
@@ -226,7 +226,7 @@ small { font-size:11px; }
 }
 
 
-/* G1 compact HUD: the six primary pages fit the viewport without scrolling.
+/* G1 compact HUD: the five primary sections fit the viewport without scrolling.
    Deep task editors and long local command output retain scroll access; no
    controls are clipped just to meet an arbitrary screen-height target. */
 .micro-device[data-depth="root"] .micro-viewport { overflow:hidden; }
@@ -421,3 +421,19 @@ small { font-size:11px; }
   .dialog-summary { min-height:24px; padding:3px; }
   .role-pager .micro-button { flex-basis:84px; }
 }
+
+#role-tab-label { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:100%; }
+#micro-settings { min-width:44px; min-height:44px; }
+
+/* Keep the header Settings target inside its row at handheld sizes. */
+.micro-device { grid-template-rows:44px 50px minmax(0,1fr) 59px 21px; }
+@media (max-width:960px) {
+  .micro-device { grid-template-rows:44px 32px minmax(0,1fr) 48px; }
+}
+@media (max-width:520px) {
+  .micro-device { grid-template-rows:44px 30px minmax(0,1fr) 47px; }
+}
+@media (max-height:360px) {
+  .micro-device { grid-template-rows:44px 28px minmax(0,1fr) 45px; }
+}
+.topbar { padding-top:0; padding-bottom:0; }

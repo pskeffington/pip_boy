@@ -36,6 +36,7 @@
         </div>
         <div class="right-status">
           <span class="status-local"><span class="tiny-led" aria-hidden="true"></span>LOCAL</span>
+          <button id="micro-settings" class="tiny-button" type="button" aria-label="Open settings">⚙</button>
           <time id="local-clock" aria-label="Device local time">--:--</time>
           <a class="desk-link" href="/" aria-label="Return to desktop dashboard">DESK</a>
         </div>
@@ -57,17 +58,16 @@
       </main>
 
       <nav class="tab-rail" id="micro-rail" aria-label="Micro workbench pages">
-        <button data-tab="stat" class="tab" type="button" aria-current="page"><span class="tab-symbol" aria-hidden="true">▤</span><span>STAT</span></button>
-        <button data-tab="gear" class="tab" type="button"><span class="tab-symbol" aria-hidden="true">▦</span><span>GEAR</span></button>
-        <button data-tab="map" class="tab" type="button"><span class="tab-symbol" aria-hidden="true">⌖</span><span>MAP</span></button>
-        <button data-tab="data" class="tab" type="button"><span class="tab-symbol" aria-hidden="true">≡</span><span>DATA</span></button>
-        <button data-tab="link" class="tab" type="button"><span class="tab-symbol" aria-hidden="true">⌁</span><span>LINK</span></button>
-        <button data-tab="conf" class="tab" type="button"><span class="tab-symbol" aria-hidden="true">⚙</span><span>SETUP</span></button>
+        <button data-tab="stat" class="tab" type="button" aria-current="page"><span>STATUS</span></button>
+        <button data-tab="role" class="tab" type="button"><span id="role-tab-label">ROLE</span></button>
+        <button data-tab="data" class="tab" type="button"><span>DATA</span></button>
+        <button data-tab="map" class="tab" type="button"><span>MAP</span></button>
+        <button data-tab="radio" class="tab" type="button"><span>RADIO</span></button>
       </nav>
 
       <footer class="micro-bottom">
         <span id="micro-foot-message">LOCAL</span>
-        <span class="keys-help">1–6 · ESC</span>
+        <span class="keys-help">1–5 · ESC</span>
       </footer>
     </div>
     <div class="hardware-footer" aria-hidden="true"><span>RUST-BOY</span><span>LOCAL</span></div>

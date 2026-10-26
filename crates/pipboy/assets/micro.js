@@ -27,10 +27,10 @@ const ui = {
   roleNext: $("role-next"),
   rolePaging: $("role-page")
 };
-const pages = ["stat", "gear", "map", "data", "link", "conf"];
+const pages = ["stat", "role", "data", "map", "radio"];
 const pageTitles = {
-  stat: "STAT", gear: "GEAR", map: "MAP",
-  data: "DATA", link: "LINK", conf: "SETUP"
+  stat: "STATUS", role: "ROLE", map: "MAP",
+  data: "DATA", radio: "RADIO", conf: "SETTINGS"
 };
 const glyphs = {
   "mission-board": "▣", "host": "⌁", "notes": "≡", "library": "▤", "game": "▣",
@@ -57,15 +57,15 @@ let activeTaskUI = null;
 let activeNetworkUI = null;
 let activeMessengerUI = null;
 let activeRadioUI = null;
-const viewPage = { gear: 0, data: 0, conf: 0 };
+const viewPage = { stat: 0, role: 0, data: 0, conf: 0 };
 let paletteOpen = false;
 let rolePage = 0;
 const MICRO_PAGE_SIZE = 6;
 const tilePageSizes = {};
 
 function toolsPerPage(key) {
-  // DATA and the Custom palette reserve a row for their leading action.
-  return ui.viewport.clientHeight < 260 ? (key === "gear" ? 4 : 2)
+  // The Custom palette reserves a row for its settings action.
+  return ui.viewport.clientHeight < 260 ? (key === "role" ? 4 : 2)
     : key === "conf" ? 4 : MICRO_PAGE_SIZE;
 }
 
@@ -142,11 +142,13 @@ function toolInfo(id) {
 
 function renderHeading() {
   const index = pages.indexOf(tab);
-  ui.code.textContent = String(index + 1).padStart(2, "0");
+  ui.code.textContent = index < 0 ? "⚙" : String(index + 1).padStart(2, "0");
   const label = openedTool === "native-radio" ? "RADIO"
+    : openedTool === "camera-grid" ? "CAMERAS"
     : openedTool === "secure-messenger" ? "MESSENGER"
     : openedTool === "assigned-duties" ? "ASSIGNED DUTIES"
-    : openedTool ? toolInfo(openedTool)?.name : pageTitles[tab];
+    : openedTool ? toolInfo(openedTool)?.name : (tab === "role" ? activeProfile()?.title : pageTitles[tab]);
+  $("role-tab-label").textContent = activeProfile()?.title || "ROLE";
   ui.title.textContent = label || pageTitles[tab];
   ui.mode.textContent = "LOCAL";
   ui.back.hidden = !openedTool && focusedCamera === null && tab === "stat";
@@ -158,7 +160,7 @@ function renderHeading() {
 }
 
 function setTab(next) {
-  if (!pages.includes(next) || !snapshot) return;
+  if ((!pages.includes(next) && next !== "conf") || !snapshot) return;
   tab = next;
   openedTool = null;
   activeTaskUI = null;
@@ -198,12 +200,9 @@ function showStat() {
   const root = panel();
   root.classList.add("micro-home");
   const profileId = snapshot.active.profile;
-  root.append(sectionTop("QUICK ACCESS", "LOCAL"));
-  const actions = make("div", "quick-row micro-home-actions");
-  // The same controls and ordering for every profile; only pinned tools vary.
-  actions.append(button("TOOLS", () => setTab("gear"), "micro-button solid"));
-  actions.append(button("MAP", () => setTab("map"), "micro-button"));
-  root.append(actions);
+  const tools = sectionTools("stat");
+  root.append(sectionTop("DEVICE", "LOCAL"));
+  if (tools.length) pagedTiles(root, tools, "stat", toolTile, 2);
   const taskSection = make("div", "task-station-summary");
   root.append(taskSection);
   if (window.RustBoyTasks) {
@@ -275,11 +274,20 @@ function toolTile(id, index) {
   return card;
 }
 
-function showGear() {
+function sectionTools(section) {
+  return allPinned().filter(id => {
+    const category = toolInfo(id)?.section;
+    return (pages.includes(category) ? category : "role") === section;
+  });
+}
+
+function showRole() {
   const root = panel();
-  const pins = allPinned();
-  root.append(sectionTop("PINNED", String(pins.length) + " TOOLS"));
-  if (pins.length) pagedTiles(root, pins, "gear");
+  const pins = sectionTools("role");
+  if (snapshot.active.profile === "security-chief") pins.push("camera-grid");
+  root.append(sectionTop("TOOLS", String(pins.length) + " TOOLS"));
+  if (pins.length) pagedTiles(root, pins, "role", (id, index) => id === "camera-grid"
+    ? button("CAMERAS", () => { openedTool = id; render(); }, "tile") : toolTile(id, index));
   else {
     root.append(make("div", "custom-empty", "NO TOOLS"));
     root.append(button("ADD TOOLS", () => { paletteOpen = true; setTab("conf"); },
@@ -308,15 +316,17 @@ function showMap() {
 
 function showData() {
   const root = panel();
-  const tools = allPinned().filter((id) =>
-    ["notes", "library", "byte-lab", "simulator", "geo-lab", "reclamation", "net-lab", "diag"].includes(id));
+  const tools = ["secure-messenger", "assigned-duties", ...sectionTools("data")];
   root.append(sectionTop("DATA", String(tools.length) + " TOOLS"));
-  root.append(button("DUTIES", () => {
-    if (snapshot.active.profile === "overseer" && hasTool("mission-board")) openTool("mission-board");
-    else openDuties();
-  }, "micro-button solid"));
-  if (tools.length) pagedTiles(root, tools, "data");
-  else root.append(make("div", "custom-empty", "NO DATA TOOLS"));
+  pagedTiles(root, tools, "data", (id, index) => {
+    if (id === "secure-messenger" || id === "assigned-duties") {
+      return button(id === "secure-messenger" ? "MESSENGER" : "DUTIES", () => {
+        openedTool = id;
+        render();
+      }, "tile");
+    }
+    return toolTile(id, index);
+  }, ui.viewport.clientHeight < 260 ? 4 : MICRO_PAGE_SIZE);
   return root;
 }
 
@@ -333,42 +343,12 @@ function cameraTile(number, focus = false) {
   return cell;
 }
 
-function showLink() {
+function showRadio() {
   const root = panel();
-  if (snapshot.active.profile === "security-chief") {
-    root.append(button("RADIO / IP", () => { openedTool = "native-radio"; render(); }, "micro-button solid"));
-    root.append(button("MESSENGER / SSH", () => {
-      openedTool = "secure-messenger";
-      render();
-    }, "micro-button solid"));
-    root.append(sectionTop("CAMERAS", "0 / 4 LIVE"));
-    if (focusedCamera !== null) {
-      root.append(cameraTile(focusedCamera, true));
-      root.append(button("◀ GRID", () => {
-        focusedCamera = null;
-        render();
-      }, "micro-button"));
-    } else {
-      const quad = make("div", "camera-grid");
-      for (let number = 1; number <= 4; number++) quad.append(cameraTile(number));
-      root.append(quad);
-    }
-    return root;
-  }
-  root.append(button("RADIO / IP", () => {
-    openedTool = "native-radio";
-    render();
-    ui.viewport.scrollTop = 0;
-  }, "micro-button solid"));
-  root.append(sectionTop("MESSENGER", "LOCAL / SSH"));
-  const host = make("div", "rb-msg-root");
+  const host = make("div", "rb-radio-host");
   root.append(host);
-  if (window.RustBoyMessenger) {
-    activeMessengerUI = window.RustBoyMessenger.mount(host, {compact:true});
-  } else {
-    host.append(make("div", "block-box", "MESSENGER MODULE UNAVAILABLE"));
-  }
-  if (hasTool("game")) root.append(button("GAME LINK", () => openTool("game"), "micro-button"));
+  if (window.RustBoyRadio) activeRadioUI = window.RustBoyRadio.mount(host, { compact: true });
+  else host.textContent = "NATIVE RADIO UI UNAVAILABLE";
   return root;
 }
 
@@ -514,6 +494,13 @@ function inputForm(root, id) {
 
 function showTool() {
   const root = panel();
+  if (openedTool === "camera-grid") {
+    root.append(sectionTop("CAMERAS", "0 / 4 LIVE"));
+    const quad = make("div", "camera-grid");
+    for (let number = 1; number <= 4; number++) quad.append(cameraTile(number));
+    root.append(focusedCamera === null ? quad : cameraTile(focusedCamera, true));
+    return root;
+  }
   if (openedTool === "native-radio") {
     const host = make("div", "rb-radio-host");
     root.append(host);
@@ -600,16 +587,16 @@ function render() {
     ? "tasks" : openedTool ? "detail" : "root";
   ui.content.replaceChildren(openedTool ? showTool() :
     tab === "stat" ? showStat() :
-      tab === "gear" ? showGear() :
+      tab === "role" ? showRole() :
         tab === "map" ? showMap() :
           tab === "data" ? showData() :
-            tab === "link" ? showLink() : showConf());
+            tab === "radio" ? showRadio() : showConf());
 }
 
 async function reload({silent = false} = {}) {
   try {
     snapshot = await api("/api/state");
-    if (openedTool && openedTool !== "native-radio" && !hasTool(openedTool)) openedTool = null;
+    if (openedTool && !["native-radio", "secure-messenger", "assigned-duties", "camera-grid"].includes(openedTool) && !hasTool(openedTool)) openedTool = null;
     focusedCamera = null;
     render();
     if (!silent) notify("SYNCED");
@@ -726,6 +713,11 @@ function back() {
   if (ui.rolesDialog.open) {
     ui.rolesDialog.close();
   } else if (openedTool) {
+    if (openedTool === "camera-grid" && focusedCamera !== null) {
+      focusedCamera = null;
+      render();
+      return;
+    }
     if (openedTool === "net-lab" && activeNetworkUI?.back()) return;
     const resultForm = ui.content.querySelector(".micro-lab.show-result");
     if (resultForm) {
@@ -763,7 +755,7 @@ function init() {
   observer.observe(ui.content, { childList: true, subtree: true });
   window.addEventListener("resize", () => {
     // Only repaginate launcher screens: resizing must not discard live editors.
-    if (snapshot && !openedTool && ["gear", "data", "conf"].includes(tab)) render();
+    if (snapshot && !openedTool && ["stat", "role", "data", "conf"].includes(tab)) render();
     if (snapshot && ui.rolesDialog.open) {
       rolePage = Math.floor(Math.max(0, snapshot.profiles.findIndex((r) =>
         r.id === pendingProfile)) / rolesPerPage());
@@ -773,6 +765,7 @@ function init() {
     ensureVisible();
   });
   ui.tabs.forEach((item) => item.addEventListener("click", () => setTab(item.dataset.tab)));
+  $("micro-settings").addEventListener("click", () => setTab("conf"));
   ui.back.addEventListener("click", back);
   ui.closeRoles.addEventListener("click", () => ui.rolesDialog.close());
   ui.cancelRoles.addEventListener("click", () => ui.rolesDialog.close());
@@ -800,13 +793,7 @@ function init() {
     const target = event.target;
     if (target instanceof Element &&
         target.closest("input,select,textarea,[contenteditable='true']")) return;
-    if (tab === "link" && snapshot.active.profile === "security-chief" &&
-        openedTool === null && /^[1-4]$/.test(event.key)) {
-      focusedCamera = Number(event.key);
-      render();
-      return;
-    }
-    if (/^[1-6]$/.test(event.key)) {
+    if (/^[1-5]$/.test(event.key)) {
       setTab(pages[Number(event.key) - 1]);
       return;
     }

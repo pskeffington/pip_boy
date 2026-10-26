@@ -76,7 +76,7 @@ with tempfile.TemporaryDirectory() as work:
         _, _, css = request(port, "GET", "/assets/micro.css")
         _, _, js = request(port, "GET", "/assets/micro.js")
         assert all(('data-tab="' + name + '"').encode() in html
-                   for name in ("stat", "gear", "map", "data", "link", "conf"))
+                   for name in ("stat", "role", "data", "map", "radio"))
         assert b"viewport-fit=cover" in html
         assert b"@media (max-width:520px)" in css
         assert b"@media (max-height:360px)" in css
@@ -95,8 +95,8 @@ with tempfile.TemporaryDirectory() as work:
         assert b'FIELD TERMINAL' in html, "All roles must share the same header"
         assert b'button("CHANGE PROFILE", openRoles' in js, "Role switch must remain in SETUP"
         assert b'ui.roleSwitch.addEventListener' not in js
-        assert b'button("TOOLS", () => setTab("gear")' in js
-        assert b'button("MAP", () => setTab("map")' in js
+        assert b'id="micro-settings"' in html
+        assert b'function sectionTools(section)' in js
         assert b"LOAD ROLE" in js
         assert b"MutationObserver(ensureVisible)" in js
         assert b'micro-overflow[data-depth="root"]' in css
@@ -218,7 +218,7 @@ with tempfile.TemporaryDirectory() as work:
         assert not (root / "notes.json").exists()
         if os.name != "nt":
             assert (root / "workbench.json").stat().st_mode & 0o777 == 0o600
-        print("PASS: micro HTML/CSS/JS on loopback, six tabs, seven roles + Custom, "
+        print("PASS: micro HTML/CSS/JS on loopback, five sections, seven roles + Custom, "
               "scope-safe switching, RustGIS MAP assets, Custom lab, CSP, offline defaults "
               "and no implicit network/device activity")
     finally:

@@ -36,7 +36,7 @@ cargo run --locked -p pipboy -- dashboard
 cargo run --locked -p pipboy -- tui
 ```
 
-Micro navigation uses STAT / GEAR / MAP / DATA / LINK / SETUP, a consistent Back button and separate local-tool input/results screens. Back returns through inputs before leaving a tool; temporary drafts survive navigation until reload.
+Micro navigation uses STATUS / [active role] / DATA / MAP / RADIO with Settings in the header, a consistent Back button and separate local-tool input/results screens. Back returns through inputs before leaving a tool; temporary drafts survive navigation until reload.
 
 Handheld tool pages adapt to available height: compact GEAR shows four tools, while DATA and the Custom palette reserve their action row and show two. Tool paging keeps keyboard focus; profile selection stays in SETUP.
 
@@ -84,7 +84,7 @@ The separate `rust-boy-broker` prototype denies every physical-device request. S
 
 **Status:** Native IP radio is integrated into `main` through [PR #35](https://github.com/pskeffington/pip_boy/pull/35), after all five pre-merge CI checks passed. The operator confirmed audible Skylab playback, Play/Stop, volume and OS-visible Bluetooth output selection on Mac. Rust-Boy uses Symphonia and CPAL inside the same native process; **no browser audio or external player** is launched. The physical SDR receiver/DSP remains a separate, not-yet-implemented milestone.
 
-From the micro HUD open **LINK → RADIO / IP**. Choose one of 10 publisher-referenced stations, press **PLAY** to begin an explicit HTTPS stream, and use **STOP** or volume controls. Tap **☆/★** to manage favorites, **ALL / ★ ONLY** to filter, and **SETTINGS** to select an OS-connected output or reorder favorites. A small local `radio-presets.json` file stores approved station IDs and the last selection—never audio, arbitrary URLs or an autoplay setting. Station listing and browsing do not start streaming.
+From the micro HUD open **RADIO**. Choose one of 10 publisher-referenced stations, press **PLAY** to begin an explicit HTTPS stream, and use **STOP** or volume controls. Tap **☆/★** to manage favorites, **ALL / ★ ONLY** to filter, and **SETTINGS** to select an OS-connected output or reorder favorites. A small local `radio-presets.json` file stores approved station IDs and the last selection—never audio, arbitrary URLs or an autoplay setting. Station listing and browsing do not start streaming.
 
 ```bash
 cargo run --locked -p pipboy -- radio stations
@@ -218,4 +218,4 @@ Public brand: **Rust-Boy**. Compatibility names remain `pip_boy` (repository), `
 
 ### RADIO from the Rust-Boy HUD
 
-Launch the micro HUD with `./scripts/launch-micro.command` or `cargo run --locked -p pipboy -- dashboard --micro`. Under **LINK → RADIO / IP**, select a station and explicitly press **PLAY**; Play/Stop and volume control native Rust audio. **☆/★** saves favorites, **★ ONLY** shows user-ordered presets, and **SETTINGS** manages output devices and ordering. Selection survives restart without autoplay. On desktop, select **VIEWPORT → RADIO / IP** to open the same native session and local preferences; it is not shown as an extra scrolling page. Mac speaker/Bluetooth playback has been demonstrated; expanded station availability and Pi hardware acceptance remain open.
+Launch the micro HUD with `./scripts/launch-micro.command` or `cargo run --locked -p pipboy -- dashboard --micro`. Under **RADIO**, select a station and explicitly press **PLAY**; Play/Stop and volume control native Rust audio. **☆/★** saves favorites, **★ ONLY** shows user-ordered presets, and **SETTINGS** manages output devices and ordering. Selection survives restart without autoplay. On desktop, select **VIEWPORT → RADIO / IP** to open the same native session and local preferences; it is not shown as an extra scrolling page. Mac speaker/Bluetooth playback has been demonstrated; expanded station availability and Pi hardware acceptance remain open.

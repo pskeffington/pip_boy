@@ -44,12 +44,15 @@ pub struct Tool {
     pub description: &'static str,
     pub availability: Availability,
     pub command: &'static str,
+    /// Canonical handheld section; shared by every role.
+    pub section: &'static str,
 }
 
 /// Built-in descriptors are navigation/metadata, not automatically executed plugins.
 pub const PALETTE: &[Tool] = &[
     Tool {
         id: "byte-lab",
+        section: "role",
         name: "BYTE LAB",
         description: "Bounded hexadecimal inspection and UTF-8 to hex conversion. No I/O.",
         availability: Availability::Ready,
@@ -57,6 +60,7 @@ pub const PALETTE: &[Tool] = &[
     },
     Tool {
         id: "mission-board",
+        section: "role",
         name: "MISSION LOG",
         description:
             "Persistent Overseer assignments, priority, due date, status and manual handoff.",
@@ -65,6 +69,7 @@ pub const PALETTE: &[Tool] = &[
     },
     Tool {
         id: "host",
+        section: "stat",
         name: "SYSTEM STAT",
         description: "Opt-in local CPU/RAM and field quality. No collection by pinning.",
         availability: Availability::Ready,
@@ -72,6 +77,7 @@ pub const PALETTE: &[Tool] = &[
     },
     Tool {
         id: "library",
+        section: "data",
         name: "ARCHIVES",
         description: "Bundled research and open-source references. Fully offline.",
         availability: Availability::Ready,
@@ -79,6 +85,7 @@ pub const PALETTE: &[Tool] = &[
     },
     Tool {
         id: "notes",
+        section: "data",
         name: "JOURNAL",
         description: "Local plaintext research journal; do not store sensitive material.",
         availability: Availability::Ready,
@@ -86,6 +93,7 @@ pub const PALETTE: &[Tool] = &[
     },
     Tool {
         id: "simulator",
+        section: "role",
         name: "SIM BAY",
         description: "Fixed synthetic fixtures for experiment and adapter development.",
         availability: Availability::Simulated,
@@ -93,6 +101,7 @@ pub const PALETTE: &[Tool] = &[
     },
     Tool {
         id: "game",
+        section: "data",
         name: "GAME LINK",
         description: "Fallout 4 companion browser. Direct LAN connection needs --confirm.",
         availability: Availability::ExplicitConnection,
@@ -100,6 +109,7 @@ pub const PALETTE: &[Tool] = &[
     },
     Tool {
         id: "diag",
+        section: "stat",
         name: "SYSTEM DIAG",
         description: "Read-only scoped evidence analysis and one-shot host checks. No probes.",
         availability: Availability::Ready,
@@ -107,6 +117,7 @@ pub const PALETTE: &[Tool] = &[
     },
     Tool {
         id: "net-lab",
+        section: "role",
         name: "NET ENGINEER",
         description: "Explicit LAN inventory, ICMP/TCP health, read-only UniFi and nine offline network calculators.",
         availability: Availability::Ready,
@@ -114,6 +125,7 @@ pub const PALETTE: &[Tool] = &[
     },
     Tool {
         id: "reclamation",
+        section: "role",
         name: "FIELD LOG",
         description: "Offline field site register with manual positions, condition, urgency and GeoJSON export.",
         availability: Availability::Ready,
@@ -121,6 +133,7 @@ pub const PALETTE: &[Tool] = &[
     },
     Tool {
         id: "geo-lab",
+        section: "role",
         name: "SURVEY GIS",
         description:
             "Offline WGS84 GeoJSON waypoints, great-circle distance and local Point inspection.",
@@ -129,6 +142,7 @@ pub const PALETTE: &[Tool] = &[
     },
     Tool {
         id: "gpio",
+        section: "role",
         name: "GPIO",
         description: "Physical pin access requires a future OS-enforced broker.",
         availability: Availability::Planned,
@@ -136,6 +150,7 @@ pub const PALETTE: &[Tool] = &[
     },
     Tool {
         id: "radio",
+        section: "radio",
         name: "RADIO/SDR",
         description: "Physical RF receive/transmit requires explicit hardware gates.",
         availability: Availability::Planned,
@@ -143,6 +158,7 @@ pub const PALETTE: &[Tool] = &[
     },
     Tool {
         id: "ble",
+        section: "role",
         name: "BLE",
         description: "Bluetooth discovery and transport are not available.",
         availability: Availability::Planned,
@@ -150,6 +166,7 @@ pub const PALETTE: &[Tool] = &[
     },
     Tool {
         id: "nfc",
+        section: "role",
         name: "NFC/RFID",
         description: "Card/radio access is not available; no device I/O is enabled.",
         availability: Availability::Planned,
@@ -157,6 +174,7 @@ pub const PALETTE: &[Tool] = &[
     },
     Tool {
         id: "mesh",
+        section: "role",
         name: "MESH",
         description: "Mesh transport and physical radio gateways remain unimplemented.",
         availability: Availability::Planned,

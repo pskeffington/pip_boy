@@ -48,3 +48,5 @@
 .rb-radio-compact .rb-radio-message{font-size:10px;min-height:14px}
 @media(max-width:480px){.rb-radio{padding:5px;gap:3px}.rb-radio-tuner{grid-template-columns:40px minmax(0,1fr) 40px;gap:4px}.rb-radio-station{font-size:12px}.rb-radio-message{font-size:10px}}
 @media(max-width:390px){.rb-radio-compact .rb-radio-title{display:none}.rb-radio-compact .rb-radio-count{font-size:9px}}
+/* Fit native controls below the shared touch-sized handheld header. */
+@media(max-height:360px){.rb-radio-compact{padding:3px;gap:2px}}
