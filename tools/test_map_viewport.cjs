@@ -31,7 +31,12 @@ function fixtureHtml(){
 </head><body><div id="map-host"></div>
 <script>window.__mapRequests=[];const nativeFetch=window.fetch;
 window.fetch=function(url){window.__mapRequests.push(String(url));
-return Promise.reject(Error("Network denied in MAP layout test"));};</script>
+return Promise.reject(Error("Network denied in MAP layout test"));};
+window.addEventListener("error",e=>parent.postMessage({kind:"map-layout-report",
+report:{error:"Iframe exception: "+e.message+" / "+e.filename+":"+e.lineno}},location.origin));
+window.addEventListener("unhandledrejection",e=>parent.postMessage({
+kind:"map-layout-report",report:{error:"Iframe rejected: "+String(e.reason)}},location.origin));
+</script>
 <script src="/assets/map.js"></script>
 <script>
 function measure(){
@@ -55,7 +60,7 @@ function measure(){
  view.layerPanel.open=true;
  view.layerButtons.roads.click();
  view.layerButtons.roads.click();
- requestAnimationFrame(()=>{
+ setTimeout(()=>{
    const expanded=snapshot();
    const report={initial,expanded,requests:window.__mapRequests.length,
      gpsState:view.gpsState,countyEnabled:view.countyEnabled};
@@ -63,7 +68,7 @@ function measure(){
    window.RustBoyMap.unmount();
  });
 }
-window.addEventListener("load",()=>requestAnimationFrame(measure));
+window.addEventListener("load",()=>setTimeout(measure,40));
 </script></body></html>`;
 }
 function hostHtml(width,height){
@@ -81,7 +86,12 @@ window.addEventListener("message",e=>{
    e.data?.kind!=="map-layout-report")return;
  received=true;target.textContent=encode(e.data.report);
 });
-setTimeout(()=>{if(!received)target.textContent=encode({error:"No map report"});},2800);
+setTimeout(()=>{if(!received){
+ const frame=document.getElementById("device");
+ target.textContent=encode({error:"No map report",ready:frame.contentDocument?.readyState,
+   body:frame.contentDocument?.body?.innerText?.slice(0,200),
+   hasMap:Boolean(frame.contentWindow?.RustBoyMap)});
+}},2800);
 </script></body></html>`;
 }
 function dump(chrome,port,width,height){
