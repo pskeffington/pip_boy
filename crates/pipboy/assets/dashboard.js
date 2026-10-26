@@ -50,6 +50,40 @@ let activeNetworkUI = null;
 let selectedCamera = null;
 let working = false;
 let lastOutput = "";
+let rolePage = 0, modulePage = 0, palettePage = 0;
+let activeStage = "modules";
+let activePane = "workspace";
+const PAGE_SIZE = 6;
+function pager(id, total, current, setter) {
+  const host = byId(id);
+  host.replaceChildren();
+  const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  if (pages < 2) return;
+  const previous = el("button", "deck-button", "◀ PREV");
+  const next = el("button", "deck-button", "NEXT ▶");
+  previous.type = next.type = "button";
+  previous.disabled = current <= 0;
+  next.disabled = current >= pages - 1;
+  previous.addEventListener("click", () => setter(current - 1));
+  next.addEventListener("click", () => setter(current + 1));
+  host.append(previous, el("span", "deck-count", `${current + 1} / ${pages}`), next);
+}
+function activateStage(stage) {
+  if (stage === "palette" && !(previewId === "custom" && selectedAvailable())) stage = "modules";
+  activeStage = stage;
+  for (const button of document.querySelectorAll("[data-stage-target]")) {
+    button.hidden = button.dataset.stageTarget === "palette" && !(previewId === "custom" && selectedAvailable());
+    button.setAttribute("aria-pressed", String(button.dataset.stageTarget === stage));
+  }
+  for (const section of document.querySelectorAll(".stage-surface")) section.hidden = section.dataset.stage !== stage;
+  if (stage === "viewport" && snapshot) renderExtension();
+}
+function activatePane(pane) {
+  activePane = pane;
+  document.querySelector(".dashboard").dataset.pane = pane;
+  for (const button of document.querySelectorAll("[data-pane-target]")) button.setAttribute("aria-pressed", String(button.dataset.paneTarget === pane));
+}
+
 let toastTimer = null;
 
 const el = (tag, className, text) => {
@@ -108,7 +142,10 @@ function visibleModuleIds() {
 
 function renderRoles() {
   ui.roles.replaceChildren();
-  for (const [index, role] of snapshot.profiles.entries()) {
+  const roles = snapshot.profiles;
+  rolePage = Math.min(rolePage, Math.max(0, Math.ceil(roles.length / PAGE_SIZE) - 1));
+  for (const [index, role] of roles.entries()) {
+    if (Math.floor(index / PAGE_SIZE) !== rolePage) continue;
     const button = el("button", "role-card");
     button.type = "button";
     button.setAttribute("aria-pressed", String(role.id === previewId));
@@ -130,6 +167,7 @@ function renderRoles() {
     });
     ui.roles.append(button);
   }
+  pager("role-pager", roles.length, rolePage, (page) => { rolePage = page; renderRoles(); });
 }
 
 function renderModules() {
@@ -148,7 +186,9 @@ function renderModules() {
     ui.modules.append(blank);
   }
   if (!ids.includes(selectedTool)) selectedTool = ids[0] || null;
+  modulePage = Math.min(modulePage, Math.max(0, Math.ceil(ids.length / PAGE_SIZE) - 1));
   for (const [index, id] of ids.entries()) {
+    if (Math.floor(index / PAGE_SIZE) !== modulePage) continue;
     const info = toolInfo(id);
     if (!info) continue;
     const card = el("button", "module-card");
@@ -174,16 +214,19 @@ function renderModules() {
     });
     ui.modules.append(card);
   }
+  pager("module-pager", ids.length, modulePage, (page) => { modulePage = page; renderModules(); });
   renderCustomPalette();
 }
 
 function renderCustomPalette() {
   const activeCustom = previewId === "custom" && selectedAvailable();
-  ui.palette.hidden = !activeCustom;
   ui.paletteGrid.replaceChildren();
   if (!activeCustom) return;
   const pinned = new Set(snapshot.active.slots.map((slot) => slot.tool));
-  for (const item of snapshot.palette) {
+  const all = snapshot.palette;
+  palettePage = Math.min(palettePage, Math.max(0, Math.ceil(all.length / PAGE_SIZE) - 1));
+  for (const [index, item] of all.entries()) {
+    if (Math.floor(index / PAGE_SIZE) !== palettePage) continue;
     const unavailable = item.availability === "planned";
     const alreadyPinned = pinned.has(item.id);
     const button = el("button", "palette-button");
@@ -199,6 +242,7 @@ function renderCustomPalette() {
     button.addEventListener("click", () => addCustomTool(item.id));
     ui.paletteGrid.append(button);
   }
+  pager("palette-pager", all.length, palettePage, (page) => { palettePage = page; renderCustomPalette(); });
 }
 
 function renderExtension() {
@@ -458,6 +502,8 @@ function renderAll() {
   renderModules();
   renderExtension();
   renderDetail();
+  activateStage(activeStage);
+  activatePane(activePane);
 }
 
 async function reload() {
@@ -589,6 +635,8 @@ async function copyOutput() {
   }
 }
 
+document.querySelectorAll("[data-stage-target]").forEach(button => button.addEventListener("click", () => activateStage(button.dataset.stageTarget)));
+document.querySelectorAll("[data-pane-target]").forEach(button => button.addEventListener("click", () => activatePane(button.dataset.paneTarget)));
 ui.load.addEventListener("click", loadSelected);
 ui.refresh.addEventListener("click", reload);
 ui.form.addEventListener("submit", runLab);
