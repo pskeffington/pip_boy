@@ -103,3 +103,10 @@ RADIO displays an **AUDIO OUTPUT** selector listing CPAL's OS-visible outputs al
 **Acceptance evidence:** Operator field report (Skylab Play/Stop/Volume and Bluetooth output working on Mac, 2026-10-26). This is distinct from formal fault-injection recovery tests and future physical SDR verification.
 
 **R4.2 first implementation pass:** `pipboy-core/src/radio_recovery.rs` now provides typed failure classifications (transient network, lost output, permanent), strict retry budgeting (1s, 2s, 4s; maximum three retries) and Stop dominance. Offline tests cover exhaustion, output/manual recovery, permanent failures and Stop. This is a **policy implementation only**—the active live streaming worker does not yet schedule the retries. Wired recovery and fault-injection remain R4.3 gates. The prior CI run revealed stopped-state RADIO JSON omitted `output` and `outputs`; fixed on feature branch with regression assertion.
+
+## R4.3 in-stream reconnect implementation pass
+
+- The existing native decoder worker now wraps each stream in an explicit bounded reconnect loop. On an actual in-stream `symphonia::Error::IoError` it closes the prior decoder/output/HTTPS stream, moves the session to RECOVERING, and waits 1s, 2s and 4s before attempting a fresh HTTPS stream using the existing curated source allowlist.
+- Each attempt builds a fresh native PCM sink and compressed-byte reader; the parent session remains live while individual network guards are dropped. Session Stop terminates retries and stale status events are rejected by the generation state machine.
+- `radio-ui.js` now describes RECOVERING as a broadcaster reconnect, not as active PCM playback. Deterministic tests cover the reconnect transition, retry budget and cancelling a pending wait.
+- **Remaining limits:** this pass retries only decoded in-stream I/O loss; initial HTTP connect failures and non-I/O demux/codec errors fail rather than retry. Device disappearance still requires explicit output selection. End-to-end fault injection and CI acceptance are gates before merging.
