@@ -72,7 +72,7 @@ function pager(id, total, current, setter, pageSize = PAGE_SIZE) {
   host.append(previous, el("span", "deck-count", `${current + 1} / ${pages}`), next);
 }
 function activateStage(stage) {
-  if (stage === "palette" && !(previewId === "custom" && selectedAvailable())) stage = "modules";
+  if (stage === "palette" && snapshot?.active.profile !== "custom") stage = "settings";
   if (!["modules", "viewport", "messages", "settings", "palette"].includes(stage)) return;
   const previous = activeStage;
   if (!["settings", "palette"].includes(stage) && previewId !== snapshot?.active.profile) {
