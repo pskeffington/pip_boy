@@ -151,3 +151,10 @@
 @media (max-width:440px) {
   .net-compact .net-runbar .net-button { font-size:10px; padding-inline:8px; }
 }
+
+/* The SOS-equipped shell reserves a 44px header. Preserve the full four-tool
+   deck and 48px pager by keeping its short-screen status strip to one line. */
+@media (max-height:360px) {
+  .net-compact .net-status-label { display:none; }
+  .net-compact .net-landing .net-tile { min-height:44px; }
+}

@@ -1,7 +1,7 @@
 "use strict";
 
 // Real headless Chromium layout acceptance. No live scan or controller access.
-// Uses only Node built-ins and production micro.css/network.css/network.js.
+// Uses Node built-ins and production micro/SOS/network shell assets.
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const http = require("node:http");
@@ -14,6 +14,7 @@ const fixture = path.join(__dirname, "fixtures", "network-viewport.html");
 const allowed = new Map([
   ["/fixture", [fixture, "text/html; charset=utf-8"]],
   ["/assets/micro.css", [path.join(root, "crates/pipboy/assets/micro.css"), "text/css; charset=utf-8"]],
+  ["/assets/aid.css", [path.join(root, "crates/pipboy/assets/aid.css"), "text/css; charset=utf-8"]],
   ["/assets/network.css", [path.join(root, "crates/pipboy/assets/network.css"), "text/css; charset=utf-8"]],
   ["/assets/network.js", [path.join(root, "crates/pipboy/assets/network.js"), "text/javascript; charset=utf-8"]]
 ]);
