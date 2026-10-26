@@ -67,3 +67,5 @@ The product name is **Rust-Boy**; the existing `pip_boy` repository, `pipboy` CL
 
 
 | [Contingency network core](CONTINGENCY_NETWORK_CORE.md) | Meshtastic, MeshCore, Reticulum, local mesh IP and fail-closed development gates |
+
+| [Communications development roadmap](COMMUNICATIONS_DEVELOPMENT_ROADMAP.md) | M00–M12 milestones, dependency gates, three next development passes and verification criteria |
