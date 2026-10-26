@@ -2073,16 +2073,16 @@ mod tests {
         });
         std::fs::write(dir.join("boundary_2025_25025.geojson"),
             fixture.to_string()).unwrap();
-        let request = request("POST", "/api/map/boundary",
+        let cached_req = request("POST", "/api/map/boundary",
             json!({"geoid":"25025","cache_only":true}));
-        let cached = dispatch(&request, &store, 8765);
+        let cached = dispatch(&cached_req, &store, 8765);
         assert_eq!(cached.status, 200);
         let data: Value = serde_json::from_slice(&cached.body).unwrap();
         assert_eq!(data["geoid"], "25025");
         assert_eq!(data["cache_hit"], true);
         assert_eq!(data["network_used"], false);
         assert_eq!(data["paths"][0].as_array().unwrap().len(), 4);
-        assert_eq!(dispatch(&request, &store, 8765).status, 200);
+        assert_eq!(dispatch(&cached_req, &store, 8765).status, 200);
         let selected = dispatch(
             &request("GET", "/api/map/cache", Value::Null), &store, 8765);
         assert_eq!(selected.status, 200);
