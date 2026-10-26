@@ -178,4 +178,5 @@ async function main(){
  assert.equal(map.countyShapes.length,0,"unmount discards decoded county geometry");
  console.log("County source registry: bounded 2025 ZIP, SHP/DBF, raw geometry, offline cache: PASS");
 }
-main().catch(error=>{console.error(error);process.exitCode=1;});
+if(require.main===module)main().catch(error=>{console.error(error);process.exitCode=1;});
+module.exports={fixture,zip,dbf};
