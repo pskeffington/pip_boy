@@ -8,6 +8,7 @@ use pipboy_core::radio_controller::{
 };
 use pipboy_core::radio_directory::station_by_id;
 use pipboy_core::radio_pcm::PcmConverter;
+use pipboy_core::radio_recovery::{decide, FailureClass, RecoveryAction};
 use std::io::{self, Read, Seek, SeekFrom};
 use std::sync::{
     atomic::{AtomicBool, AtomicU8, Ordering},
@@ -64,7 +65,7 @@ impl NativeRadioEngine {
         let worker = thread::Builder::new()
             .name("rust-boy-radio-ip".into())
             .spawn(move || {
-                let result = decode_and_play(
+                let result = play_with_recovery(
                     &id,
                     generation,
                     &worker_controller,
@@ -178,6 +179,69 @@ fn signal(controller: &Arc<Mutex<RadioController>>, generation: u64, event: Play
         .event(generation, event);
 }
 
+/// Retry only a typed in-stream I/O failure. Device loss and invalid
+/// codecs remain terminal; session Stop overrides any scheduled retry.
+fn play_with_recovery(
+    station_id: &str,
+    generation: u64,
+    controller: &Arc<Mutex<RadioController>>,
+    cancelled: &Arc<AtomicBool>,
+    volume: Arc<AtomicU8>,
+    output_id: &str,
+) -> Result<(), String> {
+    let mut attempted_retries = 0;
+    loop {
+        if cancelled.load(Ordering::Acquire) {
+            return Ok(());
+        }
+        let network_lost = AtomicBool::new(false);
+        let result = decode_and_play(
+            station_id,
+            generation,
+            controller,
+            cancelled,
+            Arc::clone(&volume),
+            output_id,
+            &network_lost,
+        );
+        let Err(error) = result else {
+            return Ok(());
+        };
+        if cancelled.load(Ordering::Acquire) {
+            return Ok(());
+        }
+        let class = if network_lost.load(Ordering::Acquire) {
+            FailureClass::NetworkTransient
+        } else {
+            FailureClass::Permanent
+        };
+        match decide(class, attempted_retries, cancelled.load(Ordering::Acquire)) {
+            RecoveryAction::RetryAfter(delay) => {
+                signal(controller, generation, PlaybackEvent::ConnectionLost);
+                attempted_retries += 1;
+                // No audio callback, network thread or old PCM queue survives
+                // decode_and_play returning before we start this delay.
+                if !interruptible_wait(cancelled, delay) {
+                    return Ok(());
+                }
+            }
+            RecoveryAction::Stop => return Ok(()),
+            RecoveryAction::SelectOutput | RecoveryAction::Fail => return Err(error),
+        }
+    }
+}
+
+fn interruptible_wait(cancelled: &AtomicBool, delay: Duration) -> bool {
+    let until = Instant::now() + delay;
+    while Instant::now() < until {
+        if cancelled.load(Ordering::Acquire) {
+            return false;
+        }
+        thread::sleep((until - Instant::now()).min(Duration::from_millis(25)));
+    }
+    !cancelled.load(Ordering::Acquire)
+}
+
 fn decode_and_play(
     station_id: &str,
     generation: u64,
@@ -185,6 +249,7 @@ fn decode_and_play(
     cancelled: &Arc<AtomicBool>,
     volume: Arc<AtomicU8>,
     output_id: &str,
+    network_lost: &AtomicBool,
 ) -> Result<(), String> {
     // Establish an audio device before opening a remote broadcaster.
     let mut output = NativeAudioOutput::open(volume, output_id)?;
@@ -236,6 +301,10 @@ fn decode_and_play(
         let packet = match format.next_packet() {
             Ok(packet) => packet,
             Err(DecodeError::IoError(err)) => {
+                if cancelled.load(Ordering::Acquire) {
+                    return Ok(());
+                }
+                network_lost.store(true, Ordering::Release);
                 return Err(format!("Broadcast stream ended or stalled: {err}"));
             }
             Err(DecodeError::ResetRequired) => {
@@ -391,6 +460,14 @@ mod tests {
         assert!(validate_demo_duration(Some(30)).is_ok());
         assert!(validate_demo_duration(None).is_ok());
         assert!(run_demo("skylab", Some(0)).is_err());
+    }
+
+    #[test]
+    fn retry_wait_can_be_cancelled_before_next_connection() {
+        let cancelled = AtomicBool::new(true);
+        assert!(!interruptible_wait(&cancelled, Duration::from_secs(4)));
+        let cancelled = AtomicBool::new(false);
+        assert!(interruptible_wait(&cancelled, Duration::ZERO));
     }
 
     #[test]
