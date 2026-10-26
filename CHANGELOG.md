@@ -1,12 +1,14 @@
 # Changelog
 
-## 2026-10-26 — RADIO R4.5 favorites and 480×320 regression (draft PR #35)
+## 2026-10-26 — RADIO R4.5 merge to main (PR #35)
 
 - Expand the approved HTTPS station directory to ten Skylab/SomaFM channels with provenance, categories and no claim of live broadcast availability or redistribution rights.
 - Add a versioned local Rust radio-presets store: up to 12 allowlisted favorites, explicit user order, last-selected station, no autoplay. Validate malformed/unknown IDs, use bounded atomic updates and preserve corrupt original data.
 - Expose same-origin metadata-only selection, favorite toggle and reorder actions; preserve the existing native Symphonia/CPAL Play/Stop/volume and OS-managed Bluetooth output routing.
 - Reduce handheld RADIO density with shared transport and volume row, favorites filtering, touch-sized controls and overlay output/recovery settings. An explicit lost-output UI regression hides nonessential ordering actions.
-- Add Node regression for favorites, selection and no-autoplay; add a headless Chromium 480×320 geometry gate with synthetic ready, favorites, playing, settings and output-loss states. Real Mac/Pi touch, field audio, Bluetooth faults and final CI remain separate acceptance gates.
+- Add Node regression for favorites, selection and no-autoplay; add a headless Chromium 480×320 geometry gate with synthetic ready, favorites, playing, settings and output-loss states.
+- Three-way merge with current `main` preserved newer role-independent HUD, county/ZIP GIS, extracted dashboard routes and security/data checks. Desktop RADIO now opens on demand within VIEWPORT, avoiding permanent extra sections or background polling. All five integrated-code GitHub Actions jobs passed before PR #35 was merged as `cfe3cc5`.
+- Physical Mac/Pi touch, individual broadcaster availability, Bluetooth disconnect/reconnect and SDR hardware remain independent release gates; source merge is not product field certification.
 
 ## 2026-10-26 — Handheld touch paging refinement
 

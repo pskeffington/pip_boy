@@ -76,13 +76,13 @@ After explicitly downloading a county in MAP, run `bash scripts/test-map-macos.c
 | Scout maps | Mac-local native Rust service + location-driven county map; Census TIGER roads, waters, verified-county landmarks, RustGIS/GeoJSON imports, explicit GPS/OSM | Mac operator/browser/GPS acceptance, upstream RustGIS renderer, raster/terrain and later Pi hardware |
 | Host / Library / Notes | Local telemetry with quality labels, bundled references and offline notes | Production packaging and accessibility acceptance |
 | Fallout 4 companion | Read-only TCP protocol browser, diagnostics and bounded observation | Actual game-build/PlayStation interoperability |
-| Radio / SDR (feature branch) | Native in-process IP playback, 10 curated stations, favorites/order/last selection, Bluetooth-ready OS output chooser and a receive-only simulated SDR contract | Real SDR receiver/DSP, individual stream checks, Pi speaker/touch and physical Bluetooth failure acceptance |\n| Device simulation | Fixed fixtures, bounded queues and mock adapters | Physical GPIO, serial, SDR, BLE, mesh and camera integrations |
+| Radio / SDR (in `main`; hardware acceptance pending) | Native in-process IP playback, 10 curated stations, favorites/order/last selection, Bluetooth-ready OS output chooser and a receive-only simulated SDR contract | Real SDR receiver/DSP, individual stream checks, Pi speaker/touch and physical Bluetooth failure acceptance |\n| Device simulation | Fixed fixtures, bounded queues and mock adapters | Physical GPIO, serial, SDR, BLE, mesh and camera integrations |
 
 The separate `rust-boy-broker` prototype denies every physical-device request. Simulated success does not grant peripheral access.
 
 ## Radio / SDR development
 
-**Status:** Native IP radio is implemented on the draft `feat/radio-sdr-core` branch, not yet merged into `main`. The operator confirmed audible Skylab playback, Play/Stop, volume and OS-visible Bluetooth output selection on Mac. Rust-Boy uses Symphonia and CPAL inside the same native process; **no browser audio or external player** is launched. The physical SDR receiver/DSP remains a separate, not-yet-implemented milestone.
+**Status:** Native IP radio is integrated into `main` through [PR #35](https://github.com/pskeffington/pip_boy/pull/35), after all five pre-merge CI checks passed. The operator confirmed audible Skylab playback, Play/Stop, volume and OS-visible Bluetooth output selection on Mac. Rust-Boy uses Symphonia and CPAL inside the same native process; **no browser audio or external player** is launched. The physical SDR receiver/DSP remains a separate, not-yet-implemented milestone.
 
 From the micro HUD open **LINK → RADIO / IP**. Choose one of 10 publisher-referenced stations, press **PLAY** to begin an explicit HTTPS stream, and use **STOP** or volume controls. Tap **☆/★** to manage favorites, **ALL / ★ ONLY** to filter, and **SETTINGS** to select an OS-connected output or reorder favorites. A small local `radio-presets.json` file stores approved station IDs and the last selection—never audio, arbitrary URLs or an autoplay setting. Station listing and browsing do not start streaming.
 

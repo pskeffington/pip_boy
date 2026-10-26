@@ -1,6 +1,6 @@
 # Native Rust RADIO — phased build and evidence matrix
 
-Status (2026-10-26): **R1–R4 HUD integration and native Skylab playback field-validated by the operator; Play/Stop, volume and OS/Bluetooth output selection working.** CI and device-change edge cases are tracked separately. Hardware SDR, recovery hardening and final micro touch certification remain open. No external media application is launched.
+Status (2026-10-26): **R1–R4.5 native IP radio and presets merged into `main` (PR #35) after five passing CI jobs; Skylab playback and controls were separately field-demonstrated on Mac.** CI and device-change edge cases are tracked separately. Hardware SDR, recovery hardening and final micro touch certification remain open. No external media application is launched.
 
 ## Research-to-design matrix
 
@@ -119,7 +119,7 @@ RADIO displays an **AUDIO OUTPUT** selector listing CPAL's OS-visible outputs al
 
 **Ordering:** R4.1 → R4.2 → R4.3 → R4.4; station presets and layout follow only after safe recovery. User-confirmed functions must not be replaced by nonworking UI scaffolds.
 
-**Product constraints:** Native Rust, OS-managed Bluetooth pairing, source HTTPS allowlisting, no external media application, no autoplay, bounded retry, no radio transmission, and no merge to `main` while the current PR is draft or CI has failing gates.
+**Product constraints:** Native Rust, OS-managed Bluetooth pairing, source HTTPS allowlisting, no external media application, no autoplay, bounded retry and no radio transmission. PR #35 was merged into `main` only after passing five exact-head integration jobs. The source merge does not replace physical Pi/SDR, broadcaster licensing or Bluetooth fault acceptance.
 
 **Acceptance evidence:** Operator field report (Skylab Play/Stop/Volume and Bluetooth output working on Mac, 2026-10-26). This is distinct from formal fault-injection recovery tests and future physical SDR verification.
 

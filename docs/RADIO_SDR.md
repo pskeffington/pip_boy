@@ -1,7 +1,7 @@
 # RADIO/SDR — hardware-independent receiver foundation
 
 ## Status
-**Software receiver contract and simulation implemented on feature branch; live SDR reception not implemented.**
+**Native IP playback and the simulated receive-only SDR contract are integrated into `main` (PR #35); live physical SDR reception remains unimplemented.**
 This is a receive-only Rust core intended for the existing Rust-Boy micro UI and future Raspberry Pi SDR accessory. It does not modify the LINK/SSH messenger, transmit RF, or silently discover/open devices.
 
 ## Existing API
@@ -44,7 +44,7 @@ cargo test -p pipboy-core radio
 
 ## IP radio / curated directory (2026-10-26)
 
-The native Rust/Symphonia/CPAL player is implemented on `feat/radio-sdr-core`; Skylab sound, Play/Stop, volume and OS-managed Bluetooth output selection were operator-confirmed on macOS. Physical SDR enumeration, RF demodulation, Raspberry Pi hardware acceptance and full reconnect/fault validation remain unimplemented or pending. Opening the Radio HUD reads only the local state; **no stream begins until Play is pressed**.
+The native Rust/Symphonia/CPAL player is integrated in `main` (PR #35); Skylab sound, Play/Stop, volume and OS-managed Bluetooth output selection were operator-confirmed on macOS. Physical SDR enumeration, RF demodulation, Raspberry Pi hardware acceptance and full reconnect/fault validation remain unimplemented or pending. Opening the Radio HUD reads only the local state; **no stream begins until Play is pressed**.
 
 The fixed 10-station directory contains Skylab Radio (UK), plus nine SomaFM channels: Groove Salad, Secret Agent, Lush, Drone Zone, Deep Space One, Space Station Soma, Beat Blender, DEF CON Radio and Underground 80s. Categories are CHILL, AMBIENT, ELECTRONIC and RETRO. The desktop list is genre-grouped; the handheld uses the same catalog with previous/next buttons and a station counter. The output picker is collapsible on handheld and opens automatically when audio hardware fails.
 
