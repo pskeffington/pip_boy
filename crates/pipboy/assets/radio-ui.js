@@ -33,6 +33,10 @@
     const selector = node("select", "rb-radio-station");
     selector.setAttribute("aria-label", "Choose curated radio station");
     const details = node("div", "rb-radio-details", "SELECT STATION");
+    const outputLabel = node("label", "rb-radio-output-label", "AUDIO OUTPUT");
+    const outputSelector = node("select", "rb-radio-output");
+    outputSelector.setAttribute("aria-label", "Audio output device including connected Bluetooth");
+    outputLabel.append(outputSelector);
     const controls = node("div", "rb-radio-controls");
     const play = node("button", "rb-radio-play", "▶ PLAY");
     play.type = "button";
@@ -50,12 +54,13 @@
     const message = node("div", "rb-radio-message", "No receiver connected. IP radio is opt-in.");
     message.setAttribute("role", "status");
     message.setAttribute("aria-live", "polite");
-    root.append(top, selector, details, controls, gain, message);
+    root.append(top, selector, details, outputLabel, controls, gain, message);
     let current = null;
     let busy = false;
     let alive = true;
     let serial = 0;
     let selected = null;
+    let requestedOutput = null;
     const apply = (data) => {
       if (!alive) return;
       current = data;
@@ -70,6 +75,18 @@
       selector.value = list.some((station) => station.id === previous)
         ? previous : (data.station || list[0]?.id || "");
       selected = selector.value;
+      const outputs = Array.isArray(data.outputs) ? data.outputs : [];
+      const chosenOutput = requestedOutput || data.output || "system";
+      outputSelector.replaceChildren();
+      for (const device of outputs) {
+        const option = node("option", "", device.name);
+        option.value = device.id;
+        outputSelector.append(option);
+      }
+      outputSelector.value = outputs.some((d) => d.id === chosenOutput)
+        ? chosenOutput : (data.output || "system");
+      requestedOutput = null;
+      outputSelector.disabled = busy || outputs.length === 0;
       const station = list.find((item) => item.id === selected);
       details.textContent = station ? station.genre.toUpperCase() + " / IP STREAM" : "NO STATIONS";
       indicator.textContent = data.status.toUpperCase();
@@ -114,6 +131,10 @@
       }
     };
     selector.addEventListener("change", () => { selected = selector.value; });
+    outputSelector.addEventListener("change", () => {
+      requestedOutput = outputSelector.value;
+      command({ action: "output", output: requestedOutput });
+    });
     play.addEventListener("click", () => command({
       action: "play", station: selector.value, confirm: true
     }));
