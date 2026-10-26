@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-10-26 — Privacy and credential-isolation audit (CI pending)
+
+- Review tracked files, local HTTP API, notes/tasks/messages/GIS storage, UniFi credentials, native subprocesses and browser provider requests for leakage paths. Record severity and limitations in the security review.
+- Strip recognized API/cloud credentials from all runtime external-process environments while preserving platform binary behavior and user consent gates.
+- Add a repository-level privacy gate for tracked operator artifacts, private key material, strong token patterns and unreviewed child-process constructors; diagnostics never print matched secrets.
+- Expand `.gitignore` for private Rust-Boy data and key/location-export formats. Do not move, migrate or purge existing user records.
+
+## 2026-10-26 — Mac-native offline county cache integrity audit
+
+- Add a read-only MAP cache audit using the actual Rust dashboard on a temporary loopback port, with only `cache_only:true`, `confirm:false` requests. Never sends GPS coordinates, source URLs or live network fetches.
+- Verify the active Census GEOID/boundary, bound original ZIP filenames and entries, uncompressed budgets, SHP/DBF presence, and full CRC streaming. Report complete, partial, empty or invalid caches without modifying stored data.
+- Add real-Rust loopback synthetic tests for cold/partial/valid/corrupted cache cases, wired into Mac `--verify`; expose `--audit-cache` / `--json` for operator-run offline restart checks.
+- Keep the test home separate, with no default city and no new physical Pi hardware requirement. Live provider interoperability and user-Mac acceptance remain field gates.
+
 ## 2026-10-26 — Mac-first native MAP acceptance harness
 
 - Add a dedicated macOS Rust MAP launcher and a repeatable offline verification entrypoint (native Cargo build, county-cache Rust tests, temporary localhost HTTP smoke and map/GPS/source JavaScript regressions).

@@ -1014,7 +1014,8 @@ fn serve_client(mut stream: TcpStream, store: &WorkbenchStore, port: u16) -> io:
 
 #[cfg(target_os = "macos")]
 fn open_browser(url: &str) {
-    if let Err(error) = std::process::Command::new("open").arg(url).spawn() {
+    let mut command = pipboy_core::process_safety::isolated_command("open");
+    if let Err(error) = command.arg(url).spawn() {
         eprintln!("Could not open the browser automatically: {error}");
     }
 }

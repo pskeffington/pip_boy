@@ -19,6 +19,23 @@ bash scripts/test-map-macos.command --launch
 
 The **verify** step builds the actual macOS Rust `pipboy` binary, runs county-cache Rust tests, starts a temporary Rust loopback server for the micro HTTP integration test, and executes the offline JavaScript map, GPS permission, county-ingestion, boundary, landmark, layer and RustGIS import tests. It does **not** contact Census, OSM or your GPS provider. It doesn't alter your normal workbench. When Chrome/Chromium is installed it also runs the headless 480×320 / 800×480 / 320×568 viewport fixture. Require that check rather than silently skipping it with `--verify --require-chromium`.
 
+### Audit the real saved county without a network connection
+
+After using MAP → CENTER/GPS → COUNTY once to download the sources of **your chosen location**, stop the app and run:
+
+```bash
+# Existing test profile only; starts the real native Rust loopback API temporarily.
+bash scripts/test-map-macos.command --audit-cache
+# Structured public source metadata only, no coordinates or site records:
+bash scripts/test-map-macos.command --audit-cache --json
+```
+
+The auditor reads the active GEOID from the **existing isolated test home**, requests its boundary and all four allowlisted source archives using `cache_only:true` and `confirm:false`, and validates exact GEOID/vintage, closed geographic rings, ZIP entry paths, SHP/DBF presence, archive size and CRC. It does not call geolocation, Census or Overpass, nor does it change the cache. It uses the actual compiled Rust server, not an in-memory replacement, and detects a corrupted ZIP even if its initial `PK` magic bytes are intact. It does **not** independently prove Census ZIP authenticity, validate the full SHP geometry, or guarantee every real landmark appears: the normal browser parser still does those ingestion and county-clip checks.
+
+Exit status is **0 COMPLETE** (boundary + all four archives), **2 EMPTY** (no active county), **3 PARTIAL** (missing boundary or archives, or no usable base layer) or **1 FAIL** (corrupt/inconsistent cached data or API failure). Optional sources may legitimately be absent, so PARTIAL is an actionable diagnostic, not proof the MAP cannot render. Keep the GEOID/redacted summary locally; even the county code can disclose approximate location. For the offline acceptance gate, disconnect external networking, repeat `--audit-cache`, then use `--launch` with the *same* test directory and verify the map visually.
+
+A deterministic end-to-end regression for this flow runs inside `--verify` using an invented synthetic county in a temporary directory, including empty, complete, partial, malformed boundary and corrupt ZIP cases. Those fixtures are **test-only**, never bundled as a default displayed map.
+
 The **launch** step runs `cargo run --locked -p pipboy -- dashboard --micro --port 0 --open`. Rust selects a free loopback port and opens the exact URL in your default browser. The test home defaults to **`~/Library/Application Support/Rust-Boy/MapTest`**, which keeps this work distinct from your normal `~/.pipboy` profile. You can override this with an **absolute** `RUSTBOY_MAP_TEST_HOME` path. A cached county GEOID may reveal your approximate area; treat this directory as local location-related data. Do not commit it. Restarting with the same test home intentionally preserves the county cache.
 
 Double-click `scripts/launch-micro.command` for the existing normal-profile launcher, or run `bash scripts/test-map-macos.command --launch` for the separate test profile. Both are native Rust processes using a browser UI. Press **Ctrl+C** in the launching Terminal to stop them. Do not expose or forward the loopback server to the public network.

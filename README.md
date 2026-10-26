@@ -58,6 +58,8 @@ bash scripts/test-map-macos.command --launch
 
 `--verify` builds and checks real native Rust plus offline map/GPS/ingestion tests against a temporary loopback service; no live Census or OSM requests. `--launch` opens the native Rust micro HUD on a free localhost port with a **separate persistent Mac test home**, so cached counties can be verified after restarting offline without modifying `~/.pipboy`. County download remains an explicit MAP → COUNTY action. Optional Chromium device-emulation verification is available via `--verify --require-chromium`; Safari is supported for manual UI inspection. MAP → DATA SOURCES includes local-only source load and drawing timings. [Mac MAP operator checklist](docs/MAC_MAP_TESTING.md). Actual operator-Mac acceptance is distinct from GitHub's macOS CI runner.
 
+After explicitly downloading a county in MAP, run `bash scripts/test-map-macos.command --audit-cache` to independently check the real saved boundary and ZIP contents through the **local Rust cache-only API**. It makes no Census, OSM or GPS requests and reports complete/partial/empty/corrupt status; missing optional sources are not treated as fabricated features.
+
 ## Available modules
 
 | Module | Implemented behavior | Field acceptance still open |

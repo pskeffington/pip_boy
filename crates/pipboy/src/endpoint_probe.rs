@@ -2,9 +2,10 @@
 //! No DNS, port-range loops, output data, packet payloads or background scans.
 use pipboy_core::network_health::{self, HealthReport};
 use pipboy_core::network_suite::tcp_target;
+use pipboy_core::process_safety::isolated_command;
 use std::io;
 use std::net::TcpStream;
-use std::process::{Command, Stdio};
+use std::process::Stdio;
 use std::time::{Duration, Instant};
 
 pub fn tcp_once(address: &str, port: &str, confirmed: bool) -> io::Result<String> {
@@ -89,7 +90,7 @@ pub fn icmp_health(address: &str, samples: u8, confirmed: bool) -> io::Result<He
     }
     // Reuse the same literal, non-multicast, non-link-local IP validator.
     let target = tcp_target(address, "7")?.ip();
-    let mut command = Command::new("ping");
+    let mut command = isolated_command("ping");
     let count = samples.to_string();
     if cfg!(target_os = "windows") {
         command.args(["-n", &count, "-w", "900", &target.to_string()]);

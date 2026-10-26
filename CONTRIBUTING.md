@@ -8,6 +8,12 @@ The shared Network Engineer view uses Rust `network_suite::OPERATIONS`. Keep con
 
 Rust-Boy is an open-source, offline-first Rust console. Contributions are welcome when they preserve clear provenance, stable commands and the boundary between **tested local features**, **simulators** and **future physical devices**.
 
+## Security and privacy changes
+
+Treat all operator messages, task boards, peer rosters, GIS location exports, inventory snapshots and device credentials as private, even when a test looks synthetic. Keep public fixtures explicitly invented and license-cleared. Never use actual `PIPBOY_HOME` files in test fixtures or PR attachments. Run `python3 tools/validate_security.py` and `python3 tools/test_validate_security.py` before pushing. This check rejects high-confidence token formats and tracked runtime filenames; it does **not** inspect Git history or replace GitHub secret scanning. Security findings involving real credentials should be reported privately, and the credentials rotated, not copied into public issues.
+
+Any new external subprocess must use `pipboy_core::process_safety::isolated_command` to avoid passing the UniFi credential and other commonly named API tokens through the child environment. Adding or changing external network providers, logging of coordinates, data retention, or local API authentication needs a security review and regression test.
+
 ## Repository and documentation hygiene
 
 Place implementation in the owning crate, browser assets in the existing shared dashboard/micro shells, and machine-readable research in `catalog/`. Use the [repository map](docs/REPO_STRUCTURE.md) and avoid moving existing on-disk stores or duplicating role/network catalogs in JavaScript. For new externally visible subsystem entrypoints, update the [component index](catalog/component_index.json), name the related validation tests and retain separate hardware acceptance status. Keep the root README concise; module contracts belong under `docs/`.

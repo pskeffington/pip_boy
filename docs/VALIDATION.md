@@ -1,5 +1,9 @@
 # Rust-Boy | Validation evidence
 
+## Native Mac real-cache integrity audit — 2026-10-26 (CI pending)
+
+The new `tools/audit_map_cache.py` is invoked by `scripts/test-map-macos.command --audit-cache`, operating on an operator-selected existing local profile only. It starts the actual Rust loopback service and sends fixed cache-only, non-confirming HTTP requests to boundary/source endpoints; there is no outward provider call. An independent Python ZIP reader verifies archive structure, paths, decompression budget and CRC and reports failures/partial layers, while native Rust validates the county boundary GEOID and rings. `tools/test_audit_map_cache.py` uses a test-only fictional county and actual loopback server to verify missing, complete, partial, bad boundary and damaged ZIP responses without touching the operator's cache. No live Census retrieval or personal Mac test has yet been performed by this code.
+
 ## Native Mac MAP operator acceptance — pending local run (2026-10-26)
 
 `scripts/test-map-macos.command` provides a native macOS Rust build, isolated loopback HTTP smoke, offline GIS parser/permission tests, optional real Chrome emulation and a persistent test-home launch. [Mac MAP acceptance matrix](MAC_MAP_TESTING.md) defines cold startup, live Census GEOID resolution, layer toggles, full offline restart, GPS permission behavior and draw/source timing measurements. The GitHub macOS runner may execute the automated portion after CI passes; **no user-Mac field results are recorded yet**. Do not equate CI with a passed GPS, Safari, or physical touch session.

@@ -6,6 +6,9 @@ Technical contracts, architecture decisions, research provenance and validation 
 
 ## Start here
 
+[Security review: data leakage and credential boundaries](SECURITY_REVIEW_2026-10-26.md) documents the current privacy audit, confirmed controls and residual risks.
+
+
 | Guide | Focus |
 | --- | --- |
 | [Repository structure and maintenance](REPO_STRUCTURE.md) | Canonical file ownership, code boundaries, documentation navigation and cleanup gates |
