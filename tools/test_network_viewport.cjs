@@ -31,15 +31,32 @@ function findChrome() {
   throw new Error("Headless Chrome/Chromium not installed; set CHROME_BIN");
 }
 
+// Headless Chrome enforces a >=500px top-level window width. An iframe supplies
+// exact inner CSS viewports (including 480x320 and 320px portrait media queries).
+function hostHtml(width,height,view) {
+  return '<!doctype html><html lang="en"><head><meta charset="utf-8">' +
+    '<title>Rust-Boy viewport host</title>' +
+    '<style>html,body{margin:0}iframe{border:0;display:block}</style></head><body>' +
+    '<iframe id="handheld" title="Handheld preview" style="width:' + width +
+    'px;height:' + height + 'px" src="/fixture?view=' + view + '"></iframe>' +
+    '<pre id="viewport-report" hidden></pre>' +
+    '<script>window.addEventListener("message",event=>{' +
+    'if(event.origin!==location.origin||event.source!==document.querySelector("#handheld").contentWindow||' +
+    'event.data?.type!=="rustboy-layout-report")return;' +
+    'const bytes=new TextEncoder().encode(JSON.stringify(event.data.value));' +
+    'document.getElementById("viewport-report").textContent=btoa(String.fromCharCode(...bytes));' +
+    '});<\/script></body></html>'.replace("<\\/script>","</script>");
+}
+
 function render(chrome, port, width, height, view) {
   return new Promise((resolve,reject) => {
     const profile = fs.mkdtempSync(path.join(os.tmpdir(), "rustboy-viewport-"));
-    const url = "http://127.0.0.1:" + port + "/fixture?view=" + view;
+    const url = "http://127.0.0.1:" + port + "/host?width=" + width + "&height=" + height + "&view=" + view;
     const args = [
       "--headless", "--no-sandbox", "--disable-gpu", "--disable-dev-shm-usage",
       "--disable-background-networking", "--no-first-run", "--no-default-browser-check",
       "--hide-scrollbars", "--force-device-scale-factor=1",
-      "--window-size=" + width + "," + height,
+      "--window-size=1000,900",
       "--virtual-time-budget=1200", "--dump-dom",
       "--user-data-dir=" + profile, url
     ];
@@ -99,6 +116,20 @@ async function main() {
   const chrome=findChrome();
   const server=http.createServer((request,response)=>{
     const url=new URL(request.url,"http://localhost");
+    if(request.method==="GET" && url.pathname==="/host"){
+      const width=Number(url.searchParams.get("width"));
+      const height=Number(url.searchParams.get("height"));
+      const view=url.searchParams.get("view");
+      if(!Number.isInteger(width)||!Number.isInteger(height)||
+          width<300||width>900||height<300||height>700||
+          !["menu","result"].includes(view)){
+        response.writeHead(400);response.end("Invalid viewport fixture");return;
+      }
+      response.writeHead(200,{"Content-Type":"text/html; charset=utf-8","Cache-Control":"no-store",
+        "Content-Security-Policy":"default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self'; frame-src 'self'"});
+      response.end(hostHtml(width,height,view));
+      return;
+    }
     const file=allowed.get(url.pathname);
     if(request.method!=="GET"||!file){
       response.writeHead(403,{"Content-Type":"text/plain"});response.end("Fixture denied");return;
