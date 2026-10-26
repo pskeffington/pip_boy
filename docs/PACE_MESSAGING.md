@@ -6,6 +6,10 @@ bounded CLI operations. It does not yet provide four independent communication
 bearers: P and A share the IP/OpenSSH stack, C cannot transmit, and E preserves
 messages locally without delivering them.
 
+## HTTP adapter ownership
+
+The Mac-first desktop and micro LINK views use one local `dashboard.rs` request gate. The message read/send/retry handlers reside in `crates/pipboy/src/dashboard/messenger_routes.rs`; the PACE policy remains in `pipboy-core::message_pace` and the pinned SSH operations in `crates/pipboy/src/peer.rs`. This source-organization change does **not** implement independent radio/Meshtastic bearers, automatic failover, radio transmission, or Raspberry Pi hardware support. Explicit human confirmation is still required before any attempt at delivery, and emergency hold remains local.
+
 ## Current route contract
 
 | Tier | Current action | Identity and receipt | Failure boundary |

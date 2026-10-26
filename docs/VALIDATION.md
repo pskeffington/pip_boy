@@ -1,8 +1,13 @@
 # Rust-Boy | Validation evidence
 
-## Task/peer HTTP route extraction — 2026-10-26 (CI pending)
+## Messenger/PACE HTTP route separation — 2026-10-26 (CI pending)
 
-`crates/pipboy/src/dashboard/task_routes.rs` now contains the Task Control and explicitly confirmed peer handoff route implementations, keeping the same public endpoints and parent same-origin gate. A new Rust regression checks that every POST route in this family rejects hostile origins **before creating local stores**. Existing manager/role scoping, optimistic revision, malformed-store preservation, SSH peer smoke tests and desktop/micro launch checks remain registered in the five-job CI matrix. This is a structural extraction; this entry does **not** claim green CI or physical SSH interoperability. Exact-head workflow results must be recorded before merging.
+The source-only Messenger handler extraction on `chore/dashboard-messenger-boundary` moves `GET /api/messages`, `POST /api/messages/send` and `POST /api/messages/retry` into `crates/pipboy/src/dashboard/messenger_routes.rs`. The sole parent Host/Origin validation and JSON parser remain unchanged. New offline Rust dashboard tests check denial of cross-origin mutations and invalid GET Host **before touching private stores**, explicit SEND/RETRY confirmation, invalid PACE tiers/text, unknown outgoing message IDs and unsupported content type. Existing desktop/micro, Messenger/PACE, SSH and workspace tests remain part of the five-job CI suite. **Pass status is pending exact-head CI; no live SSH, independent radio bearer or Raspberry Pi hardware test is claimed.**
+
+
+## Task/peer HTTP route extraction — 2026-10-26 (five-job CI passed)
+
+`crates/pipboy/src/dashboard/task_routes.rs` now contains the Task Control and explicitly confirmed peer handoff route implementations, keeping the same public endpoints and parent same-origin gate. A new Rust regression checks that every POST route in this family rejects hostile origins **before creating local stores**. Existing manager/role scoping, optimistic revision, malformed-store preservation, SSH peer smoke tests and desktop/micro launch checks remain registered in the five-job CI matrix. This structural extraction passed GitHub Actions five-job CI [run 40291462858](https://github.com/pskeffington/pip_boy/actions/runs/40291462858), exact PR #43 head `f6cd63435a0bb14eaa4743d187ba0bcd89f3f28a`, and merged into `main` as `60c066ac3e34fe9aff8fa807e29c8b7e545ced87`. These tests do **not** certify physical SSH interoperability.
 
 
 ## PACE routing local validation — 2026-10-25

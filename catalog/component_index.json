@@ -123,6 +123,7 @@
         "crates/pipboy-core/src/message_protocol.rs",
         "crates/pipboy-core/src/message_pace.rs",
         "crates/pipboy-core/src/messenger.rs",
+        "crates/pipboy/src/dashboard/messenger_routes.rs",
         "crates/pipboy/src/peer.rs",
         "crates/pipboy/assets/messenger.js"
       ],
