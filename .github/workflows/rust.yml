@@ -69,6 +69,7 @@ jobs:
           node --check crates/pipboy/assets/network.js
           node tools/test_network_ui.cjs
           node --check crates/pipboy/assets/dashboard.js
+          node --check crates/pipboy/assets/radio-ui.js
           node --check crates/pipboy/assets/micro.js
           node --check crates/pipboy/assets/tasks.js
           node --check crates/pipboy/assets/boston-base.js
