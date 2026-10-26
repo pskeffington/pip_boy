@@ -76,3 +76,7 @@ Only the worker can emit playback status. A successful connection must never be 
 - Polling cannot initiate playback; switching while playing requires STOP first. Session survives navigation between micro/desktop tabs until explicitly stopped or server exits.
 - Accessibility: minimum 40-pixel touch targets, keyboard focus states, high-contrast status, named buttons and readable failure messages.
 - Acceptance still required: CI + real Mac audio test, 480×320 screenshot and touch validation, and recovery handling for disconnected devices. The currently mounted panel is a HUD foundation, not an SDR hardware receiver.
+
+## Native output routing (Bluetooth-ready)
+
+RADIO displays an **AUDIO OUTPUT** selector listing CPAL's OS-visible outputs alongside **System default**. A Bluetooth headset or speaker appears after it has been paired and connected in the operating system; Rust-Boy does not initiate Bluetooth pairing, perform unauthorized scans, or claim control of device pairing. Selecting an output explicitly restarts the current station at the prior volume on the new native output. If the selected device disconnects, the error is exposed in RADIO; choose System default or a connected device to recover. The selector is also available when playback is stopped. User field validation is required for a Mac Bluetooth headset and for speaker handoff.
