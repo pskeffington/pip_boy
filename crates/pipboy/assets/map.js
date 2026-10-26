@@ -1030,8 +1030,9 @@
       if(view.countyAbort===controller)view.countyAbort=null;
     }
   }
-  function fitLayer(view) {
-    const points = view.shapes.flatMap((shape) => shape.paths.flat());
+  function fitLayer(view, shapes = view.shapes) {
+    const points = shapes.flatMap((shape) => shape.paths.flat());
+    if (!points.length) return;
     const anchor = points[0][0];
     let left = Infinity, right = -Infinity, top = Infinity, bottom = -Infinity;
     for (const point of points) {
@@ -1051,6 +1052,24 @@
       usableHeight / height))), MIN_ZOOM, 17);
     view.center = inverse((left + right) / 2, (top + bottom) / 2);
     view.follow = false;
+  }
+
+  function fitMap(view) {
+    if (view.sitesVisible && view.sites.length) fitLocalSites(view);
+    else if (view.countyPackage &&
+        (view.countyPackage.layers["tiger-roads"] ||
+         view.countyPackage.layers["tiger-areawater"])) fitCountyPackage(view);
+    else if (view.county?.shape) fitLayer(view, [view.county.shape]);
+    else if (view.shapes.length) fitLayer(view);
+    else if (view.onlineShapes.length) fitLayer(view, view.onlineShapes);
+    else if (view.baseVisible && view.boston) {
+      view.center = { ...view.boston.center };
+      view.zoom = 12;
+      view.follow = false;
+    } else {
+      view.gpsState = "NO GEOGRAPHY TO FIT";
+    }
+    refresh(view);
   }
 
   function gpsPolicyAllowed() {
@@ -1146,6 +1165,7 @@
         if (view.follow) {
           view.center = { lat: c.latitude, lon: c.longitude };
           view.zoom = Math.max(view.zoom, 14);
+          view.centerSelected = false;
         }
         refresh(view);
         if (view.countyEnabled) void loadCounty(view,{lat:c.latitude,lon:c.longitude});
@@ -1379,7 +1399,7 @@
       fix: null, watchId: null, gpsState: "GPS OFF",
       gpsPending:false, gpsAttempt:0, gpsIssue:null, gpsPermission:"unknown",
       gpsHelp, gpsHelpSummary, gpsHelpText,
-      follow: !mapMemory, observer: null, windowResize: null, drag: null,
+      follow: !mapMemory, centerSelected:false, observer: null, windowResize: null, drag: null,
       locate: null, followButton: null,
       siteAccess: Boolean(options && options.reclamation),
       sitesVisible: false, sites: [], sitePage: 0, selectedSiteId: null,
@@ -1395,6 +1415,7 @@
     }, "Enable or stop browser location with permission");
     view.followButton = control("FOLLOW", () => {
       view.follow = true;
+      view.centerSelected = false;
       if (view.fix) view.center = { lat: view.fix.lat, lon: view.fix.lon };
       refresh(view);
     }, "Center map on latest location fix");
@@ -1405,7 +1426,7 @@
       }
       view.countyEnabled=true;
       const location=view.fix ? {lat:view.fix.lat,lon:view.fix.lon} :
-        view.gpsState==="MANUAL CENTER / NOT A FIX" ? {...view.center} : null;
+        view.centerSelected ? {...view.center} : null;
       if(location)void loadCounty(view,location);
       else {view.countyStatus="GPS ON OR ENTER CENTER, THEN COUNTY LOADS";refresh(view);}
     },"Allow Census lookup of current manual/GPS location; then opt-in OSM viewport roads");
@@ -1430,18 +1451,23 @@
       manual.hidden = !manual.hidden;
       if (!manual.hidden) latitude.focus();
     }, "Enter map center manually; not a GPS fix");
+    view.fitButton = control("FIT", () => fitMap(view), "Fit available geometry to screen");
     const zoomIn = control("+", () => { view.zoom = clamp(view.zoom + 1, MIN_ZOOM, MAX_ZOOM); refresh(view); },
       "Zoom in");
     const zoomOut = control("-", () => { view.zoom = clamp(view.zoom - 1, MIN_ZOOM, MAX_ZOOM); refresh(view); },
       "Zoom out");
-    toolbar.append(view.locate, view.followButton, importButton, view.baseButton,
-      view.countyButton,
-      view.siteButton, view.webButton, view.webRefresh, manualButton, zoomIn, zoomOut);
+    toolbar.append(view.locate, view.followButton, manualButton,
+      view.countyButton, view.fitButton, zoomIn, zoomOut);
+    const tools = make("details", "rb-map-tools");
+    const extra = make("div", "rb-map-extra");
+    extra.append(importButton, view.baseButton, view.siteButton, view.webButton, view.webRefresh);
     if (options && typeof options.onTools === "function") {
-      toolbar.append(control("GIS", options.onTools, "Open Scout GIS tools"));
+      extra.append(control("GIS", options.onTools, "Open Scout GIS tools"));
     }
-    root.append(toolbar, stage, webStatusNode, countyNode, status, gpsHelp,
-      sitePanel, sourceBox, manual, file);
+    tools.append(make("summary", "", "TOOLS / MAP SOURCES"), extra);
+    view.tools = tools;
+    root.append(toolbar, tools, manual, stage, webStatusNode, countyNode, status, gpsHelp,
+      sitePanel, sourceBox, file);
     host.replaceChildren(root);
 
     manual.addEventListener("submit", (event) => {
@@ -1453,6 +1479,7 @@
       } else {
         view.center = { lat, lon };
         view.follow = false;
+        view.centerSelected = true;
         view.zoom = Math.max(view.zoom, 13);
         view.gpsState = "MANUAL CENTER / NOT A FIX";
         view.siteCentered = false;
