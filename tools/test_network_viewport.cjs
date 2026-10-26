@@ -84,6 +84,7 @@ function render(chrome, port, width, height, view) {
 }
 
 function check(data,width,height,view) {
+  console.log("Viewport evidence "+width+"x"+height+" "+view+": "+JSON.stringify(data));
   assert.ok(!data.error, data.error || "");
   assert.equal(data.view,view);
   assert.equal(data.window.width,width,"Chromium did not honor requested viewport width");
