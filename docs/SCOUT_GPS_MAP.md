@@ -49,4 +49,4 @@ The displayed **DATA SOURCES** view exposes dataset names, source origin, featur
 
 ### Verification
 
-`node tools/test_map_boot.cjs`, `node tools/test_map_layers.cjs`, `node tools/test_county_sources.cjs`, `node tools/test_pointlm_ingestion.cjs`, `node tools/test_map_gps_permissions.cjs`, `node tools/test_county_map.cjs`, and Rust/Cargo CI check unattended boot behavior, allowlisted acquisition, clipping, no network fallback, source controls, and offline restoration. Real Census endpoint, Raspberry Pi GNSS and 480×320 physical touchscreen acceptance remain separate gates.
+`node tools/test_map_boot.cjs`, `node tools/test_map_layers.cjs`, `node tools/test_map_viewport.cjs` (headless Chromium), `node tools/test_county_sources.cjs`, `node tools/test_pointlm_ingestion.cjs`, `node tools/test_map_gps_permissions.cjs`, `node tools/test_county_map.cjs`, and Rust/Cargo CI check unattended boot behavior, allowlisted acquisition, clipping, no network fallback, source controls, and offline restoration. Real Census endpoint, Raspberry Pi GNSS and 480×320 physical touchscreen acceptance remain separate gates.
