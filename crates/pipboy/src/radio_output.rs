@@ -9,7 +9,7 @@ use std::sync::{
     Arc,
 };
 use std::thread;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 /// CPAL exposes OS-managed audio endpoints. Connected Bluetooth speakers
 /// and headsets appear here after pairing in macOS/Windows/Linux settings.
@@ -18,6 +18,7 @@ pub struct OutputDeviceInfo {
     pub id: String,
     pub name: String,
     pub is_default: bool,
+    pub available: bool,
 }
 
 /// Bind index-based CPAL enumeration to the observed device name. CPAL 0.16
@@ -44,20 +45,23 @@ pub fn available_outputs() -> Result<Vec<OutputDeviceInfo>, String> {
         id: "system".into(),
         name: "System default".into(),
         is_default: true,
+        available: default_name.is_some(),
     }];
     for (index, device) in devices.enumerate() {
         let name = device
             .name()
             .unwrap_or_else(|_| "Unnamed audio output".into());
+        let id = device_key(index, &name);
         let label = if default_name.as_deref() == Some(name.as_str()) {
             format!("{name} (default)")
         } else {
             name
         };
         result.push(OutputDeviceInfo {
-            id: device_key(index, &device.name().unwrap_or_default()),
+            id,
             name: label,
             is_default: false,
+            available: true,
         });
     }
     Ok(result)
@@ -178,6 +182,8 @@ impl NativeAudioOutput {
     /// Writes a complete interleaved frame. If the PCM ring is full, the
     /// decoder worker yields; the audio callback never blocks.
     pub fn push_frame(&mut self, frame: &[f32], cancelled: &AtomicBool) -> bool {
+        let mut last_progress = Instant::now();
+        let mut last_consumed = self.played_samples();
         for &sample in frame {
             loop {
                 if cancelled.load(Ordering::Acquire) || self.has_failed() {
@@ -185,6 +191,18 @@ impl NativeAudioOutput {
                 }
                 if self.producer.try_push(sample).is_ok() {
                     break;
+                }
+                let consumed = self.played_samples();
+                if consumed != last_consumed {
+                    last_progress = Instant::now();
+                    last_consumed = consumed;
+                }
+                // A disconnected audio device can stop calling CPAL without
+                // sending an error. Do not block the decoder worker forever
+                // on a full ring or pretend audio is still playing.
+                if last_progress.elapsed() >= Duration::from_secs(5) {
+                    self.failed.store(true, Ordering::Release);
+                    return false;
                 }
                 thread::sleep(Duration::from_millis(3));
             }
