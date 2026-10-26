@@ -169,6 +169,6 @@ CI runs Linux stable, exact Rust 1.90.0, native macOS, native Windows and manife
 | [tools](tools) | Offline validators and controlled smoke/journey tests |
 | [docs](docs/README.md) | Operator guides, architecture, roadmap and evidence |
 
-[Micro HUD](docs/MICRO_UI.md) · [Desktop dashboard](docs/DASHBOARD_UI.md) · [Roadmap](docs/ROADMAP.md) · [Architecture](docs/ARCHITECTURE.md) · [Changelog](CHANGELOG.md) · [Security](SECURITY.md) · [Branding](BRANDING.md) · [MIT license](LICENSE).
+[RB-ICS communications design](docs/RB_ICS_ARCHITECTURE.md) · [Micro HUD](docs/MICRO_UI.md) · [Desktop dashboard](docs/DASHBOARD_UI.md) · [Roadmap](docs/ROADMAP.md) · [Architecture](docs/ARCHITECTURE.md) · [Changelog](CHANGELOG.md) · [Security](SECURITY.md) · [Branding](BRANDING.md) · [MIT license](LICENSE).
 
 Public brand: **Rust-Boy**. Compatibility names remain `pip_boy` (repository), `pipboy` (package/CLI) and `PIPBOY_HOME` (storage). No third-party game artwork or source is bundled.
