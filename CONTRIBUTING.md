@@ -56,10 +56,12 @@ cargo check --workspace --all-targets --locked
 cargo test --workspace --locked
 cargo clippy --workspace --all-targets --locked -- -D warnings
 cargo build --workspace --locked
-python3 tools/smoke_broker.py
+python3 tools/run_smokes.py --check
+python3 tools/test_run_smokes.py
+python3 tools/run_smokes.py linux  # Linux; use 'native' on macOS/Windows
 ```
 
-GitHub Actions also runs the CLI, notes, permission, simulator, transport and mock-adapter smoke scripts; native macOS PTY and Windows ConPTY tests are platform-specific. Check [the workflow](.github/workflows/rust.yml) and [validation records](docs/VALIDATION.md). A test defined but not executed is **not** a passing result.
+GitHub Actions uses the [single smoke-test roster](tools/run_smokes.py) for 19 Linux and 17 native-platform CLI/API checks; native macOS PTY and Windows ConPTY tests remain separate. Adding a new `smoke_*.py` script requires explicit roster classification. [CI inventory and historical triage](docs/CI_TRIAGE.md). Check [the workflow](.github/workflows/rust.yml) and [validation records](docs/VALIDATION.md). A test defined but not executed is **not** a passing result.
 
 ## Role feature contract
 
