@@ -141,7 +141,7 @@ async function main() {
   });
   await new Promise(resolve=>server.listen(0,"127.0.0.1",resolve));
   try {
-    for(const [w,h,scenario] of [[480,320,"default"],[800,480,"default"],[480,320,"custom"]]){
+    for(const [w,h,scenario] of [[480,320,"default"],[800,480,"default"],[320,568,"default"],[480,320,"custom"]]){
       const r=await chromeRun(bin,server.address().port,w,h,scenario);
       assert.ok(!r.error,r.error);
       assert.deepEqual(r.tabs,["stat","role","data","map","radio"]);

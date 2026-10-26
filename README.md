@@ -36,7 +36,7 @@ cargo run --locked -p pipboy -- dashboard
 cargo run --locked -p pipboy -- tui
 ```
 
-Micro navigation uses STATUS / [active role] / DATA / MAP / RADIO with Settings in the header, a consistent Back button and separate local-tool input/results screens. Back returns through inputs before leaving a tool; temporary drafts survive navigation until reload.
+Micro navigation uses STATUS / [active role] / DATA / MAP / RADIO with one compact title/control header and Settings, a consistent Back button and separate local-tool input/results screens. Back returns through inputs before leaving a tool; temporary drafts survive navigation until reload.
 
 Handheld tool pages adapt to available height: compact GEAR shows four tools, while DATA and the Custom palette reserve their action row and show two. Tool paging keeps keyboard focus; profile selection stays in SETUP.
 

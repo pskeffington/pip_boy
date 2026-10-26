@@ -1,5 +1,11 @@
 # Rust-Boy | Micro handheld shell
 
+## Single-row header
+
+Every mini UI section and tool detail uses one 44px header: Back when needed, the current page title, one local indicator when space permits, Settings, time and Desktop. The separate Field Terminal branding row and duplicate Local badge are removed. This returns 28–50px of vertical content space, depending on viewport size. Back, Settings and Desktop retain 44px touch targets; long page titles truncate within the available width. Profile selection remains in Settings.
+
+The production Chromium probe checks the shared header height, title and control bounds, and verifies that content starts immediately below it on Status, role tools, Data, Map, Radio and Settings, including a tool-detail Back action. It covers 480×320, 800×480 and narrow portrait layouts.
+
 ## Universal sections
 
 The bottom rail always has **STATUS / [active role] / DATA / MAP / RADIO**, in that order. The second tab uses the active role title from the Rust API; long titles truncate in the rail and remain available in the page heading. **⚙ Settings** in the header holds role selection, CRT effects, Reload and Custom pin editing. Settings does not take a sixth rail slot.

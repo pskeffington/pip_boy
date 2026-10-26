@@ -28,11 +28,15 @@
 <body class="micro-phosphor">
   <div class="hardware-wrap">
     <div class="hardware-label" aria-hidden="true"><span>RB / FIELD</span><span>MICRO</span></div>
-    <div class="micro-device" id="micro-device">
-      <header class="topbar">
-        <div class="terminal-brand" aria-label="Rust-Boy field terminal">
-          <span class="rb-mark" aria-hidden="true">RB<span>/</span></span>
-          <span>FIELD TERMINAL</span>
+    <div class="micro-device micro-unified-header" id="micro-device">
+      <header class="topbar" aria-label="Rust-Boy FIELD TERMINAL">
+        <div class="view-heading">
+          <button id="micro-back" class="micro-back" type="button" aria-label="Go back" hidden>‹ BACK</button>
+          <div class="heading-left">
+            <span id="page-code" class="micro-label" hidden>01</span>
+            <h1 id="page-title">STATUS</h1>
+          </div>
+          <span class="mode-indicator" id="mode-indicator" hidden>LOCAL</span>
         </div>
         <div class="right-status">
           <span class="status-local"><span class="tiny-led" aria-hidden="true"></span>LOCAL</span>
@@ -41,15 +45,6 @@
           <a class="desk-link" href="/" aria-label="Return to desktop dashboard">DESK</a>
         </div>
       </header>
-
-      <div class="view-heading">
-        <button id="micro-back" class="micro-back" type="button" aria-label="Go back" hidden>‹ BACK</button>
-        <div class="heading-left">
-          <span id="page-code" class="micro-label">01</span>
-          <h1 id="page-title">STATUS</h1>
-        </div>
-        <span class="mode-indicator" id="mode-indicator">OFFLINE</span>
-      </div>
 
       <main id="micro-viewport" class="micro-viewport" tabindex="-1" aria-label="Handheld active screen">
         <section id="micro-content" class="micro-content" aria-live="off">
