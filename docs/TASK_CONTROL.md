@@ -19,6 +19,10 @@ There is **no email handoff** in the new task UI, no outbound task broadcast, no
 
 The complete [Device-to-device setup and security guide](PEER_TASK_TRANSPORT.md) documents the two-device Mac/Raspberry Pi pairing, restricted SSH bridge, host fingerprint verification, delivery model, data limits and tests.
 
+## Source ownership and API contract
+
+The local HTTP adapter is implemented in `crates/pipboy/src/dashboard/task_routes.rs`: role-scoped task read/create/change/handoff, paired-device roster and explicitly confirmed peer send/sync. The parent `dashboard.rs` performs loopback host/origin enforcement **before** dispatch; it remains the only local server. Durable task validation, optimistic concurrency and storage belong to `pipboy-core::tasks`; native peer SSH execution stays in `crates/pipboy/src/peer.rs`. This separation does not grant role-based authentication, start an SSH connection, or change any stored schema by itself.
+
 ## Data safety
 
 The independent JSON task store is private to the current OS account but **unencrypted at rest**. Its schema, event history, revision checks and atomic writes preserve local state when a peer is unavailable. Never put sensitive patient data, passwords or protected incident evidence into the development task board. Current role labels do not authenticate humans. The SSH receiver should be a dedicated low-privilege account with a key-level `restrict,command="... peer bridge SOURCE"` restriction.
