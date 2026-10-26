@@ -41,3 +41,23 @@ cargo test -p pipboy-core radio
 - No device opened by constructing a tuner or loading a role.
 - Simulator never represented as real RF.
 - Real hardware adapter, DSP, audio, waterfall and micro HUD integration remain separate gates.
+
+## IP fallback and curated stations (2026-10-26)
+
+When a real SDR is enumerated and authorized, prefer it. Otherwise test whether an approved publisher can be reached over IP and offer the internet station list. The resolver is interface-based (`RadioDiscovery` and `RadioConnectivity`) so the same logic can be used by the CLI or micro HUD. **The current implementation has no physical SDR enumerator, no live audio/playlist decoder, and no micro radio view.** It must not claim to have checked hardware just because `NoHardwareEnumerator` returns false.
+
+The list currently contains three SomaFM stations (Groove Salad, Drone Zone and Deep Space One), whose MP3 M3U playlist URLs were cross-checked against the publisher's official direct-stream documentation on 2026-10-26. Station metadata is published, but runtime availability is not certified. SomaFM states its streams are provided for individual personal listening; do not rebroadcast, relay or embed them into commercial/game distributions without permission.
+
+- https://somafm.com/groovesalad/directstreamlinks.html
+- https://somafm.com/dronezone/directstreamlinks.html
+- https://somafm.com/deepspaceone/directstreamlinks.html
+
+```bash
+cargo run -p pipboy -- radio stations             # offline directory, no IP probe
+cargo run -p pipboy -- radio stations --check-ip  # explicit bounded TCP check to somafm.com:443
+cargo run -p pipboy -- radio source               # pure source selection, no probe
+```
+
+A successful TCP connection proves only routability to the station publisher's HTTPS server; it does not verify HTTP/TLS, playlist resolution, station audio, or decode compatibility. The future player must validate the actual HTTPS playlist/stream on demand and report `checking`, `ready`, `playing`, `unavailable`, `error` separately. Never start playing or download audio merely because the user opened RADIO. Keep playlists cached with source provenance but never cache copyrighted audio without explicit permission. Do not conflate LAN IP with internet availability.
+
+**Next:** integrate a real hardware enumerator, bounded asynchronous HTTPS validation, a decoder with user-controlled start/stop, and the 480x320 radio station selector. On hardware disconnect, stop capture and offer IP fallback; on network loss retain SDR when available and show the last-curated directory as offline/unavailable rather than active stations.
