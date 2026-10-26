@@ -8,6 +8,7 @@ pub mod blueprint;
 pub mod branding;
 pub mod buffer;
 pub mod capability;
+pub mod contingency;
 pub mod catalog;
 pub mod device_simulator;
 pub mod diagnostics;
