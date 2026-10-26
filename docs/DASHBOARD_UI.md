@@ -1,5 +1,13 @@
 # Rust-Boy | Local graphical dashboard
 
+## Desktop focus layout (October 2026)
+
+The desktop route `/` now puts **station selection → compact tool bar → active view** first, with the selected tool's controls in the right inspector. Long descriptions are not deleted: hover a station/tool for its description, or open **About this station**, **About this tool**, and **Safety & access** as needed. Those details start closed. Saved versus preview status stays explicit, and changing a station still requires the existing confirmation dialog.
+
+**Messages** is a collapsed section below the active view. The Messenger component is mounted only when the operator expands it, so opening the desktop dashboard no longer triggers the Messenger's initial local status read. A disclosure alone does not send a message or connect to a peer. The dedicated micro HUD `/micro` and every Rust API, state store, authorization and network-operation contract are unchanged.
+
+Touch-friendly station/tool controls remain at least 44 px high, with a horizontal station rail in narrower windows. CSS uses a three-pane desktop and a stacked layout below 1020 px. The tests validate production DOM structure and Chromium geometry at 1440×900, 1280×800, 1024×768 and 800×600; actual macOS Safari/Firefox user acceptance remains a manual test.
+
 ## Unified Network Engineer
 
 `main` includes the shared desktop/micro Network Engineer. Its 16-operation catalog arrives from Rust, with offline calculators, bounded ICMP/TCP health, private-LAN evidence and controller-connected-client inventory. The inspector mounts `assets/network.js`; tool navigation itself performs no I/O. Active tools have a separate authorization step. Inventories have pages; refresh stops on navigation, edits, hidden tabs, errors or STOP and never resumes automatically. [Operator setup and measurement definitions](NETWORK_HEALTH_UNIFI.md).
@@ -16,13 +24,15 @@ Load Head Engineer or Security Chief, open NET ENGINEER, select Live Private LAN
 
 ## Launch on macOS
 
-From the `feat/dashboard-ui-shell` development branch, with Rust **1.90 or newer** installed:
+From the current `main` development preview, with Rust **1.90 or newer** installed:
 
 ```bash
-git clone --branch feat/dashboard-ui-shell https://github.com/pskeffington/pip_boy.git
+git clone https://github.com/pskeffington/pip_boy.git
 cd pip_boy
-cargo run --locked -p pipboy -- dashboard --open
+./scripts/launch-dashboard.command
 ```
+
+Alternatively, use `cargo run --locked -p pipboy -- dashboard --open`.
 
 Or double-click `scripts/launch-dashboard.command` in Finder after cloning. The Mac launcher opens the default browser and leaves the local Rust server running in Terminal. Press **Ctrl+C** in that terminal to shut it down. The default address is **http://127.0.0.1:8765/**. If that port is in use, start the server with a different port:
 
@@ -42,11 +52,11 @@ The desktop Overseer Module Viewport now hosts the same task board as the handhe
 
 ## User journey
 
-1. **Job templates:** The left rail contains **seven preconfigured occupations**, followed by **Custom**. Click a role (or use **Alt+Up/Down**) to preview it without modifying the saved workbench.
-2. **Load station:** Click **Load station**, then explicitly confirm replacement. All displayed module tiles come from the exact Rust `PRESETS` and `PALETTE` definitions, not an independently maintained browser inventory. The selection is persisted in `PIPBOY_HOME/workbench.json`; without an existing file, the default is Overseer. No device connection occurs when selecting or loading.
-3. **Module deck:** Click a module to inspect its availability, scope and safe command. Implemented offline experiments include **Scout GIS** (great-circle distance or GeoJSON waypoint), **NET LAB** (IPv4/CIDR arithmetic), **BYTE LAB** (hex dump) and **HOST STAT** (one-shot local metrics). Other modules provide honest manual CLI handoffs. Gameplay and hardware are never auto-started.
+1. **Stations:** Pick one of seven preconfigured roles or Custom in the compact left rail; selection is only a preview. Use **Alt+Up/Down** to switch previews.
+2. **Load:** Click **Load**, then explicitly confirm replacement. All displayed module tiles come from the exact Rust `PRESETS` and `PALETTE` definitions, not an independently maintained browser inventory. The selection is persisted in `PIPBOY_HOME/workbench.json`; without an existing file, the default is Overseer. No device connection occurs when selecting or loading.
+3. **Tools:** Select a compact tool button to show its status and controls in the inspector. Open **About this tool** for details. Implemented offline experiments include **Scout GIS** (great-circle distance or GeoJSON waypoint), **NET LAB** (IPv4/CIDR arithmetic), **BYTE LAB** (hex dump) and **HOST STAT** (one-shot local metrics). Other modules provide honest manual CLI handoffs. Gameplay and hardware are never auto-started.
 4. **Custom last:** Load Custom to get a **blank** workspace. Add supported local/simulated/explicit-permission tools from the palette and remove pins. Planned hardware modules are disabled and cannot be pinned.
-5. **Module viewport:** Reclamation Scout has an **empty grid viewport labeled RustGIS not attached**. Security Chief has a **four-camera interaction fixture**: click a tile to focus and click again or press Escape to return. There are no fake live frames, no camera endpoints, no feeds, no recording and no map-position sampling.
+5. **Active view:** The role-specific map, task board, or security fixture appears immediately below Tools. The camera fixture remains synthetic and has no live feed, recording or automatic connection. **Messages** opens on demand below the workspace.
 
 ## Interaction and layout
 
@@ -54,7 +64,7 @@ The original design uses charcoal and phosphor-green cues but **no proprietary F
 
 - **Alt+Up/Down:** preview previous/next job profile.
 - **Alt+Enter:** start the profile-replacement confirmation.
-- **Click module:** inspect; **Run local test:** execute only the selected allowlisted offline operation.
+- **Click tool:** show its inspector and selected active view; **Run:** execute only the selected allowlisted local operation.
 - **Escape:** return the camera-wall fixture to four tiles, or cancel a confirmation dialog.
 - **Refresh icon:** reload the saved Rust workbench state.
 
@@ -76,6 +86,8 @@ cargo check --workspace --all-targets --locked
 cargo test --workspace --locked
 cargo clippy --workspace --all-targets --locked -- -D warnings
 cargo build --workspace --locked
+node tools/test_desktop_focus_ui.cjs
+node tools/test_desktop_viewport.cjs  # requires Chromium
 python3 tools/smoke_dashboard.py
 ```
 

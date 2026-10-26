@@ -240,3 +240,115 @@ dialog::backdrop { background:#000c; backdrop-filter:blur(4px); }
   .job-station-summary { padding:8px; }
   .job-command-panel .task-specs { grid-template-columns:1fr; }
 }
+
+/* Desktop focus layout: surface tasks first, disclose explanations on demand.
+   All legacy tool/viewport styles remain intact; no hidden feature controls. */
+.app-shell { padding: 8px; gap: 6px; }
+.masthead { min-height: 52px; padding: 3px 9px 5px; }
+.brand { gap: 10px; }
+.brand-mark { width: 39px; height: 39px; font-size: 17px; }
+.brand-copy strong { font-size: 16px; }
+.brand-copy > span { margin-top: 2px; font-size: 9px; }
+.masthead-right { gap: 9px; }
+.status-chip { padding: 7px 9px; }
+.dashboard { grid-template-columns: 190px minmax(0, 1fr) 314px; gap: 7px; }
+.panel { border-radius: 10px; }
+.role-panel .panel-top { padding: 14px 13px 10px; }
+.role-panel .panel-top h2 { margin: 0; font-size: 14px; }
+.role-list { padding: 8px; gap: 4px; }
+.role-card { min-height: 46px; padding: 7px 8px; gap: 8px; }
+.role-number { width: 28px; height: 28px; font-size: 11px; }
+.role-title { font-size: 12px; line-height: 1.25; }
+.role-activated { font-size: 8px; }
+.main-panel { padding: 16px 17px; }
+.workspace-identity { min-width: 0; flex: 1; }
+.workspace-head { align-items: flex-start; gap: 10px; }
+.workspace-head h1 { font-size: clamp(19px, 1.8vw, 25px); margin: 5px 0 2px; }
+.workspace-actions { gap: 6px; }
+.active-pill { padding: 3px 6px; }
+.hud-strip {
+  grid-template-columns: minmax(0, 1fr) minmax(0, .65fr) minmax(0, 1fr);
+  margin-top: 12px; padding: 10px 0; gap: 8px;
+}
+.hud-strip strong { font-size: 10px; }
+.hud-strip .tiny-label { margin-bottom: 4px; font-size: 9px; }
+.hud-strip .access-stat { border-right: 0; }
+.section-heading { margin: 14px 0 8px; }
+.section-heading h2 { font-size: 14px; }
+.module-grid { display: flex; flex-wrap: wrap; gap: 6px; align-items: stretch; }
+.module-card {
+  flex: 0 1 auto; display: inline-flex; flex-direction: row; align-items: center;
+  justify-content: flex-start; min-height: 48px; min-width: 100px; max-width: 225px;
+  width: auto; gap: 10px; padding: 8px 11px; border-radius: 8px;
+}
+.module-top { flex: none; align-self: center; color: var(--lime); font: 17px/1 var(--mono); }
+.module-name { font-size: 12px; line-height: 1.25; overflow-wrap: anywhere; }
+.module-category { margin-top: 3px; font-size: 9px; }
+.empty-state { min-height: 75px; padding: 13px; }
+.empty-state strong { margin-bottom: 5px; }
+.custom-palette { margin-top: 12px; }
+.extension-section { margin-bottom: 10px; }
+.extension-placeholder { min-height: 90px; padding: 12px 15px; }
+.extension-placeholder strong { margin-bottom: 3px; }
+.copy-disclosure { margin-top: 8px; }
+.copy-disclosure summary,
+.desktop-messenger summary {
+  cursor: pointer; list-style-position: inside; color: var(--sub);
+  font: 11px/1.4 var(--mono);
+}
+.copy-disclosure summary:hover, .desktop-messenger summary:hover { color: var(--lime); }
+.copy-disclosure summary:focus-visible, .desktop-messenger summary:focus-visible {
+  outline: 2px solid var(--lime); outline-offset: 3px; border-radius: 3px;
+}
+.copy-disclosure[open] summary { color: var(--lime); }
+.copy-disclosure p { color: var(--sub); margin: 8px 0 0; font-size: 12px; line-height: 1.5; }
+.desktop-messenger { border: 1px solid var(--border); border-radius: 9px; background: #111b14; }
+.desktop-messenger > summary {
+  min-height: 48px; padding: 12px 14px; display: flex; align-items: center;
+  justify-content: space-between; gap: 10px; color: var(--text); font-weight: 650;
+}
+.desktop-messenger > summary::before { content: "▸"; color: var(--lime-dark); margin-right: 2px; }
+.desktop-messenger[open] > summary::before { content: "▾"; }
+.desktop-messenger > summary .section-counter { margin-left: auto; color: var(--muted); }
+.desktop-messenger[open] > summary { border-bottom: 1px solid var(--border); }
+.desktop-messenger .rb-msg-desktop-dock { padding: 8px; }
+.detail-panel .detail-header { padding: 15px 15px 12px; }
+.detail-header h2 { font-size: 18px; margin: 5px 0 6px; }
+.detail-status { margin-top: 7px; }
+.detail-info { margin-top: 11px; }
+.detail-foot { padding: 10px 15px; }
+.detail-foot .copy-disclosure { margin: 0; }
+.testbench { padding: 4px 15px 14px; }
+.testbench .section-heading { margin-top: 10px; }
+.lab-fields { gap: 8px; margin-bottom: 12px; }
+.lab-fields input, .lab-fields select { margin-top: 5px; }
+.output-head { margin-top: 14px; }
+.detail-handoff { padding: 12px 15px; }
+.detail-handoff code { margin: 7px 0 0; }
+.statusbar { min-height: 22px; padding: 0 8px; }
+@media (max-width: 1280px) {
+  .dashboard { grid-template-columns: 174px minmax(0, 1fr) 280px; }
+  .module-grid { display: flex; }
+  .role-card { gap: 6px; }
+}
+@media (max-width: 1020px) {
+  body { overflow: auto; }
+  .app-shell { height: auto; min-height: 100dvh; }
+  .dashboard { display: flex; flex-direction: column; }
+  .role-panel, .detail-panel { overflow: visible; }
+  .role-panel .panel-top { padding: 9px 12px 5px; }
+  .role-list { display: flex; flex-direction: row; overflow-x: auto; padding: 8px; }
+  .role-card { flex: none; width: auto; min-width: 140px; }
+  .main-panel { overflow: visible; padding: 14px; }
+  .detail-panel .detail-header { padding: 14px; }
+  .testbench { overflow: visible; }
+}
+@media (max-width: 600px) {
+  .workspace-actions { min-width: 92px; }
+  .hud-strip { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+  .hud-strip > div { border-right: 1px solid var(--border); }
+  .hud-strip .access-stat { border: 0; }
+  .module-grid { display: flex; gap: 5px; }
+  .module-card { min-height: 44px; max-width: 100%; min-width: 0; padding: 7px 9px; }
+  .desktop-messenger > summary { padding: 11px; }
+}

@@ -1,8 +1,15 @@
 # Rust-Boy | Validation evidence
 
-## NET ENGINEER HTTP extraction — 2026-10-26 (CI pending)
+## Desktop focus / text reduction — 2026-10-26 (CI pending)
 
-The source-only `dashboard/network_routes.rs` extraction preserves `POST /api/net/scan` and `POST /api/net/unifi` behind the original exact Host/Origin, content-type, bounded JSON and explicit `net-lab`/confirmation checks. New dashboard tests reject hostile Origin, missing consent, inappropriate roles, invalid CIDR length, invalid UniFi site IDs, public compare scope and unsupported operations **before network probes or controller access**. Prior network health and UniFi smoke checks remain in the existing five-job workflow. This entry is a proposed code-organization pass; exact-commit CI has not yet been verified, and actual UniFi/field Pi interoperability remains untested.
+The desktop HTML, CSS and controller are reorganized around short station buttons, a compact tool selection row, the visible active view, and a persistent selected-tool inspector. About/safety content and Messenger are collapsed by default; Messenger's local status request is deferred until the operator opens it. All Rust module descriptions remain available via tooltips and disclosures. Station load, experiment execution and Messenger sending still require the same explicit actions. The micro route, backend APIs, private store and network permission rules are unchanged.
+
+`node tools/test_desktop_focus_ui.cjs` verifies production DOM IDs, default-closed details, button target dimensions, Rust-provided descriptive text and preserved confirmation. `node tools/test_desktop_viewport.cjs` measures real Chromium DOM geometry at 1440×900, 1280×800, 1024×768 and 800×600 using only a fictional state fixture; initial network requests must be limited to GET `/api/state`. Neither test reaches device/network hardware. Exact-head CI and macOS user browser checks remain acceptance gates before merge.
+
+
+## NET ENGINEER HTTP extraction — 2026-10-26 (five-job CI passed; merged)
+
+The source-only `dashboard/network_routes.rs` extraction preserves `POST /api/net/scan` and `POST /api/net/unifi` behind the original exact Host/Origin, content-type, bounded JSON and explicit `net-lab`/confirmation checks. New dashboard tests reject hostile Origin, missing consent, inappropriate roles, invalid CIDR length, invalid UniFi site IDs, public compare scope and unsupported operations **before network probes or controller access**. Prior network health and UniFi smoke checks remain in the existing five-job workflow. This source-only extraction passed five-job [CI run 40295912014](https://github.com/pskeffington/pip_boy/actions/runs/40295912014) on PR #48 and was merged to `main` as `870c975bf2999769388204ae9c183b8695d55d4c`. Actual UniFi/field Pi interoperability remains untested.
 
 
 ## Native Mac real-cache integrity audit — 2026-10-26 (CI pending)

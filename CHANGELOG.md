@@ -1,10 +1,18 @@
 # Changelog
 
-## 2026-10-26 — NET ENGINEER dashboard route separation (CI pending)
+## 2026-10-26 — Desktop UI focus and copy reduction (CI pending)
+
+- Reorganize the desktop console around **Stations → Tools → Active view → Inspector**, preserving the same Rust-defined roles, tools, APIs, safety gates and `/micro` layout.
+- Replace tall module cards with compact, minimum-44px tool controls; hide repeated role descriptions and safety explanations behind accessible on-demand disclosures and tooltips.
+- Collapse **Messages** until opened and mount the native local Messenger widget on demand, avoiding an unrequested initial message-status fetch. Existing send/retry consent remains unchanged.
+- Add offline markup/interaction contracts and real Chromium viewport checks at four common desktop/tablet window sizes. Record outstanding physical browser acceptance separately from CI.
+
+
+## 2026-10-26 — NET ENGINEER dashboard route separation (PR #48; five-job CI passed)
 
 - Extract the opt-in private LAN scan and read-only UniFi HTTP handlers to `crates/pipboy/src/dashboard/network_routes.rs`, retaining original `/api/net/scan` and `/api/net/unifi` paths, JSON responses, parent loopback gate and Rust core network/controller policy.
 - Add offline Rust regressions for cross-origin requests, missing confirmation, unavailable `net-lab`, invalid CIDR and UniFi site inputs, with no unauthorized network activity.
-- Update the ownership index and developer/operator documentation. Keep the focused PR separate from RADIO and Mac MAP work until its full five-job CI passes.
+- Update the ownership index and developer/operator documentation. Merged to `main` as `870c975b` after five-job CI passed; field UniFi/Mac/Pi acceptance remains independent.
 
 
 ## 2026-10-26 — Privacy and credential-isolation audit (CI pending)
