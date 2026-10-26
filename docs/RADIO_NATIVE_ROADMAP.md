@@ -1,6 +1,6 @@
 # Native Rust RADIO — phased build and evidence matrix
 
-Status (2026-10-26): **R1 controller and R2 native HTTPS/stream ingestion code committed; CI and live endpoint acceptance pending. Native audio playback and real SDR not implemented.** No external VLC, ffplay, browser or OS handler is launched from RADIO.
+Status (2026-10-26): **R1/R2 passed five-job CI; R3 native playback code committed, pending CI and real-device acceptance. Physical SDR and micro-screen RADIO controls are not implemented.** No external VLC, ffplay, browser or OS handler is launched from RADIO.
 
 ## Research-to-design matrix
 
@@ -32,7 +32,7 @@ Only the worker can emit playback status. A successful connection must never be 
 
 **R2 / Native IP ingest (implementation under review)**: Added a pinned `reqwest` blocking Rustls client for explicit short-lived stream probes; publisher-bound HTTPS endpoint validation, redirects disabled in the client, bounded M3U parser and redirect resolution in core, and ICY audio/metadata demux. Tests use in-memory fixture responses. **Outstanding**: review/commit Cargo.lock, Cargo/CI, live endpoint checks, byte-channel backpressure, cancellation and idle-timeout semantics for long-lived streaming. The total-deadline probe client MUST NOT be reused as a continuous playback worker.
 
-**R3 / Native decode and sound**: Symphonia MP3/AAC; channel/rate conversion; CPAL native output device with bounded PCM ring buffer, underflow silence, no allocation/network I/O in callback, volume limiting, user-driven Play/Stop. **Acceptance**: actual audible Skylab and SomaFM field tests on macOS; cross-platform CI and Pi audio acceptance.
+**R3 / Native decode and sound (implementation staged)**: Symphonia MP3/AAC decoding on a dedicated worker; separate no-seek ICY audio source; pure PCM channel mapping and streaming resampler; CPAL hardware sink backed by a two-second lock-free float ring. Native output callback uses no network I/O, locks or allocations; volume via atomic 0–100% control; session stop uses bounded blocking HTTP read timeout. **Acceptance pending**: all five CI jobs, actual audible Skylab/SomaFM field tests on macOS, and Raspberry Pi speaker/touch integration.
 
 **R4 / Micro RADIO**: Station list, source selector, status, Play/Stop, large touch controls, volume, no page scroll at 480×320; explicit network permission and no autoplay. Commands call local Rust radio manager, not URL navigation. **Acceptance**: browser UI tests, on-device touch, stop during reconnect.
 
@@ -58,3 +58,12 @@ Only the worker can emit playback status. A successful connection must never be 
 - `pipboy radio probe skylab --confirm`: explicitly requests a small audio byte sample. This is **not playback**, format verification or proof of continuous reception; additional user permission is required to listen.
 - `cargo test -p pipboy-core radio_stream`: offline unit fixtures cover provider allowlist, playlist limits, redirect rejection, ICY metadata and truncation.
 - Future sustained audio needs a worker with read-inactivity timeout, bounded audio ring, cancellation and a CPAL sink. No audio is recorded, stored or redistributed by the probe.
+
+## R3 native audio pass
+
+- `crates/pipboy/src/radio_playback.rs`: `NativeRadioEngine` wraps `RadioController`, manages a single user-initiated internet station session, controls cancellation/volume, and dispatches decoding on a named worker. Emits PLAYING only after CPAL starts and consumes nonempty PCM; does not interpret a successful TCP connection as audible output.
+- `crates/pipboy/src/radio_output.rs`: CPAL stream with default OS audio device, F32/I16/U16 sample format support, bounded two-second lock-free ring and silence on underrun. On Linux the build needs the ALSA development package (CI explicitly installs it).
+- `crates/pipboy-core/src/radio_pcm.rs`: deterministic f32 PCM mapping and streaming linear sample-rate conversion to device rate, with packet-boundary, cancellation and non-finite fixture tests. Linear interpolation is a baseline; high-fidelity band-limited resampling is a later quality gate. Only the first two input channels are used; extra output channels receive silence.
+- `crates/pipboy/src/radio_http.rs`: separate continuous-stream client with a per-read 3-second inactivity timeout (no total 18-second probe deadline). On timeout/failure the session reports FAILED; automatic reconnection remains R6.
+- CLI: `pipboy radio listen skylab --confirm --seconds 30` starts native playback for 30 seconds; interactive `pipboy radio listen skylab --confirm` accepts `status`, `volume N`, `stop`. No VLC, FFplay, browsers, media subprocesses or durable audio storage.
+- Required external acceptance: OS speaker/headphone hardware, actual station stream availability, audio routing, underruns and network-loss behavior; CI without audio hardware verifies compile and pure tests, not audibility.
