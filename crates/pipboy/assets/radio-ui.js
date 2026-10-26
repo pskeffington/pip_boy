@@ -102,7 +102,9 @@
       else if (running) message.textContent =
         data.status === "playing" ? "Native PCM output active" :
           data.status === "connecting" ? "Connecting to broadcaster..." :
-            data.status === "buffering" ? "Buffering audio..." : "Receiver: " + data.status;
+            data.status === "buffering" ? "Buffering audio..." :
+            data.status === "recovering" ? "Reconnecting to approved broadcast..." :
+              "Receiver: " + data.status;
       else message.textContent = data.status === "failed"
         ? "Stream failed. Select PLAY to retry." : "OFFLINE / READY";
     };
