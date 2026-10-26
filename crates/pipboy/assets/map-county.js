@@ -383,9 +383,40 @@
     const data = await localJson("/api/map/cache",signal);
     if (data.schema!==1 || (data.active_geoid!==null &&
         !validGeoid(data.active_geoid)) ||
-        !Array.isArray(data.cached_sources) || data.network_used!==false)
+        !Array.isArray(data.cached_sources) || data.network_used!==false ||
+        (data.boundary_cached!==undefined && typeof data.boundary_cached!=="boolean"))
       bad("Unrecognized local county cache manifest");
     return data;
+  }
+
+  // Obtain the independently fetched, locally validated TIGERweb boundary
+  // from the loopback Rust service. Never send a GPS fix to this endpoint.
+  async function boundary(geoid, {cacheOnly=false,signal}={}) {
+    if (!validGeoid(geoid)) bad("Invalid county boundary GEOID");
+    const response=await fetch("/api/map/boundary",{
+      method:"POST",headers:{"Content-Type":"application/json"},
+      cache:"no-store",credentials:"omit",signal,
+      body:JSON.stringify({geoid,confirm:!cacheOnly,cache_only:cacheOnly})
+    });
+    if (!response.ok) bad((cacheOnly?"OFFLINE BOUNDARY ":"CENSUS BOUNDARY ")+
+      "UNAVAILABLE ("+response.status+")");
+    const value=await response.json();
+    if (!value || value.schema!==1 || value.geoid!==geoid ||
+        value.vintage!=="2025-01-01" ||
+        value.source!=="U.S. Census TIGERweb State_County ACS 2025 / January 1 2025" ||
+        typeof value.name!=="string" || !value.name.trim() ||
+        value.name.length>100 || typeof value.network_used!=="boolean" ||
+        typeof value.cache_hit!=="boolean" ||
+        (cacheOnly && (value.network_used || !value.cache_hit)))
+      bad("Untrusted county boundary cache response");
+    const paths=countyRings(value.paths);
+    return {
+      id:geoid,name:value.name,paths,
+      source:value.source,vintage:value.vintage,
+      cacheHit:value.cache_hit,
+      shape:{kind:"line",paths,label:"COUNTY "+value.name.slice(0,32),
+        style:{stroke:"#ecda94",width:2.1,opacity:0.9}}
+    };
   }
 
   async function sources(signal) {
@@ -437,6 +468,6 @@
   }
 
   window.RustBoyCounty=Object.freeze({
-    load,active,sources,parsePackage,validGeoid,sourceIds:SOURCES
+    load,active,boundary,sources,parsePackage,validGeoid,sourceIds:SOURCES
   });
 })();
