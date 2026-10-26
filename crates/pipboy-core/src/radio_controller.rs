@@ -67,16 +67,9 @@ pub enum ControlError {
     InvalidTransition,
 }
 
+#[derive(Default)]
 pub struct RadioController {
     session: RadioSession,
-}
-
-impl Default for RadioController {
-    fn default() -> Self {
-        Self {
-            session: RadioSession::default(),
-        }
-    }
 }
 
 impl RadioController {
