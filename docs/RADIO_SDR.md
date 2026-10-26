@@ -78,3 +78,18 @@ cargo test --locked -p pipboy-core radio_stream
 ```
 
 Only `probe` contacts a published stream; `stations` remains offline. Probe uses a total timeout and is explicitly unsuitable for continuous listening. Some broadcaster playlists may list HTTP endpoints; the first-stage HTTPS-only resolver deliberately rejects those entries. Real endpoint, Cargo.lock, licensing and all-platform build verification are release gates. [Phased native roadmap](RADIO_NATIVE_ROADMAP.md).
+
+## Native R3 playback (software implementation under CI review)
+
+The new R3 engine decodes streaming MP3 or AAC with Symphonia and writes converted PCM into a bounded native CPAL sink, entirely within Rust-Boy. The IP receiver does not launch VLC/FFplay or a browser and does not save broadcast audio. A real sound device and broadcaster connection are required to hear sound. The 480x320 in-shell RADIO widget is an R4 gate.
+
+```bash
+# Short, bounded native output test:
+cargo run --locked -p pipboy -- radio listen skylab --confirm --seconds 30
+# Interactive on terminal; type status, volume 0..100, or stop:
+cargo run --locked -p pipboy -- radio listen skylab --confirm
+# Pure PCM conversion tests without hardware:
+cargo test --locked -p pipboy-core radio_pcm
+```
+
+Playback begins only following a user command. Stop invalidates the radio session generation and requests worker cancellation; the HTTP stream has a finite per-read timeout, so stop can wait for an in-flight network read. A native ALSA audio output or equivalent macOS/Windows audio device is essential. Do not report playing until the native PCM sink consumes actual samples. Live station reliability, automatic reconnect, native device volume mixing and SDR hardware acceptance remain open. See [R1–R7 plan](RADIO_NATIVE_ROADMAP.md).
