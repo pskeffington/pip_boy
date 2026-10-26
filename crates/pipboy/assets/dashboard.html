@@ -41,12 +41,18 @@
       </div>
     </header>
 
-    <div class="dashboard">
+    <nav class="pane-tabs" aria-label="Desktop workspace panels">
+      <button type="button" data-pane-target="roles" aria-pressed="false">STATIONS</button>
+      <button type="button" data-pane-target="workspace" aria-pressed="true">WORKSPACE</button>
+      <button type="button" data-pane-target="inspector" aria-pressed="false">INSPECTOR</button>
+    </nav>
+    <div class="dashboard" data-pane="workspace">
       <aside class="role-panel panel" aria-labelledby="templates-heading">
         <div class="panel-top">
           <h2 id="templates-heading">Stations</h2>
         </div>
         <nav id="role-list" class="role-list" aria-label="Job stations"></nav>
+        <div id="role-pager" class="deck-pager" aria-label="Station pages"></div>
       </aside>
 
       <main class="main-panel panel" id="workspace" tabindex="-1">
@@ -71,39 +77,48 @@
           <div class="access-stat"><span class="tiny-label">ACCESS</span><strong class="positive">LOCAL · MANUAL</strong></div>
         </div>
 
-        <section class="module-section" aria-labelledby="modules-heading">
+        <div class="workspace-stage" id="workspace-stage">
+          <nav class="stage-tabs" aria-label="Workspace pages">
+            <button type="button" data-stage-target="modules" aria-pressed="true">TOOLS</button>
+            <button type="button" data-stage-target="viewport" aria-pressed="false">VIEW</button>
+            <button type="button" data-stage-target="messages" aria-pressed="false">MESSAGES</button>
+            <button type="button" data-stage-target="palette" aria-pressed="false" hidden>ADD TOOLS</button>
+          </nav>
+        <section class="module-section stage-surface" data-stage="modules" aria-labelledby="modules-heading">
           <div class="section-heading">
             <h2 id="modules-heading">Tools</h2>
             <span class="section-counter" id="module-count">0</span>
           </div>
           <div id="module-grid" class="module-grid" aria-live="polite"></div>
-          <div id="custom-palette" class="custom-palette" hidden>
+          <div id="module-pager" class="deck-pager" aria-label="Module pages"></div>
+        </section>
+        <section id="custom-palette" class="custom-palette stage-surface" data-stage="palette" aria-label="Custom tool palette" hidden>
             <div class="section-heading">
               <h3>Add tools</h3>
             </div>
             <div id="palette-grid" class="palette-grid"></div>
-          </div>
+            <div id="palette-pager" class="deck-pager" aria-label="Available tool pages"></div>
         </section>
 
-        <section class="extension-section" aria-labelledby="extension-heading">
+        <section class="extension-section stage-surface" data-stage="viewport" aria-labelledby="extension-heading" hidden>
           <div class="section-heading">
             <h2 id="extension-heading">Active view</h2>
           </div>
           <div id="extension-content" class="extension-content"></div>
         </section>
-        <section class="extension-section message-section" aria-label="Peer messaging">
-          <details class="desktop-messenger" id="messenger-disclosure">
-            <summary>
-              <span>Messages</span>
-              <span class="section-counter">MANUAL · OPEN WHEN NEEDED</span>
-            </summary>
-            <div id="messenger-dock" class="rb-msg-root rb-msg-desktop-dock"></div>
-          </details>
+        <section class="extension-section stage-surface" data-stage="messages" aria-labelledby="messenger-heading" hidden>
+          <div class="section-heading">
+            <h2 id="messenger-heading">Messages</h2>
+            <span class="section-counter">MANUAL</span>
+          </div>
+          <div id="messenger-dock" class="rb-msg-root rb-msg-desktop-dock"></div>
         </section>
+        </div>
       </main>
 
       <aside class="detail-panel panel" aria-labelledby="details-heading">
         <div class="panel-top detail-header">
+          <button class="inspector-return" id="inspector-return" type="button">◀ TOOLS</button>
           <span class="eyebrow">INSPECTOR</span>
           <h2 id="details-heading">Select a tool</h2>
           <div id="detail-status" class="detail-status"></div>

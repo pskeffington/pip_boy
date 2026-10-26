@@ -135,13 +135,23 @@ async function main(){
   assert.equal(view.zipCountyButton.disabled,false);
 
   press(view.zipCountyButton);
-  await until(()=>view.zipList.textContent.includes("13"));
+  await until(()=>view.zipList.children.length===2);
+  assert.equal(view.zipList.children[0].textContent,"2020 ZCTAs / COUNTY 25025 / 1-12 OF 13");
+  assert.equal(view.zipList.children[1].children.length,12);
+  assert.equal(view.zipList.children[1].children[0].textContent,"02108");
   assert.equal(view.zipListNext.disabled,false);
   press(view.zipListNext);
   await until(()=>view.zipOffset===12);
+  assert.equal(view.zipList.children[0].textContent,"2020 ZCTAs / COUNTY 25025 / 13-13 OF 13");
+  assert.equal(view.zipList.children[1].children[0].textContent,"02199");
   assert.equal(view.zipListNext.disabled,true);
   press(view.zipListPrev);
   await until(()=>view.zipOffset===0);
+
+  press(view.zipList.children[1].children[0]);
+  await until(()=>view.zipStatus.textContent.includes("GIS READY"));
+  assert.equal(view.zipInput.value,"02108");
+  assert.equal(view.county.id,"25025");
 
   const before=boundaries.length;
   view.zipInput.value="02360";

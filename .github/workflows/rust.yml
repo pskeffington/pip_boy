@@ -100,7 +100,13 @@ jobs:
           node tools/test_map_layers.cjs
           node tools/test_rustgis_online.cjs
           node tools/test_rustgis_online_view.cjs
-      - name: Desktop focus real Chromium viewport acceptance
+      - name: One-screen desktop dashboard Chromium acceptance
+        if: matrix.toolchain == 'stable'
+        run: |
+          node --check tools/fixtures/dashboard-viewport-probe.js
+          node --check tools/test_dashboard_viewport.cjs
+          node tools/test_dashboard_viewport.cjs
+      - name: Desktop focus Chromium viewport acceptance
         if: matrix.toolchain == 'stable'
         run: node tools/test_desktop_viewport.cjs
       - name: Network Engineer real Chromium viewport acceptance

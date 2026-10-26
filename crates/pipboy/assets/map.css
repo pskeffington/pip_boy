@@ -168,3 +168,4 @@
     min-height:34px;
   }
 }
+\n.rb-map-zip-list-heading { padding:3px 0; font-weight:bold; }\n.rb-map-zip-list-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:4px; }\n.rb-map-zip-list-item { min-height:38px; padding:4px; font-size:12px; letter-spacing:.04em; }\n

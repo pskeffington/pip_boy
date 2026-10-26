@@ -1,12 +1,14 @@
 # Rust-Boy | Local graphical dashboard
 
-## Desktop focus layout (October 2026)
+## Desktop copy and navigation cleanup — 2026-10-26
 
-The desktop route `/` now puts **station selection → compact tool bar → active view** first, with the selected tool's controls in the right inspector. Long descriptions are not deleted: hover a station/tool for its description, or open **About this station**, **About this tool**, and **Safety & access** as needed. Those details start closed. Saved versus preview status stays explicit, and changing a station still requires the existing confirmation dialog.
+The desktop console `/` uses the existing **one-screen focused navigation**. On wide desktops, **Stations / workspace / inspector** are visible as three columns. On narrower windows, the header's **STATIONS / WORKSPACE / INSPECTOR** tabs switch between those panes. Within Workspace, **TOOLS / VIEW / MESSAGES / ADD TOOLS** are separate pages, with the existing six-item pager (reduced on very short screens). This is **not** a continuously scrolling dashboard; switching a tool brings up its inspector, with **◀ TOOLS** returning on narrow displays.
 
-**Messages** is a collapsed section below the active view. The Messenger component is mounted only when the operator expands it, so opening the desktop dashboard no longer triggers the Messenger's initial local status read. A disclosure alone does not send a message or connect to a peer. The dedicated micro HUD `/micro` and every Rust API, state store, authorization and network-operation contract are unchanged.
+The default copy is deliberately short: station names without repeated paragraphs, concise tool labels, a three-fact status band (**Role / Tools / Access**) and smaller placeholders. Full Rust-authored descriptions stay accessible through each station/tool tooltip and the collapsed **About this station** and **About this tool** disclosures. **Safety & access** is also available on demand. Confirmations for station replacement and operator-initiated commands are not reduced or bypassed.
 
-Touch-friendly station/tool controls remain at least 44 px high, with a horizontal station rail in narrower windows. CSS uses a three-pane desktop and a stacked layout below 1020 px. The tests validate production DOM structure and Chromium geometry at 1440×900, 1280×800, 1024×768 and 800×600; actual macOS Safari/Firefox user acceptance remains a manual test.
+Opening the desktop requests only the local workbench state. **MESSAGES** is not mounted until the operator selects its stage, at which point it performs a local message-status read; selecting a page cannot send a message or connect to a peer. The focused Scout MAP and Security Chief camera subviews, adaptive pagination, explicit network permissions, data stores and `/micro` remain unchanged.
+
+**Acceptance:** `node tools/test_desktop_focus_ui.cjs` validates the on-demand copy, consent and navigation contracts. `node tools/test_desktop_viewport.cjs` runs real Chromium geometry at 1440×900, 1280×800, 1024×768 and 800×600, verifying a one-screen layout, paging, >=44px touch controls and no surprise API requests. The existing `node tools/test_dashboard_viewport.cjs` continues to cover 480×320, 800×480, 1280×720, 1920×1080 and focused map/camera paths. Those automated checks do **not** substitute for an actual Mac Safari/Firefox, keyboard zoom or physical Pi acceptance test.
 
 ## Unified Network Engineer
 
@@ -29,10 +31,8 @@ From the current `main` development preview, with Rust **1.90 or newer** install
 ```bash
 git clone https://github.com/pskeffington/pip_boy.git
 cd pip_boy
-./scripts/launch-dashboard.command
+cargo run --locked -p pipboy -- dashboard --open
 ```
-
-Alternatively, use `cargo run --locked -p pipboy -- dashboard --open`.
 
 Or double-click `scripts/launch-dashboard.command` in Finder after cloning. The Mac launcher opens the default browser and leaves the local Rust server running in Terminal. Press **Ctrl+C** in that terminal to shut it down. The default address is **http://127.0.0.1:8765/**. If that port is in use, start the server with a different port:
 
@@ -52,11 +52,11 @@ The desktop Overseer Module Viewport now hosts the same task board as the handhe
 
 ## User journey
 
-1. **Stations:** Pick one of seven preconfigured roles or Custom in the compact left rail; selection is only a preview. Use **Alt+Up/Down** to switch previews.
-2. **Load:** Click **Load**, then explicitly confirm replacement. All displayed module tiles come from the exact Rust `PRESETS` and `PALETTE` definitions, not an independently maintained browser inventory. The selection is persisted in `PIPBOY_HOME/workbench.json`; without an existing file, the default is Overseer. No device connection occurs when selecting or loading.
-3. **Tools:** Select a compact tool button to show its status and controls in the inspector. Open **About this tool** for details. Implemented offline experiments include **Scout GIS** (great-circle distance or GeoJSON waypoint), **NET LAB** (IPv4/CIDR arithmetic), **BYTE LAB** (hex dump) and **HOST STAT** (one-shot local metrics). Other modules provide honest manual CLI handoffs. Gameplay and hardware are never auto-started.
+1. **Job templates:** The left rail contains **seven preconfigured occupations**, followed by **Custom**. Click a role (or use **Alt+Up/Down**) to preview it without modifying the saved workbench.
+2. **Load station:** Click **Load station**, then explicitly confirm replacement. All displayed module tiles come from the exact Rust `PRESETS` and `PALETTE` definitions, not an independently maintained browser inventory. The selection is persisted in `PIPBOY_HOME/workbench.json`; without an existing file, the default is Overseer. No device connection occurs when selecting or loading.
+3. **Module deck:** Click a module to inspect its availability, scope and safe command. Implemented offline experiments include **Scout GIS** (great-circle distance or GeoJSON waypoint), **NET LAB** (IPv4/CIDR arithmetic), **BYTE LAB** (hex dump) and **HOST STAT** (one-shot local metrics). Other modules provide honest manual CLI handoffs. Gameplay and hardware are never auto-started.
 4. **Custom last:** Load Custom to get a **blank** workspace. Add supported local/simulated/explicit-permission tools from the palette and remove pins. Planned hardware modules are disabled and cannot be pinned.
-5. **Active view:** The role-specific map, task board, or security fixture appears immediately below Tools. The camera fixture remains synthetic and has no live feed, recording or automatic connection. **Messages** opens on demand below the workspace.
+5. **Module viewport:** Reclamation Scout has an **empty grid viewport labeled RustGIS not attached**. Security Chief has a **four-camera interaction fixture**: click a tile to focus and click again or press Escape to return. There are no fake live frames, no camera endpoints, no feeds, no recording and no map-position sampling.
 
 ## Interaction and layout
 
@@ -64,7 +64,7 @@ The original design uses charcoal and phosphor-green cues but **no proprietary F
 
 - **Alt+Up/Down:** preview previous/next job profile.
 - **Alt+Enter:** start the profile-replacement confirmation.
-- **Click tool:** show its inspector and selected active view; **Run:** execute only the selected allowlisted local operation.
+- **Click module:** inspect; **Run local test:** execute only the selected allowlisted offline operation.
 - **Escape:** return the camera-wall fixture to four tiles, or cancel a confirmation dialog.
 - **Refresh icon:** reload the saved Rust workbench state.
 
@@ -86,8 +86,6 @@ cargo check --workspace --all-targets --locked
 cargo test --workspace --locked
 cargo clippy --workspace --all-targets --locked -- -D warnings
 cargo build --workspace --locked
-node tools/test_desktop_focus_ui.cjs
-node tools/test_desktop_viewport.cjs  # requires Chromium
 python3 tools/smoke_dashboard.py
 ```
 
@@ -98,3 +96,19 @@ The smoke script launches the **actual Rust server** on an ephemeral loopback po
 Do not substitute the decorative grid for navigation. RustGIS integration will require an evaluated **process/IPC or native map renderer interface**, offline layers, map pan/zoom, true GNSS consent (if enabled), waypoint/GeoJSON interoperability and Pi ARM64 GPU/performance acceptance. The compiler minimum is Rust 1.90, but no RustGIS crate is linked in this dashboard pass.
 
 See [role roadmap](ROLE_ROADMAP.md), [Scout GIS/TAK plan](SCOUT_GIS_TAK.md), [security policy](../SECURITY.md), and [camera-wall roadmap](SECURITY_CAMERA_WALL.md).
+
+## One-screen viewport rule (October 2026)
+
+The desktop shell must fit one viewport without document-level scrolling. At wide widths, the role rail, central workspace and inspector are visible simultaneously. Below 1100 CSS pixels, **ROLES / WORKSPACE / INSPECTOR** becomes an explicit three-way screen switch rather than stacking tall panels. The central workspace is subdivided into **MODULES / VIEWPORT / MESSAGES / ADD TOOLS**; the latter appears for active Custom only. Modules, roles, and Custom palette use six-item pages with visible PREV/NEXT rather than long vertical lists.
+
+**Acceptance criteria:** at normal browser zoom, do not expose a body scrollbar; keep the masthead, page switches, active screen and its navigation in the visible window; never hide the last module behind a clipping mask. At 480×320, use the dedicated `/micro` shell, which was specifically designed for the handheld. Dense data output, long device messages, authorization forms, and accessibility zoom may still use *internal* scrolling when needed; hiding essential controls is not an acceptable no-scroll implementation. The desktop radio and other future modules should use the same focused-panel/paging contract rather than adding sections below the fold.
+
+Browser/physical hardware acceptance is still required at 480×320, 800×480, 1280×720, and 1920×1080, including focus, touch operation, enlarged fonts, and no clipped buttons. A CSS-only no-scroll result does not establish that all embedded components fit.
+
+### Follow-up UI pass: focused subviews and browser acceptance
+
+The responsive dashboard now opens **INSPECTOR** when a module tile is chosen on a narrow screen and provides a dedicated **MODULES** return action. Selecting a role on a narrow screen exposes its workspace preview instead of leaving it in a hidden panel. Role lists show three items per page on short (480 CSS-pixel high or smaller) viewports; module and Custom palettes show four, with six on taller displays. Keyboard Tab/Enter and native button semantics remain supported.
+
+The Reclamation Scout viewport now separates **MAP / SITES / DUTIES** into focused screens. A site-to-map action opens MAP and requests focus on the chosen site after the map is mounted in a visible container. Security Chief separates **CAMERAS / DUTIES**; simulated cameras remain explicitly disconnected. These focused views prevent the original stacked content from being clipped by the no-scroll shell. Overflow-heavy forms, task details, and accessibility zoom retain internal scroll access.
+
+The new `node tools/test_dashboard_viewport.cjs` Chromium gate is run by GitHub Actions. It loads the *production dashboard HTML, CSS, and dashboard JavaScript* in exact-size iframe viewports, supplies local synthetic API data, and checks page bounds, module and role paging, narrow-screen inspector navigation, workspace switches, and the Custom palette. Sizes: 480×320, 800×480, 1280×720, 1920×1080, plus Custom scenarios at 480×320 and 1280×720. No external service, peer, camera, or network scan is contacted by the fixture. Tests are a browser regression gate, not physical Raspberry Pi approval.

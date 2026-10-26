@@ -1297,6 +1297,8 @@
       view.zipStatus.textContent="LOAD COUNTY BEFORE LISTING ZCTAS";return;
     }
     const version=++view.zipPageVersion;
+    view.zipListPrev.disabled=true;
+    view.zipListNext.disabled=true;
     view.zipList.textContent="COUNTY "+geoid+" / ZCTA INDEX LOADING";
     try {
       const result=await window.RustBoyZip.countyZctas(geoid,{
@@ -1304,9 +1306,27 @@
       });
       if(active!==view||view.zipPageVersion!==version||
         view.county?.id!==geoid)return;
-      view.zipList.textContent=result.zctas.length?
-        "2020 ZCTAs INTERSECTING COUNTY "+geoid+" ("+result.total+")\n"+
-        result.zctas.join(" · ") : "NO 2020 ZCTA INTERSECTIONS";
+      // Each intersecting ZCTA is a touch target. Selecting one only fills
+      // the ZIP input and resolves its county candidates; cross-county ZCTAs
+      // still require an explicit choice, never an assumed membership.
+      view.zipList.replaceChildren();
+      if(result.zctas.length){
+        view.zipList.append(make("div","rb-map-zip-list-heading",
+          "2020 ZCTAs / COUNTY "+geoid+" / "+(offset+1)+"-"+
+          (offset+result.zctas.length)+" OF "+result.total));
+        const grid=make("div","rb-map-zip-list-grid");
+        for(const zcta of result.zctas){
+          const button=control(zcta,()=>{
+            view.zipInput.value=zcta;
+            void submitZip(view);
+          },"Resolve Census ZCTA "+zcta+" to intersecting counties");
+          button.className+=" rb-map-zip-list-item";
+          grid.append(button);
+        }
+        view.zipList.append(grid);
+      }else{
+        view.zipList.textContent="NO 2020 ZCTA INTERSECTIONS";
+      }
       view.zipListPrev.disabled=offset===0;
       view.zipListNext.disabled=offset+result.zctas.length>=result.total;
       view.zipOffset=offset;

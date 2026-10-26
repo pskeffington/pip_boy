@@ -1,12 +1,11 @@
 # Changelog
 
-## 2026-10-26 — Desktop UI focus and copy reduction (CI pending)
+## 2026-10-26 — Desktop console declutter and progressive disclosure (CI pending)
 
-- Reorganize the desktop console around **Stations → Tools → Active view → Inspector**, preserving the same Rust-defined roles, tools, APIs, safety gates and `/micro` layout.
-- Replace tall module cards with compact, minimum-44px tool controls; hide repeated role descriptions and safety explanations behind accessible on-demand disclosures and tooltips.
-- Collapse **Messages** until opened and mount the native local Messenger widget on demand, avoiding an unrequested initial message-status fetch. Existing send/retry consent remains unchanged.
-- Add offline markup/interaction contracts and real Chromium viewport checks at four common desktop/tablet window sizes. Record outstanding physical browser acceptance separately from CI.
-
+- Keep the current one-screen **STATIONS / WORKSPACE / INSPECTOR** and paged **TOOLS / VIEW / MESSAGES / ADD TOOLS** navigation, but remove repeated descriptions, redundant statuses and oversized module-card content.
+- Retain complete Rust metadata through station/tool tooltips and optional **About** / **Safety & access** disclosures. Preserve 44px+ action targets, narrow-screen inspector return, Scout/Census ZIP pages, camera focus and adaptive pagination.
+- Mount Messenger only on the operator's first visit to MESSAGES, avoiding an unrequested initial journal query. Send/retry, network and role-replacement operations remain explicitly confirmed.
+- Add standalone static and real Chromium desktop focus tests, preserving the existing one-screen and GIS fixture gates. No backend, private operator state or Raspberry Pi changes.
 
 
 ## 2026-10-26 — ZIP↔county GIS lookups (Mac-first)
@@ -21,7 +20,7 @@
 
 - Extract the opt-in private LAN scan and read-only UniFi HTTP handlers to `crates/pipboy/src/dashboard/network_routes.rs`, retaining original `/api/net/scan` and `/api/net/unifi` paths, JSON responses, parent loopback gate and Rust core network/controller policy.
 - Add offline Rust regressions for cross-origin requests, missing confirmation, unavailable `net-lab`, invalid CIDR and UniFi site inputs, with no unauthorized network activity.
-- Update the ownership index and developer/operator documentation. Merged to `main` as `870c975b` after five-job CI passed; field UniFi/Mac/Pi acceptance remains independent.
+- Update the ownership index and developer/operator documentation. Merged to `main` as `870c975b` after all five CI jobs passed. Field UniFi/Mac/Pi acceptance remains separate.
 
 
 ## 2026-10-26 — Privacy and credential-isolation audit (CI pending)
