@@ -42,13 +42,20 @@ Only the worker can emit playback status. A successful connection must never be 
 
 **R7 / Release**: code audit, audio stream permissions/terms, battery/CPU measurements, telemetry privacy, retry budgets, output routing, CI matrix, packaging.
 
+## R4.5 / persisted favorites implementation (2026-10-26)
+
+- A new versioned `RadioPresetStore` writes only directory-approved IDs, up to 12 favorites in user-defined order, plus the last selected station. Reads are side-effect free; writes are short, validated, locked and atomic under the same application-owned data root as the workbench.
+- The local RADIO API supports `select`, `favorite` and `move_favorite` as metadata-only commands; the HUD displays favorites-only browsing, a tap-sized star, and explicit earlier/later reordering in a compact settings overlay. Play, Stop, PCM, network retry and Bluetooth selection are unchanged.
+- Rust unit tests cover persistence/restart, order boundaries, duplicate/foreign ID rejection, corrupt and oversized input preservation, writer lock contention and symlink rejection. The offline Node HUD regression covers restoration without autoplay, user selection/favorites/reorder, and Bluetooth manual recovery.
+- **Gates:** exact-head five-job CI, actual 480×320 touch/screenshots, full broadcaster stream testing and Mac/Pi fault injections. Persistence implementation is not evidence of real-SDR reception. No user data migration is performed.
+
 ## R4.5 / R4.6 first station-directory and micro-layout pass (2026-10-26)
 
 - Expanded the opt-in directory from four to ten publisher-referenced stations (Skylab plus nine verified SomaFM MP3 M3U URLs); the registry supplies short operator categories and optional documented bitrate to the native JSON route.
 - Grouped the station picker by genre, added non-networking previous/next buttons, wrap-around stepping, and a count/category badge. Playback is still explicit; a running station must be stopped before selecting another.
 - Kept Play, Stop, volume and OS-visible Bluetooth audio selection on the native Rust engine. On a compact HUD, output choices stay collapsed until tapped or a device failure forces manual recovery controls open.
 - Offline UI regression covers browsing without autoplay, genre grouping, disabled tuning during playback, Bluetooth failure and no silent default fallback. Existing native receiver/retry semantics are unchanged.
-- Preset persistence / favorites and ordered user-specific stations are **not** added in this pass; do not claim R4.5 is complete. All ten streams still require real on-air decoder/audio testing and broadcaster usage review before product release; 480x320 screenshot, touch and physical Pi gates remain open.
+- This earlier station-directory stage preceded the separate R4.5 persistence implementation above. All ten streams still require real on-air decoder/audio testing and broadcaster usage review before product release; 480x320 screenshot, touch and physical Pi gates remain open.
 
 ## Rules
 

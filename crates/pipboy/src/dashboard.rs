@@ -1744,6 +1744,9 @@ mod tests {
         let state = dispatch(&request("GET", "/api/radio", Value::Null), &store, 8765);
         assert_eq!(state.status, 200);
         let json: Value = serde_json::from_slice(&state.body).unwrap();
+        assert_eq!(json["presets"]["favorites"], json!([]));
+        assert_eq!(json["presets"]["last_selected"], Value::Null);
+        assert!(!radio_preset_store(&store).path().exists());
         let station_list = json["stations"].as_array().expect("radio directory");
         assert_eq!(station_list.len(), 10);
         assert_eq!(station_list[0]["id"], "skylab");
@@ -1778,6 +1781,52 @@ mod tests {
             json!({"action":"volume", "volume":101}),
         );
         assert_eq!(dispatch(&unsafe_volume, &store, 8765).status, 422);
+        let station = request(
+            "POST",
+            "/api/radio",
+            json!({"action":"select", "station":"skylab"}),
+        );
+        let selection = dispatch(&station, &store, 8765);
+        assert_eq!(selection.status, 200);
+        let selected: Value = serde_json::from_slice(&selection.body).unwrap();
+        assert_eq!(selected["status"], "stopped");
+        assert_eq!(selected["presets"]["last_selected"], "skylab");
+        assert_eq!(selected["presets"]["favorites"], json!([]));
+        for station in ["skylab", "dronezone"] {
+            let add = request(
+                "POST",
+                "/api/radio",
+                json!({"action":"favorite", "station":station, "enabled":true}),
+            );
+            assert_eq!(dispatch(&add, &store, 8765).status, 200);
+        }
+        let move_preset = request(
+            "POST",
+            "/api/radio",
+            json!({"action":"move_favorite", "station":"dronezone", "direction":"earlier"}),
+        );
+        let moved = dispatch(&move_preset, &store, 8765);
+        assert_eq!(moved.status, 200);
+        let body: Value = serde_json::from_slice(&moved.body).unwrap();
+        assert_eq!(body["presets"]["favorites"], json!(["dronezone", "skylab"]));
+        assert_eq!(body["presets"]["last_selected"], "skylab");
+        let reloaded = WorkbenchStore::new(temp.path().join("radio-hud"));
+        let persisted = dispatch(&request("GET", "/api/radio", Value::Null), &reloaded, 8765);
+        let persisted: Value = serde_json::from_slice(&persisted.body).unwrap();
+        assert_eq!(persisted["presets"]["favorites"], json!(["dronezone", "skylab"]));
+        assert_eq!(persisted["status"], "stopped"); // No autoplay on reading presets.
+        for bad in [
+            json!({"action":"select","station":"https://evil.test/audio"}),
+            json!({"action":"favorite","station":"unknown","enabled":true}),
+            json!({"action":"favorite","station":"skylab","enabled":"true"}),
+            json!({"action":"move_favorite","station":"skylab","direction":"up"}),
+            json!({"action":"move_favorite","station":"secretagent","direction":"earlier"}),
+        ] {
+            assert_eq!(
+                dispatch(&request("POST", "/api/radio", bad), &store, 8765).status,
+                422
+            );
+        }
         let mut cross_origin = request("POST", "/api/radio", json!({"action":"stop"}));
         cross_origin
             .headers
@@ -1788,6 +1837,26 @@ mod tests {
         assert!(RADIO_UI_JS.contains("/api/radio"));
         assert!(MICRO_JS.contains("native-radio"));
         assert!(HTML.contains("radio-dock"));
+    }
+
+    #[test]
+    fn corrupt_radio_presets_are_not_silently_reset() {
+        let temp = tempfile::tempdir().unwrap();
+        let store = WorkbenchStore::new(temp.path().to_path_buf());
+        let pref_path = radio_preset_store(&store).path().to_path_buf();
+        let corrupted = br#"{"schema_version":1,"favorites":["unapproved"],"last_selected":null}"#;
+        std::fs::write(&pref_path, corrupted).unwrap();
+        assert_eq!(
+            dispatch(&request("GET", "/api/radio", Value::Null), &store, 8765).status,
+            409
+        );
+        let mutation = request(
+            "POST",
+            "/api/radio",
+            json!({"action":"favorite","station":"skylab","enabled":true}),
+        );
+        assert_eq!(dispatch(&mutation, &store, 8765).status, 409);
+        assert_eq!(std::fs::read(&pref_path).unwrap(), corrupted);
     }
 
     #[test]

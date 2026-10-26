@@ -207,6 +207,12 @@ async function main() {
 
   const lastSelected = state.presets.last_selected;
   assert.equal(typeof lastSelected, "string");
+  // An automatic list-filter change is not a user selection; choosing a
+  // different station and returning explicitly updates saved selection.
+  tuner.value = "defcon";
+  tuner.dispatch("change");
+  await flush();
+  assert.equal(state.presets.last_selected, "defcon");
   tuner.value = "skylab";
   tuner.dispatch("change");
   await flush();

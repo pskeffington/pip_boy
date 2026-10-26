@@ -67,6 +67,19 @@ node tools/test_radio_ui.cjs
 `stations` is a network-free listing. `stations --check-ip` is an explicit TCP reachability probe, not evidence of decodable audio; `probe` checks bytes at an approved HTTPS endpoint only. Live playback on new channels and actual 480x320 physical touch/scroll acceptance have not yet been proven. No arbitrary URL input or automatic connection is permitted; the runtime TLS/redirect allowlist remains authoritative.
 
 
+## R4.5 / native favorites and last station (2026-10-26)
+
+The latest RADIO branch stores preferences under `PIPBOY_HOME/radio-presets.json` (or `~/.pipboy/radio-presets.json`). **This is local preference data, not a stream cache.** It contains a schema-versioned `favorites` list and `last_selected` station ID only. No IP addresses, arbitrary URLs, browsing history, audio data, or device identifiers are persisted. The missing file means no favorites; a GET creates no file or directory.
+
+- Tap **☆/★** to add or remove an approved station from favorites (maximum 12); **ALL / ★ ONLY** filters the list without streaming.
+- **Previous/Next** cycles the current visible list. Under **SETTINGS**, the *FAVORITE ORDER* earlier/later controls update the order of curated favorite IDs; audio outputs and Bluetooth device recovery remain there.
+- Selection is saved by a same-origin `POST /api/radio` command with `{"action":"select","station":"skylab"}`. Adding/removing a favorite uses `{"action":"favorite","station":"skylab","enabled":true}`; ordering uses `{"action":"move_favorite","station":"skylab","direction":"earlier"}`. None of these commands start a network stream.
+- On restart the UI highlights the last explicitly selected station, **without autoplay**. The `play` command still requires `confirm:true`, independently updates the last station, and remains the only action that opens the native decoder/stream worker.
+- Read/write validation rejects unknown IDs, duplicates, unknown JSON keys, malformed versions, oversize files and symlinked preference files. Updates use an OS lock, bounded JSON, restrictive Unix permissions and atomic staged replacement. A corrupt existing file is preserved and reported as a 409; it is never silently reset.
+- On the 480×320 HUD the Play/Stop and volume rows share horizontal space, while **SETTINGS** opens a compact overlay; the default RADIO view does not need a list scrollbar. Physical Pi display and touch screenshots remain a separate acceptance gate.
+
+Local no-device checks: `cargo test --locked -p pipboy-core radio_presets`, `cargo test --locked -p pipboy radio_hud_endpoints`, `node tools/test_radio_ui.cjs`.
+
 ## Native playback implementation policy
 
 The previous external-player CLI experiment has been removed. The `radio_controller` module now models user-driven session state, volume and generation-specific events in-process. It is a control foundation, **not** a functioning player. Live HTTP download, Symphonia decode, CPAL playback and micro UI are explicit following milestones. See [research, object model and phase gates](RADIO_NATIVE_ROADMAP.md).
