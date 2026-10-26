@@ -26,6 +26,7 @@ mod network;
 mod peer;
 mod radio;
 mod radio_http;
+mod radio_net;
 mod radio_output;
 mod radio_playback;
 mod sampling;
