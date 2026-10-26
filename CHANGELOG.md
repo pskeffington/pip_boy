@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-10-26 — Privacy and credential-isolation audit (CI pending)
+
+- Review tracked files, local HTTP API, notes/tasks/messages/GIS storage, UniFi credentials, native subprocesses and browser provider requests for leakage paths. Record severity and limitations in the security review.
+- Strip recognized API/cloud credentials from all runtime external-process environments while preserving platform binary behavior and user consent gates.
+- Add a repository-level privacy gate for tracked operator artifacts, private key material, strong token patterns and unreviewed child-process constructors; diagnostics never print matched secrets.
+- Expand `.gitignore` for private Rust-Boy data and key/location-export formats. Do not move, migrate or purge existing user records.
+
 ## 2026-10-26 — Mac-native offline county cache integrity audit
 
 - Add a read-only MAP cache audit using the actual Rust dashboard on a temporary loopback port, with only `cache_only:true`, `confirm:false` requests. Never sends GPS coordinates, source URLs or live network fetches.

@@ -9,6 +9,7 @@ use pipboy_core::messenger::{
     AttemptRoute, Delivery, Message, MessageStore, RemoteMessage, MAX_TEXT_BYTES,
 };
 use pipboy_core::peers::{Peer, PeerConfig, PeerStore};
+use pipboy_core::process_safety::isolated_command;
 use pipboy_core::tasks::{
     valid_device_id, NewTask, RemoteAssignment, RemoteReport, Task, TaskStore,
 };
@@ -55,7 +56,7 @@ fn private_local_ip(text: &str) -> io::Result<Ipv4Addr> {
 }
 
 fn ssh_command_at(peer: &Peer, remote: &str, local_ip: Option<Ipv4Addr>) -> Command {
-    let mut command = Command::new("ssh");
+    let mut command = isolated_command("ssh");
     command.arg("-F").arg("none");
     if let Some(ip) = local_ip {
         // Change routing only; the enrolled hostname remains the trust identity.
@@ -841,7 +842,7 @@ mod tests {
             "pipboy peer message-receive",
             Some("192.168.1.20".parse().unwrap()),
         );
-        let result = Command::new("ssh")
+        let result = isolated_command("ssh")
             .arg("-G")
             .args(command.get_args())
             .output();

@@ -1,12 +1,13 @@
 //! Allowlisted, operator-triggered Census county archives for the local map.
 //! Never accepts a URL or raw GPS position. Only a validated 5-digit GEOID and
 //! a source ID from SOURCE_LIST can reach a fixed HTTPS Census ZIP path.
+use pipboy_core::process_safety::isolated_command;
 use serde_json::{json, Value};
 use std::collections::BTreeSet;
 use std::fs::{self, File};
 use std::io::{self, Read, Write};
 use std::path::{Path, PathBuf};
-use std::process::{Command, Stdio};
+use std::process::Stdio;
 use std::sync::{Mutex, OnceLock};
 
 pub const MAX_ARCHIVE: u64 = 12 * 1024 * 1024;
@@ -372,7 +373,7 @@ impl CountyCache {
         // No supplied URL, no GPS coordinates, redirects, insecure TLS,
         // shell invocation, arbitrary domains, or retries.
         let cmd = if cfg!(windows) { "curl.exe" } else { "curl" };
-        let success = Command::new(cmd)
+        let success = isolated_command(cmd)
             .args([
                 "--fail",
                 "--silent",
@@ -467,7 +468,7 @@ impl CountyCache {
         // argv is always fixed by source(), geoid_valid(); no shell, arbitrary
         // target, redirects, retry loop, credentials, or custom user URLs.
         let cmd = if cfg!(windows) { "curl.exe" } else { "curl" };
-        let ok = Command::new(cmd)
+        let ok = isolated_command(cmd)
             .args([
                 "--fail",
                 "--silent",
