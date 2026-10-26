@@ -506,7 +506,8 @@ fn county_boundary(req: &Request, store: &WorkbenchStore) -> Result<Response, Re
 
 fn zip_index(store: &WorkbenchStore) -> ZipIndex {
     ZipIndex::new(
-        store.path()
+        store
+            .path()
             .parent()
             .unwrap_or_else(|| std::path::Path::new("."))
             .join("geo_index"),
@@ -519,7 +520,10 @@ fn zip_lookup(req: &Request, store: &WorkbenchStore) -> Result<Response, Respons
     let cache_only = body.get("cache_only").and_then(Value::as_bool) == Some(true);
     let confirm = body.get("confirm").and_then(Value::as_bool) == Some(true);
     if !confirm && !cache_only {
-        return Err(Response::error(403, "ZIP relationship lookup requires confirmation"));
+        return Err(Response::error(
+            403,
+            "ZIP relationship lookup requires confirmation",
+        ));
     }
     let result = zip_index(store)
         .resolve_zip(zip, !cache_only && confirm)
@@ -527,7 +531,10 @@ fn zip_lookup(req: &Request, store: &WorkbenchStore) -> Result<Response, Respons
             io::ErrorKind::NotFound => Response::error(404, "ZCTA index not cached"),
             io::ErrorKind::InvalidInput => Response::error(422, "Invalid ZIP or Census ZCTA index"),
             io::ErrorKind::WouldBlock => Response::error(409, "Census lookup download in progress"),
-            _ => Response::error(409, "Census ZCTA source unavailable; existing cache preserved"),
+            _ => Response::error(
+                409,
+                "Census ZCTA source unavailable; existing cache preserved",
+            ),
         })?;
     Ok(Response::json(200, &result))
 }
@@ -540,20 +547,29 @@ fn county_zips(req: &Request, store: &WorkbenchStore) -> Result<Response, Respon
         Some(value) => value
             .as_u64()
             .filter(|offset| *offset <= 80_000)
-            .ok_or_else(|| Response::error(422, "Invalid county ZIP page offset"))? as usize,
+            .ok_or_else(|| Response::error(422, "Invalid county ZIP page offset"))?
+            as usize,
     };
     let cache_only = body.get("cache_only").and_then(Value::as_bool) == Some(true);
     let confirm = body.get("confirm").and_then(Value::as_bool) == Some(true);
     if !confirm && !cache_only {
-        return Err(Response::error(403, "County ZCTA lookup requires confirmation"));
+        return Err(Response::error(
+            403,
+            "County ZCTA lookup requires confirmation",
+        ));
     }
     let result = zip_index(store)
         .county_zctas(geoid, offset, !cache_only && confirm)
         .map_err(|error| match error.kind() {
             io::ErrorKind::NotFound => Response::error(404, "ZCTA index not cached"),
-            io::ErrorKind::InvalidInput => Response::error(422, "Invalid county or Census ZCTA index"),
+            io::ErrorKind::InvalidInput => {
+                Response::error(422, "Invalid county or Census ZCTA index")
+            }
             io::ErrorKind::WouldBlock => Response::error(409, "Census lookup download in progress"),
-            _ => Response::error(409, "Census ZCTA source unavailable; existing cache preserved"),
+            _ => Response::error(
+                409,
+                "Census ZCTA source unavailable; existing cache preserved",
+            ),
         })?;
     Ok(Response::json(200, &result))
 }
@@ -1851,11 +1867,27 @@ mod tests {
         let cases = [
             ("/api/map/zip", json!({"zip":"02360"}), 403),
             ("/api/map/zip", json!({"zip":"0236","confirm":true}), 422),
-            ("/api/map/zip", json!({"zip":"02360","cache_only":true}), 404),
+            (
+                "/api/map/zip",
+                json!({"zip":"02360","cache_only":true}),
+                404,
+            ),
             ("/api/map/county-zips", json!({"geoid":"25023"}), 403),
-            ("/api/map/county-zips", json!({"geoid":"../../","confirm":true}), 422),
-            ("/api/map/county-zips", json!({"geoid":"25023","offset":-1,"cache_only":true}), 422),
-            ("/api/map/county-zips", json!({"geoid":"25023","cache_only":true}), 404),
+            (
+                "/api/map/county-zips",
+                json!({"geoid":"../../","confirm":true}),
+                422,
+            ),
+            (
+                "/api/map/county-zips",
+                json!({"geoid":"25023","offset":-1,"cache_only":true}),
+                422,
+            ),
+            (
+                "/api/map/county-zips",
+                json!({"geoid":"25023","cache_only":true}),
+                404,
+            ),
         ];
         for (path, body, expected) in cases {
             let response = dispatch(&request("POST", path, body), &store, 8765);
@@ -1863,12 +1895,13 @@ mod tests {
             assert!(!tmp.path().join("state/geo_index").exists());
         }
         let mut bad_origin = request(
-            "POST", "/api/map/zip",
+            "POST",
+            "/api/map/zip",
             json!({"zip":"02360","confirm":true}),
         );
-        bad_origin.headers.insert(
-            "origin".to_owned(), "https://untrusted.invalid".to_owned()
-        );
+        bad_origin
+            .headers
+            .insert("origin".to_owned(), "https://untrusted.invalid".to_owned());
         assert_eq!(dispatch(&bad_origin, &store, 8765).status, 403);
         assert!(!tmp.path().join("state/geo_index").exists());
     }
