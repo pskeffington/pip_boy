@@ -6,14 +6,13 @@
 use crate::county_cache::{self, CountyCache};
 use crate::peer;
 use crate::radio_playback::NativeRadioEngine;
-use pipboy_core::radio_directory::curated_stations;
-use std::sync::{LazyLock, Mutex};
 use pipboy_core::message_pace::{PaceStore, Tier};
 use pipboy_core::messenger::{valid_text, Direction, MessageStore};
 use pipboy_core::network_health;
 use pipboy_core::network_probe;
 use pipboy_core::network_suite;
 use pipboy_core::peers::PeerStore;
+use pipboy_core::radio_directory::curated_stations;
 use pipboy_core::reclamation::{NewSite, SiteStatus, SiteStore};
 use pipboy_core::scout_gis::{distance_meters, waypoint, Point};
 use pipboy_core::tasks::{NewTask, Status, TaskStore};
@@ -28,6 +27,7 @@ use std::sync::{
     atomic::{AtomicUsize, Ordering},
     Arc,
 };
+use std::sync::{LazyLock, Mutex};
 use std::time::Duration;
 
 const DEFAULT_PORT: u16 = 8765;
@@ -1204,7 +1204,10 @@ fn radio_command(req: &Request) -> Result<Response, Response> {
     match action {
         "play" => {
             if body.get("confirm").and_then(Value::as_bool) != Some(true) {
-                return Err(Response::error(422, "Radio playback requires explicit confirmation"));
+                return Err(Response::error(
+                    422,
+                    "Radio playback requires explicit confirmation",
+                ));
             }
             let station = str_field(&body, "station")?;
             if !curated_stations().iter().any(|s| s.id == station) {
@@ -1217,7 +1220,10 @@ fn radio_command(req: &Request) -> Result<Response, Response> {
                         | pipboy_core::radio_controller::PlaybackState::Stopped
                 )
             }) {
-                return Err(Response::error(409, "Stop the active station before switching"));
+                return Err(Response::error(
+                    409,
+                    "Stop the active station before switching",
+                ));
             }
             // Stop old failed session before opening a replacement. The native
             // decoder owns audio; no external player or web media element.
@@ -1235,13 +1241,16 @@ fn radio_command(req: &Request) -> Result<Response, Response> {
             }
         }
         "volume" => {
-            let volume = body.get("volume").and_then(Value::as_u64)
+            let volume = body
+                .get("volume")
+                .and_then(Value::as_u64)
                 .filter(|n| *n <= 100)
                 .ok_or_else(|| Response::error(422, "Volume must be between 0 and 100"))?;
-            let player = engine.as_ref().ok_or_else(|| {
-                Response::error(409, "Start a station before changing volume")
-            })?;
-            player.set_volume(volume as u8)
+            let player = engine
+                .as_ref()
+                .ok_or_else(|| Response::error(409, "Start a station before changing volume"))?;
+            player
+                .set_volume(volume as u8)
                 .map_err(|_| Response::error(409, "Cannot change radio volume"))?;
         }
         _ => return Err(Response::error(422, "Unknown radio command")),
@@ -1268,9 +1277,11 @@ fn dispatch(req: &Request, store: &WorkbenchStore, port: u16) -> Response {
         ("GET", "/assets/micro.css") => {
             Response::new(200, "text/css; charset=utf-8", MICRO_CSS.as_bytes())
         }
-        ("GET", "/assets/radio-ui.js") => {
-            Response::new(200, "text/javascript; charset=utf-8", RADIO_UI_JS.as_bytes())
-        }
+        ("GET", "/assets/radio-ui.js") => Response::new(
+            200,
+            "text/javascript; charset=utf-8",
+            RADIO_UI_JS.as_bytes(),
+        ),
         ("GET", "/assets/radio-ui.css") => {
             Response::new(200, "text/css; charset=utf-8", RADIO_UI_CSS.as_bytes())
         }
@@ -1570,21 +1581,38 @@ mod tests {
         let temp = tempfile::tempdir().unwrap();
         let store = WorkbenchStore::new(temp.path().join("radio-hud"));
         for asset in ["/assets/radio-ui.js", "/assets/radio-ui.css"] {
-            assert_eq!(dispatch(&request("GET", asset, Value::Null), &store, 8765).status, 200);
+            assert_eq!(
+                dispatch(&request("GET", asset, Value::Null), &store, 8765).status,
+                200
+            );
         }
         let state = dispatch(&request("GET", "/api/radio", Value::Null), &store, 8765);
         assert_eq!(state.status, 200);
         let json: Value = serde_json::from_slice(&state.body).unwrap();
         assert!(json["stations"].as_array().unwrap().len() >= 4);
         assert_eq!(json["sdr"], "not_connected");
-        let invalid = request("POST", "/api/radio", json!({"action":"play", "station":"unknown", "confirm":true}));
+        let invalid = request(
+            "POST",
+            "/api/radio",
+            json!({"action":"play", "station":"unknown", "confirm":true}),
+        );
         assert_eq!(dispatch(&invalid, &store, 8765).status, 422);
-        let absent = request("POST", "/api/radio", json!({"action":"play", "station":"skylab"}));
+        let absent = request(
+            "POST",
+            "/api/radio",
+            json!({"action":"play", "station":"skylab"}),
+        );
         assert_eq!(dispatch(&absent, &store, 8765).status, 422);
-        let unsafe_volume = request("POST", "/api/radio", json!({"action":"volume", "volume":101}));
+        let unsafe_volume = request(
+            "POST",
+            "/api/radio",
+            json!({"action":"volume", "volume":101}),
+        );
         assert_eq!(dispatch(&unsafe_volume, &store, 8765).status, 422);
         let mut cross_origin = request("POST", "/api/radio", json!({"action":"stop"}));
-        cross_origin.headers.insert("origin".into(), "http://evil.example".into());
+        cross_origin
+            .headers
+            .insert("origin".into(), "http://evil.example".into());
         assert_eq!(dispatch(&cross_origin, &store, 8765).status, 403);
         let stop = request("POST", "/api/radio", json!({"action":"stop"}));
         assert_eq!(dispatch(&stop, &store, 8765).status, 200);
