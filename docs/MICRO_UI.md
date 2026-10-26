@@ -105,3 +105,7 @@ LINK now includes a compact [PACE route selector](PACE_MESSAGING.md) beside DEVI
 Primary/Alternate send only on explicit actions; Contingency is disabled and
 Emergency queues locally. Its banner states P/A share a LAN, C is receive-only
 and E holds locally. History encryption labels follow the actual queue mode.
+
+## Native RADIO in the handheld HUD
+
+From `./scripts/launch-micro.command`, open **LINK → RADIO / IP**. The panel lists curated Skylab Radio UK and SomaFM stations, Play/Stop, 10-point volume buttons, native status and errors. The Rust-Boy process—not the browser—owns the receiver and CPAL speaker output. The same session is visible in the desktop RADIO dock. RADIO does not autoplay, launch another application, or require a particular workbench profile; selecting a station alone never contacts a broadcaster. **STOP** ends playback even after returning to the LINK page. Verify on actual Mac/Pi audio hardware; browser/CI checks alone cannot certify sound.
