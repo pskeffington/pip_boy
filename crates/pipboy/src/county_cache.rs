@@ -465,6 +465,83 @@ impl CountyCache {
 mod tests {
     use super::*;
 
+    fn county_fixture(geoid: &str) -> Vec<u8> {
+        json!({
+            "type":"FeatureCollection",
+            "features":[{
+                "type":"Feature",
+                "properties":{"GEOID":geoid,"NAME":"Test County"},
+                "geometry":{"type":"Polygon","coordinates":[
+                    [[-71.2,42.3],[-71.0,42.3],[-71.0,42.5],[-71.2,42.3]],
+                    [[-71.12,42.34],[-71.10,42.34],[-71.10,42.36],[-71.12,42.34]]
+                ]}
+            }]
+        })
+        .to_string()
+        .into_bytes()
+    }
+
+    #[test]
+    fn boundary_parser_rejects_unmatched_or_malformed_counties() {
+        let value = CountyCache::parse_boundary("25025", &county_fixture("25025"), false)
+            .unwrap();
+        assert_eq!(value["geoid"], "25025");
+        assert_eq!(value["paths"].as_array().unwrap().len(), 2);
+        assert_eq!(value["cache_hit"], false);
+        assert_eq!(value["network_used"], true);
+        assert!(CountyCache::parse_boundary("25023", &county_fixture("25025"), false).is_err());
+        let mut invalid: Value = serde_json::from_slice(&county_fixture("25025")).unwrap();
+        invalid["features"][0]["geometry"]["coordinates"][0][1][0] = json!(181.0);
+        assert!(CountyCache::parse_boundary("25025", invalid.to_string().as_bytes(), false).is_err());
+        invalid["features"][0]["geometry"]["coordinates"][0][1][0] = json!(-71.0);
+        invalid["features"][0]["geometry"]["coordinates"][0][3][0] = json!(-71.1);
+        assert!(CountyCache::parse_boundary("25025", invalid.to_string().as_bytes(), false).is_err());
+        assert!(CountyCache::parse_boundary("25025", b"{}", false).is_err());
+        assert!(CountyCache::parse_boundary("25025", b"{", false).is_err());
+    }
+
+    #[test]
+    fn cached_boundary_restores_offline_without_location_or_side_effects() {
+        let root = tempfile::tempdir().unwrap();
+        let cache = CountyCache::new(root.path().to_path_buf());
+        assert_eq!(
+            cache.boundary("25025", false).unwrap_err().kind(),
+            io::ErrorKind::NotFound
+        );
+        assert!(cache.boundary("../25", false).is_err());
+        assert!(cache.boundary("00000", true).is_err());
+        assert!(!cache.boundary_path("25025").exists());
+        fs::write(cache.boundary_path("25025"), county_fixture("25025")).unwrap();
+        cache.remember("25025").unwrap();
+        let data = cache.boundary("25025", false).unwrap();
+        assert_eq!(data["geoid"], "25025");
+        assert_eq!(data["cache_hit"], true);
+        assert_eq!(data["network_used"], false);
+        assert_eq!(cache.active().unwrap()["boundary_cached"], true);
+        assert_eq!(cache.active().unwrap()["cached_sources"], json!([]));
+        let original = fs::read(cache.boundary_path("25025")).unwrap();
+        fs::write(cache.boundary_path("25025"), b"{\"features\":[]}").unwrap();
+        assert!(cache.boundary("25025", false).is_err());
+        assert!(cache.boundary("25025", true).is_err());
+        assert_eq!(cache.active().unwrap()["boundary_cached"], false);
+        assert_ne!(fs::read(cache.boundary_path("25025")).unwrap(), original);
+    }
+
+    #[test]
+    fn boundary_urls_and_county_budget_are_fixed() {
+        assert!(CountyCache::boundary_url("25025").contains("GEOID%3D%2725025%27"));
+        assert!(CountyCache::boundary_url("25025").starts_with(
+            "https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/State_County/"
+        ));
+        let tmp = tempfile::tempdir().unwrap();
+        let cache = CountyCache::new(tmp.path().to_path_buf());
+        for id in ["25001","25003","25005","25007"] {
+            fs::write(cache.boundary_path(id), county_fixture(id)).unwrap();
+        }
+        assert!(cache.limit_new_county("25009").is_err());
+        assert!(cache.limit_new_county("25003").is_ok());
+    }
+
     #[test]
     fn source_and_geoid_restrictions_do_not_create_paths() {
         let tmp = tempfile::tempdir().unwrap();
