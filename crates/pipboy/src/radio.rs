@@ -2,7 +2,8 @@
 //! No hardware capture is performed by this command.
 use pipboy_core::radio::{Demodulation, RadioTuner, SimulatedRadio, Tuning};
 use std::error::Error;
-use pipboy_core::radio_directory::{curated_stations, select_source, NoHardwareEnumerator, PublisherTcpCheck, UncheckedConnectivity, RadioSource};
+use std::process::Command;
+use pipboy_core::radio_directory::{curated_stations, station_by_id, select_source, NoHardwareEnumerator, PublisherTcpCheck, UncheckedConnectivity, RadioSource};
 
 fn modulation(value: &str) -> Option<Demodulation> {
     match value.to_ascii_lowercase().as_str() {
@@ -16,14 +17,58 @@ fn modulation(value: &str) -> Option<Demodulation> {
     }
 }
 
+/// User-initiated listening through an installed player. No shell interpolation.
+fn launch_station(id: &str, player: &str) -> Result<(), Box<dyn Error>> {
+    let station = station_by_id(id).ok_or("unknown curated radio station ID")?;
+    let url = station.playlist_url;
+    let mut command = match player {
+        "vlc" => {
+            let mut c = Command::new("vlc");
+            c.arg("--no-video").arg(url);
+            c
+        }
+        "ffplay" => {
+            let mut c = Command::new("ffplay");
+            c.arg("-nodisp").arg("-autoexit").arg(url);
+            c
+        }
+        "system" => {
+            if cfg!(target_os = "macos") {
+                let mut c = Command::new("open");
+                c.arg(url);
+                c
+            } else if cfg!(target_os = "windows") {
+                let mut c = Command::new("explorer");
+                c.arg(url);
+                c
+            } else {
+                let mut c = Command::new("xdg-open");
+                c.arg(url);
+                c
+            }
+        }
+        _ => return Err("player must be system, vlc, or ffplay".into()),
+    };
+    command.spawn().map_err(|e| format!("failed to start {player} player: {e}"))?;
+    println!("RADIO / opening {} via {} (playback not verified)", station.name, player);
+    Ok(())
+}
+
 pub fn run(args: Vec<String>) -> Result<(), Box<dyn Error>> {
     match args.as_slice() {
+        [action, id, confirm] if action == "listen" && confirm == "--confirm" => {
+            launch_station(id, "system")
+        }
+        [action, id, confirm, player_flag, player]
+            if action == "listen" && confirm == "--confirm" && player_flag == "--player" => {
+            launch_station(id, player)
+        }
         [action] if action == "stations" => {
             println!("RADIO / CURATED DIRECTORY / published metadata, stream unchecked");
             for station in curated_stations() {
-                println!("{} | {} | {} kbps {} | {}", station.id, station.name, station.nominal_kbps, station.format, station.playlist_url);
+                println!("{} | {} | {} | {}", station.id, station.name, station.genre, station.playlist_url);
             }
-            println!("No playback initiated. Refer to docs/RADIO_SDR.md for publisher source and usage terms.");
+            println!("No playback initiated. To start: pipboy radio listen skylab --confirm --player vlc");
             Ok(())
         }
         [action, confirm] if action == "stations" && confirm == "--check-ip" => {
@@ -74,7 +119,7 @@ pub fn run(args: Vec<String>) -> Result<(), Box<dyn Error>> {
             println!("SIMULATED ONLY: no antenna, live RF or audio decoder connected.");
             Ok(())
         }
-        _ => Err("usage: pipboy radio <capabilities|source|stations [--check-ip]|simulate FREQ_HZ am|nfm|wfm|usb|lsb|iq>".into()),
+        _ => Err("usage: pipboy radio <capabilities|source|stations [--check-ip]|listen STATION_ID --confirm [--player system|vlc|ffplay]|simulate FREQ_HZ am|nfm|wfm|usb|lsb|iq>".into()),
     }
 }
 
@@ -86,5 +131,7 @@ mod tests {
     fn rejects_invalid_inputs() {
         assert!(run(vec!["simulate".into(), "0".into(), "am".into()]).is_err());
         assert!(run(vec!["simulate".into(), "100000000".into(), "bad".into()]).is_err());
+        assert!(launch_station("unknown", "system").is_err());
+        assert!(launch_station("skylab", "invalid").is_err());
     }
 }
