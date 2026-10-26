@@ -46,6 +46,18 @@
       $('[data-stage-target="viewport"]').click();
       result.viewport=shown($('[data-stage="viewport"]')) &&
         inside($('[data-stage="viewport"]'),$("#workspace-stage"));
+      if (shown($(".extension-tabs"))) {
+        const options=all(".extension-tabs button").map(b=>b.textContent);
+        const destination=$(".extension-tabs button:last-child");
+        destination.click();
+        result.focusedViews={
+          options,
+          selected:all(".extension-tabs button").filter(b=>b.getAttribute("aria-pressed")==="true").map(b=>b.textContent),
+          navFits:inside($(".extension-tabs"),$("#extension-content")),
+          visibleBody:shown($(".extension-focused-body")) ||
+            shown($(".camera-wall"))
+        };
+      }
       $('[data-stage-target="messages"]').click();
       result.messages=shown($('[data-stage="messages"]')) &&
         inside($('[data-stage="messages"]'),$("#workspace-stage"));
