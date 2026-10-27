@@ -18,7 +18,7 @@ const styles = ["dashboard.css", "map.css", "tasks.css",
   "messenger.css", "network.css", "reclamation.css", "radio-ui.css"];
 const allowed = new Map(styles.map(name => ["/assets/" + name,
   [path.join(assets, name), "text/css; charset=utf-8"]]));
-for (const name of ["dashboard.js", "messenger.js", "radio-ui.js"]) {
+for (const name of ["dashboard.js", "messenger.js", "radio-ui.js", "tasks.js"]) {
   allowed.set("/assets/" + name,
     [path.join(assets, name), "text/javascript; charset=utf-8"]);
 }
@@ -74,17 +74,19 @@ function chromeBinary() {
 
 function fixturePage() {
   let html = fs.readFileSync(path.join(assets, "dashboard.html"), "utf8");
-  // Load desktop, Messenger and the native radio control surface; all other
+  // Load desktop, Messenger, Task Control and native radio; other
   // subsystems run their own independent component/viewport acceptance tests.
   html = html.replace(/<script defer src="(\/assets\/[^"]+)"><\/script>/g,
     (full,url) => ["/assets/dashboard.js","/assets/messenger.js",
-      "/assets/radio-ui.js"].includes(url) ? full : "");
+      "/assets/radio-ui.js", "/assets/tasks.js"].includes(url) ? full : "");
   const mock = '<script>window.__fixtureRequests=[];' +
     'window.fetch=function(url,opts){' +
     'const method=opts&&opts.method||"GET";' +
     'window.__fixtureRequests.push({url:String(url),method});' +
     'if(url==="/api/state"&&method==="GET")return Promise.resolve({' +
     'ok:true,json:()=>Promise.resolve(' + JSON.stringify(state) + ')});' +
+    'if(url==="/api/tasks"&&method==="GET")return Promise.resolve({' +
+    'ok:true,json:()=>Promise.resolve({board:{tasks:[]},manager:false,role:"head-engineer"})});' +
     'if(url==="/api/radio"&&method==="GET")return Promise.resolve({' +
     'ok:true,json:()=>Promise.resolve({source:"none",status:"stopped",' +
     'station:null,volume:60,error:null,output:"system",output_available:true,' +
@@ -141,6 +143,10 @@ function fixturePage() {
     'document.querySelector(\'[data-stage-target="settings"]\').click();',
     'report.settingsAfterClick=!document.querySelector(\'[data-stage="settings"]\').hidden;',
     'report.stationHeightsInSettings=[...document.querySelectorAll(".role-card")].map(x=>x.getBoundingClientRect().height);',
+    'document.querySelector(\'[data-stage-target="command"]\').click();',
+    'report.commandOpened=!document.querySelector(\'[data-stage="command"]\').hidden;',
+    'report.commandHasMount=!!document.querySelector(".command-task-mount");',
+    'report.commandAuthority=document.getElementById("command-authority").textContent;',
     'document.querySelector(\'[data-stage-target="viewport"]\').click();',
     'const radio=document.getElementById("radio-dock");',
     'const toggle=document.getElementById("radio-view-toggle");',
@@ -158,6 +164,8 @@ function fixturePage() {
     'toggle.click();',
     'report.radioClosedAfterClick=radio.hidden&&radio.children.length===0;',
     'report.radioRequestsAfterClose=[...window.__fixtureRequests];',
+    'report.commandHasDutyBoard=!!document.querySelector("#command-board .task-control");',
+    'report.commandHasCreate=!![...document.querySelectorAll("#command-board button")].find(b=>b.textContent.includes("NEW ASSIGNMENT"));',
     'document.getElementById("viewport-report").textContent=',
     'btoa(String.fromCharCode(...new TextEncoder().encode(JSON.stringify(report))));',
     '},100);',
@@ -231,7 +239,7 @@ function check(data,width,height) {
   assert.ok(data.scrollWidth<=width+2,"Unexpected document horizontal overflow");
   assert.ok(data.scrollHeight<=height+2,"One-screen desktop must not scroll the document");
   assert.equal(data.paneTabs,2,"WORKSPACE/INSPECTOR pane controls missing");
-  assert.equal(data.stageTabs,4,"TOOLS/VIEW/MESSAGES/SETTINGS pages missing");
+  assert.equal(data.stageTabs,5,"COMMAND/MODULES/VIEW/MESSAGES/SETTINGS pages missing");
   assert.equal(data.roles,6,"First of eight fixture roles must show six entries");
   assert.match(data.rolePager,/1\s*\/\s*2/,"Settings role pager unavailable");
   assert.equal(data.tools,5,"Five Head Engineer tools must be available");
@@ -264,6 +272,16 @@ function check(data,width,height) {
   assert.ok(data.afterRequests.every(x=>x.method==="GET"),
     "Switching pages must not send messages or network probes");
   assert.ok(data.settingsAfterClick,"Settings page must open manually");
+  assert.ok(data.commandOpened && data.commandHasMount && data.commandHasDutyBoard,
+    "Command stage must mount the native role-scoped task board");
+  assert.equal(data.commandAuthority,"ROLE-SCOPED DUTIES",
+    "Field roles must not be presented as assignment authorities");
+  assert.equal(data.commandHasCreate,false,
+    "Task creation must remain unavailable without Task Control");
+  assert.ok(data.radioRequestsAfterClose.some(x=>x.url==="/api/tasks"&&x.method==="GET"),
+    "Opening Command must read the local task queue");
+  assert.ok(data.radioRequestsAfterClose.every(x=>x.method==="GET"),
+    "Opening Command and Radio must not issue assignments or send audio");
   assert.equal(data.stationHeightsInSettings.length,6,
     "Station template paging must remain available in Settings");
   assert.ok(data.stationHeightsInSettings.every(h=>h>0),
