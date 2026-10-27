@@ -51,6 +51,21 @@ SOURCES = {
         "page": "https://enterprise.firstmaptest.delaware.gov/arcgis/rest/services/Transportation/"
                 "DE_Boundary_and_Point/FeatureServer/26",
     },
+    "ridot": {
+        "state": "RI", "kind": "arcgis", "agency": "Rhode Island DOT / Rhodeways",
+        "url": "https://risegis.ri.gov/hosting/rest/services/RIDOT/Rhodeways/MapServer/6/query"
+               "?where=1%3D1&outFields=OBJECTID%2CEquipmentID%2CDescription%2CLatitude%2CLongitude"
+               "%2CEnabled%2CCategory%2CDirection&returnGeometry=false&resultRecordCount=500&f=json",
+        "page": "https://risegis.ri.gov/hosting/rest/services/RIDOT/Rhodeways/MapServer/6",
+    },
+    "massdot-staging": {
+        "state": "MA", "kind": "arcgis", "agency": "MassDOT traffic-camera GIS staging (unapproved)",
+        "url": "https://gisstg.massdot.state.ma.us/rh/rest/services/Hosted/MassDOT_Traffic_Cams/FeatureServer/0/query"
+               "?where=1%3D1&outFields=objectid%2Cpublicid%2Cname%2Cdescription%2Cprovider%2Cstatecode"
+               "&returnGeometry=true&outSR=4326&resultRecordCount=500&f=json",
+        "page": "https://gisstg.massdot.state.ma.us/rh/rest/services/Hosted/MassDOT_Traffic_Cams/FeatureServer/0",
+        "fetch_allowed": False,  # staging host: offline review only pending production confirmation
+    },
     "vdot": {
         "state": "VA", "kind": "geojson", "agency": "VDOT 511",
         "url": "https://511.vdot.virginia.gov/services/map/layers/map/cams",
@@ -62,6 +77,8 @@ BOUNDS = {
     "DC": (38.7, 39.05, -77.2, -76.85),
     "DE": (38.35, 39.9, -75.85, -74.75),
     "VA": (38.4, 39.25, -77.7, -76.7),  # DC metro only, not all Virginia
+    "RI": (41.1, 42.05, -72.05, -71.05),
+    "MA": (41.15, 42.95, -73.6, -69.8),
 }
 
 
@@ -91,6 +108,8 @@ def bounded_json(text):
 
 
 def fetch_public(source):
+    if SOURCES[source].get("fetch_allowed") is False:
+        raise ValueError("Staging source is offline-review only; --fetch is forbidden")
     url = SOURCES[source]["url"]  # user cannot provide a URL
     parts = urllib.parse.urlsplit(url)
     if parts.scheme != "https" or not parts.hostname or parts.username or parts.password:
@@ -98,7 +117,7 @@ def fetch_public(source):
     if parts.hostname not in {
         "mdgeodata.md.gov", "maps2.dcgis.dc.gov",
         "enterprise.firstmaptest.delaware.gov", "511.vdot.virginia.gov",
-        "opendata.maryland.gov"
+        "opendata.maryland.gov", "risegis.ri.gov"
     }:
         raise ValueError("Unapproved metadata provider")
     request = urllib.request.Request(url, headers={"Accept": "application/json"})
@@ -183,6 +202,23 @@ def normalize(source, payload):
             evidence = None
             status = "agency_camera_location_only"
             provider_id = attrs.get("CameraID")
+        elif source == "ridot":
+            ident = attrs.get("EquipmentID") or attrs.get("OBJECTID")
+            name = clean_name(attrs.get("Description"))
+            coords = coordinate(attrs.get("Latitude"), attrs.get("Longitude"), "RI")
+            # GIS enabled status reports configuration, not image health.
+            evidence = None
+            status = "agency_enabled_metadata_only" if attrs.get("Enabled") == 1 else "agency_disabled_or_unknown"
+            provider_id = attrs.get("EquipmentID")
+        elif source == "massdot-staging":
+            ident = attrs.get("publicid") or attrs.get("objectid")
+            name = clean_name(attrs.get("name") or attrs.get("description"))
+            geom = item.get("geometry") or {}
+            coords = coordinate(geom.get("y"), geom.get("x"), "MA")
+            # Exclude world-scale outliers. No staging JPEG or media URLs are promoted.
+            evidence = None
+            status = "staging_only_production_source_unverified"
+            provider_id = attrs.get("publicid")
         elif source == "deldot":
             ident = attrs.get("OBJECTID")
             name = clean_name(attrs.get("PUBLIC_NAME") or
