@@ -19,6 +19,8 @@
 
 **P2 prototype:** `pipboy-core::offline_queue` adds a standalone bounded, JSON-snapshot synthetic-data queue with atomic temp-file replacement, lock-guarded writes, duplicate identity rejection, and corruption fail-closed tests. This is NOT encrypted, not wired to Messenger, does not record authenticated receiver receipts and requires crash/disk-full validation before deployment.
 
+**P2 receipt-journal pass:** a bounded receipt record now survives restart, rejects identity conflicts, and keeps original event identities. Receipt input is NOT cryptographically verified by this storage module: only a future authenticated transport adapter may call it after validating remote identity and receipt binding. No live Messenger integration, key encryption, forced power-cut testing or field acceptance is claimed.
+
 ## Next three development increments
 
 ### Increment A — software-only proof (P0–P2)
