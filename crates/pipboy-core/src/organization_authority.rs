@@ -788,4 +788,69 @@ mod tests {
         let mut fresh_process = VolatileNonceJournal::default();
         assert!(fresh_process.check_and_record([0; 32]).is_ok());
     }
+    #[test]
+    fn durable_org_evidence_consumes_challenge_across_restart() {
+        use crate::organization_custody::{
+            tests::MemorySecrets, AdministratorApproval, CustodyError,
+        };
+        use crate::organization_durable::{
+            verify_with_durable_evidence, DurableEvidenceError, DurableOrganization, StateError,
+        };
+        struct Approve;
+        impl AdministratorApproval for Approve {
+            fn approve_root_pin(&self, _: &str, _: &str) -> Result<(), CustodyError> {
+                Ok(())
+            }
+        }
+
+        let fixture = fixture();
+        let dir = tempfile::tempdir().unwrap();
+        let store = MemorySecrets::default();
+        let mut state = DurableOrganization::provision(
+            dir.path(),
+            "sample-org",
+            fixture.root.public_key().as_ref(),
+            &Approve,
+            &store,
+        )
+        .unwrap();
+        state.install_revocations(fixture.revocations.clone()).unwrap();
+
+        let bundle = ApprovalBundle {
+            appointment: &fixture.appointment,
+            operator_grant: &fixture.operator_grant,
+            device_grant: &fixture.device_grant,
+            revocations: &fixture.revocations,
+            operator_credential: &fixture.operator_credential,
+            operator_proof: &fixture.operator_proof,
+            device_credential: &fixture.device_credential,
+            device_proof: &fixture.device_proof,
+        };
+        let first = verify_with_durable_evidence(
+            &mut state,
+            &fixture.graph,
+            &query(),
+            20,
+            &NONCE,
+            &BINDING,
+            &bundle,
+        )
+        .unwrap();
+        assert_eq!(first.identity.device_id, "field-device");
+        assert!(matches!(
+            verify_with_durable_evidence(
+                &mut state, &fixture.graph, &query(), 20, &NONCE, &BINDING, &bundle
+            ),
+            Err(DurableEvidenceError::State(StateError::Replay))
+        ));
+        drop(state);
+        let mut reopened = DurableOrganization::open(dir.path(), "sample-org", &store).unwrap();
+        assert!(matches!(
+            verify_with_durable_evidence(
+                &mut reopened, &fixture.graph, &query(), 20, &NONCE, &BINDING, &bundle
+            ),
+            Err(DurableEvidenceError::State(StateError::Replay))
+        ));
+    }
+
 }
