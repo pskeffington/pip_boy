@@ -64,7 +64,9 @@ impl OfflineQueue {
         temp.write_all(&bytes)?;
         temp.as_file().sync_all()?;
         temp.persist(self.root.join("offline-queue.json")).map_err(|e| e.error)?;
+        #[cfg(unix)]
         File::open(&self.root)?.sync_all()?;
+        // Windows directory durability requires a separate field acceptance gate.
         Ok(())
     }
     pub fn enqueue(&self, event: QueuedEvent) -> io::Result<bool> {
