@@ -263,3 +263,358 @@ pub fn verify_pair(
         device_serial: device.0.serial,
     })
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::organization::{
+        Appointment, DeviceRecord, Grant, GrantSubject, Operator, Organization, Unit,
+        UnitKind, VaultSite,
+    };
+    use ring::signature::{Ed25519KeyPair, KeyPair};
+
+    const NONCE: [u8; KEY_BYTES] = [19; KEY_BYTES];
+    const BINDING: [u8; KEY_BYTES] = [23; KEY_BYTES];
+
+    fn key(seed: u8) -> Ed25519KeyPair {
+        // Deterministic TEST-ONLY secrets, never installed on actual devices.
+        Ed25519KeyPair::from_seed_unchecked(&[seed; KEY_BYTES]).unwrap()
+    }
+
+    fn query() -> ProposedExchange<'static> {
+        ProposedExchange {
+            organization_id: "sample-org",
+            vault_id: "sample-vault",
+            operator_id: "sample-operator",
+            device_id: "sample-device",
+            action: GrantAction::Sync,
+            dataset: Dataset::Progress,
+            time_unverified: 20,
+        }
+    }
+
+    fn credential(
+        root: &Ed25519KeyPair,
+        holder: &Ed25519KeyPair,
+        kind: PrincipalKind,
+        subject: &str,
+        serial: u64,
+    ) -> SignedCredential {
+        let mut claim = SignedCredential {
+            schema_version: 1,
+            organization_id: "sample-org".into(),
+            vault_id: "sample-vault".into(),
+            principal_kind: kind,
+            principal_id: subject.into(),
+            serial,
+            key_epoch: 1,
+            not_before: 10,
+            expires_at: 100,
+            public_key: holder.public_key().as_ref().to_vec(),
+            issuer_signature: Vec::new(),
+        };
+        claim.issuer_signature = root.sign(&credential_transcript(&claim)).as_ref().to_vec();
+        claim
+    }
+
+    fn proof(
+        holder: &Ed25519KeyPair,
+        claim: &SignedCredential,
+        q: &ProposedExchange<'_>,
+    ) -> SessionProof {
+        SessionProof {
+            signature: holder
+                .sign(&proof_transcript(q, claim, &NONCE, &BINDING))
+                .as_ref()
+                .to_vec(),
+        }
+    }
+
+    fn graph() -> OrgGraph {
+        OrgGraph {
+            schema_version: 1,
+            organizations: vec![Organization {
+                id: "sample-org".into(),
+                name: "Sample Org".into(),
+            }],
+            vaults: vec![VaultSite {
+                id: "sample-vault".into(),
+                organization_id: "sample-org".into(),
+                name: "Sample Vault".into(),
+            }],
+            units: vec![Unit {
+                id: "sample-team".into(),
+                vault_id: "sample-vault".into(),
+                parent_unit_id: None,
+                kind: UnitKind::Division,
+                name: "Field Team".into(),
+            }],
+            operators: vec![
+                Operator {
+                    id: "sample-operator".into(),
+                    organization_id: "sample-org".into(),
+                    display_name: "Sample Operator".into(),
+                    active: true,
+                },
+                Operator {
+                    id: "sample-issuer".into(),
+                    organization_id: "sample-org".into(),
+                    display_name: "Sample Issuer".into(),
+                    active: true,
+                },
+            ],
+            appointments: vec![Appointment {
+                id: "sample-shift".into(),
+                operator_id: "sample-operator".into(),
+                unit_id: "sample-team".into(),
+                position_id: "recon".into(),
+                approved_by_operator_id: "sample-issuer".into(),
+                not_before: 10,
+                expires_at: 100,
+                revoked: false,
+            }],
+            devices: vec![DeviceRecord {
+                id: "sample-device".into(),
+                organization_id: "sample-org".into(),
+                vault_id: "sample-vault".into(),
+                assigned_operator_id: Some("sample-operator".into()),
+                lifecycle: DeviceLifecycle::RecordedActive,
+            }],
+            grants: vec![
+                Grant {
+                    id: "sample-user-grant".into(),
+                    organization_id: "sample-org".into(),
+                    issuer_operator_id: "sample-issuer".into(),
+                    subject: GrantSubject::Operator("sample-operator".into()),
+                    vault_id: "sample-vault".into(),
+                    action: GrantAction::Sync,
+                    dataset: Dataset::Progress,
+                    not_before: 10,
+                    expires_at: 100,
+                    revoked: false,
+                },
+                Grant {
+                    id: "sample-device-grant".into(),
+                    organization_id: "sample-org".into(),
+                    issuer_operator_id: "sample-issuer".into(),
+                    subject: GrantSubject::Device("sample-device".into()),
+                    vault_id: "sample-vault".into(),
+                    action: GrantAction::Sync,
+                    dataset: Dataset::Progress,
+                    not_before: 10,
+                    expires_at: 100,
+                    revoked: false,
+                },
+            ],
+        }
+    }
+
+    struct Fixture {
+        graph: OrgGraph,
+        root: Ed25519KeyPair,
+        operator: SignedCredential,
+        device: SignedCredential,
+        operator_proof: SessionProof,
+        device_proof: SessionProof,
+    }
+
+    fn fixture() -> Fixture {
+        let root = key(11);
+        let operator_key = key(12);
+        let device_key = key(13);
+        let q = query();
+        let operator = credential(
+            &root,
+            &operator_key,
+            PrincipalKind::Operator,
+            q.operator_id,
+            1,
+        );
+        let device = credential(
+            &root,
+            &device_key,
+            PrincipalKind::Device,
+            q.device_id,
+            2,
+        );
+        Fixture {
+            graph: graph(),
+            operator_proof: proof(&operator_key, &operator, &q),
+            device_proof: proof(&device_key, &device, &q),
+            root,
+            operator,
+            device,
+        }
+    }
+
+    fn check(
+        f: &Fixture,
+        q: &ProposedExchange<'_>,
+        nonce: &[u8; KEY_BYTES],
+        binding: &[u8; KEY_BYTES],
+        now: u64,
+        revoked: &[u64],
+    ) -> Result<IdentityEvidence, EvidenceError> {
+        let context = VerificationContext {
+            organization_public_key: f.root.public_key().as_ref(),
+            verified_now: now,
+            nonce,
+            channel_binding: binding,
+            revoked_serials: revoked,
+        };
+        verify_pair(
+            &f.graph,
+            q,
+            &context,
+            (&f.operator, &f.operator_proof),
+            (&f.device, &f.device_proof),
+        )
+    }
+
+    #[test]
+    fn signed_pair_has_matching_scopes_and_distinct_device_keys() {
+        let f = fixture();
+        let evidence = check(&f, &query(), &NONCE, &BINDING, 20, &[]).unwrap();
+        assert_eq!(evidence.organization_id, "sample-org");
+        assert_eq!(evidence.operator_serial, 1);
+        assert_eq!(evidence.device_serial, 2);
+        assert_ne!(f.operator.public_key, f.device.public_key);
+    }
+
+    #[test]
+    fn untrusted_root_and_tampered_credentials_are_rejected() {
+        let f = fixture();
+        let wrong_root = key(30);
+        let context = VerificationContext {
+            organization_public_key: wrong_root.public_key().as_ref(),
+            verified_now: 20,
+            nonce: &NONCE,
+            channel_binding: &BINDING,
+            revoked_serials: &[],
+        };
+        assert_eq!(
+            verify_pair(
+                &f.graph,
+                &query(),
+                &context,
+                (&f.operator, &f.operator_proof),
+                (&f.device, &f.device_proof),
+            ),
+            Err(EvidenceError::InvalidIssuerSignature)
+        );
+        let mut f = fixture();
+        f.device.public_key[0] ^= 0x01;
+        assert_eq!(
+            check(&f, &query(), &NONCE, &BINDING, 20, &[]),
+            Err(EvidenceError::InvalidIssuerSignature)
+        );
+        let mut f = fixture();
+        f.device.issuer_signature[0] ^= 0x01;
+        assert_eq!(
+            check(&f, &query(), &NONCE, &BINDING, 20, &[]),
+            Err(EvidenceError::InvalidIssuerSignature)
+        );
+    }
+
+    #[test]
+    fn session_nonce_channel_action_and_subject_are_bound() {
+        let f = fixture();
+        assert_eq!(
+            check(&f, &query(), &[99; KEY_BYTES], &BINDING, 20, &[]),
+            Err(EvidenceError::InvalidSessionProof)
+        );
+        assert_eq!(
+            check(&f, &query(), &NONCE, &[88; KEY_BYTES], 20, &[]),
+            Err(EvidenceError::InvalidSessionProof)
+        );
+        let mut f = fixture();
+        f.device_proof.signature[0] ^= 1;
+        assert_eq!(
+            check(&f, &query(), &NONCE, &BINDING, 20, &[]),
+            Err(EvidenceError::InvalidSessionProof)
+        );
+        let mut q = query();
+        q.action = GrantAction::View;
+        assert_eq!(
+            check(&fixture(), &q, &NONCE, &BINDING, 20, &[]),
+            Err(EvidenceError::StructuralPreflight)
+        );
+        let mut f = fixture();
+        f.device.principal_id = "another-device".into();
+        assert_eq!(
+            check(&f, &query(), &NONCE, &BINDING, 20, &[]),
+            Err(EvidenceError::ScopeMismatch)
+        );
+    }
+
+    #[test]
+    fn revocation_lease_expiry_and_absent_grants_fail_closed() {
+        let f = fixture();
+        assert_eq!(
+            check(&f, &query(), &NONCE, &BINDING, 20, &[2]),
+            Err(EvidenceError::Revoked)
+        );
+        assert_eq!(
+            check(&f, &query(), &NONCE, &BINDING, 100, &[]),
+            Err(EvidenceError::StructuralPreflight)
+        );
+        let mut f = fixture();
+        f.graph.grants.pop();
+        assert_eq!(
+            check(&f, &query(), &NONCE, &BINDING, 20, &[]),
+            Err(EvidenceError::StructuralPreflight)
+        );
+        let mut f = fixture();
+        f.device.expires_at = 21;
+        assert_eq!(
+            check(&f, &query(), &NONCE, &BINDING, 21, &[]),
+            Err(EvidenceError::ExpiredOrPremature)
+        );
+    }
+
+    #[test]
+    fn wrong_organization_device_and_session_context_fail_closed() {
+        let f = fixture();
+        let mut q = query();
+        q.organization_id = "another-org";
+        assert_eq!(
+            check(&f, &q, &NONCE, &BINDING, 20, &[]),
+            Err(EvidenceError::StructuralPreflight)
+        );
+        let mut f = fixture();
+        f.graph.devices[0].lifecycle = DeviceLifecycle::Revoked;
+        assert_eq!(
+            check(&f, &query(), &NONCE, &BINDING, 20, &[]),
+            Err(EvidenceError::StructuralPreflight)
+        );
+        let f = fixture();
+        assert_eq!(
+            check(&f, &query(), &[0; KEY_BYTES], &BINDING, 20, &[]),
+            Err(EvidenceError::InvalidContext)
+        );
+    }
+
+    #[test]
+    fn unknown_json_and_key_sizes_are_rejected() {
+        let mut f = fixture();
+        f.operator.public_key.pop();
+        assert_eq!(
+            check(&f, &query(), &NONCE, &BINDING, 20, &[]),
+            Err(EvidenceError::InvalidCredential)
+        );
+        assert!(
+            serde_json::from_str::<SignedCredential>(
+                r#"{"schema_version":1,"unexpected":"value"}"#,
+            )
+            .is_err()
+        );
+        let f = fixture();
+        assert_eq!(
+            serde_json::from_slice::<SignedCredential>(
+                &serde_json::to_vec(&f.operator).unwrap(),
+            )
+            .unwrap(),
+            f.operator
+        );
+    }
+}
