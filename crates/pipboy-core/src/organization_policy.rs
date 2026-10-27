@@ -1,7 +1,7 @@
 //! Structural *preflight* for proposed organization-scoped RB operations.
 //!
 //! This module cannot authenticate a person, device, organization, signature,
-//! grant issuer or clock. In particular, `Candidate` is NEVER a permission to
+//! grant issuer or clock. In particular, `CandidateForVerification` is NEVER a permission to
 //! send, read, assign or synchronize. Do not wire this result into the live
 //! task routes or SSH bridge until independent verification is implemented.
 use crate::organization::{
@@ -99,13 +99,19 @@ pub fn preflight(graph: &OrgGraph, query: &ProposedExchange<'_>) -> Preflight {
     }
     if !graph.grants.iter().any(|grant| {
         active_grant(grant, query)
-            && matches!(&grant.subject, GrantSubject::Operator(id) if id.as_str() == query.operator_id)
+            && matches!(
+                &grant.subject,
+                GrantSubject::Operator(id) if id.as_str() == query.operator_id
+            )
     }) {
         return Preflight::OperatorGrantUnavailable;
     }
     if !graph.grants.iter().any(|grant| {
         active_grant(grant, query)
-            && matches!(&grant.subject, GrantSubject::Device(id) if id.as_str() == query.device_id)
+            && matches!(
+                &grant.subject,
+                GrantSubject::Device(id) if id.as_str() == query.device_id
+            )
     }) {
         return Preflight::DeviceGrantUnavailable;
     }
