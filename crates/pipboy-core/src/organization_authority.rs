@@ -4,9 +4,7 @@
 //! floor. None are established by this module. This is EVIDENCE ONLY: never
 //! use a positive result as an API, file, network or task authorization.
 //! No private keys, transport calls, storage, or automatic pairing are used.
-use crate::organization::{
-    Appointment, Dataset, Grant, GrantAction, GrantSubject, OrgGraph,
-};
+use crate::organization::{Appointment, Dataset, Grant, GrantAction, GrantSubject, OrgGraph};
 use crate::organization_identity::{
     verify_pair, EvidenceError, IdentityEvidence, SessionProof, SignedCredential,
     VerificationContext,
@@ -185,8 +183,7 @@ fn encode_revocations(r: &SignedRevocations) -> Vec<u8> {
 }
 
 fn sorted_unique_nonzero(values: &[u64]) -> bool {
-    values.iter().all(|n| *n != 0)
-        && values.windows(2).all(|pair| pair[0] < pair[1])
+    values.iter().all(|n| *n != 0) && values.windows(2).all(|pair| pair[0] < pair[1])
 }
 
 fn check_signature(key: &[u8], bytes: &[u8], signature: &[u8]) -> bool {
@@ -289,7 +286,11 @@ fn verify_grant(
     if !graph.grants.contains(grant) || grant.revoked {
         return Err(AuthorityError::StaleApproval);
     }
-    if !check_signature(ctx.pinned_root_key, &encode_grant(signed), &signed.signature) {
+    if !check_signature(
+        ctx.pinned_root_key,
+        &encode_grant(signed),
+        &signed.signature,
+    ) {
         return Err(AuthorityError::InvalidApproval);
     }
     Ok(())
@@ -393,9 +394,7 @@ mod tests {
     use crate::organization::{
         DeviceLifecycle, DeviceRecord, Operator, Organization, Unit, UnitKind, VaultSite,
     };
-    use crate::organization_identity::{
-        credential_transcript, proof_transcript, PrincipalKind,
-    };
+    use crate::organization_identity::{credential_transcript, proof_transcript, PrincipalKind};
     use ring::signature::{Ed25519KeyPair, KeyPair};
 
     const NONCE: [u8; 32] = [21; 32];
@@ -598,13 +597,8 @@ mod tests {
             q.operator_id,
             1,
         );
-        let device_credential = credential(
-            &root,
-            &device_key,
-            PrincipalKind::Device,
-            q.device_id,
-            2,
-        );
+        let device_credential =
+            credential(&root, &device_key, PrincipalKind::Device, q.device_id, 2);
         let operator_proof = proof(&operator_key, &operator_credential, &q);
         let device_proof = proof(&device_key, &device_credential, &q);
         let mut appointment = SignedAppointment {
@@ -615,7 +609,10 @@ mod tests {
             appointment: graph.appointments[0].clone(),
             signature: Vec::new(),
         };
-        appointment.signature = root.sign(&encode_appointment(&appointment)).as_ref().to_vec();
+        appointment.signature = root
+            .sign(&encode_appointment(&appointment))
+            .as_ref()
+            .to_vec();
         let mut operator_grant = SignedGrant {
             issuer_key_epoch: 1,
             approval_serial: 11,
