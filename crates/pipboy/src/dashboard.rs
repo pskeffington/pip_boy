@@ -37,6 +37,7 @@ const HTML: &str = include_str!("../assets/dashboard.html");
 const CSS: &str = include_str!("../assets/dashboard.css");
 const JS: &str = include_str!("../assets/dashboard.js");
 const MICRO_HTML: &str = include_str!("../assets/micro.html");
+const FREE_TV_HTML: &str = include_str!("../assets/free-tv.html");
 const MICRO_CSS: &str = include_str!("../assets/micro.css");
 const MICRO_JS: &str = include_str!("../assets/micro.js");
 const MAP_JS: &str = include_str!("../assets/map.js");
@@ -994,6 +995,7 @@ fn dispatch(req: &Request, store: &WorkbenchStore, port: u16) -> Response {
     }
     match (req.method.as_str(), req.path.as_str()) {
         ("GET", "/") => Response::new(200, "text/html; charset=utf-8", HTML.as_bytes()),
+        ("GET", "/free-tv") => Response::new(200, "text/html; charset=utf-8", FREE_TV_HTML.as_bytes()),
         ("GET", "/micro") | ("GET", "/micro/") => {
             Response::new(200, "text/html; charset=utf-8", MICRO_HTML.as_bytes())
         }

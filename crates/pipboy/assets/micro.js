@@ -288,6 +288,7 @@ function showRole() {
   const pins = sectionTools("role");
   if (snapshot.active.profile === "security-chief") pins.push("camera-grid");
   root.append(sectionTop("TOOLS", String(pins.length) + " TOOLS"));
+  root.append(button("FREE TV", () => { window.location.assign("/free-tv"); }, "micro-button compact"));
   if (pins.length) pagedTiles(root, pins, "role", (id, index) => id === "camera-grid"
     ? button("CAMERAS", () => { openedTool = id; render(); }, "tile") : toolTile(id, index));
   else {

@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#07170e"><title>Rust-Boy / Free TV</title>
+<style>
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;background:#07170e;color:#c5f2b9;font:13px ui-monospace,SFMono-Regular,Menlo,monospace}
+main{height:100dvh;max-width:900px;margin:auto;display:flex;flex-direction:column;gap:9px;padding:10px;overflow:hidden}
+header,nav{display:flex;gap:8px;align-items:center;min-height:38px}header{justify-content:space-between}
+a,button{color:#d3ffcc;background:#143322;border:1px solid #4e8059;border-radius:3px;padding:9px;text-decoration:none;min-height:40px;cursor:pointer;font:inherit}
+a:focus-visible,button:focus-visible{outline:2px solid #f5e59b;outline-offset:2px}
+nav{flex-wrap:wrap;overflow:auto;min-height:44px;max-height:100px}
+nav button{font-size:11px;min-height:38px;padding:6px 8px}
+nav button[aria-pressed=true]{background:#c5f2b9;color:#07170e}
+section{min-height:0;flex:1;border:1px solid #4e8059;background:#0b2215;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:13px;text-align:center;padding:12px}
+h1{font-size:clamp(17px,4vw,24px);margin:0}p{max-width:58ch;margin:0;color:#a2caa6;line-height:1.4}
+#watch{font-size:15px;padding:12px 20px;background:#b0ef9d;color:#07170e}
+footer{font-size:10px;color:#8bb895;min-height:18px}
+@media(max-height:360px){main{padding:5px;gap:4px}header,nav{min-height:30px}nav{max-height:75px}a,button{min-height:32px;padding:5px}section{gap:5px}p{font-size:10px}}
+</style></head><body>
+<main><header><strong>RB-2000 / FREE TV</strong><a href="/micro">BACK TO RUST-BOY</a></header>
+<nav id="services" aria-label="Choose television service"></nav>
+<section aria-live="polite"><h1 id="service-name">Pluto TV</h1>
+<p>Watch through the selected service's official browser site. Playback, captions, and channel controls are provided by that service.</p>
+<a id="watch" href="https://pluto.tv/" rel="noopener">WATCH PLUTO TV</a>
+<p id="message">External service. Returns to Rust-Boy using browser Back.</p></section>
+<footer>FREE TV / OFFICIAL PROVIDER BROWSER / NO EMBEDS OR STREAM RELAYS</footer></main>
+<script>
+"use strict";
+const SERVICES=Object.freeze([
+ Object.freeze({name:"Pluto TV",url:"https://pluto.tv/"}),
+ Object.freeze({name:"Plex Live TV",url:"https://www.plex.tv/watch-free-tv/"}),
+ Object.freeze({name:"Roku Channel",url:"https://therokuchannel.roku.com/"}),
+ Object.freeze({name:"Tubi",url:"https://tubitv.com/"}),
+ Object.freeze({name:"Samsung TV+",url:"https://www.samsungtvplus.com/"})
+]);
+const nav=document.getElementById("services"),title=document.getElementById("service-name"),watch=document.getElementById("watch");
+const buttons=SERVICES.map((service,index)=>{
+ const button=document.createElement("button");button.type="button";button.textContent=service.name;
+ button.addEventListener("click",()=>select(index));nav.append(button);return button;
+});
+function select(index){const service=SERVICES[index];title.textContent=service.name;watch.href=service.url;
+ watch.textContent="WATCH "+service.name.toUpperCase();
+ buttons.forEach((button,i)=>button.setAttribute("aria-pressed",String(i===index)));}
+select(0);
+</script></body></html>
