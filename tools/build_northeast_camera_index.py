@@ -11,7 +11,6 @@ Output is review-only: never consumed by the live /api/state camera wall.
 """
 import argparse
 import datetime as dt
-import ipaddress
 import json
 import math
 import pathlib
@@ -150,22 +149,24 @@ def clean_name(value):
     return re.sub(r"\s+", " ", value.strip())[:110] if isinstance(value, str) else ""
 
 
+REVIEW_URL_HOSTS = {
+    "chart.maryland.gov", "www.chart.maryland.gov",
+    "snapshot.vdotcameras.com", "511.vdot.virginia.gov",
+}
+SENSITIVE_QUERY_KEYS = {"key", "token", "access_token", "auth", "authorization",
+                        "session", "password", "secret", "sig", "signature"}
+
 def safe_url(value):
-    """Retain metadata references only; NEVER automatically fetch media URLs."""
+    """Keep only publisher-hosted, noncredential metadata links; never fetch them."""
     if not isinstance(value, str) or len(value) > 500:
         return None
     try:
         u = urllib.parse.urlsplit(value)
-        if u.scheme != "https" or not u.hostname or u.username or u.password or u.port:
+        if (u.scheme != "https" or u.hostname not in REVIEW_URL_HOSTS
+                or u.username or u.password or u.port or u.fragment):
             return None
-        if u.hostname == "localhost":
-            return None
-        try:
-            if not ipaddress.ip_address(u.hostname).is_global:
-                return None
-        except ValueError:
-            pass
-        if u.fragment:
+        if any(k.lower() in SENSITIVE_QUERY_KEYS
+               for k, _ in urllib.parse.parse_qsl(u.query, keep_blank_values=True)):
             return None
         return value
     except ValueError:
