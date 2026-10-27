@@ -17,6 +17,8 @@
 | L11 | [RFC 9172 BPSec](https://www.rfc-editor.org/rfc/rfc9172) | Intermediary storage/forwarding requires integrity/confidentiality controls | End-to-end protected envelopes; relay has no plaintext or task-issuance authority; avoid inventing bespoke cryptography | S1/S4 threat tests |
 | L12 | [RFC 9000 QUIC](https://www.rfc-editor.org/rfc/rfc9000) | Connection migration can help when IP path changes but not complete outages | Evaluate only after direct secure sessions exist; retain journal when disconnected | S5 roam tests |
 
+For mining-grade physical network priorities and verified underground communications research, see [the mining communications matrix](MINING_COMMUNICATIONS_MATRIX.md).
+
 ## Scenario requirements
 
 **Hospital:** independent local operation; unit/department-scoped grants; explicit operator and device enrollment; signage and offline contact fallback; protected clinical data disabled; separate alarms and emergency procedures, no reliance on Rust-Boy as life-safety system. Exercise power, core switch, DNS, captive network, hospital firewall, certificate revocation and shift handoff.
