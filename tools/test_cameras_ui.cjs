@@ -47,9 +47,9 @@ assert.equal(cameras.distanceMiles(origin, origin), 0);
 assert.ok(cameras.distanceMiles(origin, near) < cameras.distanceMiles(origin, medium));
 assert.deepEqual(Array.from(cameras.rankFeeds([far,gated,other,near,medium,invalid],origin)).map(f=>f.id),
   ["near","medium","far","other","gated"],"Distance order, gated sources last, hostile URLs excluded");
-assert.equal(cameras.pickNearestActive([near,medium,far],{near:"reachable",medium:"live",far:"live"}).id,
+assert.equal(cameras.pickNearestActive(cameras.rankFeeds([near,medium,far],origin),{near:"reachable",medium:"live",far:"live"}).id,
   "medium","A verified live feed outranks a nearer unverified image");
-assert.equal(cameras.pickNearestActive([near,medium],{near:"offline",medium:"reachable"}).id,
+assert.equal(cameras.pickNearestActive(cameras.rankFeeds([near,medium],origin),{near:"offline",medium:"reachable"}).id,
   "medium","Offline camera skipped");
 
 let selected = null;
