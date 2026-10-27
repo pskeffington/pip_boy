@@ -15,7 +15,10 @@
     const rect=nav.getBoundingClientRect();
     const result={coverage:(map.width*map.height)/(zone.width*zone.height),
       map:{width:map.width,height:map.height},zone:{width:zone.width,height:zone.height},
-      mapButtons:document.querySelectorAll(".rb-map-canvas-only button").length,
+      contained:map.left>=zone.left-1 && map.top>=zone.top-1 &&
+        map.right<=zone.right+1 && map.bottom<=zone.bottom+1,
+      mapButtons:[...document.getElementById("workspace").querySelectorAll("button")]
+        .filter(button=>button.getClientRects().length>0).length,
       navigation:rect.width>0 && rect.height>=44 && rect.bottom<=zone.top+1};
     nav.value="settings";
     nav.dispatchEvent(new Event("change",{bubbles:true}));

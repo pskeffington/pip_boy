@@ -160,7 +160,8 @@ async function main() {
       const r=await chromeRun(bin,server.address().port,w,h,"desktop-map");
       assert.ok(!r.error,r.error);
       assert.ok(r.coverage>=0.95,`Desktop map coverage ${r.coverage}: ${JSON.stringify(r)}`);
-      assert.equal(r.mapButtons,0,"Desktop Map must have no buttons");
+      assert.equal(r.contained,true,"Map coverage must fit inside the workspace without clipping");
+      assert.equal(r.mapButtons,0,"Desktop map workspace must have no visible buttons");
       assert.equal(r.navigation,true,"Navigation must remain outside the map zone");
       assert.equal(r.settings,true,"Settings must remain reachable from map navigation");
       console.log(`PASS desktop map ${w}x${h}: ${(r.coverage*100).toFixed(1)}% coverage`);
