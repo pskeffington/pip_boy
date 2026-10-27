@@ -108,4 +108,18 @@ controller=cameras.mount(root,{feeds:[invalid,gated],location:origin});
 assert.equal(createdImages.length,0,"Blocked/private camera metadata causes no requests");
 assert.ok(text().includes("PROVIDER ACCESS REQUIRED"));
 controller.destroy();
+
+createdImages.length=0;
+controller=cameras.mount(root,{feeds:[near,far],location:null});
+assert.equal(createdImages.length,0,"No coordinates means no automatic camera network requests");
+assert.ok(text().includes("SET LOCATION IN UNIVERSAL SETTINGS"));
+controller.destroy();
+
+createdImages.length=0;
+const sfFar={...far,lat:37.775,lon:-122.424};
+controller=cameras.mount(root,{feeds:[sfFar],location:origin});
+assert.equal(createdImages.length,0,"Distant national fallback cannot pose as nearby road intelligence");
+assert.ok(text().includes("NO DOT CAMERA SITES WITHIN 200 MI"));
+controller.destroy();
+
 console.log("PASS cameras: nearest live prioritization, bounded probes, offline/stale failover, manual focus, teardown, no YouTube");
