@@ -277,6 +277,35 @@ pub(crate) mod tests {
         }
     }
 
+    /// Simulates the OS credential write completing but reporting an error,
+    /// as can happen when a process crashes or a backend confirmation is lost.
+    /// Synthetic only; production store implementations remain sealed.
+    #[derive(Default)]
+    pub struct UncertainWriteSecrets {
+        pub inner: MemorySecrets,
+        pub fail_after_write: std::sync::atomic::AtomicBool,
+    }
+
+    impl super::sealed::Sealed for UncertainWriteSecrets {}
+
+    impl ProtectedSecrets for UncertainWriteSecrets {
+        fn read(&self, name: &str) -> Result<Option<String>, CustodyError> {
+            self.inner.read(name)
+        }
+
+        fn write(&self, name: &str, value: &str) -> Result<(), CustodyError> {
+            self.inner.write(name, value)?;
+            if self
+                .fail_after_write
+                .load(std::sync::atomic::Ordering::SeqCst)
+            {
+                Err(CustodyError::Unavailable)
+            } else {
+                Ok(())
+            }
+        }
+    }
+
     #[test]
     fn unique_keys_are_protected_and_not_reenrolled() {
         let store = MemorySecrets::default();
