@@ -13,6 +13,22 @@ The shared Rust catalog now provides direct official DOT snapshots for Virginia 
 | Boston | MassDOT / TrafficLand | Provider agreement required: placeholder only |
 | San Francisco | Caltrans D04 | HTTPS road camera JPEG snapshot candidate |
 
+## Nearest-active selection contract (October 2026)
+
+Security uses the existing universal **Settings → Location / Map**. A manual center is exact; a selected ZIP resolves to a **county-map approximation**, not a precise home or ZIP centroid. After explicit GPS ON, a last known fix may be used for camera ranking for at most 60 seconds in volatile page memory. GPS OFF revokes that hint. Coordinates are never appended to DOT URLs, persisted to disk, sent to publishers as query parameters, or requested a second time by Cameras.
+
+The shared `cameras.js` selector applies Haversine ground distance to the **actual DOT camera coordinates** (not the Northeast city target roster). Only fixed, approved HTTPS snapshot hosts enter its candidate queue. The closest eligible feeds are checked with a maximum of **two simultaneous image probes**, **12 attempts per tool opening**, and **8 seconds per probe**; each probe is cache-busted and then torn down on navigation. One failed source advances to the next nearest candidate. Four working tiles is the wall limit, not a network polling target. The selected primary feed is highlighted and the **FOCUS NEAREST** control opens it; explicit focus/back remains separate from automatic source selection.
+
+Health states are intentionally distinct:
+
+- **LIVE** requires a successful image load **and** agency-provided `active: true`, recent metadata check time, and frame capture time within 120 seconds. No currently seeded static catalog source supplies those timestamp fields, so current candidate images must not be advertised as verified live.
+- **REACHABLE · FRESHNESS UNVERIFIED** means an image loaded in this session without sufficient source timestamp evidence. This is a fallback after confirmed-live candidates, not a safety claim.
+- **AGENCY INACTIVE / AGENCY FRAME STALE / FEED UNAVAILABLE** are skipped for automatic primary selection. A successful validation expires after 120 seconds; the operator must explicitly refresh to recheck. A timer marks the check expired but does not fetch another image.
+
+No endpoints are polled until Security's Cameras screen opens, and **no background refresh is enabled**. The actual user-facing UI is browser-rendered from Rust `/api/state`; native Pi media decoding and agency-authorized stream integration remain separately gated. `node tools/test_cameras_ui.cjs` covers distance ranking, live preference, offline fallback, source validation, bounded probes and teardown. `node tools/test_map_gps_permissions.cjs` covers shared location consent and revocation.
+
+The [Northeast DOT city roster](../catalog/northeast_camera_roster.json) contains **29 discovery targets**, not 29 verified camera streams. The [provider registry](../catalog/camera_feeders.json) distinguishes public viewing from permission to ingest or redistribute feeds; no API key or subscription was bypassed. NYC, CT, PennDOT and MassDOT integrations require their documented access paths. Camera selection cannot legitimately claim nearby live coverage until individual feeds in those regions pass both access and on-device health gates.
+
 The camera UI fetches snapshots only after its view opens, does not use iframes, and offers an explicit REFRESH control. It does not poll in the background, record, discover local IP cameras or send user location to agencies. An image load is labeled **IMAGE RECEIVED · FRESHNESS UNKNOWN**, not LIVE. Failure is labeled **FEED UNAVAILABLE**. The source URLs are HTTPS and constrained to exact agency-managed media hosts/path patterns; the HTTP CSP now allows only the two media hosts as additional image origins and disallows frames.
 
 **Security meaning:** road activity and visible vehicles can support situational awareness, not certify that a particular person is mobile or that a route is safe. Always preserve camera identity, original agency attribution, capture freshness uncertainty and provider access requirements. Never label Virginia traffic cameras as DC city cameras.
