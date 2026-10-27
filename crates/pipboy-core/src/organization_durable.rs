@@ -232,7 +232,10 @@ impl<'s, S: ProtectedSecrets> DurableOrganization<'s, S> {
     pub fn organization_id(&self) -> &str { &self.state.organization_id }
     pub fn issuer_key_epoch(&self) -> u64 { self.state.issuer_key_epoch }
     pub fn revocation_generation(&self) -> u64 { self.state.revocation_generation }
-    pub fn revocations(&self) -> Option<&SignedRevocations> { self.state.revocations.as_ref() }
+    pub fn revocations(&self) -> Result<Option<&SignedRevocations>, StateError> {
+        self.check_anchor()?;
+        Ok(self.state.revocations.as_ref())
+    }
 
     /// Verified expiry is enforced by the caller's separately authenticated clock.
     /// Missing or expired snapshots MUST block authentication evidence consumption.
@@ -326,6 +329,7 @@ fn persist(directory: &Path, state: &OrganizationState) -> Result<(), StateError
     temp.write_all(&bytes)?;
     temp.as_file().sync_all()?;
     temp.persist(directory.join("org-state.json")).map_err(|e| StateError::Io(e.error))?;
+    #[cfg(unix)]
     File::open(directory)?.sync_all()?;
     Ok(())
 }
@@ -333,6 +337,7 @@ fn persist(directory: &Path, state: &OrganizationState) -> Result<(), StateError
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::organization_custody::{CustodyError, tests::MemorySecrets};
     use ring::signature::{Ed25519KeyPair, KeyPair};
     struct Approve;
     impl AdministratorApproval for Approve {
@@ -347,7 +352,7 @@ mod tests {
     fn key() -> Ed25519KeyPair {
         Ed25519KeyPair::from_seed_unchecked(&[12; 32]).unwrap()
     }
-    fn snapshot(root: &Ed25519KeyPair, generation: u64) -> SignedRevocations {
+    fn snapshot(root: &Ed25519KeyPair, generation: u64, serials: &[u64]) -> SignedRevocations {
         let mut state = OrganizationState {
             schema_version: 1, organization_id: "test-org".into(),
             root_public_key: root.public_key().as_ref().to_vec(),
@@ -357,7 +362,7 @@ mod tests {
         let mut r = SignedRevocations {
             schema_version: 1, organization_id: "test-org".into(),
             issuer_key_epoch: 1, generation, not_before: 10, expires_at: 100,
-            credential_serials: vec![5], approval_serials: vec![9], signature: vec![]
+            credential_serials: serials.to_vec(), approval_serials: vec![9], signature: vec![]
         };
         let mut data = REVOCATION_DOMAIN.to_vec();
         data.extend_from_slice(&r.schema_version.to_be_bytes());
@@ -381,20 +386,25 @@ mod tests {
     fn explicit_pin_replay_restart_and_generation_rollback() {
         let dir = tempfile::tempdir().unwrap();
         let root = key();
-        assert!(matches!(DurableOrganization::provision(dir.path(), "test-org", root.public_key().as_ref(), &Deny), Err(StateError::Unapproved)));
-        let mut org = DurableOrganization::provision(dir.path(), "test-org", root.public_key().as_ref(), &Approve).unwrap();
+        let store = MemorySecrets::default();
+        assert!(matches!(DurableOrganization::provision(dir.path(), "test-org", root.public_key().as_ref(), &Deny, &store), Err(StateError::Unapproved)));
+        let mut org = DurableOrganization::provision(dir.path(), "test-org", root.public_key().as_ref(), &Approve, &store).unwrap();
         assert!(matches!(org.fresh_snapshot(20), Err(StateError::Stale)));
-        assert!(org.install_revocations(snapshot(&root, 2)).is_ok());
+        assert!(org.install_revocations(snapshot(&root, 2, &[5])).is_ok());
         assert!(org.fresh_snapshot(20).is_ok());
         org.record_nonce([7; 32]).unwrap();
         assert!(matches!(org.record_nonce([7; 32]), Err(StateError::Replay)));
         drop(org);
-        let mut org = DurableOrganization::open(dir.path()).unwrap();
+        let mut org = DurableOrganization::open(dir.path(), "test-org", &store).unwrap();
         assert!(matches!(org.record_nonce([7; 32]), Err(StateError::Replay)));
-        assert!(matches!(org.install_revocations(snapshot(&root, 1)), Err(StateError::Rollback)));
+        assert!(matches!(org.install_revocations(snapshot(&root, 1, &[5])), Err(StateError::Rollback)));
         assert!(matches!(org.fresh_snapshot(100), Err(StateError::Stale)));
-        let mut tampered = snapshot(&root, 3);
+        let mut tampered = snapshot(&root, 3, &[5]);
         tampered.signature[0] ^= 1;
         assert!(matches!(org.install_revocations(tampered), Err(StateError::Invalid)));
+        assert!(matches!(
+            org.install_revocations(snapshot(&root, 3, &[])),
+            Err(StateError::RevocationRegression)
+        ));
     }
 }
