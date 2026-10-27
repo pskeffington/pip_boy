@@ -2,6 +2,10 @@
 
 Reviewed: **2026-10-25**. Repository: `pip_boy`; product: **Rust-Boy**. This is a **roadmap**, not a claim that every feature is implemented or hardware-certified. The authoritative machine-readable matrix is [catalog/role_roadmap.json](../catalog/role_roadmap.json); it must match `PRESETS` in [workbench.rs](../crates/pipboy-core/src/workbench.rs).
 
+## Vault reporting model (design prerequisite to RB fleet sync)
+
+[Common Vault organizational chart](VAULT_ORG_CHART.md) is the shared **reporting template** for independent and institutional adopters. Overseer coordinates mission work; Security supervises Recon by default; Engineering, Medical, Science, Reclamations and Administration have distinct functional chains. Deputy Overseer, Medic and Quartermaster are **planned positions without Rust presets**. Organization Governance is deliberately not an operator role. The chart's [machine-readable positions](../catalog/vault_org_chart.json) map every non-Custom `PRESETS` ID exactly once. A reporting line, profile selection, pin or tool is **never** identity, permission or cryptographic enrollment.
+
 ## Operator titles
 
 The current title roster is **Overseer, Maintenance, Security, Doctor, Scientist, Reclamations, Recon, Archivist, Custom**. The UI uses operator titles rather than Station, Field Kit, Operations or Workbench suffixes. Existing preset IDs and task role references remain stable; exact legacy built-in titles are normalized on read without rewriting saved manifests or replacing operator-authored titles. Recon is a separate field role with mapping, observations, references and diagnostics; Custom remains last.
