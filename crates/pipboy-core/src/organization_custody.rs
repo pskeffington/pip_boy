@@ -331,6 +331,62 @@ pub(crate) mod tests {
     }
 
     #[test]
+    fn scoped_proofs_sign_only_with_matching_stored_identity() {
+        use crate::organization::{Dataset, GrantAction};
+        use crate::organization_identity::PrincipalKind;
+        use ring::signature::{UnparsedPublicKey, ED25519};
+
+        let store = MemorySecrets::default();
+        let public = enroll_identity(&store, "sample-org", "device", "device-a").unwrap();
+        let q = ProposedExchange {
+            organization_id: "sample-org",
+            vault_id: "sample-vault",
+            operator_id: "person-a",
+            device_id: "device-a",
+            action: GrantAction::Sync,
+            dataset: Dataset::Progress,
+            time_unverified: 20,
+        };
+        // The test claim is not issuer-signed; sign_proof is possession only.
+        // Full credential/approval validation belongs to ORG-3.1.
+        let claim = SignedCredential {
+            schema_version: 1,
+            organization_id: "sample-org".into(),
+            vault_id: "sample-vault".into(),
+            principal_kind: PrincipalKind::Device,
+            principal_id: "device-a".into(),
+            serial: 7,
+            key_epoch: 1,
+            not_before: 1,
+            expires_at: 100,
+            public_key: public.clone(),
+            issuer_signature: vec![],
+        };
+        let nonce = [24; 32];
+        let binding = [31; 32];
+        let proof = sign_proof(&store, &q, &claim, &nonce, &binding).unwrap();
+        assert!(UnparsedPublicKey::new(&ED25519, &public)
+            .verify(&proof_transcript(&q, &claim, &nonce, &binding), &proof.signature)
+            .is_ok());
+        assert!(UnparsedPublicKey::new(&ED25519, &public)
+            .verify(&proof_transcript(&q, &claim, &[25; 32], &binding), &proof.signature)
+            .is_err());
+
+        let mut mismatched = claim.clone();
+        mismatched.public_key = vec![1; 32];
+        assert_eq!(
+            sign_proof(&store, &q, &mismatched, &nonce, &binding),
+            Err(CustodyError::Corrupt)
+        );
+        mismatched = claim;
+        mismatched.principal_id = "other-device".into();
+        assert_eq!(
+            sign_proof(&store, &q, &mismatched, &nonce, &binding),
+            Err(CustodyError::InvalidInput)
+        );
+    }
+
+    #[test]
     fn bad_principal_and_missing_os_secret_fail_closed() {
         let store = MemorySecrets::default();
         assert_eq!(
