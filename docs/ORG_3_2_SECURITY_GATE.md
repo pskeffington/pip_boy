@@ -49,3 +49,7 @@ cargo test --workspace
 Added an OS credential-store anchor containing the public-root fingerprint, canonical-directory digest, signed revocation generation, and digest of the persistent nonce and revocation state. An ordinary local file rollback now fails closed unless the independently stored anchor is also restored. Signed revocation imports are bounded and cannot remove previously revoked serials. Offline import/export is manual only; automatic fleet propagation is not implemented.
 
 This is still **not** protection against a whole-device rollback, keyring compromise, or concurrent administrative mutation. Real macOS/Pi tests, independent administrator authentication, trusted time, session channel binding, crash injection, symlink-race review, recovery controls, and platform-specific secure key custody remain blockers. The next gate must not connect to live Vault Command or RB sync.
+
+## Signed-evidence integration check
+
+The new `verify_with_durable_evidence` function joins ORG-3.1's signature/approval verifier to the provisioned root, the installed signed revocation snapshot, and the OS-anchored spent-nonce ledger. A synthetic regression exercises verified evidence and a replay denial after closing and reopening the store. This remains **evidence only** and is not a transport or application authorization endpoint.
