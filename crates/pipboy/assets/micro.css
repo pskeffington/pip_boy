@@ -463,3 +463,8 @@ small { font-size:11px; }
 @media (max-height:360px) {
   .micro-device.micro-unified-header { grid-template-rows:44px minmax(0,1fr) 45px; }
 }
+
+/* Five fixed touch targets; one slim navigation row, no horizontal scroll. */
+.micro-unified-header .tab-rail { grid-template-columns: repeat(5, minmax(0,1fr)); border-top-width:1px; }
+.micro-unified-header .tab-rail .tab { min-height:40px; font-size:clamp(10px, 2.3vw, 12px); padding:3px 1px; letter-spacing:0; }
+.micro-unified-header .micro-device { grid-template-rows:43px 50px minmax(0,1fr) 43px 21px; }
