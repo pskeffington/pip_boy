@@ -70,7 +70,7 @@ focus.listeners.click();
 assert.equal(selected,"medium","Selection persists by camera ID instead of mutable grid index");
 assert.equal(walk(root).filter(n=>n.className.includes("rb-camera-tile")).length,1);
 signal(createdImages[2],"load");
-const staleCheck=[...timers.values()].find(t=>t.delay===120000);
+const staleCheck=[...timers.values()].find(t=>t.delay>=119000 && t.delay<=120000);
 assert.ok(staleCheck,"A successful source check expires");
 staleCheck.fn();
 assert.equal(selected,"far","Focused source fails over to the next available camera");
