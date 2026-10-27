@@ -4,6 +4,8 @@
 
 **Organization prerequisite:** [Common Vault organizational chart](VAULT_ORG_CHART.md) defines the stable command/reporting template and [machine-readable organization positions](../catalog/vault_org_chart.json). **This chart is not an authentication or authorization implementation**; R1 must separate org governance, named operator appointments, device enrollment and scoped grants before using it to route synchronized records.
 
+**ORG-1 structural core present (not authorization):** [`pipboy-core::organization`](../crates/pipboy-core/src/organization.rs) defines independently scoped org/vault/units/operators/appointments/devices and draft grants with deterministic structural and cross-tenant rejection tests. This does not verify a signer, log in an operator, enable pairing, persist a fleet roster, activate a grant, or synchronize data. R1 remains open until authenticated enrollment and a reviewed policy decision point are implemented.
+
 **Execution tracker:** [GitHub issue #62 — R0–R3](https://github.com/pskeffington/pip_boy/issues/62). The tracking issue is planning work, not an implementation acceptance.
 
 **Decision (2026-10-26):** A desktop Vault Command Center may originate missions, assign work to an authorized organizational fleet, and reconcile field-device reports. Handhelds own their local progress. Device proximity is only a routing hint. Authorization is anchored to organization, authenticated human/operator, authenticated device and per-dataset policy; transport selection cannot change those rights.
