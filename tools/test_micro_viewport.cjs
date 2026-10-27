@@ -39,7 +39,7 @@ function state(scenario) {
       profile:activeProfile,
       slots:custom?[]:toolIds.map((tool,index)=>({id:"slot-"+index,tool}))
     },
-    camera_feeds:["DC","NYC","BOSTON","SF"].map((city,index)=>({city,name:city+" fixture",publisher:"Invented publisher",video_id:"testcam000"+index,source_url:"https://www.youtube.com/watch?v=testcam000"+index})),
+    camera_feeds:["DC","NYC","BOSTON","SF"].map((city,index)=>({city,name:city+" fixture",publisher:"Synthetic direct source",kind:index===2?"hls":"jpeg",media_url:index===2?"/api/cameras/boston/playlist.m3u8":"https://fogcam.org/fogcam2.jpg",source_url:"https://fogcam.org/",refresh_seconds:20})),
     net_operations:[]
   };
 }
@@ -56,7 +56,7 @@ function findChrome() {
 }
 function fixture(desktop=false) {
   return fs.readFileSync(desktop ? path.join(assets,"dashboard.html") : htmlFile,"utf8")
-    .replace("<head>",'<head><meta http-equiv="Content-Security-Policy" content="frame-src \'none\'">')
+    .replace("<head>",'<head><meta http-equiv="Content-Security-Policy" content="frame-src \'none\'; img-src \'self\' data:; media-src \'none\'">')
     .replace("</body>",'<script defer src="'+(desktop?'/desktop-probe.js':'/probe.js')+'"></script></body>');
 }
 function host(width,height,scenario) {
@@ -136,7 +136,7 @@ async function main() {
       stations:[{id:"skylab",name:"Invented station",genre:"Test",category:"TEST",format:"MP3"}],sdr:"not_connected"}));
     if(url.pathname.startsWith("/assets/")){
       const name=url.pathname.slice(8);
-      if(!/^[a-z0-9-]+\.(js|css)$/.test(name))return send(403,"Denied","text/plain");
+      if(name!=="vendor/hls-light-1.6.13.min.js"&&!/^[a-z0-9-]+\.(js|css)$/.test(name))return send(403,"Denied","text/plain");
       const file=path.join(assets,name);
       if(fs.existsSync(file))return send(200,fs.readFileSync(file,"utf8"),
         name.endsWith(".css")?"text/css":"text/javascript");

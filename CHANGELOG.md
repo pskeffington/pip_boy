@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-10-27 — Direct camera media
+
+- Replace hosted video embeds with direct Boston MWRA HLS and SF FogCam JPEG snapshots; DC and NYC remain explicitly unavailable pending verified direct endpoints.
+- Add a bounded, fixed-source HLS relay and pinned self-hosted player; block all frames and stop media when the view closes or hides.
+
 ## 2026-10-26 — Operator titles and public camera fallback
 
 - Replace station/workbench labels with current operator titles; retain saved role IDs, normalize legacy built-in labels on read and add Recon with existing field tools.

@@ -1,21 +1,25 @@
 # Security Chief | 4-camera handheld view specification
 
-**Status: public publisher-player fallback implemented; private IP-camera decoding/enrollment remains planned.** Applies to the [Security Chief](ROLE_ROADMAP.md#security-security-chief) role. Use only cameras and networks the operator is authorized to view. Not a surveillance discovery product.
+**Status: direct public-media fallback implemented; private IP-camera decoding/enrollment remains planned.** Applies to the [Security Chief](ROLE_ROADMAP.md#security-security-chief) role. Use only cameras and networks the operator is authorized to view. Not a surveillance discovery product.
 
 ## Public views when private cameras are unconfigured
 
-Security uses the shared `cameras.js` component and Rust `public_cameras::PUBLIC_CAMERA_FEEDS` catalog. Desktop opens four muted embedded publisher players only on the active Cameras view; role preview/loading does not create players. The small handheld lists four locations and opens one publisher player on selection. Leaving Cameras, opening Radio, or returning to the grid removes the old frames. No background recording, server-side video proxy, discovery, credentials, scraping, or health polling is implemented.
+Security uses the shared `cameras.js` component and Rust `public_cameras::PUBLIC_CAMERA_FEEDS` catalog. Desktop loads available direct media only on Cameras entry; handheld waits for a location selection. Leaving Cameras, opening Radio, hiding the document or returning to the grid stops players, timers and requests. No background recording or private camera discovery is implemented.
 
-| City | Publisher / view | Source checked 2026-10-26 |
-| --- | --- | --- |
-| DC | earthTV / White House | [Publisher stream](https://www.youtube.com/watch?v=5p_KGD4fJZs) |
-| NYC | EarthCam / Times Square Crossroads | [Publisher stream](https://www.youtube.com/watch?v=z-jYdOIKcTQ) |
-| Boston | Boston and Maine Live / Hyatt Regency Boston Harbor | [Publisher stream](https://www.youtube.com/watch?v=3I_cIS24AfY) |
-| SF | ABC7 News Bay Area / skyline | [Publisher stream](https://www.youtube.com/watch?v=G8RIAgPxaMc) |
+| Location | Direct media | Publisher |
+|---|---|---|
+| DC | Unavailable: no verified direct endpoint | [EarthCam](https://www.earthcam.com/usa/dc/washingtonmonument/?cam=wamo) |
+| NYC | Unavailable: DOT image endpoint returned HTTP 503 during verification | [NYC DOT](https://www.nyc.gov/html/dot/html/motorist/atis.shtml) |
+| Boston | HLS video, Deer Island | [MWRA](https://www.mwra.com/about-mwra/live-camera-feeds) |
+| SF | JPEG snapshot, refreshed every 20 seconds | [FogCam](https://fogcam.org/) |
 
-These are visibly labeled **PUBLIC VIEWS · PRIVATE CAMERAS UNCONFIGURED**. Source discovery is not a guarantee of current live playback: publishers may stop/replace a stream, limit embedding, require interaction, or display advertising. The original publisher link always remains available. Rust-Boy does not label an iframe load as verified live or invent timestamps, connection counts or private-camera health. Fixed YouTube IDs and exact publisher watch URLs are validated before creating a frame; only `https://www.youtube-nocookie.com` is added to parent `frame-src`. Parent `connect-src` remains unchanged. Each iframe is sandboxed, starts muted, and uses its own origin referrer policy for provider playback compatibility. Third-party players can make their own network requests once opened.
+The component creates video/image elements, never hosted video players or frames. CSP sets `frame-src 'none'`. The SF image comes directly from `https://fogcam.org/fogcam2.jpg`; displayed receipt times are local receipt times, not camera capture times. Failed images show unavailable. A stale 2017 DC preview was rejected rather than presented as current.
 
-`node tools/test_cameras_ui.cjs` checks four-view/focus behavior, compact opt-in, muted fixed-origin frames, malformed-source rejection and teardown with synthetic metadata. CI does not certify external playback, publisher permissions, private camera interoperability or physical handheld performance.
+Boston's publisher exposes `https://www.mwra.com/sites/default/files/camera-streams/ditp.m3u8` without cross-origin response headers. A same-origin Rust relay fetches that exact playlist and numeric `ditp*.ts` segments only. It rejects redirects, arbitrary URLs, keys, nested playlists, recorded end lists, unexpected media types and oversized responses. Limits: 16 KiB playlist, 64 segments, 8 MiB per segment, 3-second connect and 8-second total request timeout. Browser same-origin request metadata is required. No credentials, disk cache or recording are used. The self-hosted pinned hls.js light bundle supports browsers without native HLS; see its vendor provenance and license.
+
+Direct HLS and JPEG responses were HTTP 200 with current Last-Modified values on 2026-10-27; MPEG-TS and JPEG signatures were checked. Availability can change. The UI does not substitute a video platform, infer private-camera health, or claim snapshots are continuous video. Source links open publisher pages only; they are not media endpoints.
+
+`node tools/test_cameras_ui.cjs` checks direct element types, unavailable slots, compact opt-in, URL allowlists, muted playback, refresh timing and teardown. Rust tests check relay path and playlist boundaries. CI does not certify continuous external playback, private-camera interoperability or physical handheld performance.
 
 ## User task and screen state
 

@@ -14,6 +14,7 @@ use pipboy_core::runtime::{Capability, LocalOperation, ModuleHost, PermissionSet
 use pipboy_core::simulator_replay::{replay_fixture, ReplayScenario};
 use pipboy_core::virtual_transport::VirtualTransport;
 use std::error::Error;
+mod camera_media;
 mod console;
 mod county_cache;
 mod dashboard;

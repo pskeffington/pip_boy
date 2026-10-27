@@ -1,63 +1,86 @@
 "use strict";
-// Shared public-camera renderer. Catalog metadata comes from Rust /api/state.
-// No URL input, camera discovery, credentials, recording or status polling.
+// Direct media only: Rust-owned catalog, local bounded HLS relay, refreshed JPEG.
 (function () {
   const make=(tag,cls,text)=>{
-    const node=document.createElement(tag);
-    node.className=cls;
+    const node=document.createElement(tag);node.className=cls;
     if(text!==undefined)node.textContent=text;
     return node;
   };
   function mount(root,options={}) {
-    let connected=true;
+    let connected=true,epoch=0,disposers=[];
     let selected=Number.isInteger(options.selected)?options.selected:null;
-    const feeds=(options.feeds||[]).filter(feed=>
-      typeof feed.video_id==="string" && /^[A-Za-z0-9_-]{11}$/.test(feed.video_id) &&
-      feed.source_url === "https://www.youtube.com/watch?v="+feed.video_id).slice(0,4);
-    const choose=value=>{
-      if(!connected)return;
-      selected=value;
-      options.onSelect?.(value);
-      render();
-    };
-    const button=(label,fn)=>{
-      const node=make("button","rb-camera-button",label);
-      node.type="button";node.addEventListener("click",fn);return node;
-    };
+    const feeds=(options.feeds||[]).filter(feed=>{
+      if(feed.kind==="unavailable")return !feed.media_url;
+      if(feed.kind==="hls")return feed.media_url==="/api/cameras/boston/playlist.m3u8";
+      return feed.kind==="jpeg" && feed.media_url==="https://fogcam.org/fogcam2.jpg";
+    }).slice(0,4);
+    const stop=()=>{epoch++;disposers.forEach(dispose=>dispose());disposers=[];};
+    const button=(text,fn)=>{const node=make("button","rb-camera-button",text);node.type="button";node.addEventListener("click",fn);return node;};
     function render() {
-      root.replaceChildren();
+      stop();root.replaceChildren();
+      const current=epoch;
       root.classList.add("rb-camera-view");
-      const heading=make("div","rb-camera-heading","PUBLIC VIEWS · PRIVATE CAMERAS UNCONFIGURED");
-      root.append(heading);
-      if(!feeds.length){root.append(make("p","","PUBLIC CAMERA CATALOG UNAVAILABLE"));return;}
+      root.append(make("div","rb-camera-heading","DIRECT PUBLIC MEDIA · PRIVATE CAMERAS UNCONFIGURED"));
+      if(!feeds.length){root.append(make("p","","DIRECT CAMERA CATALOG UNAVAILABLE"));return;}
       const grid=make("div","rb-camera-grid"+(selected!==null?" rb-camera-focused":""));
       feeds.forEach((feed,index)=>{
         if(selected!==null && selected!==index+1)return;
         const tile=make("section","rb-camera-tile");
         const top=make("div","rb-camera-top");
-        top.append(make("strong","",feed.city),button(selected===null?"OPEN":"GRID",()=>choose(selected===null?index+1:null)));
-        tile.append(top);
-        // Tiny handhelds select one view before creating its player. Desktop
-        // opens four muted publisher players only upon entering Cameras.
-        if(!options.compact || selected!==null) {
-          const frame=make("iframe","rb-camera-player");
-          frame.title=feed.city+" / "+feed.name+" / public view by "+feed.publisher;
-          frame.src="https://www.youtube-nocookie.com/embed/"+feed.video_id+"?autoplay=1&mute=1&playsinline=1&rel=0";
-          frame.referrerPolicy="strict-origin-when-cross-origin";
-          frame.setAttribute("sandbox","allow-scripts allow-same-origin allow-presentation");
-          frame.allow="autoplay; encrypted-media; picture-in-picture; fullscreen";
-          frame.allowFullscreen=true;
-          tile.append(frame);
+        const choose=()=>{selected=selected===null?index+1:null;options.onSelect?.(selected);render();};
+        top.append(make("strong","",feed.city),button(selected===null?"OPEN":"GRID",choose));tile.append(top);
+        const status=make("div","rb-camera-state",feed.kind==="jpeg"?"DIRECT JPEG SNAPSHOTS":feed.kind==="hls"?"DIRECT HLS VIDEO":"UNAVAILABLE / NO VERIFIED DIRECT FEED");
+        if(feed.kind==="unavailable")tile.append(make("span","rb-camera-name",feed.name));
+        else if(!options.compact || selected!==null) {
+          if(feed.kind==="jpeg") {
+            const image=make("img","rb-camera-player");image.alt=feed.city+" / "+feed.name+" / refreshed snapshot";
+            let timer=null;
+            const valid=()=>connected && epoch===current && !document.hidden;
+            const load=()=>{if(valid())image.src=feed.media_url+"?rb="+Date.now();};
+            image.onload=()=>{
+              if(!valid())return;
+              status.textContent="SNAPSHOT RECEIVED / "+new Date().toLocaleTimeString();
+              timer=setTimeout(load,Math.max(20,Math.min(60,feed.refresh_seconds||20))*1000);
+            };
+            image.onerror=()=>{if(valid())status.textContent="DIRECT SNAPSHOT UNAVAILABLE";};
+            tile.append(image);load();
+            disposers.push(()=>{if(timer!==null)clearTimeout(timer);image.onload=null;image.onerror=null;image.removeAttribute("src");});
+          } else {
+            const video=make("video","rb-camera-player");
+            video.muted=true;video.autoplay=true;video.playsInline=true;video.controls=true;
+            video.setAttribute("aria-label",feed.city+" / "+feed.name+" / direct video");
+            let hls=null;
+            const valid=()=>connected && epoch===current;
+            video.onplaying=()=>{if(valid())status.textContent="DIRECT VIDEO / PLAYING";};
+            video.onerror=()=>{if(valid())status.textContent="DIRECT VIDEO UNAVAILABLE";};
+            tile.append(video);
+            if(video.canPlayType?.("application/vnd.apple.mpegurl")) {
+              video.src=feed.media_url;
+              video.play?.()?.catch(()=>{if(valid())status.textContent="PRESS PLAY FOR DIRECT VIDEO";});
+            } else if(window.Hls?.isSupported()) {
+              hls=new window.Hls({enableWorker:false,maxBufferLength:12,maxMaxBufferLength:30,backBufferLength:0,maxBufferSize:8*1024*1024,fragLoadingMaxRetry:1,manifestLoadingMaxRetry:1,levelLoadingMaxRetry:1});
+              hls.on(window.Hls.Events.ERROR,(_event,data)=>{
+                if(data.fatal && valid()){status.textContent="DIRECT VIDEO UNAVAILABLE";hls.destroy();hls=null;}
+              });
+              hls.loadSource(feed.media_url);hls.attachMedia(video);
+            } else status.textContent="DIRECT HLS NOT SUPPORTED IN THIS BROWSER";
+            disposers.push(()=>{if(hls)hls.destroy();video.onplaying=null;video.onerror=null;video.pause?.();video.removeAttribute("src");video.load?.();});
+          }
         } else tile.append(make("span","rb-camera-name",feed.name));
-        const source=make("a","rb-camera-source",feed.publisher+" ↗");
-        source.href=feed.source_url;source.target="_blank";source.rel="noopener noreferrer";
-        source.setAttribute("aria-label","Open original "+feed.city+" camera publisher page");
-        tile.append(source);grid.append(tile);
+        tile.append(status);
+        const source=make("a","rb-camera-source",feed.publisher+" / SOURCE ↗");
+        // Source links are documentation only, never used as media URLs.
+        if(typeof feed.source_url==="string" && /^https:\/\/(www\.mwra\.com|fogcam\.org|www\.nyc\.gov|www\.earthcam\.com)\//.test(feed.source_url)) {
+          source.href=feed.source_url;source.target="_blank";source.rel="noopener noreferrer";tile.append(source);
+        }
+        grid.append(tile);
       });
       root.append(grid);
     }
+    const visibility=()=>{if(document.hidden)stop();else if(connected)render();};
+    document.addEventListener?.("visibilitychange",visibility);
     render();
-    return {destroy(){connected=false;root.replaceChildren();}};
+    return {destroy(){connected=false;stop();document.removeEventListener?.("visibilitychange",visibility);root.replaceChildren();}};
   }
   window.RustBoyCameras=Object.freeze({mount});
 })();
