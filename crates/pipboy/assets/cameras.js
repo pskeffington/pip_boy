@@ -240,14 +240,20 @@
         state.status = ok ? (liveEvidence(feed, Date.now()) ? "live" : "reachable") : "offline";
         if (!ok) state.img.removeAttribute("src");
         failover(ok ? null : feed.id);
-        if (ok) state.expiry = setTimeout(() => {
+        if (ok) {
+          const verifiedUntil = state.status === "live" ? Math.min(
+            Date.parse(feed.status_checked_at), Date.parse(feed.frame_captured_at)) + RECENT_MS :
+            Date.now() + RECENT_MS;
+          const expiryDelay = Math.max(0, Math.min(RECENT_MS, verifiedUntil - Date.now()));
+          state.expiry = setTimeout(() => {
           if (!connected || statuses.get(feed.id) !== state) return;
           state.status = "expired";
           state.img.removeAttribute("src");
           failover(feed.id);
           // Expiry never launches a background request; recheck is explicit.
           render();
-        }, RECENT_MS);
+          }, expiryDelay);
+        }
         render();
         ensureProbes();
       };
