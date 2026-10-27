@@ -113,13 +113,17 @@ impl<'s, S: ProtectedSecrets> DurableOrganization<'s, S> {
         organization_id: &str,
         root_public_key: &[u8],
         admin: &impl AdministratorApproval,
+        store: &'s S,
     ) -> Result<Self, StateError> {
         if !valid_org_id(organization_id) { return Err(StateError::Invalid); }
         let fingerprint = fingerprint(root_public_key).map_err(|_| StateError::Invalid)?;
         admin.approve_root_pin(organization_id, &fingerprint)
             .map_err(|_| StateError::Unapproved)?;
         let (lock, _) = Self::open_lock(directory)?;
-        if directory.join("org-state.json").exists() { return Err(StateError::Unapproved); }
+        let name = anchored_name(organization_id);
+        if directory.join("org-state.json").exists() || read_anchor(store, &name)?.is_some() {
+            return Err(StateError::Unapproved);
+        }
         let state = OrganizationState {
             schema_version: 1,
             organization_id: organization_id.to_owned(),
@@ -129,11 +133,21 @@ impl<'s, S: ProtectedSecrets> DurableOrganization<'s, S> {
             revocations: None,
             consumed_nonces: Vec::new(),
         };
+        // Protected keyring anchor first: interrupted storage commit fails closed.
+        write_anchor(store, &name, &expected_anchor(directory, &state)?)?;
         persist(directory, &state)?;
-        Ok(Self { root: directory.to_owned(), _lock: lock, state })
+        Ok(Self {
+            root: directory.to_owned(),
+            _lock: lock,
+            state,
+            store,
+            anchor_name: name,
+            poisoned: false,
+        })
     }
 
-    pub fn open(directory: &Path) -> Result<Self, StateError> {
+    pub fn open(directory: &Path, organization_id: &str, store: &'s S) -> Result<Self, StateError> {
+        if !valid_org_id(organization_id) { return Err(StateError::Invalid); }
         let (lock, _) = Self::open_lock(directory)?;
         let path = directory.join("org-state.json");
         let mut bytes = Vec::new();
@@ -154,7 +168,15 @@ impl<'s, S: ProtectedSecrets> DurableOrganization<'s, S> {
             if snapshot.generation != state.revocation_generation
                 || !check_snapshot(&state, snapshot) { return Err(StateError::Invalid); }
         } else if state.revocation_generation != 0 { return Err(StateError::Invalid); }
-        Ok(Self { root: directory.to_owned(), _lock: lock, state })
+        if state.organization_id != organization_id { return Err(StateError::AnchorMismatch); }
+        let name = anchored_name(organization_id);
+        if read_anchor(store, &name)?.as_ref() != Some(&expected_anchor(directory, &state)?) {
+            return Err(StateError::AnchorMismatch);
+        }
+        Ok(Self {
+            root: directory.to_owned(), _lock: lock, state,
+            store, anchor_name: name, poisoned: false,
+        })
     }
 
     fn open_lock(directory: &Path) -> Result<(File, Option<OrganizationState>), StateError> {
