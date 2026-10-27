@@ -32,6 +32,8 @@ jobs:
           python3 tools/test_validate_security.py
           python3 tools/run_smokes.py --check
           python3 tools/test_run_smokes.py
+          python3 tools/test_probe_public_cameras.py
+          python3 -m py_compile tools/probe_public_cameras.py
 
   rust:
     name: Rust ${{ matrix.toolchain }}
