@@ -93,6 +93,42 @@ class NormalizeTests(unittest.TestCase):
             self.assertIsNone(camera["image_url"])
             self.assertFalse(camera["live_verified"])
 
+    def test_ridot_official_camera_layer_imports_location_not_stream(self):
+        sample = {"features": [
+            {"attributes": {"OBJECTID": 100, "EquipmentID": 211, "Description": "I-95 at Thurbers Ave",
+                            "Latitude": 41.804, "Longitude": -71.423, "Enabled": 1,
+                            "CCVEWebURL": "https://example.org/video/211"}},
+            {"attributes": {"OBJECTID": 101, "EquipmentID": 212, "Description": "Disabled camera",
+                            "Latitude": 41.81, "Longitude": -71.43, "Enabled": 0}},
+            {"attributes": {"OBJECTID": 102, "EquipmentID": 213, "Description": "Out of Rhode Island",
+                            "Latitude": 42.5, "Longitude": -71.4, "Enabled": 1}}
+        ]}
+        rows = index.normalize("ridot", index.bounded_json(json.dumps(sample)))
+        self.assertEqual(len(rows), 2)
+        self.assertEqual(rows[0]["id"], "ridot-211")
+        self.assertEqual(rows[0]["media_status"], "agency_enabled_metadata_only")
+        self.assertEqual(rows[1]["media_status"], "agency_disabled_or_unknown")
+        self.assertTrue(all(row["image_url"] is None and row["frame_captured_at"] is None
+                            and row["media_reference_review_only"] is None for row in rows))
+        self.assertTrue(all(not row["live_verified"] for row in rows))
+
+    def test_massdot_staging_is_offline_only_and_rejects_global_outliers(self):
+        sample = {"features": [
+            {"attributes": {"objectid": 21, "publicid": "MA21", "name": "I-93 Boston",
+                            "halfjpeg": "https://unapproved.example/frame.jpg"},
+             "geometry": {"x": -71.06, "y": 42.36}},
+            {"attributes": {"objectid": 22, "publicid": "WORLD22", "name": "Foreign coordinate"},
+             "geometry": {"x": 4.74, "y": 52.31}}
+        ]}
+        rows = index.normalize("massdot-staging", index.bounded_json(json.dumps(sample)))
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]["id"], "massdot-staging-MA21")
+        self.assertEqual(rows[0]["media_status"], "staging_only_production_source_unverified")
+        self.assertIsNone(rows[0]["image_url"])
+        self.assertIsNone(rows[0]["media_reference_review_only"])
+        with self.assertRaisesRegex(ValueError, "offline-review only"):
+            index.fetch_public("massdot-staging")
+
     def test_input_limits_and_malformed_payload_fail_closed(self):
         for payload in ('{}', '{"features": null}', '{"error": {"message": "bad"}, "features":[]}',
                         '{"features": [null]}'):
