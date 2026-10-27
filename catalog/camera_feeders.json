@@ -37,7 +37,8 @@
       "access": "public_gis_metadata_media_review_required",
       "media": "Public video URL per camera; image compatibility not verified",
       "integration": "metadata_ingestion_review",
-      "notes": "Maryland iMAP exposes GIS camera ID, location, latitude/longitude, and public camera URL, but the layer metadata alone does not certify footage is current, accessible as a JPEG, or licensed for embedding. Keep media gated until reviewed."
+      "notes": "Maryland iMAP exposes GIS camera ID, location, latitude/longitude, and public camera URL, but the layer metadata alone does not certify footage is current, accessible as a JPEG, or licensed for embedding. Keep media gated until reviewed. Maryland's separate Socrata JSON endpoint contains individual camera names, point locations and publisher video.php pages. These HTML player URLs are not direct image streams.",
+      "alternate_public_metadata_url": "https://opendata.maryland.gov/resource/4z3c-43ce.json"
     },
     {
       "id": "wsdot",
