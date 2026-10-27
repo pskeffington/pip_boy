@@ -4,7 +4,12 @@
 //! this store. The OS credential-store anchor detects replacement of the local
 //! state file, but cannot resist a simultaneous rollback/compromise of both
 //! the filesystem and the OS credential store; hardware counters are untested.
-use crate::organization_authority::SignedRevocations;
+use crate::organization_authority::{
+    verify_enrollment_evidence, ApprovalBundle, AuthorityContext, AuthorityError,
+    EnrollmentEvidence, SignedRevocations, VolatileNonceJournal,
+};
+use crate::organization::OrgGraph;
+use crate::organization_policy::ProposedExchange;
 use crate::organization_custody::{fingerprint, valid_org_id, AdministratorApproval, ProtectedSecrets};
 use fs2::FileExt;
 use ring::digest::{digest, SHA256};
@@ -307,6 +312,58 @@ impl<'s, S: ProtectedSecrets> DurableOrganization<'s, S> {
         next.consumed_nonces.push(nonce);
         self.commit_state(next)
     }
+}
+
+/// The result is identity/approval EVIDENCE ONLY, never route authorization.
+#[derive(Debug)]
+pub enum DurableEvidenceError {
+    State(StateError),
+    Verification(AuthorityError),
+    SnapshotMismatch,
+}
+
+impl From<StateError> for DurableEvidenceError {
+    fn from(value: StateError) -> Self { Self::State(value) }
+}
+
+/// Tie ORG-3.1's existing signature checks to the pinned local root, stored
+/// signed revocation snapshot and durable one-time nonce journal. The caller
+/// is still responsible for independently authenticated time, a CSPRNG nonce,
+/// authenticated operator session, and a channel binding from the real link.
+/// This function does not activate a communication or task route.
+pub fn verify_with_durable_evidence<S: ProtectedSecrets>(
+    state: &mut DurableOrganization<'_, S>,
+    graph: &OrgGraph,
+    query: &ProposedExchange<'_>,
+    verified_now: u64,
+    nonce: &[u8; 32],
+    authenticated_channel_binding: &[u8; 32],
+    bundle: &ApprovalBundle<'_>,
+) -> Result<EnrollmentEvidence, DurableEvidenceError> {
+    if state.organization_id() != query.organization_id {
+        return Err(DurableEvidenceError::SnapshotMismatch);
+    }
+    let verified = {
+        let snapshot = state.fresh_snapshot(verified_now)?;
+        if snapshot != bundle.revocations {
+            return Err(DurableEvidenceError::SnapshotMismatch);
+        }
+        let ctx = AuthorityContext {
+            pinned_root_key: state.verified_root_public_key()?,
+            issuer_key_epoch: state.issuer_key_epoch(),
+            verified_now,
+            minimum_revocation_generation: state.revocation_generation(),
+            verifier_nonce: nonce,
+            authenticated_channel_binding,
+        };
+        // ORG-3.1 verifies all approvals. The permanent write below, not this
+        // ephemeral journal, enforces replay rejection across process restarts.
+        let mut ephemeral = VolatileNonceJournal::default();
+        verify_enrollment_evidence(graph, query, &ctx, bundle, &mut ephemeral)
+            .map_err(DurableEvidenceError::Verification)?
+    };
+    state.record_nonce(*nonce)?;
+    Ok(verified)
 }
 
 fn sorted_nonzero(items: &[u64]) -> bool {
