@@ -194,7 +194,7 @@ impl<'s, S: ProtectedSecrets> DurableOrganization<'s, S> {
             || fingerprint(&state.root_public_key).is_err()
             || state.issuer_key_epoch == 0
             || state.consumed_nonces.len() > MAX_RECORDS
-            || state.consumed_nonces.iter().any(|n| *n == [0; 32])
+            || state.consumed_nonces.contains(&[0; 32])
         {
             return Err(StateError::Invalid);
         }
@@ -243,18 +243,20 @@ impl<'s, S: ProtectedSecrets> DurableOrganization<'s, S> {
             reject_symlink(&directory.join("org-state.lock"))?;
             let lock = OpenOptions::new()
                 .create(true)
+                .truncate(false)
                 .read(true)
                 .write(true)
                 .mode(0o600)
                 .open(directory.join("org-state.lock"))?;
             lock.try_lock_exclusive()?;
-            return Ok((lock, None));
+            Ok((lock, None))
         }
         #[cfg(not(unix))]
         {
             reject_symlink(&directory.join("org-state.lock"))?;
             let lock = OpenOptions::new()
                 .create(true)
+                .truncate(false)
                 .read(true)
                 .write(true)
                 .open(directory.join("org-state.lock"))?;
