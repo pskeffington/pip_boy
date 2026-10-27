@@ -814,7 +814,9 @@ mod tests {
             &store,
         )
         .unwrap();
-        state.install_revocations(fixture.revocations.clone()).unwrap();
+        state
+            .install_revocations(fixture.revocations.clone())
+            .unwrap();
 
         let bundle = ApprovalBundle {
             appointment: &fixture.appointment,
@@ -839,7 +841,13 @@ mod tests {
         assert_eq!(first.identity.device_id, "field-device");
         assert!(matches!(
             verify_with_durable_evidence(
-                &mut state, &fixture.graph, &query(), 20, &NONCE, &BINDING, &bundle
+                &mut state,
+                &fixture.graph,
+                &query(),
+                20,
+                &NONCE,
+                &BINDING,
+                &bundle
             ),
             Err(DurableEvidenceError::State(StateError::Replay))
         ));
@@ -847,10 +855,15 @@ mod tests {
         let mut reopened = DurableOrganization::open(dir.path(), "sample-org", &store).unwrap();
         assert!(matches!(
             verify_with_durable_evidence(
-                &mut reopened, &fixture.graph, &query(), 20, &NONCE, &BINDING, &bundle
+                &mut reopened,
+                &fixture.graph,
+                &query(),
+                20,
+                &NONCE,
+                &BINDING,
+                &bundle
             ),
             Err(DurableEvidenceError::State(StateError::Replay))
         ));
     }
-
 }
