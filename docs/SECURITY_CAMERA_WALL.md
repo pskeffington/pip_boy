@@ -27,7 +27,7 @@ Health states are intentionally distinct:
 
 No endpoints are polled until Security's Cameras screen opens, and **no background refresh is enabled**. The actual user-facing UI is browser-rendered from Rust `/api/state`; native Pi media decoding and agency-authorized stream integration remain separately gated. `node tools/test_cameras_ui.cjs` covers distance ranking, live preference, offline fallback, source validation, bounded probes and teardown. `node tools/test_map_gps_permissions.cjs` covers shared location consent and revocation.
 
-The [Northeast DOT city roster](../catalog/northeast_camera_roster.json) contains **29 discovery cities**, and [the named-camera sites file](../catalog/northeast_camera_sites.json) now contains **37 specifically identified cameras** (Maryland 27, Rhode Island 6, Virginia 4). **None of those 37 is marked as verified live or auto-licensed media.** The [provider registry](../catalog/camera_feeders.json) distinguishes public viewing from permission to ingest or redistribute feeds; no API key or subscription was bypassed. NYC, CT, PennDOT and MassDOT integrations require their documented access paths. Camera selection cannot legitimately claim nearby live coverage until individual feeds in those regions pass both access and on-device health gates.
+The [Northeast DOT city roster](../catalog/northeast_camera_roster.json) contains **29 discovery cities**, and [the named-camera sites file](../catalog/northeast_camera_sites.json) now contains **53 specifically identified camera sites** (Maryland 27, Rhode Island 6, Virginia 4, NYC 16). **None of those 53 is marked as verified live or auto-licensed media.** The [provider registry](../catalog/camera_feeders.json) distinguishes public viewing from permission to ingest or redistribute feeds; no API key or subscription was bypassed. NYC, CT, PennDOT and MassDOT integrations require their documented access paths. Camera selection cannot legitimately claim nearby live coverage until individual feeds in those regions pass both access and on-device health gates.
 
 The camera UI fetches approved snapshots only after opening Cameras **and with an eligible selected location**, never on general navigation. It does not use iframes and offers an explicit REFRESH control. It does not poll in the background, record, discover local IP cameras or send user location to agencies. An image load without trusted capture-time metadata is labeled **REACHABLE · FRESHNESS UNVERIFIED**, not LIVE. Failure is labeled **FEED UNAVAILABLE**. The source URLs are HTTPS and constrained to exact agency-managed media hosts/path patterns; the HTTP CSP now allows only the two media hosts as additional image origins and disallows frames.
 
@@ -37,7 +37,7 @@ Run `node tools/test_cameras_ui.cjs` for UI regression and `python3 tools/smoke_
 
 ## Northeast metadata ingestion pass (review-only)
 
-Three additional official geospatial sources are indexed alongside VDOT and the public state camera lists:
+Three additional official geospatial sources are indexed alongside VDOT, NYC DOT's official named-camera list, and other public state camera lists:
 
 | Provider | Published camera metadata | Video integration |
 | --- | --- | --- |
