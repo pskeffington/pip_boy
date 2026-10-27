@@ -2,6 +2,8 @@
 
 **Status: DESIGN / NOT DEPLOYED.** This document specifies a prospective multi-device subsystem for the open-source Rust-Boy (`pip_boy`) project. It does **not** assert that proximity discovery, automatic sync, multi-tenant authorization, E2EE, or HIPAA-ready clinical data exchange exist. The current working baseline is explicit enrolled-peer OpenSSH task and Messenger traffic with bounded packets and manually requested sends/status sync. Do not conflate passing synthetic tests with live radio, enterprise, or clinical acceptance.
 
+**Execution tracker:** [GitHub issue #62 — R0–R3](https://github.com/pskeffington/pip_boy/issues/62). The tracking issue is planning work, not an implementation acceptance.
+
 **Decision (2026-10-26):** A desktop Vault Command Center may originate missions, assign work to an authorized organizational fleet, and reconcile field-device reports. Handhelds own their local progress. Device proximity is only a routing hint. Authorization is anchored to organization, authenticated human/operator, authenticated device and per-dataset policy; transport selection cannot change those rights.
 
 ## 1. System picture and operating modes
