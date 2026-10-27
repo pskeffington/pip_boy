@@ -20,7 +20,7 @@ import urllib.parse
 import urllib.request
 
 MAX_BYTES = 6 * 1024 * 1024
-MAX_RECORDS = 1000
+MAX_RECORDS = 5000  # supports full authorized CT/NY JSON exports; still capped at 6 MiB
 SOURCES = {
     "md-socrata": {
         "state": "MD", "kind": "socrata", "agency": "Maryland Open Data / CHART",
