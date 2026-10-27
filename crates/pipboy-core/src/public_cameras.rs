@@ -24,13 +24,13 @@ pub const PUBLIC_CAMERA_FEEDS: &[PublicCamera] = &[
         city: "DC METRO",
         name: "US-50 / Patrick Henry Drive (Arlington, VA)",
         publisher: "VDOT / Virginia 511",
-        source_url: "https://511.vdot.virginia.gov/",
-        image_url: "https://snapshot.vdotcameras.com/thumbs/0wyvj6n16r826rz758qn5mf48ogpj1fp.flv.png",
+        source_url: "https://www.vdot.virginia.gov/news-events/media/",
+        image_url: "", // third-party integration requires a VDOT/Iteris agreement
         region: "VA",
         lat: 38.868556,
         lon: -77.14676,
-        format: "jpeg_or_png_snapshot",
-        validation: "published_in_agency_feed_unverified_live",
+        format: "unavailable",
+        validation: "third_party_user_agreement_required",
     },
     PublicCamera {
         id: "nyc",
