@@ -28,6 +28,8 @@ pub mod notes;
 pub mod observation;
 pub mod organization;
 pub mod organization_authority;
+pub mod organization_custody;
+pub mod organization_durable;
 pub mod organization_identity;
 pub mod organization_policy;
 pub mod peers;
