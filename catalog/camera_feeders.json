@@ -86,7 +86,9 @@
       "access": "provider_access_required",
       "media": "JPEG (1 frame per 120 seconds)",
       "integration": "gated",
-      "notes": "MassDOT directs third-party camera API access through TrafficLand sales@trafficland.com. No anonymous Boston camera URL is approved."
+      "notes": "MassDOT directs third-party camera API access through TrafficLand sales@trafficland.com. No anonymous Boston camera URL is approved. A MassDOT-hosted STAGING GIS layer exposes camera names, geographic positions and JPEG fields but has geographically invalid/worldwide outlier records; it is OFFLINE REVIEW ONLY, not an approved operational feed. The existing TrafficLand approval path remains necessary.",
+      "alternate_metadata_catalog_url": "https://gisstg.massdot.state.ma.us/rh/rest/services/Hosted/MassDOT_Traffic_Cams/FeatureServer/0",
+      "staging_status": "quarantined_no_auto_fetch"
     },
     {
       "id": "ddot",
@@ -140,13 +142,13 @@
       "id": "ridot",
       "agency": "Rhode Island DOT",
       "coverage": "Providence, Warwick, Pawtucket, Cranston and I-95/I-195",
-      "format": "ridot-public-traffic-cams",
-      "catalog_url": "https://dot.ri.gov/travel/",
-      "feed_url": "https://dot.ri.gov/travel/",
-      "access": "public_viewing_only_api_unverified",
+      "format": "arcgis-rhodeways-camera-gis",
+      "catalog_url": "https://risegis.ri.gov/hosting/rest/services/RIDOT/Rhodeways/MapServer/6",
+      "feed_url": "https://risegis.ri.gov/hosting/rest/services/RIDOT/Rhodeways/MapServer/6/query",
+      "access": "public_gis_metadata_video_rights_unverified",
       "media": "Public Live Stream-labelled cameras",
-      "integration": "candidate_requires_media_review",
-      "notes": "Official RIDOT lists camera names and public streams; independent direct URL, terms, coordinates and freshness must be validated before ingestion."
+      "integration": "metadata_ingestion_review",
+      "notes": "Official Rhode Island GIS camera layer 6 publishes EquipmentID, Description, Latitude, Longitude, Enabled, Direction and CCVEWebURL. Enabled means configured in GIS, not verified recent footage. The metadata importer intentionally does not load CCVEWebURL or launch playback; obtain feed access/reuse approval separately."
     },
     {
       "id": "deldot",
