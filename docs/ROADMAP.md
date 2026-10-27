@@ -17,6 +17,8 @@ Rust-Boy is the public product name. The existing `pip_boy` repository, `pipboy`
 
 [RB fleet synchronization roadmap](RB_SYNC_ROADMAP.md) defines R0-R7 with clear separation between **nearby discovery**, **authenticated device pairing**, **organization-bound operator authorization**, **versioned dataset deltas** and **transport routing**. The immediate target is R0-R3: freeze v1 OpenSSH compatibility; model device/org/subject trust and revocation; test a bounded event ledger with simulated faults; then integrate opt-in pinned-SSH delta transfer across two physical hosts. Later passes add optional proximity discovery, admin-enrolled fleets, bounded scheduled reconciliation and separate high-sensitivity/clinical approvals.
 
+**ORG-2 progress (design-only core):** [Rust organization graph](../crates/pipboy-core/src/organization.rs) records tenants, Vault sites, units, operators, appointments and device relationships. The [policy preflight](../crates/pipboy-core/src/organization_policy.rs) checks the proposed operator+device's organization/site scope, active appointment and matching operator/device draft grants, but intentionally returns `CandidateForVerification` **not authorization**. Live task/API/SSH routes remain unchanged until authenticated operator/device identity, cryptographically verified grant issuers, revocation freshness and trusted time are implemented.
+
 **Safety boundary:** same Wi-Fi, BLE proximity, matching key label or open-source installation never imply shared permissions. Current tasks and peer registries are plaintext; no PHI, background sync, org trust federation or device-discovery authorization has been released.
 
 ## PACE message routing
