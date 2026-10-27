@@ -20,24 +20,24 @@
       "agency": "Virginia Department of Transportation / Virginia 511",
       "coverage": "VA statewide; DC metro fringe",
       "format": "geojson-featurecollection",
-      "catalog_url": "https://511.vdot.virginia.gov/",
+      "catalog_url": "https://www.vdot.virginia.gov/news-events/media/",
       "feed_url": "https://511.vdot.virginia.gov/services/map/layers/map/cams",
-      "access": "public_catalog_unconfirmed",
+      "access": "third_party_user_agreement_required",
       "media": "HTTPS PNG snapshots; HLS may be available",
-      "integration": "active_snapshot_seeds",
-      "notes": "Public map data exposes image_url, https_url, active and coordinates; live endpoint reachability and redistribution rights require on-device checks. DC Metro label is Virginia, not DDOT."
+      "integration": "gated_until_agreement",
+      "notes": "VDOT officially requires an Iteris-managed third-party user agreement for integrated 511 traffic video, including free-distribution use. Public map metadata and media URLs do not establish redistribution authorization. Contact 511_videosubscription@iteris.com; do not enable playback without documented approval."
     },
     {
       "id": "mdot",
       "agency": "Maryland DOT / CHART",
       "coverage": "MD statewide; DC metro fringe",
       "format": "chart-live-cameras-json",
-      "catalog_url": "https://chart.maryland.gov/DataFeeds/GetDataFeeds",
-      "feed_url": "https://chart.maryland.gov/DataFeeds/GetDataFeeds",
-      "access": "public_catalog",
+      "catalog_url": "https://mdgeodata.md.gov/imap/rest/services/Transportation/MD_TrafficCameras/FeatureServer/0",
+      "feed_url": "https://mdgeodata.md.gov/imap/rest/services/Transportation/MD_TrafficCameras/FeatureServer/0/query",
+      "access": "public_gis_metadata_media_review_required",
       "media": "Public video URL per camera; image compatibility not verified",
-      "integration": "candidate_requires_media_review",
-      "notes": "Official CHART feed documents lat/lon, operation status, last cache update and publicVideoURL; do not assume it is a JPEG."
+      "integration": "metadata_ingestion_review",
+      "notes": "Maryland iMAP exposes GIS camera ID, location, latitude/longitude, and public camera URL, but the layer metadata alone does not certify footage is current, accessible as a JPEG, or licensed for embedding. Keep media gated until reviewed."
     },
     {
       "id": "wsdot",
@@ -92,12 +92,12 @@
       "agency": "District of Columbia DOT",
       "coverage": "Washington DC proper",
       "format": "ddot-cctv",
-      "catalog_url": "https://ddot.dc.gov/vi/page/open-government-material-and-foia-ddot",
-      "feed_url": "https://ddot.dc.gov/",
-      "access": "no_public_developer_feed_verified",
+      "catalog_url": "https://maps2.dcgis.dc.gov/dcgis/rest/services/DDOT/TrafficOperations/FeatureServer/2",
+      "feed_url": "https://maps2.dcgis.dc.gov/dcgis/rest/services/DDOT/TrafficOperations/FeatureServer/2/query",
+      "access": "public_location_metadata_media_access_unverified",
       "media": "CCTV traffic camera feeds",
-      "integration": "gated",
-      "notes": "DDOT/HSEMA documentation describes CCTV/FOIA access, not an unconditional public developer API. Do not label Virginia views as DC city cameras."
+      "integration": "metadata_ingestion_review",
+      "notes": "Official DDOT GIS layer 2 provides CameraID, Location, Latitude, Longitude, and Operation_Status (0 inactive/1 active). It contains no media URL. Location/status data may be indexed; never infer a video feed."
     },
     {
       "id": "ctdot",
@@ -152,12 +152,12 @@
       "agency": "Delaware DOT",
       "coverage": "Wilmington, Newark DE, Dover and DE interstates",
       "format": "deldot-traffic-camera-map",
-      "catalog_url": "https://deldot.gov/map/index.shtml?tab=TrafficCameras",
-      "feed_url": "https://deldot.gov/map/index.shtml?tab=TrafficCameras",
-      "access": "public_viewing_only_api_unverified",
+      "catalog_url": "https://enterprise.firstmaptest.delaware.gov/arcgis/rest/services/Transportation/DE_Boundary_and_Point/FeatureServer/26",
+      "feed_url": "https://enterprise.firstmaptest.delaware.gov/arcgis/rest/services/Transportation/DE_Boundary_and_Point/FeatureServer/26/query",
+      "access": "public_gis_metadata_media_access_unverified",
       "media": "Public camera map, direct source requires verification",
-      "integration": "candidate_requires_media_review",
-      "notes": "Historical XML documentation exists but cannot certify current endpoint or redistribution rights; do not assume old HTTP JPEG URLs remain valid."
+      "integration": "metadata_ingestion_review",
+      "notes": "DelDOT FirstMap traffic device camera metadata layer 26 provides names, road/intersection, equipment status and geometry. Projection is EPSG:26957; request outSR=4326. No live-media URLs are published in this layer. This is on a firstmaptest host: confirm production authority before operational use."
     },
     {
       "id": "newengland511",
@@ -169,8 +169,9 @@
       "access": "public_viewing_only_api_unverified",
       "media": "CCTV/RWIS camera stills",
       "integration": "candidate_requires_media_review",
-      "notes": "VTrans points to New England 511 for public CCTV images; direct licensing, public API and capture timestamps remain unverified."
+      "notes": "Official New England 511 serves ME/NH/VT public camera and RWIS locations. Public viewing is confirmed, but an unrestricted, documented developer media API and its redistribution rights were not verified. Do not scrape browser internals."
     }
   ],
-  "region_priority": "Northeast first: individual cameras must have provider-issued coordinates and health before automatic selection"
+  "region_priority": "Northeast first: individual cameras must have provider-issued coordinates and health before automatic selection",
+  "media_policy": "No operator camera is auto-fetched merely because public metadata lists an image or HLS URL. Require provider reuse authorization, real camera coordinates, and a current direct-media probe."
 }
