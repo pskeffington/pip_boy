@@ -28,6 +28,7 @@ mod radio;
 mod radio_http;
 mod radio_output;
 mod radio_playback;
+mod radio_sdr;
 mod sampling;
 mod scout;
 mod status;
@@ -58,6 +59,8 @@ fn help() {
         "  radio <probe STATION_ID --confirm|validate STATION_ID --confirm>",
         "  radio listen STATION_ID --confirm [--seconds 1..300]",
         "  radio simulate FREQ_HZ MODE",
+        "  radio sdr-devices --confirm (optional soapy-sdr feature)",
+        "  radio sdr-capture DEVICE_ID FREQ_HZ RATE_HZ --milliseconds 1..5000 --confirm",
         "",
         "NETWORK & COMMUNICATIONS (explicit authorization required)",
         "  net <scan|watch> <local|PRIVATE_CIDR> --confirm [--json]",

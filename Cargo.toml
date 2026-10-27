@@ -10,4 +10,4 @@ repository = "https://github.com/pskeffington/pip_boy"
 rust-version = "1.90"
 
 [workspace.dependencies]
-rust-radio = { git = "https://github.com/pskeffington/rust_radio", rev = "573d841ed7839f2cce9a28a102460d15edd79533", default-features = false }
+rust-radio = { git = "https://github.com/pskeffington/rust_radio", rev = "f569cbff3d876aec50812043a44e591caa798ee4", default-features = false }

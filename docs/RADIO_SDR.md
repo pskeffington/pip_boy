@@ -1,7 +1,7 @@
 # RADIO/SDR — hardware-independent receiver foundation
 
 ## Status
-**Native IP playback and the simulated receive-only SDR contract are integrated into `main` (PR #35); live physical SDR reception remains unimplemented.**
+**Native IP playback is embedded from the standalone module. An optional SoapySDR adapter provides bounded I/Q receive checks; RF audio demodulation and physical hardware acceptance remain open.**
 This is a receive-only Rust core intended for the existing Rust-Boy micro UI and future Raspberry Pi SDR accessory. It does not modify the LINK/SSH messenger, transmit RF, or silently discover/open devices.
 
 ## Existing API
@@ -20,8 +20,8 @@ cargo run -p pipboy -- radio simulate 100100000 wfm
 cargo test -p pipboy-core radio
 ```
 
-## Hardware integration pass (next)
-1. Introduce an optional `SoapySDR` receive backend behind a feature flag for supported hardware (RTL-SDR, Airspy, HackRF RX, LimeSDR RX, etc., depending on installed Soapy drivers). Avoid linking mandatory native SDR libraries into the default build.
+## Hardware integration pass
+1. The standalone module now supplies an optional `SoapySDR` receive backend, enabled in the host with `--features soapy-sdr`. The default build links no SDR SDK. Receiver support depends on installed Soapy drivers; this Mac has the SDK but no device factories or receivers.
 2. Enumerate device identifiers and report actual frequency ranges, sample rates, bandwidth and gain ranges. Never assume all dongles have the simulator's range or rates. Require explicit user selection and access authorization.
 3. A bounded capture worker owns the device; separate it from the UI and message transport. Introduce stop/cancel, stream timeouts, bounded buffer/backpressure, unplug/replug recovery and event logs.
 4. Build DSP pipeline: input samples -> complex baseband -> AM/NFM/WFM/SSB decoder -> resampler -> audio device. Bandwidth, gain and frequency correction must be device-aware.
@@ -44,7 +44,7 @@ cargo test -p pipboy-core radio
 
 ## IP radio / curated directory (2026-10-26)
 
-The native Rust/Symphonia/CPAL player is integrated in `main` (PR #35); Skylab sound, Play/Stop, volume and OS-managed Bluetooth output selection were operator-confirmed on macOS. Physical SDR enumeration, RF demodulation, Raspberry Pi hardware acceptance and full reconnect/fault validation remain unimplemented or pending. Opening the Radio HUD reads only the local state; **no stream begins until Play is pressed**.
+The native Rust/Symphonia/CPAL player is integrated in `main` (PR #35); Skylab sound, Play/Stop, volume and OS-managed Bluetooth output selection were operator-confirmed on macOS. Explicit optional SDR enumeration is available; RF demodulation, physical receiver and Raspberry Pi acceptance remain pending. Opening the Radio HUD reads only the local state; **no stream begins until Play is pressed**.
 
 The fixed 10-station directory contains Skylab Radio (UK), plus nine SomaFM channels: Groove Salad, Secret Agent, Lush, Drone Zone, Deep Space One, Space Station Soma, Beat Blender, DEF CON Radio and Underground 80s. Categories are CHILL, AMBIENT, ELECTRONIC and RETRO. The desktop list is genre-grouped; the handheld uses the same catalog with previous/next buttons and a station counter. The output picker is collapsible on handheld and opens automatically when audio hardware fails.
 
@@ -120,3 +120,19 @@ The host now consumes the separately maintained `rust-radio` library at the Git 
 This cutover brings the shared bounded retries, ICY cancellation fix and HTTPS-only SomaFM playlist compatibility into the host. Earlier entries describing these native implementations as pending are historical. Physical SDR reception and demodulation remain hardware acceptance gates; the receive-only tuner contract and marked simulator are shared through the module.
 
 On 2026-10-27 the integrated loopback HUD was executed with temporary preferences and low initial volume. Skylab and Groove Salad both reached native Playing after the PCM callback consumed decoded samples. The test changed volume, rejected duplicate Play, stopped before switching, preserved favorites/last selection, and verified no autoplay on reads or output selection. The two observed Stop responses were approximately 28 ms and 21 ms; these are one-run measurements, not timing guarantees. Physical SDR and Pi remain unverified.
+
+
+## Optional native I/Q receive checks (2026-10-27)
+
+The `soapy-sdr` feature forwards to the pinned standalone module. Install the SoapySDR SDK and the appropriate receiver driver before building it. Device discovery is explicit and does not activate a stream. No SDK discovery occurs on host startup, HUD reads or IP source checks.
+
+```sh
+cargo run --locked -p pipboy --features soapy-sdr -- radio sdr-devices --confirm
+cargo run --locked -p pipboy --features soapy-sdr -- radio sdr-capture DEVICE_ID 100100000 1024000 --milliseconds 500 --confirm
+```
+
+Copy the ID from discovery and choose a device-supported frequency and sample rate. The command opens RX channel zero, checks actual driver capabilities and requests RawIq only. The module owns bounded capture, 100 ms driver-read timeouts, cancellation checks and receiver cleanup. Durations are limited to 1–5000 ms; samples are discarded. Native driver initialization/teardown has no hard deadline, so embed synchronous discovery/capture on a host worker.
+
+I/Q ingress is not signal identification or audible radio. AM/FM/SSB audio demodulation, RF HUD controls, physical unplug/replug and Pi tests remain open. No receiver was found on this development Mac. Running these commands without the feature returns installation/build guidance while leaving IP radio available. See the standalone [receive adapter contract](https://github.com/pskeffington/rust_radio/blob/main/docs/SDR_RECEIVE.md).
+
+Local verification of the pinned optional adapter passed formatting, workspace check, strict Clippy, all 330 tests and build in both default and SDR-enabled configurations. The SDK-enabled host executed discovery (no receiver found), rejected an unavailable ID, and silently decoded live Skylab MP3 at 48 kHz/stereo. The default binary returned SDK installation guidance. An unrelated task-dashboard test failed once in the initial parallel suite, then passed alone and in both full reruns; no task-dashboard code was changed. Remote GitHub CI remains a separate gate.

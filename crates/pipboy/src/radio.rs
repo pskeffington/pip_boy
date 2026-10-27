@@ -24,6 +24,9 @@ fn modulation(value: &str) -> Option<Demodulation> {
 
 pub fn run(args: Vec<String>) -> Result<(), Box<dyn Error>> {
     match args.as_slice() {
+        [action, ..] if action == "sdr-devices" || action == "sdr-capture" => {
+            crate::radio_sdr::run(&args)
+        }
         [action, id, confirm] if action == "listen" && confirm == "--confirm" => {
             crate::radio_playback::run_demo(id, None)?;
             Ok(())
@@ -93,7 +96,7 @@ pub fn run(args: Vec<String>) -> Result<(), Box<dyn Error>> {
             } else {
                 println!("No approved provider route detected. Offline radio mode.");
             }
-            println!("Physical SDR autodetection is not yet implemented; no actual receiver was queried.");
+            println!("No SDR was queried by this IP probe; use sdr-devices --confirm for explicit discovery.");
             Ok(())
         }
         [action] if action == "source" => {

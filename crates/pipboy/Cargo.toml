@@ -6,6 +6,10 @@ edition.workspace = true
 license.workspace = true
 rust-version.workspace = true
 
+[features]
+default = []
+soapy-sdr = ["rust-radio/soapy-sdr"]
+
 [dependencies]
 rust-radio = { workspace = true, features = ["ip-radio", "sdr"] }
 pipboy-core = { path = "../pipboy-core" }

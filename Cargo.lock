@@ -2764,17 +2764,18 @@ dependencies = [
 [[package]]
 name = "rust-radio"
 version = "0.1.0"
-source = "git+https://github.com/pskeffington/rust_radio?rev=573d841ed7839f2cce9a28a102460d15edd79533#573d841ed7839f2cce9a28a102460d15edd79533"
+source = "git+https://github.com/pskeffington/rust_radio?rev=f569cbff3d876aec50812043a44e591caa798ee4#f569cbff3d876aec50812043a44e591caa798ee4"
 dependencies = [
  "rust-radio-audio",
  "rust-radio-core",
  "rust-radio-ip",
+ "rust-radio-sdr",
 ]
 
 [[package]]
 name = "rust-radio-audio"
 version = "0.1.0"
-source = "git+https://github.com/pskeffington/rust_radio?rev=573d841ed7839f2cce9a28a102460d15edd79533#573d841ed7839f2cce9a28a102460d15edd79533"
+source = "git+https://github.com/pskeffington/rust_radio?rev=f569cbff3d876aec50812043a44e591caa798ee4#f569cbff3d876aec50812043a44e591caa798ee4"
 dependencies = [
  "cpal",
  "ringbuf",
@@ -2786,16 +2787,26 @@ dependencies = [
 [[package]]
 name = "rust-radio-core"
 version = "0.1.0"
-source = "git+https://github.com/pskeffington/rust_radio?rev=573d841ed7839f2cce9a28a102460d15edd79533#573d841ed7839f2cce9a28a102460d15edd79533"
+source = "git+https://github.com/pskeffington/rust_radio?rev=f569cbff3d876aec50812043a44e591caa798ee4#f569cbff3d876aec50812043a44e591caa798ee4"
 
 [[package]]
 name = "rust-radio-ip"
 version = "0.1.0"
-source = "git+https://github.com/pskeffington/rust_radio?rev=573d841ed7839f2cce9a28a102460d15edd79533#573d841ed7839f2cce9a28a102460d15edd79533"
+source = "git+https://github.com/pskeffington/rust_radio?rev=f569cbff3d876aec50812043a44e591caa798ee4#f569cbff3d876aec50812043a44e591caa798ee4"
 dependencies = [
  "reqwest",
  "rust-radio-core",
  "tokio",
+]
+
+[[package]]
+name = "rust-radio-sdr"
+version = "0.1.0"
+source = "git+https://github.com/pskeffington/rust_radio?rev=f569cbff3d876aec50812043a44e591caa798ee4#f569cbff3d876aec50812043a44e591caa798ee4"
+dependencies = [
+ "num-complex",
+ "rust-radio-core",
+ "soapysdr",
 ]
 
 [[package]]
@@ -3173,6 +3184,25 @@ name = "smallvec"
 version = "1.16.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d0d5d4b1981b8bbbb7aed204cae5726d683d5d6ac7e74ec54122ea28f315e7c8"
+
+[[package]]
+name = "soapysdr"
+version = "0.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a18cfe7033985b73ab920b34b79ea333ac9271c64910023054efefd8a5f08088"
+dependencies = [
+ "num-complex",
+ "soapysdr-sys",
+]
+
+[[package]]
+name = "soapysdr-sys"
+version = "0.8.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f436607817a47de9b0716931dd874cd273993a69091d174222d0b9099c2f748b"
+dependencies = [
+ "pkg-config",
+]
 
 [[package]]
 name = "socket2"

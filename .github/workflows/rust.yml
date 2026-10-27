@@ -146,6 +146,23 @@ jobs:
           cargo build --workspace --locked
           python3 tools/run_smokes.py linux
 
+  optional-sdr:
+    name: Optional receive adapter (no hardware I/O)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - name: Install native SDK headers
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libasound2-dev libsoapysdr-dev pkg-config
+      - name: Check and lint embedded receive adapter
+        run: |
+          cargo check --workspace --all-targets --locked --features pipboy/soapy-sdr
+          cargo clippy --workspace --all-targets --locked --features pipboy/soapy-sdr -- -D warnings
+      - name: Test without receiver discovery or capture
+        run: cargo test --workspace --locked --features pipboy/soapy-sdr
+
   native:
     name: Native ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
