@@ -66,7 +66,7 @@
       .filter(feed => feed && typeof feed.id === "string" &&
         /^[a-zA-Z0-9_-]{1,64}$/.test(feed.id) &&
         typeof feed.city === "string" && typeof feed.publisher === "string" &&
-        (safeImage(feed) || feed.format === "unavailable"))
+        (feed.format === "unavailable" || (safeImage(feed) && point(feed))))
       .map((feed, index) => ({
         ...feed, availableSource: safeImage(feed),
         distance_mi: origin && point(feed) ? distanceMiles(origin, feed) : null,
