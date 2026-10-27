@@ -2335,6 +2335,7 @@ dependencies = [
  "age",
  "fs2",
  "keyring",
+ "ring",
  "serde",
  "serde_json",
  "sysinfo",
