@@ -101,7 +101,7 @@ def audit_documents(root=ROOT):
     """Audit only checked-in public Markdown locations, never runtime storage."""
     root = Path(root).resolve()
     scanned = links = 0
-    for directory in (root, root / "catalog", root / "docs", root / "data"):
+    for directory in (root, root / "catalog", root / "docs", root / "data", root / "server"):
         if not directory.exists():
             continue
         require(directory.is_dir() and not directory.is_symlink(),
