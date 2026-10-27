@@ -111,9 +111,9 @@ def fetch_public(source):
 
 def coordinate(lat, lon, state):
     # Socrata publishes numeric coordinates as short decimal strings.
-    if isinstance(lat, str) and re.fullmatch(r"-?\\d{1,3}(?:\\.\\d{1,12})?", lat):
+    if isinstance(lat, str) and re.fullmatch(r"-?\d{1,3}(?:\.\d{1,12})?", lat):
         lat = float(lat)
-    if isinstance(lon, str) and re.fullmatch(r"-?\\d{1,3}(?:\\.\\d{1,12})?", lon):
+    if isinstance(lon, str) and re.fullmatch(r"-?\d{1,3}(?:\.\d{1,12})?", lon):
         lon = float(lon)
     if isinstance(lat, bool) or isinstance(lon, bool):
         return None
