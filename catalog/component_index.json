@@ -266,6 +266,23 @@
         "tools/test_cameras_ui.cjs"
       ],
       "acceptance": "Software catalog/lifecycle tests only; publisher playback and Mac/Pi operator acceptance remain provider/hardware dependent."
+    },
+    {
+      "id": "field-mini-server",
+      "boundary": "Optional field-server binary and architecture; currently no listener and no transport authority.",
+      "hardware_gate": "deny_only",
+      "code": [
+        "server/mini-server/Cargo.toml",
+        "server/mini-server/src/main.rs"
+      ],
+      "docs": [
+        "docs/README.md"
+      ],
+      "checks": [
+        "tools/validate_server_matrix.py",
+        "tools/test_server_matrix.py"
+      ],
+      "acceptance": "No-socket S0 scaffold; field/relay authentication and hardware acceptance pending."
     }
   ]
 }
