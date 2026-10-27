@@ -39,7 +39,7 @@ function state(scenario) {
       profile:activeProfile,
       slots:custom?[]:toolIds.map((tool,index)=>({id:"slot-"+index,tool}))
     },
-    camera_feeds:["DC","NYC","BOSTON","SF"].map((city,index)=>({city,name:city+" fixture",publisher:"Invented publisher",video_id:"testcam000"+index,source_url:"https://www.youtube.com/watch?v=testcam000"+index})),
+    camera_feeds:["DC","NYC","BOSTON","SF"].map((city,index)=>({id:"gate-"+index,city,name:city+" access-gated fixture",publisher:"Fixture DOT",region:"MA",lat:40+index,lon:-75+index,format:"unavailable",image_url:"",source_url:"https://example.org/camera"})),
     net_operations:[]
   };
 }
