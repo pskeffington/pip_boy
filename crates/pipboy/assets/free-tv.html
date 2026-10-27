@@ -21,7 +21,7 @@ footer{font-size:10px;color:#8bb895;min-height:18px}
 <section aria-live="polite"><h1 id="service-name">Pluto TV</h1>
 <p>Watch through the selected service's official browser site. Playback, captions, and channel controls are provided by that service.</p>
 <a id="watch" href="https://pluto.tv/" rel="noopener">WATCH PLUTO TV</a>
-<p id="message">External service. Returns to Rust-Boy using browser Back.</p></section>
+<p id="message">One tap opens the selected service. Provider controls whether video begins automatically.</p></section>
 <footer>FREE TV / OFFICIAL PROVIDER BROWSER / NO EMBEDS OR STREAM RELAYS</footer></main>
 <script>
 "use strict";
@@ -33,12 +33,23 @@ const SERVICES=Object.freeze([
  Object.freeze({name:"Samsung TV+",url:"https://www.samsungtvplus.com/"})
 ]);
 const nav=document.getElementById("services"),title=document.getElementById("service-name"),watch=document.getElementById("watch");
+const STORAGE_KEY="rustboy.free-tv.provider.v1";
+function remembered(){
+ try {const n=Number(sessionStorage.getItem(STORAGE_KEY));return Number.isInteger(n)&&n>=0&&n<SERVICES.length?n:0;}
+ catch {return 0;}
+}
+function remember(index){try{sessionStorage.setItem(STORAGE_KEY,String(index));}catch{}}
+function launch(index){
+ const service=SERVICES[index];
+ // Navigation occurs synchronously inside an actual user gesture.
+ window.location.assign(service.url);
+}
 const buttons=SERVICES.map((service,index)=>{
  const button=document.createElement("button");button.type="button";button.textContent=service.name;
- button.addEventListener("click",()=>select(index));nav.append(button);return button;
+ button.addEventListener("click",()=>{select(index);launch(index);});nav.append(button);return button;
 });
-function select(index){const service=SERVICES[index];title.textContent=service.name;watch.href=service.url;
+function select(index){const service=SERVICES[index];remember(index);title.textContent=service.name;watch.href=service.url;
  watch.textContent="WATCH "+service.name.toUpperCase();
  buttons.forEach((button,i)=>button.setAttribute("aria-pressed",String(i===index)));}
-select(0);
+select(remembered());
 </script></body></html>
