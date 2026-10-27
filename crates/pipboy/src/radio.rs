@@ -24,6 +24,9 @@ fn modulation(value: &str) -> Option<Demodulation> {
 
 pub fn run(args: Vec<String>) -> Result<(), Box<dyn Error>> {
     match args.as_slice() {
+        [action, ..] if action == "sdrconnect-status" || action == "sdrconnect-capture" => {
+            crate::radio_sdrconnect::run(&args)
+        }
         [action, ..] if action == "sdr-devices" || action == "sdr-capture" => {
             crate::radio_sdr::run(&args)
         }

@@ -9,6 +9,7 @@ rust-version.workspace = true
 [features]
 default = []
 soapy-sdr = ["rust-radio/soapy-sdr"]
+sdrconnect = ["rust-radio/sdrconnect"]
 
 [dependencies]
 rust-radio = { workspace = true, features = ["ip-radio", "sdr"] }

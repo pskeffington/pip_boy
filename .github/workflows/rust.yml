@@ -147,21 +147,27 @@ jobs:
           python3 tools/run_smokes.py linux
 
   optional-sdr:
-    name: Optional receive adapter (no hardware I/O)
+    name: Optional receive adapter ${{ matrix.feature }} (no hardware I/O)
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        feature: [soapy-sdr, sdrconnect]
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy
-      - name: Install native SDK headers
-        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libasound2-dev libsoapysdr-dev pkg-config
+      - name: Install audio headers
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libasound2-dev pkg-config
+      - name: Install optional USB SDK headers
+        if: matrix.feature == 'soapy-sdr'
+        run: sudo apt-get install -y --no-install-recommends libsoapysdr-dev
       - name: Check and lint embedded receive adapter
         run: |
-          cargo check --workspace --all-targets --locked --features pipboy/soapy-sdr
-          cargo clippy --workspace --all-targets --locked --features pipboy/soapy-sdr -- -D warnings
+          cargo check --workspace --all-targets --locked --features pipboy/${{ matrix.feature }}
+          cargo clippy --workspace --all-targets --locked --features pipboy/${{ matrix.feature }} -- -D warnings
       - name: Test without receiver discovery or capture
-        run: cargo test --workspace --locked --features pipboy/soapy-sdr
+        run: cargo test --workspace --locked --features pipboy/${{ matrix.feature }}
 
   native:
     name: Native ${{ matrix.os }}

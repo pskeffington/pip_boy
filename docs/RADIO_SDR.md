@@ -1,5 +1,8 @@
 # RADIO/SDR — hardware-independent receiver foundation
 
+The selected nRSP-ST uses the [SDRconnect network adapter](RADIO_NRSP_ST.md),
+which is independent of the USB SoapySDR path described below.
+
 ## Status
 **Native IP playback is embedded from the standalone module. An optional SoapySDR adapter provides bounded I/Q receive checks; RF audio demodulation and physical hardware acceptance remain open.**
 This is a receive-only Rust core intended for the existing Rust-Boy micro UI and future Raspberry Pi SDR accessory. It does not modify the LINK/SSH messenger, transmit RF, or silently discover/open devices.
