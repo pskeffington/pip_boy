@@ -16,7 +16,9 @@ Roles use short operator titles: **Overseer, Maintenance, Security, Doctor, Scie
 
 [Documentation index](docs/README.md) · [Repository structure](docs/REPO_STRUCTURE.md) · [Architecture](docs/ARCHITECTURE.md) · [Organizational research](docs/ORGANIZATIONAL_OPTIMIZATION.md) · [Validation](docs/VALIDATION.md) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md).
 
-**Desktop focus:** The shared console uses compact **TOOLS / VIEW / MESSAGES / SETTINGS** pages. Change stations only under Settings; optional explanations replace repeated text. The handheld `/micro` is unchanged. [Desktop guide](docs/DASHBOARD_UI.md).
+**Desktop focus:** The Vault Command Center separates **COMMAND / MODULES / VIEWPORT / MESSAGES / SETTINGS**, plus RADIO. Command manages mission/task assignment and explicit paired-device dispatch; the handheld `/micro` remains the field terminal. [Desktop guide](docs/DASHBOARD_UI.md).
+
+**RB-to-RB fleet synchronization:** [Phased organizational/proximity/IP/keyed-pairing roadmap](docs/RB_SYNC_ROADMAP.md). Existing pinned OpenSSH task and Messenger links are manual; automatic discovery, organizational enrollment and background synchronization are **not implemented**. Regulated clinical data is outside the present release boundary.
 
 ## Quick start
 
