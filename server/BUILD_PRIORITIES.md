@@ -17,6 +17,8 @@
 
 **P1 initial software pass:** `pipboy-core::harsh_link_sim` now contains deterministic offline fault scenarios (cable cut, tunnel dead zone, relay silence, asymmetric transport, duplicate/reorder, 20-node rejoin). This is an in-memory simulation only: it does not prove disk durability, secure transport, a field relay, or hardware conditions. P1 remains open pending CI and real transport evidence. A P1.2 virtual-time harness now adds seeded reproducible loss, delayed receiver arrival, bounded in-flight windows and exponential retry backoff. It models only memory-local acceptance, not verified cryptographic receipts, fsync, power recovery, retransmission after partial acknowledgement, or integrated production messaging.
 
+**P2 prototype:** `pipboy-core::offline_queue` adds a standalone bounded, JSON-snapshot synthetic-data queue with atomic temp-file replacement, lock-guarded writes, duplicate identity rejection, and corruption fail-closed tests. This is NOT encrypted, not wired to Messenger, does not record authenticated receiver receipts and requires crash/disk-full validation before deployment.
+
 ## Next three development increments
 
 ### Increment A — software-only proof (P0–P2)
