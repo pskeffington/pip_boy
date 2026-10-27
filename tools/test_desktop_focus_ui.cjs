@@ -70,4 +70,17 @@ assert.match(css,/@media\(max-height:480px\)/,
   "Short-screen adaptive paging must remain");
 assert.match(css,/\.copy-disclosure summary:focus-visible/,
   "Disclosure keyboard focus must remain visible");
+// Desktop Radio is global navigation, including when MAP owns the viewport.
+assert.match(js,/function toggleRadioSubview\(\)\s*\{[\s\S]*?activateStage\("viewport"\);/,
+  "Global Radio button must activate viewport from Modules, Settings and Messages");
+assert.match(js,/ui\.extension\.replaceChildren\(\);\s*activatePane\("workspace"\);\s*activateStage\("viewport"\);/,
+  "Entering Radio must discard stale map markup and restore workspace pane");
+assert.match(js,/if \(stage !== "viewport"\) radioPaneOpen = false;/,
+  "Changing desktop pages must not leave a hidden radio override active");
+assert.match(js,/ui\.extension\.hidden = visible;/,
+  "Radio subview must never hide the active workspace while on another page");
+assert.match(js,/radioPaneOpen = false;\s*extensionMode = destination;\s*activateStage\("viewport"\);/,
+  "Map selector must return from Radio without rendering a hidden extension");
+assert.match(js,/if \(button\.dataset\.stageTarget === "viewport" && activeStage === "viewport" && radioPaneOpen\)/,
+  "Viewport button must return from the native radio surface");
 console.log("PASS desktop focus: concise Settings, tools, consent, optional details and deferred messages");
