@@ -50,6 +50,18 @@ SOURCES = {
         "page": "https://enterprise.firstmaptest.delaware.gov/arcgis/rest/services/Transportation/"
                 "DE_Boundary_and_Point/FeatureServer/26",
     },
+    "ctroads": {
+        "state": "CT", "kind": "restricted-json", "agency": "Connecticut DOT / CTroads",
+        "url": "https://www.ctroads.org/developers/help",
+        "page": "https://www.ctroads.org/developers/help",
+        "fetch_allowed": False,  # a registered developer key and approval are required
+    },
+    "511ny": {
+        "state": "NY", "kind": "restricted-json", "agency": "New York State 511 / NYSDOT",
+        "url": "https://prod-ny.ibi511.com/developers/help",
+        "page": "https://prod-ny.ibi511.com/developers/resources",
+        "fetch_allowed": False,  # a registered developer key and agreement are required
+    },
     "ridot": {
         "state": "RI", "kind": "arcgis", "agency": "Rhode Island DOT / Rhodeways",
         "url": "https://risegis.ri.gov/hosting/rest/services/RIDOT/Rhodeways/MapServer/6/query"
@@ -77,6 +89,8 @@ BOUNDS = {
     "DE": (38.35, 39.9, -75.85, -74.75),
     "VA": (38.4, 39.25, -77.7, -76.7),  # DC metro only, not all Virginia
     "RI": (41.1, 42.05, -72.05, -71.05),
+    "CT": (40.9, 42.1, -73.75, -71.75),
+    "NY": (40.45, 45.15, -79.9, -71.8),
     "MA": (41.15, 42.95, -73.6, -69.8),
 }
 
@@ -179,7 +193,7 @@ def normalize(source, payload):
     for item in payload["features"]:
         if not isinstance(item, dict):
             continue
-        attrs = item.get("attributes") if spec["kind"] in ("arcgis", "socrata") else item.get("properties")
+        attrs = item.get("attributes") if spec["kind"] in ("arcgis", "socrata", "restricted-json") else item.get("properties")
         if not isinstance(attrs, dict):
             continue
         if source == "md-socrata":
@@ -203,6 +217,17 @@ def normalize(source, payload):
             evidence = None
             status = "agency_camera_location_only"
             provider_id = attrs.get("CameraID")
+        elif source in ("ctroads", "511ny"):
+            ident = attrs.get("ID")
+            name = clean_name(attrs.get("Name") or attrs.get("RoadwayName"))
+            coords = coordinate(attrs.get("Latitude"), attrs.get("Longitude"), spec["state"])
+            # Authenticated developer exports are review-only. Never persist raw
+            # Url, VideoUrl, API key, or a source request URL containing a key.
+            evidence = None
+            status = ("developer_feed_disabled_or_blocked" if
+                      attrs.get("Disabled") is True or attrs.get("Blocked") is True
+                      else "developer_agreement_metadata_only")
+            provider_id = ident
         elif source == "ridot":
             ident = attrs.get("EquipmentID") or attrs.get("OBJECTID")
             name = clean_name(attrs.get("Description"))
