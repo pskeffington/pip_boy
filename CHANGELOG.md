@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-10-26 — Universal location ingestion settings
+
+- Move GPS setup, ZIP/manual location input, county acquisition, Layers and map sources behind Settings → Location / Map in micro and desktop.
+- Keep Map to geographic display only, with every button under universal Settings; preserve the selected area and county between tabs without repeated lookup.
+- Expand desktop Map to at least 95% of the workspace zone; move navigation above it and verify canvas coverage at three screen sizes.
+- Retain explicit GPS consent, stop watches when leaving map/settings, and resume an opted-in watch only on those screens. Keep accepted manual/ZIP selection in page memory and retain the existing local county cache.
+
 ## 2026-10-26 — Compact shared mini UI header
 
 - Combine branding and page heading into one 44px title/control bar across all mini UI sections and tool details.

@@ -1,10 +1,10 @@
 # MAP — ZIP/ZCTA ↔ County GIS lookup
 
-The MAP **ZIP** control allows a user to enter a familiar five-digit U.S. ZIP code without needing coordinates or to grant GPS access. Rust-Boy looks for a matching **2020 Census ZIP Code Tabulation Area (ZCTA)** and presents its intersecting **2020 counties**. After one county is selected, the existing independent **2025 county-boundary and TIGER/Line GIS ingestion** pipeline loads real roads, waterways, and county-clipped landmarks. ZIP lookup is a *statistical routing aid*, not postal address validation.
+The universal **Settings → Location / Map → ZIP** control allows a user to enter a familiar five-digit U.S. ZIP code without needing coordinates or to grant GPS access. Rust-Boy looks for a matching **2020 Census ZIP Code Tabulation Area (ZCTA)** and presents its intersecting **2020 counties**. After one county is selected, the existing independent **2025 county-boundary and TIGER/Line GIS ingestion** pipeline loads real roads, waterways, and county-clipped landmarks. ZIP lookup is a *statistical routing aid*, not postal address validation.
 
 ## Operator workflow (Mac first)
 
-1. Open MAP, press **ZIP**, type exactly five digits (including leading zeros), then press **FIND COUNTY**. No location or external provider request happens until FIND COUNTY is pressed.
+1. Open **Settings → Location / Map**, press **ZIP**, type exactly five digits (including leading zeros), then press **FIND COUNTY**. No location or external provider request happens until FIND COUNTY is pressed.
 2. On first connected use, the native Rust service downloads and validates the fixed Census 2020 **national ZCTA5-to-county relationship file** (~6.5 MB) into `PIPBOY_HOME/geo_index/`. **The entered ZIP is sent only to the local loopback Rust server**, not as a URL, query parameter, or payload to Census. Repeated ZIP lookups use the same cached index.
 3. **One matching county:** the operator's FIND COUNTY action authorizes loading that county's 2025 Census boundary/roads/water and optional in-county landmarks. MAP fits its *verified county geometry*, not a guessed ZIP centroid.
 4. **Multiple intersecting counties:** each source county, GEOID and percentage of the ZCTA's land area is offered as a separate button. The operator chooses which county GIS to load; the largest overlap is sorted first but **never silently selected**.

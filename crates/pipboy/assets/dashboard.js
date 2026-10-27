@@ -362,15 +362,13 @@ function renderExtension() {
     if (extensionMode === "map" || !selectedAvailable()) {
       const map = el("div", "rb-map-desktop-host");
       body.append(map);
-      if (window.RustBoyMap) {
-        requestAnimationFrame(() => {
-          if (!map.isConnected || activeStage !== "viewport") return;
-          window.RustBoyMap.mount(map, {
-            reclamation: selectedAvailable() &&
-              snapshot.active.slots.some((slot) => slot.tool === "reclamation")
-          });
-          if (queuedSiteId && window.RustBoyMap.queueSiteFocus(queuedSiteId)) queuedSiteId = null;
+      if (window.RustBoyMap && map.isConnected && activeStage === "viewport") {
+        window.RustBoyMap.mount(map, {
+          navigationOnly: true,
+          reclamation: selectedAvailable() &&
+            snapshot.active.slots.some((slot) => slot.tool === "reclamation")
         });
+        if (queuedSiteId && window.RustBoyMap.queueSiteFocus(queuedSiteId)) queuedSiteId = null;
       }
     } else if (extensionMode === "sites" && window.RustBoyReclamation) {
       const station = el("div", "rb-reclamation-desktop");
@@ -787,3 +785,29 @@ void reload({silent:true});
 
 // RADIO is explicitly mounted only via VIEWPORT → RADIO / IP. No autoplay,
  // background status polling, or permanently visible dock on dashboard launch.
+
+// Shared location ingestion is opened explicitly from universal Settings.
+byId("location-settings-open")?.addEventListener("click", () => {
+  const dialog = byId("location-settings-dialog");
+  if (!window.RustBoyMap?.mountSettings || !dialog) return;
+  dialog.showModal();
+  window.RustBoyMap.mountSettings(byId("location-settings-host"), {
+    reclamation: snapshot?.active.slots.some(slot => slot.tool === "reclamation")
+  });
+});
+byId("location-settings-close")?.addEventListener("click", () => byId("location-settings-dialog").close());
+byId("location-settings-dialog")?.addEventListener("close", () => window.RustBoyMap?.unmount());
+
+byId("desktop-map-nav")?.addEventListener("change", (event) => {
+  const destination = event.target.value;
+  event.target.value = "map";
+  if (destination === "radio") {
+    radioPaneOpen = true;
+    activateStage("viewport");
+  } else if (["sites", "tasks", "map"].includes(destination)) {
+    extensionMode = destination;
+    renderExtension();
+  } else if (["modules", "messages", "settings"].includes(destination)) {
+    activateStage(destination);
+  }
+});

@@ -1,5 +1,13 @@
 # Rust-Boy | Micro handheld shell
 
+## Universal location settings
+
+Open **Settings → Location / Map** on any role. Enable GPS, choose a five-digit ZIP, or enter latitude/longitude there. ZIP selection and **Load Area** resolve and load the county; GPS enables county lookup as fixes arrive. The setup screen also owns Layers, imports and map-source controls. The Map screen is canvas only, with no buttons or setup/status rows. Recenter, Fit and zoom buttons also live in Settings; pan and wheel gestures remain on the map.
+
+Accepted center, county and bounded geography survive tab changes in page memory, including areas without an imported layer. Returning to Map does not repeat ZIP/manual lookup. The local county cache remains available across restarts. GPS permission is explicit: after enabling it, a fresh watch resumes only on the visible Map/location settings screen and stops when leaving; live fixes are not retained or written to disk. Submitting manual coordinates or accepting a ZIP replaces GPS mode. Existing provider consent, cache-only fallback and site-coordinate privacy rules remain in force.
+
+Desktop Map fills at least 95% of the workspace zone, hiding station/status blocks, inspector, duplicate headings, local tabs and padding. A compact navigation selector above the workspace preserves access to Settings, other pages, Sites, Duties and Radio. Production Chromium acceptance measures actual canvas/workspace area at 1280×800, 1920×1080 and 800×600. Desktop uses the same component under **Settings → Location / Map**. No second location catalog or network API is introduced.
+
 ## Single-row header
 
 Every mini UI section and tool detail uses one 44px header: Back when needed, the current page title, one local indicator when space permits, Settings, time and Desktop. The separate Field Terminal branding row and duplicate Local badge are removed. This returns 28–50px of vertical content space, depending on viewport size. Back, Settings and Desktop retain 44px touch targets; long page titles truncate within the available width. Profile selection remains in Settings.
@@ -15,7 +23,7 @@ The bottom rail always has **STATUS / [active role] / DATA / MAP / RADIO**, in t
 | Status | System Stat, System Diag and local task summary |
 | Active role | Mission Log, Network Engineer, Byte Lab, Sim Bay, Survey GIS, Field Log and future specialist pins; Security Chief camera placeholders |
 | Data | Journal, Archives, Game Link, Messenger and assigned duties |
-| Map | Shared county/vector map, location and map-layer controls |
+| Map | Full geographic viewport with no buttons |
 | Radio | Direct shared native Rust radio controls and output settings |
 
 Each palette descriptor has a Rust-owned `section` field. Only pinned modules appear, each in one launcher category; shared Messenger, duties, Map and Radio remain available to every role. Unknown future section metadata defaults to the role deck. Browsing categories never starts a probe, playback, peer delivery or a hardware connection.
@@ -123,7 +131,7 @@ The new smoke script starts an actual Rust loopback server with `--micro --port 
 
 ## County-first offline cache, RustGIS import and GPS map
 
-MAP mounts the shared [RustGIS-native map and GPS viewer](SCOUT_GPS_MAP.md), supporting explicit browser GPS permission, manual location selection, RustGIS/GeoJSON imports, source manifests, follow, accuracy, and pan/zoom. It starts on an unlocated grid, without an outbound request. **COUNTY** retrieves source-derived Census roads and water features only after the operator chooses a location and explicitly requests county data; cached, validated county geometry remains available offline. A separate **WEB ON** control allows bounded external reference queries, while saved-site privacy constraints remain in force. There is no bundled demonstration-city basemap, fictional geography, navigational certification, native RustGIS renderer, remote raster layer, or USB serial GNSS integration. [County data provenance](COUNTY_SOURCES.md) · [Lore naming](LORE_NAMING.md).
+Location ingestion now lives under Settings → Location / Map. MAP mounts the shared [RustGIS-native map and GPS viewer](SCOUT_GPS_MAP.md), supporting explicit browser GPS permission, manual location selection, RustGIS/GeoJSON imports, source manifests, follow, accuracy, and pan/zoom. It starts on an unlocated grid, without an outbound request. **COUNTY** retrieves source-derived Census roads and water features only after the operator chooses a location and explicitly requests county data; cached, validated county geometry remains available offline. A separate **WEB ON** control allows bounded external reference queries, while saved-site privacy constraints remain in force. There is no bundled demonstration-city basemap, fictional geography, navigational certification, native RustGIS renderer, remote raster layer, or USB serial GNSS integration. [County data provenance](COUNTY_SOURCES.md) · [Lore naming](LORE_NAMING.md).
 
 DATA → MESSENGER includes a compact [PACE route selector](PACE_MESSAGING.md) beside DEVICE.
 Primary/Alternate send only on explicit actions; Contingency is disabled and

@@ -542,3 +542,27 @@ html, body { height:100%; overflow:hidden; }
 @media(pointer:coarse) {
   .settings-choice #open-palette { min-height:44px; }
 }
+
+#location-settings-dialog { width:min(720px,calc(100vw - 24px)); max-height:calc(100dvh - 24px); overflow:auto; color:var(--text); background:#09190e; border:1px solid #51864c; }
+#location-settings-close { min-height:44px; margin-bottom:10px; }
+
+/* Give the desktop map the full workspace, without inspector/status duplication. */
+.dashboard:has(.rb-map-canvas-only) { grid-template-columns:minmax(0,1fr); }
+.dashboard:has(.rb-map-canvas-only) > .detail-panel { display:none; }
+.main-panel:has(.rb-map-canvas-only) > .workspace-head,
+.main-panel:has(.rb-map-canvas-only) > .hud-strip,
+.extension-section:has(.rb-map-canvas-only) > .section-heading { display:none; }
+.extension-focused-body > .rb-map-desktop-host:has(.rb-map-canvas-only) {
+  padding:0; margin:0; min-height:0; height:100%; flex:1 1 0;
+}
+.extension-content:has(.rb-map-canvas-only) { border-radius:0; }
+
+/* Canvas occupies the entire desktop workspace zone; navigation stays above it. */
+#desktop-map-nav { display:none; min-height:44px; max-width:150px; color:var(--text); background:#102619; border:1px solid var(--border-lit); font:700 11px var(--mono); }
+body:has(.rb-map-canvas-only) #desktop-map-nav { display:block; }
+.main-panel:has(.rb-map-canvas-only) { padding:0; gap:0; }
+.main-panel:has(.rb-map-canvas-only) .stage-tabs,
+.extension-content:has(.rb-map-canvas-only) > .extension-tabs { display:none; }
+.main-panel:has(.rb-map-canvas-only) .extension-section { margin:0; }
+.main-panel:has(.rb-map-canvas-only) .workspace-stage { padding:0; gap:0; }
+.extension-content:has(.rb-map-canvas-only) { border:0; }

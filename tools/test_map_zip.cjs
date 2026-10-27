@@ -196,6 +196,25 @@ async function main(){
   assert.equal(view.county.id,"25025","Failed GIS replacement restores last valid map");
   assert.equal(view.countyPackage.geoid,"25025");
   assert.equal(gps,0);
+  const acceptedCenter = {...view.center};
+  const acceptedShapes = view.countyShapes;
+  win.RustBoyMap.unmount();
+  const callsBeforeNavigation = requests.length;
+  const navigation = win.RustBoyMap.mount(new E("div"), {navigationOnly:true});
+  assert.equal(navigation.root.children.length,1,"Map only contains the geographic viewport");
+  assert.equal(navigation.root.children[0],navigation.stage,"The map stage is the only top-level content");
+  assert.ok(!navigation.root.children.includes(navigation.zipPanel));
+  assert.ok(!navigation.root.children.includes(navigation.manual));
+  assert.equal(navigation.county.id,"25025","Settings/map handoff keeps the selected county");
+  assert.equal(navigation.countyShapes,acceptedShapes,"Handoff retains accepted geography");
+  assert.deepEqual(navigation.center,acceptedCenter,"Handoff retains the selected area");
+  assert.equal(requests.length,callsBeforeNavigation,"Returning to Map does not repeat location lookup");
+  win.RustBoyMap.unmount();
+  const settings = win.RustBoyMap.mountSettings(new E("div"));
+  assert.ok(settings.root.children.includes(settings.zipPanel),"ZIP lives in universal location Settings");
+  assert.ok(settings.root.children.includes(settings.manual),"Coordinates live in Settings");
+  assert.equal(settings.stage.hidden,true,"Settings does not duplicate the map screen");
+  assert.equal(settings.county.id,"25025");
   win.RustBoyMap.unmount();
   console.log("MAP ZIP: validation, single/multi-county, ZCTA reverse paging, offline, rollback, no GPS PASS");
 }

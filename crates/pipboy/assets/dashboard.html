@@ -37,6 +37,15 @@
         </div>
       </div>
       <div class="masthead-right">
+        <select id="desktop-map-nav" aria-label="Map workspace navigation">
+          <option value="map">MAP</option>
+          <option value="modules">MODULES</option>
+          <option value="messages">MESSAGES</option>
+          <option value="settings">SETTINGS</option>
+          <option value="sites">SITES</option>
+          <option value="tasks">DUTIES</option>
+          <option value="radio">RADIO</option>
+        </select>
         <span class="status-chip" id="server-status"><span class="live-dot" aria-hidden="true"></span> STARTING</span>
         <a href="/micro" class="mini-button" title="Open handheld view">HANDHELD ↗</a>
         <button type="button" class="icon-button" id="refresh-state" title="Reload saved workspace" aria-label="Reload saved workspace">↻</button>
@@ -69,6 +78,8 @@
             <button type="button" data-stage-target="viewport" aria-pressed="false">VIEWPORT</button>
             <button type="button" data-stage-target="messages" aria-pressed="false">MESSAGES</button>
             <button type="button" data-stage-target="settings" aria-pressed="false">SETTINGS</button>
+            <button type="button" id="radio-view-toggle" class="secondary-button"
+              aria-controls="radio-dock" aria-pressed="false">RADIO / IP</button>
           </nav>
         <section class="module-section stage-surface" data-stage="modules" aria-labelledby="modules-heading">
           <div class="section-heading">
@@ -91,6 +102,7 @@
         <div id="role-pager" class="deck-pager" aria-label="Station pages"></div>
       </div>
           <div class="settings-choice">
+            <button id="location-settings-open" type="button" class="secondary-button">LOCATION / MAP</button>
             <span id="settings-selection" aria-live="polite">Select a station.</span>
             <button id="open-palette" type="button" class="secondary-button" hidden>EDIT CUSTOM TOOLS</button>
             <button class="primary-button" id="load-role" type="button" disabled>LOAD PROFILE</button>
@@ -108,8 +120,7 @@
         <section class="extension-section stage-surface" data-stage="viewport" aria-labelledby="extension-heading" hidden>
           <div class="section-heading">
             <h2 id="extension-heading">Active view</h2>
-            <button type="button" id="radio-view-toggle" class="secondary-button"
-              aria-controls="radio-dock" aria-pressed="false">RADIO / IP</button>
+
           </div>
           <div id="extension-content" class="extension-content"></div>
           <div id="radio-dock" aria-label="Native IP radio" hidden></div>
@@ -182,5 +193,9 @@
     </form>
   </dialog>
   <div id="toast" role="status" aria-live="polite" class="toast" hidden></div>
+  <dialog id="location-settings-dialog" aria-label="Location and map settings">
+    <button id="location-settings-close" type="button" class="secondary-button">CLOSE LOCATION SETTINGS</button>
+    <div id="location-settings-host"></div>
+  </dialog>
 </body>
 </html>

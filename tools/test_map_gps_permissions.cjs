@@ -186,6 +186,29 @@ async function main(){
   assert.equal(map.gpsHelp.hidden,true);
   assert.equal(positions.length,7);
   window.RustBoyMap.unmount();
+  sitePermission="granted";
+  let configured=window.RustBoyMap.mountSettings(new Element("div"));
+  assert.equal(positions.length,7,"Opening Settings does not grant GPS consent");
+  click(configured.locate);
+  positions.at(-1).success(position());
+  const lastWatch=positions.at(-1);
+  const chosen={...configured.center};
+  window.RustBoyMap.unmount();
+  assert.ok(cleared.includes(lastWatch.id),"Leaving Settings stops its watch");
+  const navigation=window.RustBoyMap.mount(new Element("div"),{navigationOnly:true});
+  assert.equal(positions.length,9,"Map resumes GPS only after explicit session consent");
+  assert.equal(navigation.fix,null,"Last fix is not promoted to a new live fix");
+  assert.deepEqual(navigation.center,chosen);
+  lastWatch.success(position(1,1));
+  assert.deepEqual(navigation.center,chosen,"Detached callbacks cannot change the new map");
+  window.RustBoyMap.unmount();
+  configured=window.RustBoyMap.mountSettings(new Element("div"));
+  click(configured.locate); // Stop the resumed watch.
+  const watches=positions.length;
+  window.RustBoyMap.unmount();
+  window.RustBoyMap.mount(new Element("div"),{navigationOnly:true});
+  assert.equal(positions.length,watches,"GPS OFF revokes automatic session resumption");
+  window.RustBoyMap.unmount();
   console.log("GPS UX: browser denied/OS denied, recovery, timeout, policy, stale callbacks PASS");
 }
 main().catch(error=>{console.error(error);process.exitCode=1;});
