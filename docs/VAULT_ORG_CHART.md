@@ -2,6 +2,8 @@
 
 **Status: canonical project design template; not a live directory, HR policy, permission grant, or implemented organization enrollment.** The machine-readable source is [`catalog/vault_org_chart.json`](../catalog/vault_org_chart.json). Keep its `role_id` values aligned to the existing Rust `PRESETS`; do not rename persistent workbench, task, or peer IDs to make the organizational chart attractive.
 
+The reporting tree is **not a permission tree**: titles, ancestry and role presets are not authorization tokens. Existing local `tasks.json` and `peers.json` remain **unencrypted at rest** and must not hold protected patient information or secrets.
+
 The chart is a **common default for an independent vault or an adopter's site**. Every company, community organization, institution or hospital may configure its actual departments, reporting relationships, appointment rules and access policies later. The organizational chart informs assignment routing; it **does not create authorization**. Separately authenticated people, devices, organizations, capabilities and dataset grants remain requirements of the [RB↔RB synchronization roadmap](RB_SYNC_ROADMAP.md).
 
 ## Default hierarchy
