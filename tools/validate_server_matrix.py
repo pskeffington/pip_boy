@@ -24,6 +24,18 @@ def check(text: str) -> int:
         assert term in text, f"missing scenario {term}"
     return len(rows)
 
+def check_mining(text: str) -> int:
+    rows = re.findall(r"^\\| (M\\d{2}) \\| \\[([^]]+)\\]\\((https://[^)]+)\\) \\| (.+) \\| (.+) \\| (.+) \\|$", text, re.M)
+    ids = [row[0] for row in rows]
+    assert len(rows) >= 8 and ids == [f"M{i:02}" for i in range(1, len(rows)+1)], "missing or duplicate mining source IDs"
+    for ident, title, url, finding, action, phases in rows:
+        assert urlparse(url).hostname and title and finding and action, f"{ident}: missing provenance"
+        assert re.search(r"S[0-7]", phases), f"{ident}: missing phase"
+    for term in ("Single cable severed", "Power interruption", "Mass rejoin", "Wrong/counterfeit relay"):
+        assert term in text, f"missing mining fault test: {term}"
+    return len(rows)
+
 if __name__ == "__main__":
     n = check(MATRIX.read_text(encoding="utf-8"))
-    print(f"PASS: {n} unique literature sources and 8 phased gates; offline structural validation")
+    mining = check_mining((ROOT / "server/MINING_COMMUNICATIONS_MATRIX.md").read_text(encoding="utf-8"))
+    print(f"PASS: {n} literature + {mining} mining sources and 8 phased gates; offline structural validation")
