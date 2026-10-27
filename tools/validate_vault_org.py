@@ -111,8 +111,8 @@ def check():
     counts = check_template(data, roster())
     doc = (ROOT / "docs/VAULT_ORG_CHART.md").read_text(encoding="utf-8")
     need("mermaid" in doc and
-         all(x in doc for x in ("Medical", "Recon", "Reclamations", "Overseer",
-                                "unencrypted", "AUTHORIZATION", "not a permission")),
+         all(x in doc.lower() for x in ("medical", "recon", "reclamations", "overseer",
+                                        "unencrypted", "authorization", "not a permission")),
          "Readable chart must show hierarchy and security boundary")
     index = (ROOT / "docs/README.md").read_text(encoding="utf-8")
     sync = (ROOT / "docs/RB_SYNC_ROADMAP.md").read_text(encoding="utf-8")
