@@ -123,6 +123,20 @@ The native unit fixtures exercise two organizations, three Vault sites, multiple
 
 **Next gate:** an independently authenticated human/organization/device enrollment flow and a policy decision point before using these records to route actual jobs. Do not apply draft grants to existing `/api/tasks` or `peer` routes merely because this structural model validates.
 
+## ORG-2 policy preflight (offline tests only)
+
+[`pipboy-core::organization_policy`](../crates/pipboy-core/src/organization_policy.rs) now models a **proposed exchange** between one named operator and one assigned RB device, for a single organization's Vault, dataset and action. It requires all of these *structural candidates* before proceeding to a future verified authorization stage:
+
+- Complete, valid and internally consistent organization graph; organization/Vault scope matches the request.
+- Operator record is active in that organization; assigned device is in the same Vault, marked `recorded_active`, and assigned to that operator.
+- Appointment is for a unit within that Vault, non-revoked and active at the supplied time.
+- **Both** a draft operator grant **and** a distinct draft device grant match the Vault, action, dataset and validity interval; no union of partial grants.
+- No privilege inheritance from Overseer title, team ancestry, another Vault or another organization. Every failure returns a denial state.
+
+The sole positive result is `CandidateForVerification`, **not `Allow`**. The evaluator has no authenticated principal, device-key proof, trusted wall clock, verified grant issuer, live integration, persistence or network transport. Its time argument is explicitly `time_unverified`. Do **not** use `CandidateForVerification` to open any API route, SSH session or dataset read. A future policy decision point must validate signatures/identities, grant issuer authority, current revocation and trusted time *independently* before allowing an operation.
+
+Synthetic Rust tests check two organizations and three Vaults, valid/expired/revoked appointments, disabled users, revoked devices, absent/revoked operator and device grants, wrong dataset/action, mismatched Vaults and corrupted graphs. No existing dashboard, peer, task or radio behavior changes.
+
 ### Upcoming implementation gates
 
 - **ORG-0 (this pass):** common, stable diagram; machine-readable role/preset mapping; documented non-role positions; CI drift detection.
