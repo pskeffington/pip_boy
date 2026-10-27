@@ -1020,7 +1020,7 @@ fn dispatch(req: &Request, store: &WorkbenchStore, port: u16) -> Response {
                 return Response::error(403, "Camera media requires same-origin navigation");
             }
             match crate::camera_media::fetch(path) {
-                Ok((mime, bytes)) => Response::new(200, mime, &bytes),
+                Ok((mime, bytes)) => Response::new(200, mime, bytes),
                 Err(_) => Response::error(502, "Direct camera feed unavailable"),
             }
         }
