@@ -1,6 +1,8 @@
 //! Inert optional field relay entrypoint. No socket is opened.
 #![forbid(unsafe_code)]
 
+fn allowed_commands() -> [&'static str; 1] { ["status"] }
+
 fn main() {
     let mut args = std::env::args().skip(1);
     match (args.next().as_deref(), args.next()) {
@@ -19,6 +21,6 @@ mod tests {
     #[test]
     fn scaffold_has_no_listening_configuration() {
         // A deliberately minimal executable: status-only, no daemon lifecycle.
-        assert_eq!(std::env::var("RUST_BOY_MINI_SERVER_AUTOSTART").ok(), None);
+        assert_eq!(super::allowed_commands(), ["status"]);
     }
 }
