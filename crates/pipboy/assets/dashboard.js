@@ -54,6 +54,8 @@ let rolePage = 0, modulePage = 0, palettePage = 0;
 let activeStage = "modules";
 let activePane = "workspace";
 let desktopMessenger = null;
+let desktopCommandUI = null;
+let initialWorkspaceLoaded = false;
 let desktopRadioUI = null;
 let cameraWallUI = null;
 let radioPaneOpen = false;
@@ -78,7 +80,7 @@ function pager(id, total, current, setter, pageSize = PAGE_SIZE) {
 }
 function activateStage(stage) {
   if (stage === "palette" && snapshot?.active.profile !== "custom") stage = "settings";
-  if (!["modules", "viewport", "messages", "settings", "palette"].includes(stage)) return;
+  if (!["command", "modules", "viewport", "messages", "settings", "palette"].includes(stage)) return;
   const previous = activeStage;
   // Radio is a subview, not a sticky override of later VIEWPORT visits.
   if (stage !== "viewport") radioPaneOpen = false;
@@ -95,11 +97,48 @@ function activateStage(stage) {
   if (stage === "viewport" && snapshot && !radioPaneOpen) renderExtension();
   else if (previous === "viewport" && window.RustBoyMap) window.RustBoyMap.unmount();
   syncRadioSubview();
+  if (stage === "command" && snapshot) renderCommandCenter();
   // First local journal read occurs only after operator opens MESSAGES.
   if (stage === "messages" && !desktopMessenger && window.RustBoyMessenger) {
     desktopMessenger = window.RustBoyMessenger.mount(byId("messenger-dock"));
   }
 }
+// Desktop is the vault command station. Role authority comes from Rust's
+// persisted mission-board slot, never from a browser toggle or inferred title.
+// The task editor reads local storage on explicit entry; it never sends by itself.
+function renderCommandCenter() {
+  if (!snapshot) return;
+  const manager = snapshot.active.slots.some(slot => slot.tool === "mission-board");
+  byId("command-authority").textContent = manager ? "ASSIGN / DISPATCH ENABLED" : "ROLE-SCOPED DUTIES";
+  byId("command-current-role").textContent = profile()?.title || "UNKNOWN";
+  byId("command-policy").textContent = manager
+    ? "Create or reassign missions here; review receipts before considering an operator notified."
+    : "Review and update your assigned duties. Only a station with Task Control can issue or reassign jobs.";
+  const host = byId("command-board");
+  if (!host) return;
+  if (!window.RustBoyTasks) {
+    host.textContent = "Task Control is unavailable. Reload this command center to retry.";
+    return;
+  }
+  if (desktopCommandUI?.profile === snapshot.active.profile &&
+      desktopCommandUI.root.isConnected) {
+    if (desktopCommandUI.controller) void desktopCommandUI.controller.refresh();
+    return;
+  }
+  // Separate the mount node so an in-flight response from the old role cannot
+  // repaint the next role's queue after a confirmed profile switch.
+  const root = el("div", "command-task-mount");
+  host.replaceChildren(root);
+  const current = {profile: snapshot.active.profile, root, controller: null};
+  desktopCommandUI = current;
+  void window.RustBoyTasks.mount(root, {profiles: snapshot.profiles}).then(controller => {
+    if (desktopCommandUI === current) current.controller = controller;
+  }).catch(error => {
+    if (desktopCommandUI === current && root.isConnected)
+      root.textContent = "Mission board unavailable: " + error.message;
+  });
+}
+
 // The RADIO dock is a VIEWPORT subview, not a permanent second page below it.
 // Radio UI mounting is lazy; leaving VIEWPORT stops local status polling only.
 // The Rust native engine and any explicitly playing audio remain undisturbed.
@@ -360,19 +399,16 @@ function renderExtension() {
   if (selected.id === "overseer" || selectedTool === "mission-board") {
     const manager = el("section", "job-command-panel");
     const heading = el("div", "section-heading");
-    heading.append(el("h2", "", "Task Control"),
+    heading.append(el("h2", "", "Vault Operations"),
       el("span", "section-counter", "LOCAL"));
     manager.append(heading);
-    if (selectedAvailable() && snapshot.active.slots.some((slot) => slot.tool === "mission-board")) {
-      const mount = el("div", "task-desktop-board");
-      manager.append(mount);
-      if (window.RustBoyTasks) {
-        window.RustBoyTasks.mount(mount, { profiles: snapshot.profiles });
-      }
-    } else {
-      manager.append(el("p", "workspace-subtitle",
-        "Load Overseer to manage tasks."));
-    }
+    manager.append(el("p", "task-help",
+      "Mission planning, assignments, dispatch and receipts are managed from COMMAND. " +
+      "This viewport remains available for active module work."));
+    const open = el("button", "primary-button", "OPEN MISSION COMMAND");
+    open.type = "button";
+    open.addEventListener("click", () => activateStage("command"));
+    manager.append(open);
     ui.extension.append(manager);
     return;
   }
@@ -540,7 +576,7 @@ function renderDetail() {
   }
   if (selectedTool === "mission-board") {
     ui.handoff.hidden = false;
-    ui.manual.textContent = "Task Control is open in the Module Viewport. Tasks remain local until explicitly handed off.";
+    ui.manual.textContent = "Open COMMAND to create, assign, track and explicitly dispatch missions. Local tasks are never sent automatically.";
     return;
   }
   if (selectedTool === "net-lab" && window.RustBoyNetwork) {
@@ -600,6 +636,10 @@ function renderAll() {
 async function reload({silent = false} = {}) {
   try {
     snapshot = await api("/api/state");
+    if (!initialWorkspaceLoaded) {
+      activeStage = snapshot.active.profile === "overseer" ? "command" : "modules";
+      initialWorkspaceLoaded = true;
+    }
     previewId = snapshot.active.profile;
     if (!selectedTool) selectedTool = visibleModuleIds()[0] || null;
     rolePage = Math.floor(Math.max(0, snapshot.profiles.findIndex(p => p.id === previewId)) / rolesPerPage());
@@ -625,7 +665,7 @@ async function changeProfile(id) {
     extensionMode = "map";
     ui.detailInfo.open = false;
     notify("Role loaded: " + profile().title);
-    activeStage = "modules";
+    activeStage = id === "overseer" ? "command" : "modules";
     activePane = "workspace";
     renderAll();
   } catch (error) {
@@ -739,6 +779,9 @@ document.querySelectorAll("[data-stage-target]").forEach(button => button.addEve
 byId("open-palette").addEventListener("click", () => activateStage("palette"));
 byId("palette-back").addEventListener("click", () => activateStage("settings"));
 byId("radio-view-toggle").addEventListener("click", toggleRadioSubview);
+byId("command-open-messages").addEventListener("click", () => activateStage("messages"));
+byId("command-open-viewport").addEventListener("click", () => activateStage("viewport"));
+byId("command-open-modules").addEventListener("click", () => activateStage("modules"));
 byId("inspector-return").addEventListener("click", () => { activateStage("modules"); activatePane("workspace"); });
 window.addEventListener("resize", () => { if (!snapshot) return; renderRoles(); renderModules(); });
 document.querySelectorAll("[data-pane-target]").forEach(button => button.addEventListener("click", () => activatePane(button.dataset.paneTarget)));
@@ -819,7 +862,7 @@ byId("desktop-map-nav")?.addEventListener("change", (event) => {
     radioPaneOpen = false;
     extensionMode = destination;
     activateStage("viewport");
-  } else if (["modules", "messages", "settings"].includes(destination)) {
+  } else if (["command", "modules", "messages", "settings"].includes(destination)) {
     activateStage(destination);
   }
 });
