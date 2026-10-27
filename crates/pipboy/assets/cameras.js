@@ -193,6 +193,8 @@
     }
     function drop(state) {
       if (!state) return;
+      // Cancel callbacks from an old probe before starting a replacement.
+      state.finished = true;
       if (state.timer !== null) clearTimeout(state.timer);
       if (state.expiry !== null) clearTimeout(state.expiry);
       if (state.img) {
