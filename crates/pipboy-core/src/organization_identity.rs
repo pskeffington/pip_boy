@@ -268,8 +268,8 @@ pub fn verify_pair(
 mod tests {
     use super::*;
     use crate::organization::{
-        Appointment, DeviceRecord, Grant, GrantSubject, Operator, Organization, Unit, UnitKind,
-        VaultSite,
+        Appointment, DeviceLifecycle, DeviceRecord, Grant, GrantSubject, Operator, Organization,
+        Unit, UnitKind, VaultSite,
     };
     use ring::signature::{Ed25519KeyPair, KeyPair};
 
