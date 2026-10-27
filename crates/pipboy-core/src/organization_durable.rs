@@ -4,13 +4,15 @@
 //! this store. The OS credential-store anchor detects replacement of the local
 //! state file, but cannot resist a simultaneous rollback/compromise of both
 //! the filesystem and the OS credential store; hardware counters are untested.
+use crate::organization::OrgGraph;
 use crate::organization_authority::{
     verify_enrollment_evidence, ApprovalBundle, AuthorityContext, AuthorityError,
     EnrollmentEvidence, SignedRevocations, VolatileNonceJournal,
 };
-use crate::organization::OrgGraph;
+use crate::organization_custody::{
+    fingerprint, valid_org_id, AdministratorApproval, ProtectedSecrets,
+};
 use crate::organization_policy::ProposedExchange;
-use crate::organization_custody::{fingerprint, valid_org_id, AdministratorApproval, ProtectedSecrets};
 use fs2::FileExt;
 use ring::digest::{digest, SHA256};
 use ring::signature::{UnparsedPublicKey, ED25519};
@@ -40,7 +42,9 @@ pub enum StateError {
 }
 
 impl From<io::Error> for StateError {
-    fn from(value: io::Error) -> Self { Self::Io(value) }
+    fn from(value: io::Error) -> Self {
+        Self::Io(value)
+    }
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -84,7 +88,10 @@ fn sha256_hex(bytes: &[u8]) -> String {
     crate::organization_custody::hex(digest(&SHA256, bytes).as_ref())
 }
 
-fn expected_anchor(directory: &Path, state: &OrganizationState) -> Result<ProtectedAnchor, StateError> {
+fn expected_anchor(
+    directory: &Path,
+    state: &OrganizationState,
+) -> Result<ProtectedAnchor, StateError> {
     let encoded = serde_json::to_vec(state).map_err(|_| StateError::Invalid)?;
     let canonical = fs::canonicalize(directory)?;
     Ok(ProtectedAnchor {
@@ -98,15 +105,26 @@ fn expected_anchor(directory: &Path, state: &OrganizationState) -> Result<Protec
     })
 }
 
-fn read_anchor(store: &impl ProtectedSecrets, name: &str) -> Result<Option<ProtectedAnchor>, StateError> {
-    store.read(name).map_err(|_| StateError::UntrustedAnchor)?
+fn read_anchor(
+    store: &impl ProtectedSecrets,
+    name: &str,
+) -> Result<Option<ProtectedAnchor>, StateError> {
+    store
+        .read(name)
+        .map_err(|_| StateError::UntrustedAnchor)?
         .map(|s| serde_json::from_str(&s).map_err(|_| StateError::UntrustedAnchor))
         .transpose()
 }
 
-fn write_anchor(store: &impl ProtectedSecrets, name: &str, value: &ProtectedAnchor) -> Result<(), StateError> {
+fn write_anchor(
+    store: &impl ProtectedSecrets,
+    name: &str,
+    value: &ProtectedAnchor,
+) -> Result<(), StateError> {
     let encoded = serde_json::to_string(value).map_err(|_| StateError::Invalid)?;
-    store.write(name, &encoded).map_err(|_| StateError::UntrustedAnchor)?;
+    store
+        .write(name, &encoded)
+        .map_err(|_| StateError::UntrustedAnchor)?;
     if read_anchor(store, name)?.as_ref() != Some(value) {
         return Err(StateError::UntrustedAnchor);
     }
@@ -121,9 +139,12 @@ impl<'s, S: ProtectedSecrets> DurableOrganization<'s, S> {
         admin: &impl AdministratorApproval,
         store: &'s S,
     ) -> Result<Self, StateError> {
-        if !valid_org_id(organization_id) { return Err(StateError::Invalid); }
+        if !valid_org_id(organization_id) {
+            return Err(StateError::Invalid);
+        }
         let fingerprint = fingerprint(root_public_key).map_err(|_| StateError::Invalid)?;
-        admin.approve_root_pin(organization_id, &fingerprint)
+        admin
+            .approve_root_pin(organization_id, &fingerprint)
             .map_err(|_| StateError::Unapproved)?;
         let (lock, _) = Self::open_lock(directory)?;
         let name = anchored_name(organization_id);
@@ -153,36 +174,59 @@ impl<'s, S: ProtectedSecrets> DurableOrganization<'s, S> {
     }
 
     pub fn open(directory: &Path, organization_id: &str, store: &'s S) -> Result<Self, StateError> {
-        if !valid_org_id(organization_id) { return Err(StateError::Invalid); }
+        if !valid_org_id(organization_id) {
+            return Err(StateError::Invalid);
+        }
         let (lock, _) = Self::open_lock(directory)?;
         let path = directory.join("org-state.json");
         reject_symlink(&path)?;
         let mut bytes = Vec::new();
-        File::open(path)?.take(MAX_FILE_BYTES + 1).read_to_end(&mut bytes)?;
-        if bytes.len() as u64 > MAX_FILE_BYTES { return Err(StateError::Capacity); }
-        let state: OrganizationState = serde_json::from_slice(&bytes)
-            .map_err(|_| StateError::Invalid)?;
-        if state.schema_version != 1 || !valid_org_id(&state.organization_id)
+        File::open(path)?
+            .take(MAX_FILE_BYTES + 1)
+            .read_to_end(&mut bytes)?;
+        if bytes.len() as u64 > MAX_FILE_BYTES {
+            return Err(StateError::Capacity);
+        }
+        let state: OrganizationState =
+            serde_json::from_slice(&bytes).map_err(|_| StateError::Invalid)?;
+        if state.schema_version != 1
+            || !valid_org_id(&state.organization_id)
             || fingerprint(&state.root_public_key).is_err()
-            || state.issuer_key_epoch == 0 || state.consumed_nonces.len() > MAX_RECORDS
+            || state.issuer_key_epoch == 0
+            || state.consumed_nonces.len() > MAX_RECORDS
             || state.consumed_nonces.iter().any(|n| *n == [0; 32])
-        { return Err(StateError::Invalid); }
+        {
+            return Err(StateError::Invalid);
+        }
         let mut distinct = state.consumed_nonces.clone();
         distinct.sort_unstable();
         distinct.dedup();
-        if distinct.len() != state.consumed_nonces.len() { return Err(StateError::Invalid); }
+        if distinct.len() != state.consumed_nonces.len() {
+            return Err(StateError::Invalid);
+        }
         if let Some(snapshot) = &state.revocations {
             if snapshot.generation != state.revocation_generation
-                || !check_snapshot(&state, snapshot) { return Err(StateError::Invalid); }
-        } else if state.revocation_generation != 0 { return Err(StateError::Invalid); }
-        if state.organization_id != organization_id { return Err(StateError::AnchorMismatch); }
+                || !check_snapshot(&state, snapshot)
+            {
+                return Err(StateError::Invalid);
+            }
+        } else if state.revocation_generation != 0 {
+            return Err(StateError::Invalid);
+        }
+        if state.organization_id != organization_id {
+            return Err(StateError::AnchorMismatch);
+        }
         let name = anchored_name(organization_id);
         if read_anchor(store, &name)?.as_ref() != Some(&expected_anchor(directory, &state)?) {
             return Err(StateError::AnchorMismatch);
         }
         Ok(Self {
-            root: directory.to_owned(), _lock: lock, state,
-            store, anchor_name: name, poisoned: false,
+            root: directory.to_owned(),
+            _lock: lock,
+            state,
+            store,
+            anchor_name: name,
+            poisoned: false,
         })
     }
 
@@ -190,12 +234,18 @@ impl<'s, S: ProtectedSecrets> DurableOrganization<'s, S> {
         fs::create_dir_all(directory)?;
         #[cfg(unix)]
         {
-            use std::os::unix::fs::{PermissionsExt, OpenOptionsExt};
+            use std::os::unix::fs::{OpenOptionsExt, PermissionsExt};
             let meta = fs::symlink_metadata(directory)?;
-            if meta.file_type().is_symlink() || !meta.is_dir() { return Err(StateError::Invalid); }
+            if meta.file_type().is_symlink() || !meta.is_dir() {
+                return Err(StateError::Invalid);
+            }
             fs::set_permissions(directory, fs::Permissions::from_mode(0o700))?;
             reject_symlink(&directory.join("org-state.lock"))?;
-            let lock = OpenOptions::new().create(true).read(true).write(true).mode(0o600)
+            let lock = OpenOptions::new()
+                .create(true)
+                .read(true)
+                .write(true)
+                .mode(0o600)
                 .open(directory.join("org-state.lock"))?;
             lock.try_lock_exclusive()?;
             return Ok((lock, None));
@@ -203,18 +253,22 @@ impl<'s, S: ProtectedSecrets> DurableOrganization<'s, S> {
         #[cfg(not(unix))]
         {
             reject_symlink(&directory.join("org-state.lock"))?;
-            let lock = OpenOptions::new().create(true).read(true).write(true)
+            let lock = OpenOptions::new()
+                .create(true)
+                .read(true)
+                .write(true)
                 .open(directory.join("org-state.lock"))?;
             lock.try_lock_exclusive()?;
             Ok((lock, None))
         }
     }
 
-
     fn check_anchor(&self) -> Result<(), StateError> {
-        if self.poisoned { return Err(StateError::Poisoned); }
-        let actual = read_anchor(self.store, &self.anchor_name)?
-            .ok_or(StateError::UntrustedAnchor)?;
+        if self.poisoned {
+            return Err(StateError::Poisoned);
+        }
+        let actual =
+            read_anchor(self.store, &self.anchor_name)?.ok_or(StateError::UntrustedAnchor)?;
         if actual != expected_anchor(&self.root, &self.state)? {
             return Err(StateError::AnchorMismatch);
         }
@@ -238,9 +292,15 @@ impl<'s, S: ProtectedSecrets> DurableOrganization<'s, S> {
         self.check_anchor()?;
         Ok(&self.state.root_public_key)
     }
-    pub fn organization_id(&self) -> &str { &self.state.organization_id }
-    pub fn issuer_key_epoch(&self) -> u64 { self.state.issuer_key_epoch }
-    pub fn revocation_generation(&self) -> u64 { self.state.revocation_generation }
+    pub fn organization_id(&self) -> &str {
+        &self.state.organization_id
+    }
+    pub fn issuer_key_epoch(&self) -> u64 {
+        self.state.issuer_key_epoch
+    }
+    pub fn revocation_generation(&self) -> u64 {
+        self.state.revocation_generation
+    }
     pub fn revocations(&self) -> Result<Option<&SignedRevocations>, StateError> {
         self.check_anchor()?;
         Ok(self.state.revocations.as_ref())
@@ -259,11 +319,11 @@ impl<'s, S: ProtectedSecrets> DurableOrganization<'s, S> {
 
     /// Install a full, signed snapshot using monotonic generation. Even with
     /// matching generation, different contents are not accepted.
-    pub fn install_revocations(&mut self, snapshot: SignedRevocations)
-        -> Result<(), StateError>
-    {
+    pub fn install_revocations(&mut self, snapshot: SignedRevocations) -> Result<(), StateError> {
         self.check_anchor()?;
-        if !check_snapshot(&self.state, &snapshot) { return Err(StateError::Invalid); }
+        if !check_snapshot(&self.state, &snapshot) {
+            return Err(StateError::Invalid);
+        }
         if snapshot.generation <= self.state.revocation_generation {
             return Err(StateError::Rollback);
         }
@@ -308,9 +368,15 @@ impl<'s, S: ProtectedSecrets> DurableOrganization<'s, S> {
 
     pub fn record_nonce(&mut self, nonce: [u8; 32]) -> Result<(), StateError> {
         self.check_anchor()?;
-        if nonce == [0; 32] { return Err(StateError::Invalid); }
-        if self.state.consumed_nonces.contains(&nonce) { return Err(StateError::Replay); }
-        if self.state.consumed_nonces.len() >= MAX_RECORDS { return Err(StateError::Capacity); }
+        if nonce == [0; 32] {
+            return Err(StateError::Invalid);
+        }
+        if self.state.consumed_nonces.contains(&nonce) {
+            return Err(StateError::Replay);
+        }
+        if self.state.consumed_nonces.len() >= MAX_RECORDS {
+            return Err(StateError::Capacity);
+        }
         let mut next = self.state.clone();
         next.consumed_nonces.push(nonce);
         self.commit_state(next)
@@ -326,7 +392,9 @@ pub enum DurableEvidenceError {
 }
 
 impl From<StateError> for DurableEvidenceError {
-    fn from(value: StateError) -> Self { Self::State(value) }
+    fn from(value: StateError) -> Self {
+        Self::State(value)
+    }
 }
 
 /// Tie ORG-3.1's existing signature checks to the pinned local root, stored
@@ -383,14 +451,20 @@ fn sorted_nonzero(items: &[u64]) -> bool {
 }
 
 fn check_snapshot(state: &OrganizationState, r: &SignedRevocations) -> bool {
-    if r.schema_version != 1 || r.organization_id != state.organization_id
-        || r.issuer_key_epoch != state.issuer_key_epoch || r.generation == 0
+    if r.schema_version != 1
+        || r.organization_id != state.organization_id
+        || r.issuer_key_epoch != state.issuer_key_epoch
+        || r.generation == 0
         || r.not_before >= r.expires_at
         || r.expires_at - r.not_before > SNAPSHOT_MAX
-        || r.credential_serials.len() > 1024 || r.approval_serials.len() > 1024
+        || r.credential_serials.len() > 1024
+        || r.approval_serials.len() > 1024
         || !sorted_nonzero(&r.credential_serials)
         || !sorted_nonzero(&r.approval_serials)
-        || r.signature.len() != 64 { return false; }
+        || r.signature.len() != 64
+    {
+        return false;
+    }
     let mut data = REVOCATION_DOMAIN.to_vec();
     data.extend_from_slice(&r.schema_version.to_be_bytes());
     data.extend_from_slice(&(r.organization_id.len() as u32).to_be_bytes());
@@ -400,25 +474,35 @@ fn check_snapshot(state: &OrganizationState, r: &SignedRevocations) -> bool {
     data.extend_from_slice(&r.not_before.to_be_bytes());
     data.extend_from_slice(&r.expires_at.to_be_bytes());
     data.extend_from_slice(&(r.credential_serials.len() as u32).to_be_bytes());
-    for s in &r.credential_serials { data.extend_from_slice(&s.to_be_bytes()); }
+    for s in &r.credential_serials {
+        data.extend_from_slice(&s.to_be_bytes());
+    }
     data.extend_from_slice(&(r.approval_serials.len() as u32).to_be_bytes());
-    for s in &r.approval_serials { data.extend_from_slice(&s.to_be_bytes()); }
-    UnparsedPublicKey::new(&ED25519, &state.root_public_key).verify(&data, &r.signature).is_ok()
+    for s in &r.approval_serials {
+        data.extend_from_slice(&s.to_be_bytes());
+    }
+    UnparsedPublicKey::new(&ED25519, &state.root_public_key)
+        .verify(&data, &r.signature)
+        .is_ok()
 }
 
 fn persist(directory: &Path, state: &OrganizationState) -> Result<(), StateError> {
     let bytes = serde_json::to_vec(state).map_err(|_| StateError::Invalid)?;
-    if bytes.len() as u64 > MAX_FILE_BYTES { return Err(StateError::Capacity); }
+    if bytes.len() as u64 > MAX_FILE_BYTES {
+        return Err(StateError::Capacity);
+    }
     let mut temp = tempfile::NamedTempFile::new_in(directory)?;
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
-        temp.as_file().set_permissions(fs::Permissions::from_mode(0o600))?;
+        temp.as_file()
+            .set_permissions(fs::Permissions::from_mode(0o600))?;
     }
     temp.write_all(&bytes)?;
     temp.as_file().sync_all()?;
     reject_symlink(&directory.join("org-state.json"))?;
-    temp.persist(directory.join("org-state.json")).map_err(|e| StateError::Io(e.error))?;
+    temp.persist(directory.join("org-state.json"))
+        .map_err(|e| StateError::Io(e.error))?;
     #[cfg(unix)]
     File::open(directory)?.sync_all()?;
     Ok(())
@@ -427,11 +511,13 @@ fn persist(directory: &Path, state: &OrganizationState) -> Result<(), StateError
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::organization_custody::{CustodyError, tests::MemorySecrets};
+    use crate::organization_custody::{tests::MemorySecrets, CustodyError};
     use ring::signature::{Ed25519KeyPair, KeyPair};
     struct Approve;
     impl AdministratorApproval for Approve {
-        fn approve_root_pin(&self, _: &str, _: &str) -> Result<(), CustodyError> { Ok(()) }
+        fn approve_root_pin(&self, _: &str, _: &str) -> Result<(), CustodyError> {
+            Ok(())
+        }
     }
     struct Deny;
     impl AdministratorApproval for Deny {
@@ -444,15 +530,24 @@ mod tests {
     }
     fn snapshot(root: &Ed25519KeyPair, generation: u64, serials: &[u64]) -> SignedRevocations {
         let mut state = OrganizationState {
-            schema_version: 1, organization_id: "test-org".into(),
+            schema_version: 1,
+            organization_id: "test-org".into(),
             root_public_key: root.public_key().as_ref().to_vec(),
-            issuer_key_epoch: 1, revocation_generation: 0,
-            revocations: None, consumed_nonces: vec![]
+            issuer_key_epoch: 1,
+            revocation_generation: 0,
+            revocations: None,
+            consumed_nonces: vec![],
         };
         let mut r = SignedRevocations {
-            schema_version: 1, organization_id: "test-org".into(),
-            issuer_key_epoch: 1, generation, not_before: 10, expires_at: 100,
-            credential_serials: serials.to_vec(), approval_serials: vec![9], signature: vec![]
+            schema_version: 1,
+            organization_id: "test-org".into(),
+            issuer_key_epoch: 1,
+            generation,
+            not_before: 10,
+            expires_at: 100,
+            credential_serials: serials.to_vec(),
+            approval_serials: vec![9],
+            signature: vec![],
         };
         let mut data = REVOCATION_DOMAIN.to_vec();
         data.extend_from_slice(&r.schema_version.to_be_bytes());
@@ -463,9 +558,13 @@ mod tests {
         data.extend_from_slice(&r.not_before.to_be_bytes());
         data.extend_from_slice(&r.expires_at.to_be_bytes());
         data.extend_from_slice(&(r.credential_serials.len() as u32).to_be_bytes());
-        for v in &r.credential_serials { data.extend_from_slice(&v.to_be_bytes()); }
+        for v in &r.credential_serials {
+            data.extend_from_slice(&v.to_be_bytes());
+        }
         data.extend_from_slice(&(r.approval_serials.len() as u32).to_be_bytes());
-        for v in &r.approval_serials { data.extend_from_slice(&v.to_be_bytes()); }
+        for v in &r.approval_serials {
+            data.extend_from_slice(&v.to_be_bytes());
+        }
         r.signature = root.sign(&data).as_ref().to_vec();
         assert!(check_snapshot(&state, &r));
         state.revocation_generation = generation;
@@ -478,8 +577,13 @@ mod tests {
         let store = MemorySecrets::default();
         let root = key();
         let mut org = DurableOrganization::provision(
-            dir.path(), "test-org", root.public_key().as_ref(), &Approve, &store
-        ).unwrap();
+            dir.path(),
+            "test-org",
+            root.public_key().as_ref(),
+            &Approve,
+            &store,
+        )
+        .unwrap();
         let old_state = fs::read(dir.path().join("org-state.json")).unwrap();
         org.record_nonce([42; 32]).unwrap();
         drop(org);
@@ -493,8 +597,9 @@ mod tests {
         changed.root_public_key = substitute.public_key().as_ref().to_vec();
         fs::write(
             dir.path().join("org-state.json"),
-            serde_json::to_vec(&changed).unwrap()
-        ).unwrap();
+            serde_json::to_vec(&changed).unwrap(),
+        )
+        .unwrap();
         assert!(matches!(
             DurableOrganization::open(dir.path(), "test-org", &store),
             Err(StateError::AnchorMismatch)
@@ -507,10 +612,19 @@ mod tests {
         let store = MemorySecrets::default();
         let root = key();
         let org = DurableOrganization::provision(
-            dir.path(), "test-org", root.public_key().as_ref(), &Approve, &store
-        ).unwrap();
+            dir.path(),
+            "test-org",
+            root.public_key().as_ref(),
+            &Approve,
+            &store,
+        )
+        .unwrap();
         drop(org);
-        store.0.lock().unwrap().remove("organization-anchor:test-org");
+        store
+            .0
+            .lock()
+            .unwrap()
+            .remove("organization-anchor:test-org");
         assert!(matches!(
             DurableOrganization::open(dir.path(), "test-org", &store),
             Err(StateError::AnchorMismatch)
@@ -522,8 +636,24 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let root = key();
         let store = MemorySecrets::default();
-        assert!(matches!(DurableOrganization::provision(dir.path(), "test-org", root.public_key().as_ref(), &Deny, &store), Err(StateError::Unapproved)));
-        let mut org = DurableOrganization::provision(dir.path(), "test-org", root.public_key().as_ref(), &Approve, &store).unwrap();
+        assert!(matches!(
+            DurableOrganization::provision(
+                dir.path(),
+                "test-org",
+                root.public_key().as_ref(),
+                &Deny,
+                &store
+            ),
+            Err(StateError::Unapproved)
+        ));
+        let mut org = DurableOrganization::provision(
+            dir.path(),
+            "test-org",
+            root.public_key().as_ref(),
+            &Approve,
+            &store,
+        )
+        .unwrap();
         assert!(matches!(org.fresh_snapshot(20), Err(StateError::Stale)));
         assert!(org.install_revocations(snapshot(&root, 2, &[5])).is_ok());
         assert!(org.fresh_snapshot(20).is_ok());
@@ -541,11 +671,17 @@ mod tests {
         drop(org);
         let mut org = DurableOrganization::open(dir.path(), "test-org", &store).unwrap();
         assert!(matches!(org.record_nonce([7; 32]), Err(StateError::Replay)));
-        assert!(matches!(org.install_revocations(snapshot(&root, 1, &[5])), Err(StateError::Rollback)));
+        assert!(matches!(
+            org.install_revocations(snapshot(&root, 1, &[5])),
+            Err(StateError::Rollback)
+        ));
         assert!(matches!(org.fresh_snapshot(100), Err(StateError::Stale)));
         let mut tampered = snapshot(&root, 3, &[5]);
         tampered.signature[0] ^= 1;
-        assert!(matches!(org.install_revocations(tampered), Err(StateError::Invalid)));
+        assert!(matches!(
+            org.install_revocations(tampered),
+            Err(StateError::Invalid)
+        ));
         assert!(matches!(
             org.install_revocations(snapshot(&root, 3, &[])),
             Err(StateError::RevocationRegression)
