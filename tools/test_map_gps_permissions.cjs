@@ -71,6 +71,8 @@ async function main(){
   assert.equal(map.fix,null);
   map.latitude.value="42.36";map.longitude.value="-71.06";
   map.manual.listeners.submit[0]({preventDefault(){}});
+  assert.equal(window.RustBoyMap.getCameraLocation().source,"manual");
+  assert.equal(window.RustBoyMap.getCameraLocation().lon,-71.06);
   click(map.locate);
   assert.equal(positions.length,1);
   assert.equal(map.gpsState,"WAITING FOR BROWSER LOCATION");
@@ -114,9 +116,11 @@ async function main(){
   assert.equal(map.gpsHelp.hidden,true);
   assert.equal(map.gpsPending,false);
   assert.equal(map.fix.lat,42.3601);
+  assert.equal(window.RustBoyMap.getCameraLocation().source,"gps");
   assert.equal(map.center.lon,-71.0589);
   assert.match(map.status.textContent,/FIX 42.36010/);
   click(map.locate);
+  assert.equal(window.RustBoyMap.getCameraLocation(),null,"GPS OFF revokes camera location hint");
   assert.equal(map.watchId,null);
   assert.equal(map.fix,null);
   assert.ok(cleared.includes(3));
@@ -194,6 +198,8 @@ async function main(){
   const lastWatch=positions.at(-1);
   const chosen={...configured.center};
   window.RustBoyMap.unmount();
+  assert.equal(window.RustBoyMap.getCameraLocation().source,"gps",
+    "Consented GPS fix is available for a bounded, local camera handoff");
   assert.ok(cleared.includes(lastWatch.id),"Leaving Settings stops its watch");
   const navigation=window.RustBoyMap.mount(new Element("div"),{navigationOnly:true});
   assert.equal(positions.length,9,"Map resumes GPS only after explicit session consent");
@@ -204,6 +210,8 @@ async function main(){
   window.RustBoyMap.unmount();
   configured=window.RustBoyMap.mountSettings(new Element("div"));
   click(configured.locate); // Stop the resumed watch.
+  assert.equal(window.RustBoyMap.getCameraLocation(),null,
+    "Explicit GPS OFF prevents camera selection using old coordinates");
   const watches=positions.length;
   window.RustBoyMap.unmount();
   window.RustBoyMap.mount(new Element("div"),{navigationOnly:true});
