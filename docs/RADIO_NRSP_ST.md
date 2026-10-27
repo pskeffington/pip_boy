@@ -65,6 +65,12 @@ one source can own output; switching requires Stop and completed worker cleanup.
 Metadata shown as “CONNECTED AT” is captured at connection time; tuning remains
 in SDRconnect.
 
+The pinned module excludes native output backpressure from the next audio
+read's three-second timeout. Delivering a large PCM packet therefore cannot
+trigger a false network reconnect. Secondary and empty primary packets still
+cannot keep a stalled subscription alive; bounded captures keep their original
+read deadline.
+
 STOP mutes queued PCM immediately and returns while the worker unsubscribes and
 releases output. The HUD shows STOPPING and blocks new playback/output changes
 until cleanup completes. Stopping Rust-Boy leaves the shared SDRconnect receiver
