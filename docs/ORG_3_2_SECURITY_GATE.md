@@ -53,3 +53,19 @@ This is still **not** protection against a whole-device rollback, keyring compro
 ## Signed-evidence integration check
 
 The new `verify_with_durable_evidence` function joins ORG-3.1's signature/approval verifier to the provisioned root, the installed signed revocation snapshot, and the OS-anchored spent-nonce ledger. A synthetic regression exercises verified evidence and a replay denial after closing and reopening the store. This remains **evidence only** and is not a transport or application authorization endpoint.
+
+## ORG-3.2 active-state and offline distribution pass
+
+- Every verified root read, revocation lease read, nonce recording operation and evidence-producing decision now checks the currently readable state file against the protected OS-store anchor, not just on restart. A changed on-disk file causes fail-closed rejection.
+- The update path re-verifies the persisted state after its protected-anchor and atomic-file writes. Ambiguous backend errors poison the open handle rather than claiming that a challenge was consumed. An interrupted two-store commit requires authorized recovery: never silently reconstruct a missing or different anchor from peer data, an untrusted backup, the UI role, or a new root.
+- Synthetic fault injection models a credential-store write that takes effect but reports an error. Reopening with a mismatched file must fail closed. This is not equivalent to real crash/power-loss validation.
+- A synthetic two-store test exercises manual export, transfer and import of full signed cumulative revocation snapshots, rejecting older generations and removal of prior revocations. There is no automatic transport or assurance that a disconnected device immediately learns about a remote revocation.
+- A previous CI run was green on stable, Rust 1.90, macOS, Windows and manifest tests. Re-run the same matrix after this pass; do not infer CI success for new commits from older results.
+
+### Non-negotiable recovery contract
+
+When the anchor and durable store disagree, deny further session evidence, preserve both records for an authorized forensic inspection, and require administrative re-enrollment or a reviewed recovery ceremony. Do not automatically overwrite the protected anchor with the local file, and do not accept an unsigned emergency revocation bypass. Power-loss crash points, physical disk rollback, OS credential rollback, and key-recovery design remain release blockers. Real Raspberry Pi headless Linux and macOS keychain field testing is still required.
+
+### Offline revocation availability
+
+The signed snapshot contains an explicit expiry time, but the expiry check only has security meaning when supplied from a separately authenticated time source. A disconnected RB operating with a still-valid old snapshot cannot know whether its organization has published a newer revocation. Bound offline trust leases appropriately; after expiry, refuse new organizational evidence until fresh signed policy is delivered. For hospital and other sensitive contexts, offline privileges require a separate risk-reviewed policy.
