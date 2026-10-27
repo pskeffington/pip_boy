@@ -48,7 +48,14 @@ Three additional official geospatial sources are indexed alongside VDOT, NYC DOT
 | Maryland iMAP / CHART | FeatureServer layer 0: ID, name, county, latitude, longitude, camera URL | Review media type and rights before enabling |
 | DDOT / DC GIS | TrafficOperations FeatureServer layer 2: CameraID, Location, lat/lon, Operation_Status | **No direct video URL** in this GIS layer |
 | DelDOT / FirstMap | Traffic Devices CAMERA layer 26: public name, road/intersection, status, location geometry | Test GIS host; no camera media URL in layer |
-| RIDOT | Six named cameras on official traveler information page | Public browser viewing confirmed; direct media API and reuse terms not confirmed |
+| RIDOT Rhodeways | Official GIS layer 6: EquipmentID, Description, Latitude, Longitude, Enabled and view reference | `Enabled` is metadata only; direct media and reuse terms unverified |
+
+**Boston/Providence expansion:** The reviewed Rhodeways GIS service has a stable source-layer definition for Rhode Island location ingestion. MassDOT publishes a staging GIS layer with `publicid`, `name`, `statecode`, JPEG fields and geometry, but its raw extent contains non-Massachusetts coordinates. The importer therefore rejects points outside the Massachusetts bounds, retains **no** JPEG URLs, and deliberately refuses `--fetch` for `massdot-staging`; only explicitly supplied offline samples can be reviewed. This staging service does not replace MassDOT's TrafficLand provider authorization. Neither layer supplies a verified camera-capture timestamp suitable for a LIVE claim.
+
+```bash
+python3 tools/build_northeast_camera_index.py --source ridot --fetch --output /tmp/ridot-review.json
+python3 tools/build_northeast_camera_index.py --source massdot-staging --input /path/to/staging-sample.json --output /tmp/massdot-stage-review.json
+```
 
 Run an offline importer against a previously obtained official JSON file:
 
@@ -62,7 +69,7 @@ Or explicitly fetch **one fixed official public metadata endpoint** (no discover
 python3 tools/build_northeast_camera_index.py --source ddot --fetch --output /tmp/ddot-camera-review.json
 ```
 
-Supported source keys: `md-socrata`, `md-imap`, `ddot`, `deldot`, `vdot`. The `md-socrata` key imports official camera metadata from `opendata.maryland.gov/resource/4z3c-43ce.json`; it never activates the player URL. The import caps input at 6 MiB and 1,000 features, validates state-specific camera coordinates and writes **review-only** JSON with `image_url:null`, `live_verified:false`, no retained credentials or video. Output cannot activate a camera automatically. Official metadata/terms and media access must be reviewed before promoting each device to the runtime catalog. `python3 tools/test_build_northeast_camera_index.py` exercises the normalizers offline.
+Supported source keys: `md-socrata`, `md-imap`, `ddot`, `deldot`, `vdot`, `ridot`, `massdot-staging`. The `md-socrata` key imports official camera metadata from `opendata.maryland.gov/resource/4z3c-43ce.json`; it never activates the player URL. The import caps input at 6 MiB and 1,000 features, validates state-specific camera coordinates and writes **review-only** JSON with `image_url:null`, `live_verified:false`, no retained credentials or video. Output cannot activate a camera automatically. Official metadata/terms and media access must be reviewed before promoting each device to the runtime catalog. `python3 tools/test_build_northeast_camera_index.py` exercises the normalizers offline.
 
 ## User task and screen state
 
