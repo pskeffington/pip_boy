@@ -55,13 +55,16 @@ I/O. Settings contains an IP:port field and SET button, plus the normal native
 output picker. Addresses remain in process memory and never enter radio presets.
 The existing IP favorites and last station keep their schema and contents.
 
-Use **Refresh Device List** in SDRconnect if the receiver does not start, select
-the nRSP-ST in IQ Lite mode, and press Start. Then press PLAY in Rust-Boy. Refresh
-and shared receiver startup remain SDRconnect operator actions. The shared native
-engine subscribes to primary stereo PCM, converts/resamples on its worker and
-feeds the bounded CPAL queue. Playing requires PCM consumed by the native output
-callback. Local volume and output restart use the same engine as IP radio. Only
-one source can own output; switching requires Stop and completed worker cleanup.
+Use **Refresh Device List** and select the nRSP-ST in IQ Lite mode in SDRconnect.
+Then press PLAY in Rust-Boy. If the selected receiver is stopped and SDRconnect
+grants control, PLAY sends `device_stream_enable=true` and waits for its started
+status before opening audio output. If control is unavailable, PLAY reports an
+error. Refresh and receiver selection remain SDRconnect actions. The shared
+native engine subscribes to primary stereo PCM, converts/resamples on its worker
+and feeds the bounded CPAL queue. Playing requires PCM consumed by the native
+output callback. Local volume and output restart use the same engine as IP radio.
+Only one source can own output; switching requires Stop and completed worker
+cleanup.
 Metadata shown as “CONNECTED AT” is captured at connection time; tuning remains
 in SDRconnect.
 
@@ -74,9 +77,7 @@ read deadline.
 STOP mutes queued PCM immediately and returns while the worker unsubscribes and
 releases output. The HUD shows STOPPING and blocks new playback/output changes
 until cleanup completes. Stopping Rust-Boy leaves the shared SDRconnect receiver
-running. A stopped bridge receiver fails with a clear instruction instead of
-opening audio output or claiming Playing. Default builds retain IP playback and
-hide the optional receiver entry.
+running. Default builds retain IP playback and hide the optional receiver entry.
 
 ```sh
 cargo run --locked -p pipboy --features sdrconnect -- dashboard --micro

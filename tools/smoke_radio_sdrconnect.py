@@ -41,6 +41,7 @@ class SyntheticReceiver:
         self.errors = []
         self.subscriptions = 0
         self.unsubscribed = 0
+        self.starts = 0
         self.lock = threading.Lock()
         self.listener.settimeout(0.2)
         threading.Thread(target=self.accept, daemon=True).start()
@@ -74,8 +75,8 @@ class SyntheticReceiver:
             client.sendall(("HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: " + accept + "\r\n\r\n").encode())
             properties = {
                 "api_version": "1.0.3", "active_device": "SYNTHETIC FIXTURE - NO RF",
-                "valid_devices": "SYNTHETIC FIXTURE - NO RF", "started": "true",
-                "can_control": "false", "device_center_frequency": "99100000",
+                "valid_devices": "SYNTHETIC FIXTURE - NO RF", "started": "false",
+                "can_control": "true", "device_center_frequency": "99100000",
                 "device_sample_rate": "2000000", "demodulator": "WFM",
                 "valid_antennas": "Fixture", "active_antenna": "Fixture",
             }
@@ -123,6 +124,12 @@ class SyntheticReceiver:
                     if event == "get_property":
                         response = {"event_type": "get_property_response", "property": message["property"], "value": properties[message["property"]], "device": "primary"}
                         client.sendall(frame(1, json.dumps(response).encode()))
+                    elif event == "device_stream_enable":
+                        if message["value"] != "true" or message.get("device") != "primary":
+                            raise ValueError("Unexpected receiver activation request")
+                        with self.lock:
+                            self.starts += 1
+                        properties["started"] = "true"
                     elif event == "audio_stream_enable":
                         enabled = message["value"] == "true"
                         with self.lock:
@@ -224,9 +231,10 @@ def main():
             while receiver.clients and time.monotonic() < until:
                 time.sleep(0.02)
             assert receiver.clients == 0
+            assert receiver.starts >= 2, "Standalone and HUD Play must activate the stopped receiver"
             assert receiver.subscriptions >= 2 and receiver.unsubscribed >= 2
             assert not receiver.errors, receiver.errors
-            print(json.dumps({"fixture": "SYNTHETIC PCM - NO RF", "native_callback_playing": True, "standalone": bool(args.standalone), "output_restart": True, "stop_ms": round(stop_ms, 2), "subscriptions_closed": True, "live_ip": args.live_ip}))
+            print(json.dumps({"fixture": "SYNTHETIC PCM - NO RF", "native_callback_playing": True, "stopped_receiver_activation": receiver.starts, "standalone": bool(args.standalone), "output_restart": True, "stop_ms": round(stop_ms, 2), "subscriptions_closed": True, "live_ip": args.live_ip}))
         finally:
             if process.poll() is None:
                 try:
