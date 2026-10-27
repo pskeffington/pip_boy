@@ -252,20 +252,28 @@
     },
     {
       "id": "public-camera-fallback",
-      "boundary": "DOT-first DC/NYC/Boston/SF catalog: HTTPS agency snapshots where public, access-pending placeholders otherwise. No embeds, discovery, credentials, recording or RTSP decode.",
+      "boundary": "DOT camera catalog: 31 Northeast target cities, 53 named review sites, Maryland geolocated metadata, permission-gated runtime and nearest eligible source selection. Media activation requires provider approval and actual image-health evidence.",
       "hardware_gate": "field_pending",
       "code": [
         "crates/pipboy-core/src/public_cameras.rs",
         "crates/pipboy/assets/cameras.js",
-        "crates/pipboy/assets/cameras.css"
+        "crates/pipboy/assets/cameras.css",
+        "catalog/camera_feeders.json",
+        "catalog/northeast_camera_roster.json",
+        "catalog/northeast_camera_sites.json",
+        "catalog/maryland_geolocated_camera_seeds.json",
+        "tools/build_northeast_camera_index.py",
+        "tools/probe_public_cameras.py"
       ],
       "docs": [
         "docs/SECURITY_CAMERA_WALL.md"
       ],
       "checks": [
-        "tools/test_cameras_ui.cjs"
+        "tools/test_cameras_ui.cjs",
+        "tools/test_build_northeast_camera_index.py",
+        "tools/test_probe_public_cameras.py"
       ],
-      "acceptance": "Software catalog/lifecycle tests only; publisher playback and Mac/Pi operator acceptance remain provider/hardware dependent."
+      "acceptance": "Offline catalog, permission gating, location distance and image probe tests; no Northeast media playback or actual capture freshness is certified."
     }
   ]
 }
