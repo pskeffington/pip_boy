@@ -292,7 +292,9 @@ impl OrgGraph {
                 return Err("Device crosses organization boundary");
             }
             if let Some(person_id) = &device.assigned_operator_id {
-                if self.person(person_id).is_none_or(|p| p.organization_id != device.organization_id)
+                if self
+                    .person(person_id)
+                    .is_none_or(|p| p.organization_id != device.organization_id)
                 {
                     return Err("Device assigned to operator in another organization");
                 }
@@ -364,50 +366,119 @@ mod tests {
         OrgGraph {
             schema_version: ORG_SCHEMA,
             organizations: vec![
-                Organization { id:"vault-corp".into(), name:"Vault Corp".into() },
-                Organization { id:"care-network".into(), name:"Care Network".into() },
+                Organization {
+                    id: "vault-corp".into(),
+                    name: "Vault Corp".into(),
+                },
+                Organization {
+                    id: "care-network".into(),
+                    name: "Care Network".into(),
+                },
             ],
             vaults: vec![
-                VaultSite { id:"vault-one".into(), organization_id:"vault-corp".into(), name:"North".into() },
-                VaultSite { id:"vault-two".into(), organization_id:"vault-corp".into(), name:"South".into() },
-                VaultSite { id:"hospital-one".into(), organization_id:"care-network".into(), name:"Hospital".into() },
+                VaultSite {
+                    id: "vault-one".into(),
+                    organization_id: "vault-corp".into(),
+                    name: "North".into(),
+                },
+                VaultSite {
+                    id: "vault-two".into(),
+                    organization_id: "vault-corp".into(),
+                    name: "South".into(),
+                },
+                VaultSite {
+                    id: "hospital-one".into(),
+                    organization_id: "care-network".into(),
+                    name: "Hospital".into(),
+                },
             ],
             units: vec![
-                Unit { id:"security".into(), vault_id:"vault-one".into(), parent_unit_id:None,
-                       kind:UnitKind::Division, name:"Security".into() },
-                Unit { id:"recon".into(), vault_id:"vault-one".into(), parent_unit_id:Some("security".into()),
-                       kind:UnitKind::Team, name:"Recon".into() },
-                Unit { id:"maintenance".into(), vault_id:"vault-two".into(), parent_unit_id:None,
-                       kind:UnitKind::Division, name:"Maintenance".into() },
-                Unit { id:"medical".into(), vault_id:"hospital-one".into(), parent_unit_id:None,
-                       kind:UnitKind::Division, name:"Medical".into() },
+                Unit {
+                    id: "security".into(),
+                    vault_id: "vault-one".into(),
+                    parent_unit_id: None,
+                    kind: UnitKind::Division,
+                    name: "Security".into(),
+                },
+                Unit {
+                    id: "recon".into(),
+                    vault_id: "vault-one".into(),
+                    parent_unit_id: Some("security".into()),
+                    kind: UnitKind::Team,
+                    name: "Recon".into(),
+                },
+                Unit {
+                    id: "maintenance".into(),
+                    vault_id: "vault-two".into(),
+                    parent_unit_id: None,
+                    kind: UnitKind::Division,
+                    name: "Maintenance".into(),
+                },
+                Unit {
+                    id: "medical".into(),
+                    vault_id: "hospital-one".into(),
+                    parent_unit_id: None,
+                    kind: UnitKind::Division,
+                    name: "Medical".into(),
+                },
             ],
             operators: vec![
-                Operator { id:"commander".into(), organization_id:"vault-corp".into(),
-                           display_name:"Commander".into(), active:true },
-                Operator { id:"scout".into(), organization_id:"vault-corp".into(),
-                           display_name:"Scout".into(), active:true },
-                Operator { id:"medic".into(), organization_id:"care-network".into(),
-                           display_name:"Medic".into(), active:true },
+                Operator {
+                    id: "commander".into(),
+                    organization_id: "vault-corp".into(),
+                    display_name: "Commander".into(),
+                    active: true,
+                },
+                Operator {
+                    id: "scout".into(),
+                    organization_id: "vault-corp".into(),
+                    display_name: "Scout".into(),
+                    active: true,
+                },
+                Operator {
+                    id: "medic".into(),
+                    organization_id: "care-network".into(),
+                    display_name: "Medic".into(),
+                    active: true,
+                },
             ],
             appointments: vec![Appointment {
-                id:"shift-one".into(), operator_id:"scout".into(), unit_id:"recon".into(),
-                position_id:"recon".into(), approved_by_operator_id:"commander".into(),
-                not_before:10, expires_at:100, revoked:false,
+                id: "shift-one".into(),
+                operator_id: "scout".into(),
+                unit_id: "recon".into(),
+                position_id: "recon".into(),
+                approved_by_operator_id: "commander".into(),
+                not_before: 10,
+                expires_at: 100,
+                revoked: false,
             }],
             devices: vec![
-                DeviceRecord { id:"field-one".into(), organization_id:"vault-corp".into(),
-                               vault_id:"vault-one".into(), assigned_operator_id:Some("scout".into()),
-                               lifecycle:DeviceLifecycle::RecordedActive },
-                DeviceRecord { id:"care-one".into(), organization_id:"care-network".into(),
-                               vault_id:"hospital-one".into(), assigned_operator_id:Some("medic".into()),
-                               lifecycle:DeviceLifecycle::Pending },
+                DeviceRecord {
+                    id: "field-one".into(),
+                    organization_id: "vault-corp".into(),
+                    vault_id: "vault-one".into(),
+                    assigned_operator_id: Some("scout".into()),
+                    lifecycle: DeviceLifecycle::RecordedActive,
+                },
+                DeviceRecord {
+                    id: "care-one".into(),
+                    organization_id: "care-network".into(),
+                    vault_id: "hospital-one".into(),
+                    assigned_operator_id: Some("medic".into()),
+                    lifecycle: DeviceLifecycle::Pending,
+                },
             ],
             grants: vec![Grant {
-                id:"demo-grant".into(), organization_id:"vault-corp".into(),
-                issuer_operator_id:"commander".into(), subject:GrantSubject::Operator("scout".into()),
-                vault_id:"vault-one".into(), action:GrantAction::View, dataset:Dataset::Mission,
-                not_before:10, expires_at:50, revoked:false,
+                id: "demo-grant".into(),
+                organization_id: "vault-corp".into(),
+                issuer_operator_id: "commander".into(),
+                subject: GrantSubject::Operator("scout".into()),
+                vault_id: "vault-one".into(),
+                action: GrantAction::View,
+                dataset: Dataset::Mission,
+                not_before: 10,
+                expires_at: 50,
+                revoked: false,
             }],
         }
     }
@@ -416,8 +487,10 @@ mod tests {
     fn valid_multi_vault_graph_and_chain() {
         let graph = fixture();
         assert_eq!(graph.validate(), Ok(()));
-        assert_eq!(graph.reporting_chain("recon"),
-                   Some(vec!["recon".into(), "security".into()]));
+        assert_eq!(
+            graph.reporting_chain("recon"),
+            Some(vec!["recon".into(), "security".into()])
+        );
         assert_eq!(graph.reporting_chain("unknown"), None);
         assert!(OrgGraph::empty().validate().is_ok());
     }
@@ -426,10 +499,16 @@ mod tests {
     fn cross_tenant_device_and_grant_fail_closed() {
         let mut graph = fixture();
         graph.devices[0].assigned_operator_id = Some("medic".into());
-        assert_eq!(graph.validate(), Err("Device assigned to operator in another organization"));
+        assert_eq!(
+            graph.validate(),
+            Err("Device assigned to operator in another organization")
+        );
         let mut graph = fixture();
         graph.grants[0].subject = GrantSubject::Device("care-one".into());
-        assert_eq!(graph.validate(), Err("Grant subject belongs to another organization"));
+        assert_eq!(
+            graph.validate(),
+            Err("Grant subject belongs to another organization")
+        );
         let mut graph = fixture();
         graph.appointments[0].operator_id = "medic".into();
         assert_eq!(graph.validate(), Err("Cross-organization appointment"));
@@ -439,7 +518,10 @@ mod tests {
     fn same_org_different_vault_requires_local_reporting_tree() {
         let mut graph = fixture();
         graph.units[1].parent_unit_id = Some("maintenance".into());
-        assert_eq!(graph.validate(), Err("Reporting relationship crosses vault boundary"));
+        assert_eq!(
+            graph.validate(),
+            Err("Reporting relationship crosses vault boundary")
+        );
         let mut graph = fixture();
         graph.devices[0].vault_id = "vault-two".into();
         assert!(graph.validate().is_ok()); // explicit reassignment within same org
@@ -453,10 +535,16 @@ mod tests {
         let mut graph = fixture();
         graph.units[0].kind = UnitKind::Team;
         graph.units[0].parent_unit_id = Some("recon".into());
-        assert_eq!(graph.validate(), Err("Reporting relationship contains a cycle"));
+        assert_eq!(
+            graph.validate(),
+            Err("Reporting relationship contains a cycle")
+        );
         let mut graph = fixture();
         graph.units[1].id = "security".into();
-        assert_eq!(graph.validate(), Err("Duplicate organization record identity"));
+        assert_eq!(
+            graph.validate(),
+            Err("Duplicate organization record identity")
+        );
     }
 
     #[test]
@@ -468,7 +556,8 @@ mod tests {
         graph.appointments[0].revoked = true;
         graph.grants[0].revoked = true;
         graph.devices[0].lifecycle = DeviceLifecycle::Revoked;
-        assert!(graph.validate().is_ok()); // valid historical record is NOT an active permission
+        // Historical revoked records remain structurally valid, not authorized.
+        assert!(graph.validate().is_ok());
     }
 
     #[test]
@@ -482,10 +571,15 @@ mod tests {
         let mut graph = fixture();
         graph.operators[0].display_name = "Commander\nInjected".into();
         assert_eq!(graph.validate(), Err("Operator references unknown organization"));
-        assert!(serde_json::from_str::<OrgGraph>(r#"{"schema_version":1,"unknown":true}"#).is_err());
+        assert!(
+            serde_json::from_str::<OrgGraph>(r#"{"schema_version":1,"unknown":true}"#).is_err()
+        );
         let graph = fixture();
         let serialized = serde_json::to_vec(&graph).unwrap();
-        assert_eq!(serde_json::from_slice::<OrgGraph>(&serialized).unwrap(), graph);
+        assert_eq!(
+            serde_json::from_slice::<OrgGraph>(&serialized).unwrap(),
+            graph
+        );
     }
 
     #[test]
