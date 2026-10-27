@@ -538,7 +538,10 @@ fn persist(directory: &Path, state: &OrganizationState) -> Result<(), StateError
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::organization_custody::{tests::MemorySecrets, CustodyError};
+    use crate::organization_custody::{
+        tests::{MemorySecrets, UncertainWriteSecrets},
+        CustodyError,
+    };
     use ring::signature::{Ed25519KeyPair, KeyPair};
     struct Approve;
     impl AdministratorApproval for Approve {
@@ -696,6 +699,87 @@ mod tests {
         assert!(matches!(
             DurableOrganization::open(dir.path(), "test-org", &store),
             Err(StateError::AnchorMismatch)
+        ));
+    }
+
+    #[test]
+    fn uncertain_protected_write_poisoned_and_recovery_never_silent() {
+        use std::sync::atomic::Ordering;
+
+        let dir = tempfile::tempdir().unwrap();
+        let store = UncertainWriteSecrets::default();
+        let root = key();
+        let mut org = DurableOrganization::provision(
+            dir.path(),
+            "test-org",
+            root.public_key().as_ref(),
+            &Approve,
+            &store,
+        )
+        .unwrap();
+        store.fail_after_write.store(true, Ordering::SeqCst);
+        assert!(matches!(
+            org.record_nonce([77; 32]),
+            Err(StateError::UntrustedAnchor)
+        ));
+        assert!(matches!(
+            org.record_nonce([78; 32]),
+            Err(StateError::Poisoned)
+        ));
+        drop(org);
+        store.fail_after_write.store(false, Ordering::SeqCst);
+        assert!(matches!(
+            DurableOrganization::open(dir.path(), "test-org", &store),
+            Err(StateError::AnchorMismatch)
+        ));
+    }
+
+    #[test]
+    fn cumulative_signed_updates_propagate_between_two_offline_stores() {
+        let root = key();
+        let first_dir = tempfile::tempdir().unwrap();
+        let second_dir = tempfile::tempdir().unwrap();
+        let first_store = MemorySecrets::default();
+        let second_store = MemorySecrets::default();
+
+        let mut first = DurableOrganization::provision(
+            first_dir.path(), "test-org", root.public_key().as_ref(), &Approve,
+            &first_store,
+        ).unwrap();
+        let mut second = DurableOrganization::provision(
+            second_dir.path(), "test-org", root.public_key().as_ref(), &Approve,
+            &second_store,
+        ).unwrap();
+        let initial = snapshot(&root, 2, &[5]);
+        first.install_revocations(initial.clone()).unwrap();
+        second.install_revocations(initial).unwrap();
+
+        // An offline peer cannot learn a new revocation until it receives
+        // the signed update; its old lease must eventually expire.
+        first
+            .install_revocations(snapshot(&root, 3, &[5, 10]))
+            .unwrap();
+        assert_eq!(
+            second.fresh_snapshot(20).unwrap().credential_serials,
+            vec![5]
+        );
+        assert!(matches!(second.fresh_snapshot(100), Err(StateError::Stale)));
+        let transferred = first.export_revocations_json().unwrap();
+        second.import_revocations_json(&transferred).unwrap();
+        assert_eq!(second.revocation_generation(), 3);
+        assert_eq!(
+            second.fresh_snapshot(20).unwrap().credential_serials,
+            vec![5, 10]
+        );
+        assert!(matches!(
+            second.import_revocations_json(
+                &serde_json::to_vec(&snapshot(&root, 2, &[5])).unwrap()
+            ),
+            Err(StateError::Rollback)
+        ));
+        assert!(matches!(
+            second.install_revocations(snapshot(&root, 4, &[10])),
+            Err(StateError::RevocationRegression)
         ));
     }
 
