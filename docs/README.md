@@ -8,7 +8,9 @@ Technical contracts, architecture decisions, research provenance and validation 
 
 [Server index](../server/README.md) · [Phased implementation](../server/ROADMAP.md) · [Field architecture](../server/ARCHITECTURE.md). The mini-server currently has no listener and no relay capability.
 
-## Server research\n\n[Server literature matrix — NIST, healthcare, tunnels and disruption-tolerant communications](../server/LITERATURE_MATRIX.md) (on the server feature branch; pending merge).\n\n## Start here
+## Server research
+
+[Mining communications research and stress tests](../server/MINING_COMMUNICATIONS_MATRIX.md) ·\n\n[Server literature matrix — NIST, healthcare, tunnels and disruption-tolerant communications](../server/LITERATURE_MATRIX.md) (on the server feature branch; pending merge).\n\n## Start here
 
 [Security review: data leakage and credential boundaries](SECURITY_REVIEW_2026-10-26.md) documents the current privacy audit, confirmed controls and residual risks.
 
