@@ -125,6 +125,10 @@ python3 tools/smoke_peer.py
 
 The deterministic smoke relay starts two **separate Rust-Boy homes** and tests explicit pairing, denied untrusted sender, strict SSH flags, sender/receiver durable storage, exact resend idempotency, receiver's job-specific queue, acknowledgment, progress and on-demand sender reconciliation. On POSIX, the SSH executable is *replaced by a strict local relay* for testability. Real OpenSSH cryptographic verification is delegated to SSH and requires field acceptance. See [OpenSSH ssh_config(5)](https://man.openbsd.org/ssh_config) and [OpenSSH authorized_keys documentation](https://manpages.debian.org/trixie/openssh-server/authorized_keys.5.en.html).
 
+## Future RB fleet synchronization
+
+The organization-aware [RB <-> RB synchronization roadmap](RB_SYNC_ROADMAP.md) proposes opt-in nearby discovery, administrator-issued device identities, signed/scoped enrollment, bounded event-delta reconciliation and a future shared command-center fleet view. **None of those new capabilities are active.** The current one-way OpenSSH trust and manual key/fingerprint ceremony remain authoritative until each future gate passes. Proximity and common IP/subnet are never enrollment credentials. Current task and peer stores remain plaintext and must not hold PHI or regulated institutional data.
+
 ## LINK Messenger
 
 The same pinned OpenSSH transport now supports a separate **Messenger** operation. The dedicated authorized_keys forced bridge additionally permits exactly `pipboy peer message-receive`, bound to its named source key. Messages live in a separate bounded plaintext journal rather than the task board. See [Messenger operator guide and security limitations](MESSENGER.md). One-way task pairing is sufficient to send a message in one direction; receiving a reply requires reverse pairing.
