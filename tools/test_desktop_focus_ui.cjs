@@ -14,11 +14,13 @@ for(const id of [
   "open-palette","palette-back","load-role","confirm-dialog",
   "module-grid","module-pager","palette-grid","palette-pager",
   "workspace-title","status-role","status-modules","workspace-stage",
+  "command-heading","command-authority","command-current-role","command-policy",
+  "command-board","command-open-messages","command-open-viewport","command-open-modules",
   "extension-content","messenger-dock","inspector-return",
   "details-heading","detail-info","detail-description","detail-status",
   "testbench","network-workspace","lab-form","lab-output","refresh-state"
 ]) assert.ok(ids.includes(id),"Missing desktop contract "+id);
-for(const stage of ["modules","viewport","messages","settings"])
+for(const stage of ["command","modules","viewport","messages","settings"])
   assert.ok(html.includes('data-stage-target="'+stage+'"'),"Missing workspace stage "+stage);
 assert.ok(html.includes('data-stage="palette"') && html.includes('id="open-palette"'),
   "Custom palette must remain available through Settings");
@@ -70,6 +72,21 @@ assert.match(css,/@media\(max-height:480px\)/,
   "Short-screen adaptive paging must remain");
 assert.match(css,/\.copy-disclosure summary:focus-visible/,
   "Disclosure keyboard focus must remain visible");
+// Vault Command is a first-class role-independent page; authority is backend-gated.
+assert.match(html,/data-stage="command"[^>]*hidden/,
+  "Command stage must be available but initially hidden in raw HTML");
+assert.match(js,/activeStage = snapshot.active.profile === "overseer" \? "command" : "modules";/,
+  "Overseer should land in the vault command center");
+assert.match(js,/snapshot.active.slots.some\(slot => slot.tool === "mission-board"\)/,
+  "Command authority label must reflect Rust-provided tool slots");
+assert.match(js,/window.RustBoyTasks.mount\(root, \{profiles: snapshot.profiles\}\)/,
+  "Mission Control must use existing backend-gated task component");
+assert.match(js,/host.replaceChildren\(root\)/,
+  "Profile changes must replace old command board DOM before mounting the new role");
+assert.match(css,/\.dashboard:has\(\.command-section:not\(\[hidden\]\)\)/,
+  "Vault command must claim full desktop width");
+assert.match(css,/\.command-board\s*\{[^}]*overflow:auto/,
+  "Task list should scroll internally without scrolling the desktop");
 // Desktop Radio is global navigation, including when MAP owns the viewport.
 assert.match(js,/function toggleRadioSubview\(\)\s*\{[\s\S]*?activateStage\("viewport"\);/,
   "Global Radio button must activate viewport from Modules, Settings and Messages");
