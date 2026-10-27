@@ -129,6 +129,28 @@ class NormalizeTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "offline-review only"):
             index.fetch_public("massdot-staging")
 
+    def test_ctroads_and_511ny_developer_exports_are_offline_only(self):
+        for source, lat, lon in (("ctroads", 41.76, -72.68),
+                                 ("511ny", 40.75, -73.98)):
+            payload = [{"ID": "CAM-001", "Name": "I-95 public camera",
+                        "Latitude": lat, "Longitude": lon,
+                        "Url": "https://images.example.org/camera.jpg",
+                        "VideoUrl": "https://images.example.org/movie.m3u8",
+                        "Disabled": False, "Blocked": False},
+                       {"ID": "CAM-002", "Name": "Blocked camera",
+                        "Latitude": lat, "Longitude": lon,
+                        "Disabled": False, "Blocked": True}]
+            rows = index.normalize(source, index.bounded_json(json.dumps(payload)))
+            self.assertEqual(len(rows), 2)
+            self.assertEqual(rows[0]["media_status"], "developer_agreement_metadata_only")
+            self.assertEqual(rows[1]["media_status"], "developer_feed_disabled_or_blocked")
+            for item in rows:
+                self.assertIsNone(item["image_url"])
+                self.assertIsNone(item["media_reference_review_only"])
+                self.assertFalse(item["live_verified"])
+            with self.assertRaisesRegex(ValueError, "offline-review only"):
+                index.fetch_public(source)
+
     def test_input_limits_and_malformed_payload_fail_closed(self):
         for payload in ('{}', '{"features": null}', '{"error": {"message": "bad"}, "features":[]}',
                         '{"features": [null]}'):
