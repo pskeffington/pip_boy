@@ -37,7 +37,7 @@ Technical contracts, architecture decisions, research provenance and validation 
 | [Scout GIS + TAK on Pi](SCOUT_GIS_TAK.md) | Offline GeoJSON, RustGIS ARM64 roadmap, Pi TAK server and CoT integration gates |
 | [Role roadmap](ROLE_ROADMAP.md) | Eight occupational workbenches, operational needs and R0-R3 acceptance gates |
 | [Lore/source matrix](VAULT_TEC_LORE_MATRIX.md) | Publisher-source evidence, role name fidelity and technical standards |
-| [Security camera wall](SECURITY_CAMERA_WALL.md) | Four-feed 2×2 view, one-key focus, camera authorization and media acceptance |
+| [Security camera wall](SECURITY_CAMERA_WALL.md) | DOT-first nearest-feed selection, 31 Northeast metro targets, 53 named cameras, 21 Maryland geolocated seeds, strict access and live-freshness gates |
 | [Architecture](ARCHITECTURE.md) | Workspace, lifecycle, local boundaries and adapter layering |
 | [Roadmap](ROADMAP.md) | G0–G4 priorities, planned modules and acceptance gates |
 | [Validation](VALIDATION.md) | Executed tests, exact CI runs, limitations and historic evidence |
