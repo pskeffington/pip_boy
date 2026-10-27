@@ -167,7 +167,14 @@ async function main() {
       assert.equal(r.initial.cardsFit,true,"Module cards clipped");
       assert.equal(r.initial.rolesHidden,true,"Role selection must be hidden outside Settings");
       assert.equal(r.initial.noRoleNavigation,true,"Role pane must not appear in top-level navigation");
-      assert.deepEqual(r.initial.commonTabs,["MODULES","VIEWPORT","MESSAGES","SETTINGS"],"Role-independent nav mismatch");
+      assert.deepEqual(r.initial.commonTabs,["COMMAND","MODULES","VIEWPORT","MESSAGES","SETTINGS"],"Role-independent nav mismatch");
+      assert.equal(r.commandAccessible,true,"Vault mission command cannot be opened");
+      assert.equal(r.commandNavVisible,true,"Mission command action rail missing");
+      if (scenario==="default") {
+        assert.equal(r.commandStartup,true,"Overseer must open in mission command by default");
+        assert.equal(r.commandFits,true,"Overseer command stage clipped");
+        assert.equal(r.commandHeading,"Mission Command");
+      }
       assert.equal(r.initial.pagerFits,true,"Pager clipped");
       assert.equal(r.initial.paneTabsVisible,true);
       assert.equal(r.settings?.visible,true,"Settings stage missing");
