@@ -4,8 +4,9 @@
 //! this store. Filesystem rollback after restoring a full old disk backup is
 //! not detectable without a protected monotonic hardware/remote counter.
 use crate::organization_authority::SignedRevocations;
-use crate::organization_custody::{fingerprint, valid_org_id, AdministratorApproval, CustodyError};
+use crate::organization_custody::{fingerprint, valid_org_id, AdministratorApproval, ProtectedSecrets};
 use fs2::FileExt;
+use ring::digest::{digest, SHA256};
 use ring::signature::{UnparsedPublicKey, ED25519};
 use serde::{Deserialize, Serialize};
 use std::fs::{self, File, OpenOptions};
@@ -26,6 +27,10 @@ pub enum StateError {
     Capacity,
     Stale,
     Rollback,
+    UntrustedAnchor,
+    AnchorMismatch,
+    RevocationRegression,
+    Poisoned,
 }
 
 impl From<io::Error> for StateError {
@@ -44,13 +49,65 @@ struct OrganizationState {
     consumed_nonces: Vec<[u8; 32]>,
 }
 
-pub struct DurableOrganization {
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ProtectedAnchor {
+    schema_version: u32,
+    organization_id: String,
+    root_fingerprint: String,
+    issuer_key_epoch: u64,
+    revocation_generation: u64,
+    directory_sha256: String,
+    state_sha256: String,
+}
+
+pub struct DurableOrganization<'s, S: ProtectedSecrets> {
     root: std::path::PathBuf,
     _lock: File,
     state: OrganizationState,
+    store: &'s S,
+    anchor_name: String,
+    poisoned: bool,
 }
 
-impl DurableOrganization {
+fn anchored_name(org: &str) -> String {
+    format!("organization-anchor:{org}")
+}
+
+fn sha256_hex(bytes: &[u8]) -> String {
+    crate::organization_custody::hex(digest(&SHA256, bytes).as_ref())
+}
+
+fn expected_anchor(directory: &Path, state: &OrganizationState) -> Result<ProtectedAnchor, StateError> {
+    let encoded = serde_json::to_vec(state).map_err(|_| StateError::Invalid)?;
+    let canonical = fs::canonicalize(directory)?;
+    Ok(ProtectedAnchor {
+        schema_version: 1,
+        organization_id: state.organization_id.clone(),
+        root_fingerprint: fingerprint(&state.root_public_key).map_err(|_| StateError::Invalid)?,
+        issuer_key_epoch: state.issuer_key_epoch,
+        revocation_generation: state.revocation_generation,
+        directory_sha256: sha256_hex(canonical.to_string_lossy().as_bytes()),
+        state_sha256: sha256_hex(&encoded),
+    })
+}
+
+fn read_anchor(store: &impl ProtectedSecrets, name: &str) -> Result<Option<ProtectedAnchor>, StateError> {
+    store.read(name).map_err(|_| StateError::UntrustedAnchor)?
+        .map(|s| serde_json::from_str(&s).map_err(|_| StateError::UntrustedAnchor))
+        .transpose()
+}
+
+fn write_anchor(store: &impl ProtectedSecrets, name: &str, value: &ProtectedAnchor) -> Result<(), StateError> {
+    let encoded = serde_json::to_string(value).map_err(|_| StateError::Invalid)?;
+    store.write(name, &encoded).map_err(|_| StateError::UntrustedAnchor)?;
+    if read_anchor(store, name)?.as_ref() != Some(value) {
+        return Err(StateError::UntrustedAnchor);
+    }
+    Ok(())
+}
+
+impl<'s, S: ProtectedSecrets> DurableOrganization<'s, S> {
     pub fn provision(
         directory: &Path,
         organization_id: &str,
