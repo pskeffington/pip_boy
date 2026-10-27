@@ -123,7 +123,7 @@ impl Response {
         let head = format!(
             "HTTP/1.1 {} {}\r\nContent-Type: {}\r\nContent-Length: {}\r\n\
              Cache-Control: no-store, max-age=0\r\n\
-             Content-Security-Policy: default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self' https://overpass-api.de https://tigerweb.geo.census.gov; frame-src https://www.youtube-nocookie.com; frame-ancestors 'none'; base-uri 'none'; form-action 'none'\r\n\
+             Content-Security-Policy: default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data: https://snapshot.vdotcameras.com https://cwwp2.dot.ca.gov; connect-src 'self' https://overpass-api.de https://tigerweb.geo.census.gov; frame-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'\r\n\
              X-Content-Type-Options: nosniff\r\n\
              X-Frame-Options: DENY\r\n\
              Referrer-Policy: no-referrer\r\n\
@@ -304,7 +304,7 @@ fn state(store: &WorkbenchStore) -> Result<Response, Response> {
             "net_operations": network_suite::OPERATIONS,
             "engine": {
                 "rustgis": "not_integrated",
-                "camera_wall": "public_fallback_embeds",
+                "camera_wall": "dot_direct_snapshots",
                 "private_cameras": "not_configured",
                 "tak": "not_integrated",
                 "game_link": "explicit_cli_only"
