@@ -36,7 +36,7 @@ mute/mode settings. No PCM was saved or played by Pip-Boy.
 
 Raw I/Q returned zero pairs in IQ Lite mode. Full IQ startup displayed an
 “Update Required” device firmware notice and could not be verified. Firmware was
-not modified. Raw I/Q, human listening and Pi runtime acceptance remain open.
+not modified. Raw I/Q and Pi runtime acceptance remain open.
 Real-receiver native HUD playback and independent subscribers were subsequently
 verified as recorded below.
 
@@ -108,8 +108,7 @@ output restart and duplicate-start rejection passed. Stop returned in 9.44 ms
 in this run, completed worker cleanup and left the shared receiver running.
 A fresh 500 ms subscription received 26,409 stereo frames afterward. These are
 real-receiver checks, separate from the synthetic fixture; no PCM was saved or
-shared tuning, firmware or receiver start/stop commands sent. Human confirmation
-of speaker audibility and RF signal quality remains open.
+shared tuning, firmware or receiver start/stop commands sent.
 
 Repeating these live checks with host `f71dd2d` and module `6997dff` after an
 operator Refresh/Start restored PCM ingress and passed both native players,
@@ -117,6 +116,10 @@ concurrent reception, output restart and cleanup again. Stop returned in
 11.52 ms and left shared reception running; a fresh 500 ms capture received
 24,008 stereo frames. This validates the module pin containing the output
 backpressure timeout fix against the real receiver.
+
+On 2026-10-27 the operator confirmed audible radio playback through the MacBook
+Air speakers with the system default audio output. RF signal quality has not
+been measured; Pi and physical Bluetooth recovery acceptance remain open.
 
 Final checks passed 331 host tests in both default and all-feature builds,
 strict Clippy, build, UI interaction fixtures and 11 Chromium viewport scenarios.
