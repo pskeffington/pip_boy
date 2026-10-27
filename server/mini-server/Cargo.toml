@@ -1,0 +1,9 @@
+[package]
+name = "rust-boy-mini-server"
+description = "Optional Rust-Boy field relay scaffold (no network listener)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]

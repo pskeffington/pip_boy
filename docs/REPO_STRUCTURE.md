@@ -8,6 +8,7 @@ Rust-Boy keeps a deliberately small top level. **Do not relocate operational dat
 | --- | --- | --- |
 | [`../crates/pipboy-core`](../crates/pipboy-core) | Shared Rust model, policy, persistence and capability definitions | Keep business logic out of browser JavaScript; add unit tests with changes |
 | [`../crates/pipboy`](../crates/pipboy) | Native CLI/TUI, loopback HTTP server, embedded dashboard/micro assets | Keep endpoints bounded and operator gated; share one core backend |
+| [`../server`](../server) | Optional mini-server scaffold, field deployment roadmap and server-specific architecture | Keep networking code distinct from the loopback dashboard and deny-all device broker; no implicit listeners |
 | [`../crates/rust-boy-broker`](../crates/rust-boy-broker) | Deny-only peripheral broker prototype | Do not enable physical I/O without separate threat review |
 | [`../catalog`](../catalog) | Machine-readable evidence, sources, modules and role roadmaps | Stable IDs and source provenance; run catalog and role validators |
 | [`README.md`](README.md) | Operator, architecture and acceptance contracts | Add a link to this index for new operator-facing guides |
@@ -31,6 +32,8 @@ NET ENGINEER's opt-in private-LAN scan and read-only UniFi HTTP handlers live in
 ## Machine-readable component responsibility map
 
 The [component ownership and acceptance index](../catalog/component_index.json) tracks mainline subsystem entrypoints, their engineering guides, tests, responsibility boundaries and physical-hardware gates. It is intentionally **not** an exhaustive inventory of every source file or a license/permissions roster. The [organizational optimization research](ORGANIZATIONAL_OPTIMIZATION.md) explains the evidence and proposed sequencing; [ADR 0001](adr/0001-mac-first-portable-core.md) records the Mac-first/Pi-later decision.
+
+Run `python3 tools/validate_server_matrix.py` and `python3 tools/test_server_matrix.py` for the server literature matrix. The repository Markdown auditor includes `server/`. External URLs require separate live provenance review; offline checks validate format and coverage only.
 
 Run `python3 tools/validate_component_index.py` and `python3 tools/test_component_index.py` when an externally visible component entrypoint, guide, test or hardware-gate label changes. CI validates both using standard-library-only, offline checks. Keep Raspberry Pi acceptance distinct from portable code compilation; `field_pending` identifies open device acceptance and `deny_only` is not a grant. Avoid unreviewed duplicate ownership of the same source entrypoint.
 

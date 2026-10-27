@@ -2725,6 +2725,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "rust-boy-mini-server"
+version = "0.1.0"
+
+[[package]]
 name = "rust-boy-broker"
 version = "0.1.0"
 dependencies = [
