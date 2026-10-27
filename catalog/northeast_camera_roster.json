@@ -1,0 +1,399 @@
+{
+  "schema_version": 1,
+  "region": "US Northeast",
+  "status": "provider discovery only - no city-center coordinates are camera coordinates",
+  "selection_rule": "The UI ranks genuine, provider-published camera coordinates, not this city roster. Unlicensed or unverified candidates are never automatically fetched.",
+  "cities": [
+    {
+      "city": "Boston",
+      "state": "MA",
+      "provider_ids": [
+        "massdot"
+      ],
+      "major_corridors": [
+        "I-90",
+        "I-93",
+        "US-1"
+      ],
+      "access_status": "provider_access_required",
+      "verified_camera_count": 0
+    },
+    {
+      "city": "Worcester",
+      "state": "MA",
+      "provider_ids": [
+        "massdot"
+      ],
+      "major_corridors": [
+        "I-90",
+        "I-290",
+        "I-190"
+      ],
+      "access_status": "provider_access_required",
+      "verified_camera_count": 0
+    },
+    {
+      "city": "Springfield",
+      "state": "MA",
+      "provider_ids": [
+        "massdot"
+      ],
+      "major_corridors": [
+        "I-91",
+        "I-291",
+        "I-90"
+      ],
+      "access_status": "provider_access_required",
+      "verified_camera_count": 0
+    },
+    {
+      "city": "Providence",
+      "state": "RI",
+      "provider_ids": [
+        "ridot"
+      ],
+      "major_corridors": [
+        "I-95",
+        "I-195",
+        "RI-10"
+      ],
+      "access_status": "direct_media_unverified",
+      "verified_camera_count": 0
+    },
+    {
+      "city": "Warwick",
+      "state": "RI",
+      "provider_ids": [
+        "ridot"
+      ],
+      "major_corridors": [
+        "I-95",
+        "RI-37"
+      ],
+      "access_status": "direct_media_unverified",
+      "verified_camera_count": 0
+    },
+    {
+      "city": "Hartford",
+      "state": "CT",
+      "provider_ids": [
+        "ctdot"
+      ],
+      "major_corridors": [
+        "I-84",
+        "I-91"
+      ],
+      "access_status": "developer_key_required",
+      "verified_camera_count": 0
+    },
+    {
+      "city": "New Haven",
+      "state": "CT",
+      "provider_ids": [
+        "ctdot"
+      ],
+      "major_corridors": [
+        "I-95",
+        "I-91"
+      ],
+      "access_status": "developer_key_required",
+      "verified_camera_count": 0
+    },
+    {
+      "city": "Bridgeport",
+      "state": "CT",
+      "provider_ids": [
+        "ctdot"
+      ],
+      "major_corridors": [
+        "I-95",
+        "CT-8"
+      ],
+      "access_status": "developer_key_required",
+      "verified_camera_count": 0
+    },
+    {
+      "city": "Stamford",
+      "state": "CT",
+      "provider_ids": [
+        "ctdot"
+      ],
+      "major_corridors": [
+        "I-95",
+        "Merritt Parkway"
+      ],
+      "access_status": "developer_key_required",
+      "verified_camera_count": 0
+    },
+    {
+      "city": "New York City",
+      "state": "NY",
+      "provider_ids": [
+        "nycdot",
+        "511ny"
+      ],
+      "major_corridors": [
+        "I-278",
+        "I-495",
+        "FDR Drive"
+      ],
+      "access_status": "developer_agreement_or_key_required",
+      "verified_camera_count": 0
+    },
+    {
+      "city": "Albany",
+      "state": "NY",
+      "provider_ids": [
+        "511ny"
+      ],
+      "major_corridors": [
+        "I-87",
+        "I-90"
+      ],
+      "access_status": "developer_key_required",
+      "verified_camera_count": 0
+    },
+    {
+      "city": "Syracuse",
+      "state": "NY",
+      "provider_ids": [
+        "511ny"
+      ],
+      "major_corridors": [
+        "I-81",
+        "I-90"
+      ],
+      "access_status": "developer_key_required",
+      "verified_camera_count": 0
+    },
+    {
+      "city": "Rochester",
+      "state": "NY",
+      "provider_ids": [
+        "511ny"
+      ],
+      "major_corridors": [
+        "I-490",
+        "I-390"
+      ],
+      "access_status": "developer_key_required",
+      "verified_camera_count": 0
+    },
+    {
+      "city": "Buffalo",
+      "state": "NY",
+      "provider_ids": [
+        "511ny"
+      ],
+      "major_corridors": [
+        "I-90",
+        "I-190"
+      ],
+      "access_status": "developer_key_required",
+      "verified_camera_count": 0
+    },
+    {
+      "city": "Newark",
+      "state": "NJ",
+      "provider_ids": [
+        "njdot"
+      ],
+      "major_corridors": [
+        "I-78",
+        "I-95",
+        "US-1/9"
+      ],
+      "access_status": "direct_media_unverified",
+      "verified_camera_count": 0
+    },
+    {
+      "city": "Jersey City",
+      "state": "NJ",
+      "provider_ids": [
+        "njdot"
+      ],
+      "major_corridors": [
+        "I-78",
+        "NJ Turnpike"
+      ],
+      "access_status": "direct_media_unverified",
+      "verified_camera_count": 0
+    },
+    {
+      "city": "Trenton",
+      "state": "NJ",
+      "provider_ids": [
+        "njdot"
+      ],
+      "major_corridors": [
+        "I-295",
+        "US-1"
+      ],
+      "access_status": "direct_media_unverified",
+      "verified_camera_count": 0
+    },
+    {
+      "city": "Philadelphia",
+      "state": "PA",
+      "provider_ids": [
+        "penndot"
+      ],
+      "major_corridors": [
+        "I-95",
+        "I-76",
+        "I-676"
+      ],
+      "access_status": "feed_request_and_video_license_required",
+      "verified_camera_count": 0
+    },
+    {
+      "city": "Pittsburgh",
+      "state": "PA",
+      "provider_ids": [
+        "penndot"
+      ],
+      "major_corridors": [
+        "I-376",
+        "I-279",
+        "I-79"
+      ],
+      "access_status": "feed_request_and_video_license_required",
+      "verified_camera_count": 0
+    },
+    {
+      "city": "Allentown",
+      "state": "PA",
+      "provider_ids": [
+        "penndot"
+      ],
+      "major_corridors": [
+        "I-78",
+        "US-22"
+      ],
+      "access_status": "feed_request_and_video_license_required",
+      "verified_camera_count": 0
+    },
+    {
+      "city": "Baltimore",
+      "state": "MD",
+      "provider_ids": [
+        "mdot"
+      ],
+      "major_corridors": [
+        "I-95",
+        "I-83",
+        "I-695"
+      ],
+      "access_status": "media_type_and_terms_review",
+      "verified_camera_count": 0
+    },
+    {
+      "city": "Washington, DC",
+      "state": "DC",
+      "provider_ids": [
+        "ddot",
+        "vdot",
+        "mdot"
+      ],
+      "major_corridors": [
+        "I-395",
+        "I-295",
+        "I-66"
+      ],
+      "access_status": "dc_city_feed_unverified_va_suburbs_seeded",
+      "verified_camera_count": 0
+    },
+    {
+      "city": "Wilmington",
+      "state": "DE",
+      "provider_ids": [
+        "deldot"
+      ],
+      "major_corridors": [
+        "I-95",
+        "I-495",
+        "US-13"
+      ],
+      "access_status": "direct_media_unverified",
+      "verified_camera_count": 0
+    },
+    {
+      "city": "Portland",
+      "state": "ME",
+      "provider_ids": [
+        "newengland511"
+      ],
+      "major_corridors": [
+        "I-95",
+        "I-295"
+      ],
+      "access_status": "direct_media_unverified",
+      "verified_camera_count": 0
+    },
+    {
+      "city": "Bangor",
+      "state": "ME",
+      "provider_ids": [
+        "newengland511"
+      ],
+      "major_corridors": [
+        "I-95",
+        "US-2"
+      ],
+      "access_status": "direct_media_unverified",
+      "verified_camera_count": 0
+    },
+    {
+      "city": "Manchester",
+      "state": "NH",
+      "provider_ids": [
+        "newengland511"
+      ],
+      "major_corridors": [
+        "I-93",
+        "I-293"
+      ],
+      "access_status": "direct_media_unverified",
+      "verified_camera_count": 0
+    },
+    {
+      "city": "Nashua",
+      "state": "NH",
+      "provider_ids": [
+        "newengland511"
+      ],
+      "major_corridors": [
+        "US-3",
+        "NH-101A"
+      ],
+      "access_status": "direct_media_unverified",
+      "verified_camera_count": 0
+    },
+    {
+      "city": "Concord",
+      "state": "NH",
+      "provider_ids": [
+        "newengland511"
+      ],
+      "major_corridors": [
+        "I-93",
+        "I-89"
+      ],
+      "access_status": "direct_media_unverified",
+      "verified_camera_count": 0
+    },
+    {
+      "city": "Burlington",
+      "state": "VT",
+      "provider_ids": [
+        "newengland511"
+      ],
+      "major_corridors": [
+        "I-89",
+        "US-7"
+      ],
+      "access_status": "direct_media_unverified",
+      "verified_camera_count": 0
+    }
+  ]
+}
