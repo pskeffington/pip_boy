@@ -111,6 +111,13 @@ real-receiver checks, separate from the synthetic fixture; no PCM was saved or
 shared tuning, firmware or receiver start/stop commands sent. Human confirmation
 of speaker audibility and RF signal quality remains open.
 
+Repeating these live checks with host `f71dd2d` and module `6997dff` after an
+operator Refresh/Start restored PCM ingress and passed both native players,
+concurrent reception, output restart and cleanup again. Stop returned in
+11.52 ms and left shared reception running; a fresh 500 ms capture received
+24,008 stereo frames. This validates the module pin containing the output
+backpressure timeout fix against the real receiver.
+
 Final checks passed 331 host tests in both default and all-feature builds,
 strict Clippy, build, UI interaction fixtures and 11 Chromium viewport scenarios.
 The known unrelated task-dashboard flake recurred once in an earlier parallel
