@@ -1,0 +1,9 @@
+[package]
+name = "rust-boy-module-host"
+description = "Native Rust-Boy module registry and lifecycle boundary"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
