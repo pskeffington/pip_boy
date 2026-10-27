@@ -43,3 +43,9 @@ cargo test --workspace
 ```
 
 **Release gate:** branch must remain draft until independent trust-anchor protection, administrator authentication, rollback resistance, trusted clock/channel binding, security regression tests, and actual Mac/Pi two-device validation are complete. No clinical/ePHI or life-critical use.
+
+## ORG-3.2 second pass
+
+Added an OS credential-store anchor containing the public-root fingerprint, canonical-directory digest, signed revocation generation, and digest of the persistent nonce and revocation state. An ordinary local file rollback now fails closed unless the independently stored anchor is also restored. Signed revocation imports are bounded and cannot remove previously revoked serials. Offline import/export is manual only; automatic fleet propagation is not implemented.
+
+This is still **not** protection against a whole-device rollback, keyring compromise, or concurrent administrative mutation. Real macOS/Pi tests, independent administrator authentication, trusted time, session channel binding, crash injection, symlink-race review, recovery controls, and platform-specific secure key custody remain blockers. The next gate must not connect to live Vault Command or RB sync.
