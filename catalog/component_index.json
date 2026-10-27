@@ -252,20 +252,30 @@
     },
     {
       "id": "public-camera-fallback",
-      "boundary": "Rust-owned DC/NYC/Boston/SF publisher catalog and shared browser player. No discovery, private camera credentials, native RTSP decoder or recording.",
+      "boundary": "Northeast DOT camera catalog and source review: 31 cities, 53 named sites, 21 Maryland geolocated seeds; official RI/MD/DC metadata probes; permission-gated camera media with nearest eligible-source selection.",
       "hardware_gate": "field_pending",
       "code": [
         "crates/pipboy-core/src/public_cameras.rs",
         "crates/pipboy/assets/cameras.js",
-        "crates/pipboy/assets/cameras.css"
+        "crates/pipboy/assets/cameras.css",
+        "catalog/camera_feeders.json",
+        "catalog/northeast_camera_roster.json",
+        "catalog/northeast_camera_sites.json",
+        "catalog/maryland_geolocated_camera_seeds.json",
+        "tools/build_northeast_camera_index.py",
+        "tools/probe_public_cameras.py",
+        "tools/probe_northeast_sources.py"
       ],
       "docs": [
         "docs/SECURITY_CAMERA_WALL.md"
       ],
       "checks": [
-        "tools/test_cameras_ui.cjs"
+        "tools/test_cameras_ui.cjs",
+        "tools/test_build_northeast_camera_index.py",
+        "tools/test_probe_public_cameras.py",
+        "tools/test_probe_northeast_sources.py"
       ],
-      "acceptance": "Software catalog/lifecycle tests only; publisher playback and Mac/Pi operator acceptance remain provider/hardware dependent."
+      "acceptance": "Offline catalog, permission gating, location distance and image probe tests; no Northeast media playback or actual capture freshness is certified."
     }
   ]
 }

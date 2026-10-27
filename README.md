@@ -10,7 +10,7 @@ Rust-Boy is a Rust workbench for local diagnostics, field maps, network engineer
 
 **Development preview on `main`.** Implemented modules are merged after software checks pass. Physical Raspberry Pi touchscreen, actual UniFi controller, Mac-to-Pi SSH and PlayStation game acceptance remain separate field tests. There is no packaged production release.
 
-Roles use short operator titles: **Overseer, Maintenance, Security, Doctor, Scientist, Reclamations, Recon, Archivist, Custom**. Security's unconfigured camera view offers labeled public publisher views for **DC, NYC, Boston and SF**; private IP-camera enrollment/decoding remains a separate gate. See [camera sources and lifecycle](docs/SECURITY_CAMERA_WALL.md).
+Roles use short operator titles: **Overseer, Maintenance, Security, Doctor, Scientist, Reclamations, Recon, Archivist, Custom**. Security's DOT-only fallback shows access-gated DC/NYC/Boston references and a published-but-unverified SF snapshot candidate, never YouTube. Its Northeast review catalog tracks **31 cities**, **53 named camera-site candidates** and **21 separately geolocated Maryland camera records**; none are certified live. Media requests require an eligible operator-selected location within 200 miles and permission-cleared endpoints. Private IP-camera enrollment/decoding remains separately gated. See [camera sources and lifecycle](docs/SECURITY_CAMERA_WALL.md).
 
 ## Project navigation
 

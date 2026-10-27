@@ -61,10 +61,13 @@ const inside=(node,box)=>{
         throw Error("Public camera city selectors clipped");
       if(ui.content.querySelector("iframe"))throw Error("Compact grid must not create third-party players");
       choices[0].click(); await settle();
-      const frame=ui.content.querySelector(".rb-camera-player");
-      if(!frame || !inside(frame,box))throw Error("Focused public player clipped");
+      const tile=ui.content.querySelector(".rb-camera-tile");
+      const label=ui.content.querySelector(".rb-camera-status");
+      if(!tile || !inside(tile,box) || !label || !/ACCESS REQUIRED/.test(label.textContent))
+        throw Error("Focused DOT access-gated tile clipped or incorrectly marked live");
+      if(ui.content.querySelector("img,iframe"))throw Error("Access-gated camera cannot load external media");
       back();
-      if(ui.content.querySelector("iframe"))throw Error("Back must remove the public player");
+      if(ui.content.querySelector("img,iframe"))throw Error("Back must remove camera media");
     }
     if(hasTool("byte-lab")) {
       setTab("role"); openTool("byte-lab"); await settle();

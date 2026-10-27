@@ -478,6 +478,7 @@ function renderExtension() {
     if (activeStage === "viewport" && activePane === "workspace" && selectedAvailable() && window.RustBoyCameras) {
       cameraWallUI = window.RustBoyCameras.mount(wall, {
         feeds: snapshot.camera_feeds, selected: selectedCamera,
+        location: window.RustBoyMap?.getCameraLocation?.() || null,
         onSelect: value => { selectedCamera = value; }
       });
     } else wall.append(el("div", "camera-wall-heading", "PUBLIC VIEWS / OPEN CAMERAS TO LOAD"));

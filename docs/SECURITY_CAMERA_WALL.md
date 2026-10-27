@@ -1,25 +1,101 @@
-# Security Chief | 4-camera handheld view specification
+# Security | DOT-first outside-world camera views
 
-**Status: public publisher-player fallback implemented; private IP-camera decoding/enrollment remains planned.** Applies to the [Security Chief](ROLE_ROADMAP.md#security-security-chief) role. Use only cameras and networks the operator is authorized to view. Not a surveillance discovery product.
+**Status:** Northeast camera index expanded; image playback remains access-gated or verification-pending. No Northeast source is currently certified live. The existing Caltrans sample is a direct-snapshot candidate, not a Northeast fallback.
 
-## Public views when private cameras are unconfigured
+## DOT first, no YouTube
 
-Security uses the shared `cameras.js` component and Rust `public_cameras::PUBLIC_CAMERA_FEEDS` catalog. Desktop opens four muted embedded publisher players only on the active Cameras view; role preview/loading does not create players. The small handheld lists four locations and opens one publisher player on selection. Leaving Cameras, opening Radio, or returning to the grid removes the old frames. No background recording, server-side video proxy, discovery, credentials, scraping, or health polling is implemented.
+The shared Rust catalog lists provider-owned DOT camera references. Third-party VDOT video use requires an Iteris-managed agreement, even when distribution is free, so its DC-metro candidate is **not automatically fetched**. NYC DOT, MassDOT, CTroads and 511PA also have provider access gates. Caltrans remains an out-of-region snapshot candidate, not a substitute for Northeast coverage. The [feed inventory](../catalog/camera_feeders.json) tracks **14 providers**, their coverage, metadata and media access gates.
 
-| City | Publisher / view | Source checked 2026-10-26 |
+| Area | Agency | Current fallback |
 | --- | --- | --- |
-| DC | earthTV / White House | [Publisher stream](https://www.youtube.com/watch?v=5p_KGD4fJZs) |
-| NYC | EarthCam / Times Square Crossroads | [Publisher stream](https://www.youtube.com/watch?v=z-jYdOIKcTQ) |
-| Boston | Boston and Maine Live / Hyatt Regency Boston Harbor | [Publisher stream](https://www.youtube.com/watch?v=3I_cIS24AfY) |
-| SF | ABC7 News Bay Area / skyline | [Publisher stream](https://www.youtube.com/watch?v=G8RIAgPxaMc) |
+| DC metro (Arlington, Virginia) | VDOT / 511 Virginia | Media gated pending third-party agreement |
+| NYC | NYC DOT TMC | Developer agreement required: placeholder only |
+| Boston | MassDOT / TrafficLand | Provider agreement required: placeholder only |
+| San Francisco | Caltrans D04 | HTTPS road camera JPEG snapshot candidate |
 
-These are visibly labeled **PUBLIC VIEWS · PRIVATE CAMERAS UNCONFIGURED**. Source discovery is not a guarantee of current live playback: publishers may stop/replace a stream, limit embedding, require interaction, or display advertising. The original publisher link always remains available. Rust-Boy does not label an iframe load as verified live or invent timestamps, connection counts or private-camera health. Fixed YouTube IDs and exact publisher watch URLs are validated before creating a frame; only `https://www.youtube-nocookie.com` is added to parent `frame-src`. Parent `connect-src` remains unchanged. Each iframe is sandboxed, starts muted, and uses its own origin referrer policy for provider playback compatibility. Third-party players can make their own network requests once opened.
+## Nearest-active selection contract (October 2026)
 
-`node tools/test_cameras_ui.cjs` checks four-view/focus behavior, compact opt-in, muted fixed-origin frames, malformed-source rejection and teardown with synthetic metadata. CI does not certify external playback, publisher permissions, private camera interoperability or physical handheld performance.
+Security uses the existing universal **Settings → Location / Map**. A manual center is exact; a selected ZIP resolves to a **county-map approximation**, not a precise home or ZIP centroid. After explicit GPS ON, a last known fix may be used for camera ranking for at most 60 seconds in volatile page memory. GPS OFF revokes that hint. Coordinates are never appended to DOT URLs, persisted to disk, sent to publishers as query parameters, or requested a second time by Cameras.
+
+The shared `cameras.js` selector applies Haversine ground distance to **actual DOT camera coordinates**, not city centroids. It requires an existing operator-selected position; without one, it fetches no public camera images. To avoid misleading nationwide fallbacks, automatic selection is limited to **200 miles**. Only fixed, approved HTTPS snapshot hosts within that radius enter its candidate queue. The closest eligible feeds are checked with a maximum of **two simultaneous image probes**, **12 attempts per tool opening**, and **8 seconds per probe**; each probe is cache-busted and then torn down on navigation. One failed source advances to the next nearest candidate. Four working tiles is the wall limit, not a network polling target. The selected primary feed is highlighted and the **FOCUS NEAREST** control opens it; explicit focus/back remains separate from automatic source selection.
+
+Health states are intentionally distinct:
+
+- **LIVE** requires a successful image load **and** agency-provided `active: true`, recent metadata check time, and frame capture time within 120 seconds. No currently seeded static catalog source supplies those timestamp fields, so current candidate images must not be advertised as verified live.
+- **REACHABLE · FRESHNESS UNVERIFIED** means an image loaded in this session without sufficient source timestamp evidence. This is a fallback after confirmed-live candidates, not a safety claim.
+- **AGENCY INACTIVE / AGENCY FRAME STALE / FEED UNAVAILABLE** are skipped for automatic primary selection. A successful validation expires after 120 seconds; the operator must explicitly refresh to recheck. A timer marks the check expired but does not fetch another image.
+
+No endpoints are polled until Security's Cameras screen opens, and **no background refresh is enabled**. The actual user-facing UI is browser-rendered from Rust `/api/state`; native Pi media decoding and agency-authorized stream integration remain separately gated. `node tools/test_cameras_ui.cjs` covers distance ranking, live preference, offline fallback, source validation, bounded probes and teardown. `node tools/test_map_gps_permissions.cjs` covers shared location consent and revocation.
+
+The [Northeast DOT city roster](../catalog/northeast_camera_roster.json) contains **31 discovery cities** (including Annapolis and Arlington), and [the named-camera sites file](../catalog/northeast_camera_sites.json) now contains **53 specifically identified camera sites** (Maryland 27, Rhode Island 6, Virginia 4, NYC 16). **None of those 53 is marked as verified live or auto-licensed media.** The [provider registry](../catalog/camera_feeders.json) distinguishes public viewing from permission to ingest or redistribute feeds; no API key or subscription was bypassed. NYC, CT, PennDOT and MassDOT integrations require their documented access paths. Camera selection cannot legitimately claim nearby live coverage until individual feeds in those regions pass both access and on-device health gates.
+
+The camera UI fetches approved snapshots only after opening Cameras **and with an eligible selected location**, never on general navigation. It does not use iframes and offers an explicit REFRESH control. It does not poll in the background, record, discover local IP cameras or send user location to agencies. An image load without trusted capture-time metadata is labeled **REACHABLE · FRESHNESS UNVERIFIED**, not LIVE. Failure is labeled **FEED UNAVAILABLE**. The source URLs are HTTPS and constrained to exact agency-managed media hosts/path patterns; the HTTP CSP now allows only the two media hosts as additional image origins and disallows frames.
+
+**Security meaning:** road activity and visible vehicles can support situational awareness, not certify that a particular person is mobile or that a route is safe. Always preserve camera identity, original agency attribution, capture freshness uncertainty and provider access requirements. Never label Virginia traffic cameras as DC city cameras.
+
+Run `node tools/test_cameras_ui.cjs` for UI regression and `python3 tools/smoke_micro.py` with the local Rust server. On a Mac with the dashboard already running on loopback, run `python3 tools/probe_public_cameras.py --json` to check approved direct-image HTTP responses, MIME types, image signatures and optional Last-Modified headers. The one-shot probe has an 8-second timeout, 2 MiB per-image ceiling, maximum 12 entries and no redirects, recording or automatic retries. It reports `reachable_freshness_unknown` on success: even a valid HTTPS image cannot prove live capture without agency frame timestamps. Actual provider playback remains an on-device gate.
+
+## Northeast metadata ingestion pass (review-only)
+
+The [Maryland geolocated seed set](../catalog/maryland_geolocated_camera_seeds.json) adds **21 point-coordinate records** extracted from the official State of Maryland open-data camera JSON. These are a **separate evidence dataset**, with potential overlap against the 53 name-only/site candidates, not 21 additional verified live streams. The upstream publisher URLs resolve to HTML video-player pages and are not accepted as direct JPEG/HLS media without separate review. Maryland metadata must retain State of Maryland/CHART attribution, and public data access does not establish unlimited video redistribution rights.
+
+
+
+Three additional official geospatial sources are indexed alongside VDOT, NYC DOT's official named-camera list, and other public state camera lists:
+
+| Provider | Published camera metadata | Video integration |
+| --- | --- | --- |
+| Maryland iMAP / CHART | FeatureServer layer 0: ID, name, county, latitude, longitude, camera URL | Review media type and rights before enabling |
+| DDOT / DC GIS | TrafficOperations FeatureServer layer 2: CameraID, Location, lat/lon, Operation_Status | **No direct video URL** in this GIS layer |
+| DelDOT / FirstMap | Traffic Devices CAMERA layer 26: public name, road/intersection, status, location geometry | Test GIS host; no camera media URL in layer |
+| RIDOT Rhodeways | Official GIS layer 6: EquipmentID, Description, Latitude, Longitude, Enabled and view reference | `Enabled` is metadata only; direct media and reuse terms unverified |
+
+**Boston/Providence expansion:** The reviewed Rhodeways GIS service has a stable source-layer definition for Rhode Island location ingestion. MassDOT publishes a staging GIS layer with `publicid`, `name`, `statecode`, JPEG fields and geometry, but its raw extent contains non-Massachusetts coordinates. The importer therefore rejects points outside the Massachusetts bounds, retains **no** JPEG URLs, and deliberately refuses `--fetch` for `massdot-staging`; only explicitly supplied offline samples can be reviewed. This staging service does not replace MassDOT's TrafficLand provider authorization. Neither layer supplies a verified camera-capture timestamp suitable for a LIVE claim.
+
+```bash
+python3 tools/build_northeast_camera_index.py --source ridot --fetch --output /tmp/ridot-review.json
+python3 tools/build_northeast_camera_index.py --source massdot-staging --input /path/to/staging-sample.json --output /tmp/massdot-stage-review.json
+```
+
+Run an offline importer against a previously obtained official JSON file:
+
+```bash
+python3 tools/build_northeast_camera_index.py --source md-imap --input /path/to/md.json --output /tmp/md-camera-review.json
+```
+
+Or explicitly fetch **one fixed official public metadata endpoint** (no discovery or media requests):
+
+```bash
+python3 tools/build_northeast_camera_index.py --source ddot --fetch --output /tmp/ddot-camera-review.json
+```
+
+Supported source keys: `md-socrata`, `md-imap`, `ddot`, `deldot`, `vdot`, `ridot`, `massdot-staging`, `ctroads`, `511ny`. The `md-socrata` key imports official camera metadata from `opendata.maryland.gov/resource/4z3c-43ce.json`; it never activates the player URL. The import caps input at 6 MiB and 5,000 features, validates state-specific camera coordinates and writes **review-only** JSON with `image_url:null`, `live_verified:false`, no retained credentials or video. Output cannot activate a camera automatically. Official metadata/terms and media access must be reviewed before promoting each device to the runtime catalog. `python3 tools/test_build_northeast_camera_index.py` exercises the normalizers offline.
+
+## Connecticut / New York developer-feed import (authorization required)
+
+The official CTroads and 511NY camera APIs require developer enrollment and a key. Rust-Boy deliberately **does not request, scrape, store or transmit those credentials**. Once an operator has obtained approved camera-list JSON through the publisher's authorized process, only the offline `--input` path is accepted:
+
+```bash
+python3 tools/build_northeast_camera_index.py --source ctroads --input /path/to/approved-ctroads-cameras.json --output /tmp/ctroads-review.json
+python3 tools/build_northeast_camera_index.py --source 511ny --input /path/to/approved-511ny-cameras.json --output /tmp/511ny-review.json
+```
+
+These parsers read only camera `ID`, `Name`, `Latitude`, `Longitude`, and `Disabled`/`Blocked` fields into a **review-only** list; `Url` and `VideoUrl` are never retained. Provider-disabled cameras are explicitly flagged. No API key is accepted by the command and `--fetch` is forbidden for both sources. Developer enrollment and media licensing are independent of the metadata import. <https://www.ctroads.org/developers/help> · <https://prod-ny.ibi511.com/developers/resources>
+
+## Metadata endpoint availability check
+
+The read-only `tools/probe_northeast_sources.py` checks the four default official public GIS endpoints (Maryland Socrata, Maryland iMAP, DDOT and RIDOT). It checks HTTPS reachability, expected JSON shape and valid camera coordinates, and reports a distinct `metadata_reachable` / `metadata_error` result with the count of valid camera locations. It **never downloads camera images**; `image_streams_verified` is always zero. API pagination or a source limit may make counts partial. The script is opt-in, no credentials, no redirect following, no background polling and no unapproved NYC/CT/PennDOT API scraping. MassDOT staging is excluded entirely.
+
+```bash
+python3 tools/probe_northeast_sources.py --json
+python3 tools/probe_northeast_sources.py --source ridot --json
+```
+
+The two acceptance gates remain distinct: **metadata online** means locations can be indexed; **verified live camera** requires authorized direct media plus a real frame capture-time check. A public web map or agency `Enabled` flag does not satisfy the second gate.
 
 ## User task and screen state
 
-A small, approximately 4-inch handheld has **four independently live feeds** displayed in a **2×2 grid**. Each tile labels source identity, feed age and status (connecting, live, stale, auth failed, offline). One press opens an individual feed in a main focused viewport; one press returns to the wall with the other three streams still tracked. Design target: 800×480 landscape, adaptive 480×320 fallback, and ordinary Mac window/terminal mock before hardware testing. These resolutions are reference targets, not specifications for an approved physical screen.
+A small, approximately 4-inch handheld targets **up to four independently checked feeds** in a **2×2 grid**; restricted or offline cameras display honest placeholders. Each tile labels source identity, feed age and status (connecting, live, stale, auth failed, offline). One press opens an individual feed in a main focused viewport; one press returns to the wall with the other three streams still tracked. Design target: 800×480 landscape, adaptive 480×320 fallback, and ordinary Mac window/terminal mock before hardware testing. These resolutions are reference targets, not specifications for an approved physical screen.
 
 - **Grid:** 1/2/3/4 selects a feed directly; arrows move focus; Enter (or button/tap) opens it; Esc/Back returns to the grid; Q exits the tool. Selected pane is identified by border and label, not color only.
 - **Focused feed:** Full main content area, camera name, timestamp/freshness, error badge, Return/Back hint. Do not silently start audio, PTZ or recording.
