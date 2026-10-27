@@ -122,7 +122,7 @@ pub fn preflight(graph: &OrgGraph, query: &ProposedExchange<'_>) -> Preflight {
 mod tests {
     use super::*;
     use crate::organization::{
-        Appointment, DeviceRecord, Organization, Operator, Unit, UnitKind, VaultSite,
+        Appointment, DeviceRecord, Operator, Organization, Unit, UnitKind, VaultSite,
     };
 
     fn test_graph() -> OrgGraph {
@@ -259,11 +259,20 @@ mod tests {
     #[test]
     fn candidate_is_not_a_permission_and_requires_both_scoped_grants() {
         let mut graph = test_graph();
-        assert_eq!(preflight(&graph, &query()), Preflight::CandidateForVerification);
+        assert_eq!(
+            preflight(&graph, &query()),
+            Preflight::CandidateForVerification
+        );
         graph.grants.pop();
-        assert_eq!(preflight(&graph, &query()), Preflight::DeviceGrantUnavailable);
+        assert_eq!(
+            preflight(&graph, &query()),
+            Preflight::DeviceGrantUnavailable
+        );
         graph.grants.clear();
-        assert_eq!(preflight(&graph, &query()), Preflight::OperatorGrantUnavailable);
+        assert_eq!(
+            preflight(&graph, &query()),
+            Preflight::OperatorGrantUnavailable
+        );
     }
 
     #[test]
@@ -276,13 +285,22 @@ mod tests {
         assert_eq!(preflight(&graph, &query()), Preflight::OperatorUnavailable);
         let mut graph = test_graph();
         graph.appointments[0].revoked = true;
-        assert_eq!(preflight(&graph, &query()), Preflight::AppointmentUnavailable);
+        assert_eq!(
+            preflight(&graph, &query()),
+            Preflight::AppointmentUnavailable
+        );
         let mut graph = test_graph();
         graph.grants[0].revoked = true;
-        assert_eq!(preflight(&graph, &query()), Preflight::OperatorGrantUnavailable);
+        assert_eq!(
+            preflight(&graph, &query()),
+            Preflight::OperatorGrantUnavailable
+        );
         let mut graph = test_graph();
         graph.grants[1].revoked = true;
-        assert_eq!(preflight(&graph, &query()), Preflight::DeviceGrantUnavailable);
+        assert_eq!(
+            preflight(&graph, &query()),
+            Preflight::DeviceGrantUnavailable
+        );
     }
 
     #[test]
