@@ -220,14 +220,16 @@ impl<'s, S: ProtectedSecrets> DurableOrganization<'s, S> {
         if read_anchor(store, &name)?.as_ref() != Some(&expected_anchor(directory, &state)?) {
             return Err(StateError::AnchorMismatch);
         }
-        Ok(Self {
+        let handle = Self {
             root: directory.to_owned(),
             _lock: lock,
             state,
             store,
             anchor_name: name,
             poisoned: false,
-        })
+        };
+        handle.check_anchor()?;
+        Ok(handle)
     }
 
     fn open_lock(directory: &Path) -> Result<(File, Option<OrganizationState>), StateError> {
@@ -271,7 +273,9 @@ impl<'s, S: ProtectedSecrets> DurableOrganization<'s, S> {
         }
         let actual =
             read_anchor(self.store, &self.anchor_name)?.ok_or(StateError::UntrustedAnchor)?;
-        if actual != expected_anchor(&self.root, &self.state)? {
+        if actual != expected_anchor(&self.root, &self.state)?
+            || !disk_matches_state(&self.root, &self.state)?
+        {
             return Err(StateError::AnchorMismatch);
         }
         Ok(())
@@ -287,6 +291,10 @@ impl<'s, S: ProtectedSecrets> DurableOrganization<'s, S> {
         persist(&self.root, &next)?;
         self.state = next;
         self.poisoned = false;
+        if let Err(error) = self.check_anchor() {
+            self.poisoned = true;
+            return Err(error);
+        }
         Ok(())
     }
 
@@ -437,6 +445,23 @@ pub fn verify_with_durable_evidence<S: ProtectedSecrets>(
     };
     state.record_nonce(*nonce)?;
     Ok(verified)
+}
+
+/// Compare the live disk record against the locked, keyring-anchored state
+/// before producing evidence or changing the ledger. Checking only on restart
+/// would miss a file replaced while this process remains active.
+fn disk_matches_state(directory: &Path, state: &OrganizationState) -> Result<bool, StateError> {
+    let path = directory.join("org-state.json");
+    reject_symlink(&path)?;
+    let expected = serde_json::to_vec(state).map_err(|_| StateError::Invalid)?;
+    if expected.len() as u64 > MAX_FILE_BYTES {
+        return Err(StateError::Capacity);
+    }
+    let mut actual = Vec::new();
+    File::open(path)?
+        .take(MAX_FILE_BYTES + 1)
+        .read_to_end(&mut actual)?;
+    Ok(actual == expected)
 }
 
 fn reject_symlink(path: &Path) -> Result<(), StateError> {
@@ -605,6 +630,47 @@ mod tests {
         assert!(matches!(
             DurableOrganization::open(dir.path(), "test-org", &store),
             Err(StateError::AnchorMismatch)
+        ));
+    }
+
+    #[test]
+    fn active_process_rejects_file_replacement_before_evidence() {
+        let dir = tempfile::tempdir().unwrap();
+        let store = MemorySecrets::default();
+        let root = key();
+        let mut org = DurableOrganization::provision(
+            dir.path(),
+            "test-org",
+            root.public_key().as_ref(),
+            &Approve,
+            &store,
+        )
+        .unwrap();
+        let baseline = fs::read(dir.path().join("org-state.json")).unwrap();
+        let mut tampered: OrganizationState = serde_json::from_slice(&baseline).unwrap();
+        tampered.revocation_generation = 55;
+        fs::write(
+            dir.path().join("org-state.json"),
+            serde_json::to_vec(&tampered).unwrap(),
+        )
+        .unwrap();
+        assert!(matches!(
+            org.verified_root_public_key(),
+            Err(StateError::AnchorMismatch)
+        ));
+        assert!(matches!(
+            org.record_nonce([61; 32]),
+            Err(StateError::AnchorMismatch)
+        ));
+        assert!(matches!(
+            org.fresh_snapshot(20),
+            Err(StateError::AnchorMismatch)
+        ));
+        fs::write(dir.path().join("org-state.json"), &baseline).unwrap();
+        org.record_nonce([61; 32]).unwrap();
+        assert!(matches!(
+            org.record_nonce([61; 32]),
+            Err(StateError::Replay)
         ));
     }
 
