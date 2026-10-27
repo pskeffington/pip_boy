@@ -19,6 +19,18 @@
     const result={width:innerWidth, height:innerHeight, documentFits:documentFits()};
     try {
       const roles=$("#role-list"),modules=$("#module-grid");
+      result.commandStartup = shown($('[data-stage="command"]'));
+      if (result.commandStartup) {
+        result.commandHeading = $("#command-heading")?.textContent;
+        result.commandFits = inside($('[data-stage="command"]'),$("#workspace-stage"));
+        $('[data-stage-target="modules"]').click();
+      }
+      $('[data-stage-target="command"]').click();
+      result.commandAccessible = shown($('[data-stage="command"]')) &&
+        inside($('[data-stage="command"]'),$("#workspace-stage"));
+      result.commandNavVisible = !!$("#command-open-modules") &&
+        shown($("#command-open-modules"));
+      $('[data-stage-target="modules"]').click();
       result.initial={
         deckFits:shown($('[data-stage="modules"]')) &&
           inside($('[data-stage="modules"]'),$("#workspace-stage")),
