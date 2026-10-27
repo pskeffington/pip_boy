@@ -26,6 +26,7 @@ pub mod network_health;
 pub mod network_probe;
 pub mod network_suite;
 pub mod notes;
+pub mod offline_queue;
 pub mod observation;
 pub mod organization;
 pub mod organization_authority;
