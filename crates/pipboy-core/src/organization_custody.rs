@@ -36,12 +36,20 @@ impl std::error::Error for CustodyError {}
 /// Implementations must protect confidentiality, integrity, and persistence.
 /// Production uses the platform keychain; tests use an isolated memory fake.
 /// No caller may substitute a plaintext production implementation.
-pub trait ProtectedSecrets {
+// Public implementations are deliberately sealed: arbitrary downstream code
+// cannot supply a plaintext replacement for production trust-root storage.
+mod sealed {
+    pub trait Sealed {}
+}
+
+pub trait ProtectedSecrets: sealed::Sealed {
     fn read(&self, name: &str) -> Result<Option<String>, CustodyError>;
     fn write(&self, name: &str, value: &str) -> Result<(), CustodyError>;
 }
 
 pub struct OsKeyring;
+
+impl sealed::Sealed for OsKeyring {}
 
 impl ProtectedSecrets for OsKeyring {
     fn read(&self, name: &str) -> Result<Option<String>, CustodyError> {
@@ -244,6 +252,8 @@ pub(crate) mod tests {
 
     #[derive(Default)]
     pub struct MemorySecrets(pub Mutex<HashMap<String, String>>);
+
+    impl super::sealed::Sealed for MemorySecrets {}
 
     impl ProtectedSecrets for MemorySecrets {
         fn read(&self, name: &str) -> Result<Option<String>, CustodyError> {
