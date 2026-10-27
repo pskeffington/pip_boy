@@ -6,7 +6,7 @@ Open **Settings → Location / Map** on any role. Enable GPS, choose a five-digi
 
 Accepted center, county and bounded geography survive tab changes in page memory, including areas without an imported layer. Returning to Map does not repeat ZIP/manual lookup. The local county cache remains available across restarts. GPS permission is explicit: after enabling it, a fresh watch resumes only on the visible Map/location settings screen and stops when leaving; live fixes are not retained or written to disk. Submitting manual coordinates or accepting a ZIP replaces GPS mode. Existing provider consent, cache-only fallback and site-coordinate privacy rules remain in force.
 
-Desktop uses the same component under **Settings → Location / Map**. No second location catalog or network API is introduced.
+Desktop Map fills at least 95% of the workspace zone, hiding station/status blocks, inspector, duplicate headings, local tabs and padding. A compact navigation selector above the workspace preserves access to Settings, other pages, Sites, Duties and Radio. Production Chromium acceptance measures actual canvas/workspace area at 1280×800, 1920×1080 and 800×600. Desktop uses the same component under **Settings → Location / Map**. No second location catalog or network API is introduced.
 
 ## Single-row header
 

@@ -53,9 +53,9 @@ function findChrome() {
   }
   throw new Error("Chromium required; set CHROME_BIN");
 }
-function fixture() {
-  return fs.readFileSync(htmlFile,"utf8")
-    .replace("</body>",'<script defer src="/probe.js"></script></body>');
+function fixture(desktop=false) {
+  return fs.readFileSync(desktop ? path.join(assets,"dashboard.html") : htmlFile,"utf8")
+    .replace("</body>",'<script defer src="'+(desktop?'/desktop-probe.js':'/probe.js')+'"></script></body>');
 }
 function host(width,height,scenario) {
   const script=[
@@ -122,9 +122,11 @@ async function main() {
     if(req.method!=="GET")return send(405,"Denied","text/plain");
     if(url.pathname==="/host")return send(200,host(Number(url.searchParams.get("w")),
       Number(url.searchParams.get("h")),url.searchParams.get("scenario")),"text/html");
-    if(url.pathname==="/fixture")return send(200,fixture(),"text/html");
+    if(url.pathname==="/fixture")return send(200,fixture(url.searchParams.get("scenario")==="desktop-map"),"text/html");
+    if(url.pathname==="/desktop-probe.js")return send(200,fs.readFileSync(path.join(__dirname,"fixtures/desktop-map-probe.js"),"utf8"),"text/javascript");
     if(url.pathname==="/probe.js")return send(200,fs.readFileSync(probeFile,"utf8"),"text/javascript");
     if(url.pathname==="/api/state")return send(200,JSON.stringify(state(
+      (req.headers.referer||"").includes("scenario=desktop-map")?"scout":
       (req.headers.referer||"").includes("scenario=custom")?"custom":"security")));
     if(url.pathname==="/api/tasks")return send(200,JSON.stringify({board:{tasks:[]},manager:true}));
     if(url.pathname==="/api/radio")return send(200,JSON.stringify({source:"none",status:"stopped",
@@ -153,6 +155,15 @@ async function main() {
       assert.ok(r.calls.every(x=>x.method==="GET" && x.url.startsWith("/api/")),
         "Navigation must only read local state");
       console.log(`PASS micro production viewport ${w}x${h} ${scenario}`);
+    }
+    for(const [w,h] of [[1280,800],[1920,1080],[800,600]]){
+      const r=await chromeRun(bin,server.address().port,w,h,"desktop-map");
+      assert.ok(!r.error,r.error);
+      assert.ok(r.coverage>=0.95,`Desktop map coverage ${r.coverage}: ${JSON.stringify(r)}`);
+      assert.equal(r.mapButtons,0,"Desktop Map must have no buttons");
+      assert.equal(r.navigation,true,"Navigation must remain outside the map zone");
+      assert.equal(r.settings,true,"Settings must remain reachable from map navigation");
+      console.log(`PASS desktop map ${w}x${h}: ${(r.coverage*100).toFixed(1)}% coverage`);
     }
   } finally { await new Promise(resolve=>server.close(resolve)); }
 }
