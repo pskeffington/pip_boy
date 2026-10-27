@@ -137,6 +137,20 @@ The sole positive result is `CandidateForVerification`, **not `Allow`**. The eva
 
 Synthetic Rust tests check two organizations and three Vaults, valid/expired/revoked appointments, disabled users, revoked devices, absent/revoked operator and device grants, wrong dataset/action, mismatched Vaults and corrupted graphs. No existing dashboard, peer, task or radio behavior changes.
 
+## ORG-3 credential proof verification (offline only)
+
+[`pipboy-core::organization_identity`](../crates/pipboy-core/src/organization_identity.rs) now verifies **Ed25519 organization-root-signed operator and device credentials**, then requires each separate holder to sign a **domain-separated, nonce- and channel-bound proof** for the proposed RB exchange. The proof transcript includes organization/Vault/operator/device, action/dataset, principal type, key serial/epoch and session binding. A fixed binary transcript avoids ambiguous JSON serialization or field-order signing. This uses the preexisting locked `ring` library; no new cryptographic primitives are invented.
+
+A positive `IdentityEvidence` requires:
+- The original ORG-2 structural preflight evaluated at externally supplied *trusted* time, with **both** operator/device draft grants and a same-Vault appointment.
+- A caller-provisioned, out-of-band verified public organizational root; a signature-valid credential bound to the exact organization, Vault, principal ID, Ed25519 key, serial and validity period.
+- Distinct operator/device serials, a claimed non-revoked status against an externally verified revocation snapshot, and separate private-key possession proofs over the same nonce/channel-bound session request.
+- Rejection of altered credentials, wrong roots, changed request scopes, expired credentials, revoked serials, bad signature lengths and mismatched challenges.
+
+**Unfinished critical enforcement:** The module cannot authenticate or prove freshness of its caller-supplied root, the clock, a revocation snapshot, or the channel binding. It neither generates/holds private keys nor tracks nonces, secures a session or verifies grant/appointment signers. An attacker able to substitute those inputs can manufacture positive evidence. These proofs are **NOT production authorization** and are **NOT connected** to the HTTP task APIs or SSH bridge. A trusted enrollment service, OS-backed key custody, replay journal, signed grant authority, freshness, rotation, attested binding and independent security/hardware review remain required before any actual RB sync can be approved.
+
+Synthetic `organization_identity` unit tests use fixed **test-only** key seeds and include independent signed credentials, wrong authority, tampering, wrong session binding/nonces, revocation, invalid organization/site and ungranted actions. The test-only seeds are not intended as live keys.
+
 ### Upcoming implementation gates
 
 - **ORG-0 (this pass):** common, stable diagram; machine-readable role/preset mapping; documented non-role positions; CI drift detection.
