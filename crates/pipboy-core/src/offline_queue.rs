@@ -5,7 +5,7 @@ use fs2::FileExt;
 use serde::{Deserialize, Serialize};
 use std::fs::{self, File, OpenOptions};
 use std::io::{self, Read, Write};
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 const LIMIT: u64 = 1_048_576;
 const MAX_ITEMS: usize = 1024;
 const MAX_BODY: usize = 2048;
