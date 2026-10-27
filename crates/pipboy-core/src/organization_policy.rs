@@ -34,7 +34,11 @@ pub struct ProposedExchange<'a> {
     pub time_unverified: u64,
 }
 
-fn active_appointment(appointment: &Appointment, query: &ProposedExchange<'_>, units: &OrgGraph) -> bool {
+fn active_appointment(
+    appointment: &Appointment,
+    query: &ProposedExchange<'_>,
+    units: &OrgGraph,
+) -> bool {
     !appointment.revoked
         && appointment.operator_id == query.operator_id
         && appointment.not_before <= query.time_unverified
@@ -95,13 +99,13 @@ pub fn preflight(graph: &OrgGraph, query: &ProposedExchange<'_>) -> Preflight {
     }
     if !graph.grants.iter().any(|grant| {
         active_grant(grant, query)
-            && matches!(&grant.subject, GrantSubject::Operator(id) if id == query.operator_id)
+            && matches!(&grant.subject, GrantSubject::Operator(id) if id.as_str() == query.operator_id)
     }) {
         return Preflight::OperatorGrantUnavailable;
     }
     if !graph.grants.iter().any(|grant| {
         active_grant(grant, query)
-            && matches!(&grant.subject, GrantSubject::Device(id) if id == query.device_id)
+            && matches!(&grant.subject, GrantSubject::Device(id) if id.as_str() == query.device_id)
     }) {
         return Preflight::DeviceGrantUnavailable;
     }
