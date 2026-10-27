@@ -37,6 +37,10 @@ Run `node tools/test_cameras_ui.cjs` for UI regression and `python3 tools/smoke_
 
 ## Northeast metadata ingestion pass (review-only)
 
+The [Maryland geolocated seed set](../catalog/maryland_geolocated_camera_seeds.json) adds **21 point-coordinate records** extracted from the official State of Maryland open-data camera JSON. These are a **separate evidence dataset**, with potential overlap against the 53 name-only/site candidates, not 21 additional verified live streams. The upstream publisher URLs resolve to HTML video-player pages and are not accepted as direct JPEG/HLS media without separate review. Maryland metadata must retain State of Maryland/CHART attribution, and public data access does not establish unlimited video redistribution rights.
+
+
+
 Three additional official geospatial sources are indexed alongside VDOT, NYC DOT's official named-camera list, and other public state camera lists:
 
 | Provider | Published camera metadata | Video integration |
@@ -58,7 +62,7 @@ Or explicitly fetch **one fixed official public metadata endpoint** (no discover
 python3 tools/build_northeast_camera_index.py --source ddot --fetch --output /tmp/ddot-camera-review.json
 ```
 
-Supported source keys: `md-imap`, `ddot`, `deldot`, `vdot`. The import caps input at 6 MiB and 1,000 features, validates state-specific camera coordinates and writes **review-only** JSON with `image_url:null`, `live_verified:false`, no retained credentials or video. Output cannot activate a camera automatically. Official metadata/terms and media access must be reviewed before promoting each device to the runtime catalog. `python3 tools/test_build_northeast_camera_index.py` exercises the normalizers offline.
+Supported source keys: `md-socrata`, `md-imap`, `ddot`, `deldot`, `vdot`. The `md-socrata` key imports official camera metadata from `opendata.maryland.gov/resource/4z3c-43ce.json`; it never activates the player URL. The import caps input at 6 MiB and 1,000 features, validates state-specific camera coordinates and writes **review-only** JSON with `image_url:null`, `live_verified:false`, no retained credentials or video. Output cannot activate a camera automatically. Official metadata/terms and media access must be reviewed before promoting each device to the runtime catalog. `python3 tools/test_build_northeast_camera_index.py` exercises the normalizers offline.
 
 ## User task and screen state
 
