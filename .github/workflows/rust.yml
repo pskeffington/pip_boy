@@ -33,6 +33,8 @@ jobs:
           python3 tools/run_smokes.py --check
           python3 tools/test_run_smokes.py
           python3 tools/test_probe_public_cameras.py
+          python3 tools/test_build_northeast_camera_index.py
+          python3 -m py_compile tools/build_northeast_camera_index.py
           python3 -m py_compile tools/probe_public_cameras.py
 
   rust:
