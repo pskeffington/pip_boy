@@ -59,12 +59,12 @@ const inside=(node,box)=>{
       const choices=[...ui.content.querySelectorAll(".rb-camera-button")];
       if(choices.length !== 4 || !choices.every(button=>inside(button,box)))
         throw Error("Public camera city selectors clipped");
-      if(ui.content.querySelector("iframe"))throw Error("Compact grid must not create third-party players");
+      if(ui.content.querySelector(".rb-camera-player"))throw Error("Compact grid must not open direct media");
       choices[0].click(); await settle();
       const frame=ui.content.querySelector(".rb-camera-player");
       if(!frame || !inside(frame,box))throw Error("Focused public player clipped");
       back();
-      if(ui.content.querySelector("iframe"))throw Error("Back must remove the public player");
+      if(ui.content.querySelector(".rb-camera-player"))throw Error("Back must remove direct media");
     }
     if(hasTool("byte-lab")) {
       setTab("role"); openTool("byte-lab"); await settle();

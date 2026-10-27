@@ -53,6 +53,7 @@ const MESSENGER_JS: &str = include_str!("../assets/messenger.js");
 const MESSENGER_CSS: &str = include_str!("../assets/messenger.css");
 const RECLAMATION_JS: &str = include_str!("../assets/reclamation.js");
 const RECLAMATION_CSS: &str = include_str!("../assets/reclamation.css");
+const HLS_JS: &str = include_str!("../assets/vendor/hls-light-1.6.13.min.js");
 const CAMERAS_JS: &str = include_str!("../assets/cameras.js");
 const CAMERAS_CSS: &str = include_str!("../assets/cameras.css");
 const RADIO_UI_JS: &str = include_str!("../assets/radio-ui.js");
@@ -123,7 +124,7 @@ impl Response {
         let head = format!(
             "HTTP/1.1 {} {}\r\nContent-Type: {}\r\nContent-Length: {}\r\n\
              Cache-Control: no-store, max-age=0\r\n\
-             Content-Security-Policy: default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self' https://overpass-api.de https://tigerweb.geo.census.gov; frame-src https://www.youtube-nocookie.com; frame-ancestors 'none'; base-uri 'none'; form-action 'none'\r\n\
+             Content-Security-Policy: default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data: https://fogcam.org; media-src 'self' blob:; connect-src 'self' https://overpass-api.de https://tigerweb.geo.census.gov; frame-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'\r\n\
              X-Content-Type-Options: nosniff\r\n\
              X-Frame-Options: DENY\r\n\
              Referrer-Policy: no-referrer\r\n\
@@ -304,7 +305,7 @@ fn state(store: &WorkbenchStore) -> Result<Response, Response> {
             "net_operations": network_suite::OPERATIONS,
             "engine": {
                 "rustgis": "not_integrated",
-                "camera_wall": "public_fallback_embeds",
+                "camera_wall": "direct_public_media",
                 "private_cameras": "not_configured",
                 "tak": "not_integrated",
                 "game_link": "explicit_cli_only"
@@ -1008,6 +1009,21 @@ fn dispatch(req: &Request, store: &WorkbenchStore, port: u16) -> Response {
         ("GET", "/assets/radio-ui.css") => {
             Response::new(200, "text/css; charset=utf-8", RADIO_UI_CSS.as_bytes())
         }
+        ("GET", "/assets/vendor/hls-light-1.6.13.min.js") => {
+            Response::new(200, "text/javascript; charset=utf-8", HLS_JS.as_bytes())
+        }
+        ("GET", path) if path.starts_with("/api/cameras/") => {
+            let origin = format!("http://{expected_host}");
+            if req.header("sec-fetch-site") != Some("same-origin")
+                && req.header("origin") != Some(origin.as_str())
+            {
+                return Response::error(403, "Camera media requires same-origin navigation");
+            }
+            match crate::camera_media::fetch(path) {
+                Ok((mime, bytes)) => Response::new(200, mime, bytes),
+                Err(_) => Response::error(502, "Direct camera feed unavailable"),
+            }
+        }
         ("GET", "/assets/cameras.js") => {
             Response::new(200, "text/javascript; charset=utf-8", CAMERAS_JS.as_bytes())
         }
@@ -1456,6 +1472,28 @@ mod tests {
     }
 
     #[test]
+    fn camera_media_requires_same_origin_and_rejects_unknown_paths() {
+        let temp = tempfile::tempdir().unwrap();
+        let store = WorkbenchStore::new(temp.path().join("fresh"));
+        let mut req = request("GET", "/api/cameras/boston/playlist.m3u8", Value::Null);
+        assert_eq!(dispatch(&req, &store, 8765).status, 403);
+        req.headers
+            .insert("sec-fetch-site".into(), "cross-site".into());
+        assert_eq!(dispatch(&req, &store, 8765).status, 403);
+        req.headers
+            .insert("sec-fetch-site".into(), "same-origin".into());
+        for path in [
+            "/api/cameras/unknown",
+            "/api/cameras/boston/segment/../ditp1.ts",
+            "/api/cameras/boston/segment/ditp1.ts?url=other",
+        ] {
+            req.path = path.into();
+            assert_eq!(dispatch(&req, &store, 8765).status, 502);
+        }
+        assert!(!temp.path().join("fresh").exists());
+    }
+
+    #[test]
     fn all_profiles_are_loaded_from_rust_templates_and_custom_is_last() {
         let temp = tempfile::tempdir().unwrap();
         let store = WorkbenchStore::new(temp.path().join("fresh"));
@@ -1472,6 +1510,7 @@ mod tests {
         assert!(!temp.path().join("fresh").exists());
         for endpoint in [
             "/",
+            "/assets/vendor/hls-light-1.6.13.min.js",
             "/assets/cameras.js",
             "/assets/cameras.css",
             "/assets/tasks.css",

@@ -13,3 +13,5 @@
 .rb-camera-host{height:100%;min-height:0}
 .micro-content:has(.rb-camera-host),.micro-content:has(.rb-camera-host)>.micro-panel{height:100%;min-height:0}
 .camera-wall.rb-camera-view{padding:5px}
+.rb-camera-player{object-fit:contain;background:#000;max-width:100%}
+.rb-camera-state{font-size:9px;line-height:1.2;flex:none;overflow-wrap:anywhere}

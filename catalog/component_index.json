@@ -252,12 +252,16 @@
     },
     {
       "id": "public-camera-fallback",
-      "boundary": "Rust-owned DC/NYC/Boston/SF publisher catalog and shared browser player. No discovery, private camera credentials, native RTSP decoder or recording.",
+      "boundary": "Rust-owned public catalog, fixed-source bounded MWRA HLS relay and shared direct HLS/JPEG player. DC/NYC unavailable. No hosted frames, discovery, credentials or recording.",
       "hardware_gate": "field_pending",
       "code": [
         "crates/pipboy-core/src/public_cameras.rs",
         "crates/pipboy/assets/cameras.js",
-        "crates/pipboy/assets/cameras.css"
+        "crates/pipboy/assets/cameras.css",
+        "crates/pipboy/src/camera_media.rs",
+        "crates/pipboy/assets/vendor/hls-light-1.6.13.min.js",
+        "crates/pipboy/assets/vendor/HLS-LICENSE.txt",
+        "crates/pipboy/assets/vendor/README.md"
       ],
       "docs": [
         "docs/SECURITY_CAMERA_WALL.md"
