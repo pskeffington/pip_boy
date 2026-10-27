@@ -39,6 +39,7 @@ function state(scenario) {
       profile:activeProfile,
       slots:custom?[]:toolIds.map((tool,index)=>({id:"slot-"+index,tool}))
     },
+    camera_feeds:["DC","NYC","BOSTON","SF"].map((city,index)=>({city,name:city+" fixture",publisher:"Invented publisher",video_id:"testcam000"+index,source_url:"https://www.youtube.com/watch?v=testcam000"+index})),
     net_operations:[]
   };
 }
@@ -55,6 +56,7 @@ function findChrome() {
 }
 function fixture(desktop=false) {
   return fs.readFileSync(desktop ? path.join(assets,"dashboard.html") : htmlFile,"utf8")
+    .replace("<head>",'<head><meta http-equiv="Content-Security-Policy" content="frame-src \'none\'">')
     .replace("</body>",'<script defer src="'+(desktop?'/desktop-probe.js':'/probe.js')+'"></script></body>');
 }
 function host(width,height,scenario) {

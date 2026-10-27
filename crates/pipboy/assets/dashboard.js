@@ -410,7 +410,7 @@ function renderExtension() {
     }
     const wall = el("div", "camera-wall");
     ui.extension.append(wall);
-    if (activeStage === "viewport" && selectedAvailable() && window.RustBoyCameras) {
+    if (activeStage === "viewport" && activePane === "workspace" && selectedAvailable() && window.RustBoyCameras) {
       cameraWallUI = window.RustBoyCameras.mount(wall, {
         feeds: snapshot.camera_feeds, selected: selectedCamera,
         onSelect: value => { selectedCamera = value; }

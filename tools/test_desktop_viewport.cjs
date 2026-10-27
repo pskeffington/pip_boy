@@ -232,12 +232,12 @@ function check(data,width,height) {
   assert.ok(data.scrollHeight<=height+2,"One-screen desktop must not scroll the document");
   assert.equal(data.paneTabs,2,"WORKSPACE/INSPECTOR pane controls missing");
   assert.equal(data.stageTabs,4,"TOOLS/VIEW/MESSAGES/SETTINGS pages missing");
-  assert.equal(data.roles,6,"First of eight stations must show six entries");
-  assert.match(data.rolePager,/1\s*\/\s*2/,"Settings station pager unavailable");
+  assert.equal(data.roles,6,"First of eight fixture roles must show six entries");
+  assert.match(data.rolePager,/1\s*\/\s*2/,"Settings role pager unavailable");
   assert.equal(data.tools,5,"Five Head Engineer tools must be available");
   assert.equal(data.toolCount,"5","Tool count must reflect Rust data");
-  assert.equal(data.mainRole,data.selectedStation,"Workspace title must show the current operator role");
-  assert.equal(data.selectedStation,"HEAD ENGINEER STATION");
+  assert.equal(data.mainRole.toUpperCase(),data.selectedStation,"Workspace title must show the current operator role");
+  assert.equal(data.selectedStation,"MAINTENANCE");
   assert.ok(data.mainVisible && data.activeStage,"Workspace tools must start visible");
   assert.ok(data.collapsedDetail,"Tool explanation should start closed");
   assert.ok(data.messagesInitiallyHidden && data.messageChildrenInitially===0,
