@@ -96,6 +96,7 @@
     const feeds = rankFeeds(options.feeds, location, options.region);
     const candidates = feeds.filter(feed => feed.availableSource);
     const statuses = new Map(); // per-camera, in memory only; never persisted
+    let wantsFailover = false;
     let focused = typeof options.selected === "string" ? options.selected :
       Number.isInteger(options.selected) && options.selected > 0 ?
         feeds[options.selected - 1]?.id || null : null;
@@ -111,9 +112,25 @@
     const choose = id => {
       if (!connected) return;
       focused = id;
+      wantsFailover = false;
       options.onSelect?.(id);
       render();
     };
+    function failover(failedId) {
+      if (focused === failedId) {
+        focused = null;
+        wantsFailover = true;
+        options.onSelect?.(null);
+      }
+      if (wantsFailover) {
+        const replacement = primary();
+        if (replacement) {
+          focused = replacement.id;
+          wantsFailover = false;
+          options.onSelect?.(focused);
+        }
+      }
+    }
     function showState(feed) {
       if (!feed.availableSource) return "PROVIDER ACCESS REQUIRED · NO DIRECT FEED";
       if (staleAgency(feed, Date.now())) return feed.active === false ?
@@ -222,12 +239,14 @@
         if (!connected || statuses.get(feed.id) !== state) return;
         state.status = ok ? (liveEvidence(feed, Date.now()) ? "live" : "reachable") : "offline";
         if (!ok) state.img.removeAttribute("src");
+        failover(ok ? null : feed.id);
         if (ok) state.expiry = setTimeout(() => {
           if (!connected || statuses.get(feed.id) !== state) return;
           state.status = "expired";
           state.img.removeAttribute("src");
+          failover(feed.id);
+          // Expiry never launches a background request; recheck is explicit.
           render();
-          ensureProbes();
         }, RECENT_MS);
         render();
         ensureProbes();
