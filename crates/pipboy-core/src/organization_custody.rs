@@ -27,7 +27,10 @@ pub enum CustodyError {
 
 impl fmt::Display for CustodyError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "organizational credential custody unavailable or denied: {self:?}")
+        write!(
+            f,
+            "organizational credential custody unavailable or denied: {self:?}"
+        )
     }
 }
 
@@ -55,7 +58,8 @@ impl ProtectedSecrets for OsKeyring {
     fn read(&self, name: &str) -> Result<Option<String>, CustodyError> {
         #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
         {
-            let entry = keyring::Entry::new(SERVICE, name).map_err(|_| CustodyError::Unavailable)?;
+            let entry =
+                keyring::Entry::new(SERVICE, name).map_err(|_| CustodyError::Unavailable)?;
             match entry.get_password() {
                 Ok(value) => Ok(Some(value)),
                 Err(keyring::Error::NoEntry) => Ok(None),
@@ -101,7 +105,9 @@ pub fn valid_org_id(id: &str) -> bool {
         && id.bytes().next().is_some_and(|c| c.is_ascii_lowercase())
         && !id.ends_with('-')
         && !id.contains("--")
-        && id.bytes().all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == b'-')
+        && id
+            .bytes()
+            .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == b'-')
 }
 
 pub fn hex(bytes: &[u8]) -> String {
@@ -182,10 +188,7 @@ pub fn enroll_identity(
 }
 
 fn identity_name(org: &str, kind: &str, principal: &str) -> Result<String, CustodyError> {
-    if !valid_org_id(org)
-        || !valid_org_id(principal)
-        || !matches!(kind, "operator" | "device")
-    {
+    if !valid_org_id(org) || !valid_org_id(principal) || !matches!(kind, "operator" | "device") {
         return Err(CustodyError::InvalidInput);
     }
     Ok(format!("identity:{org}:{kind}:{principal}"))
@@ -220,7 +223,12 @@ pub fn sign_proof(
     };
     if credential.organization_id != query.organization_id
         || credential.vault_id != query.vault_id
-        || credential.principal_id != if kind == "operator" { query.operator_id } else { query.device_id }
+        || credential.principal_id
+            != if kind == "operator" {
+                query.operator_id
+            } else {
+                query.device_id
+            }
         || nonce.iter().all(|b| *b == 0)
         || authenticated_channel_binding.iter().all(|b| *b == 0)
     {
@@ -261,7 +269,10 @@ pub(crate) mod tests {
         }
 
         fn write(&self, name: &str, value: &str) -> Result<(), CustodyError> {
-            self.0.lock().unwrap().insert(name.to_string(), value.to_string());
+            self.0
+                .lock()
+                .unwrap()
+                .insert(name.to_string(), value.to_string());
             Ok(())
         }
     }
