@@ -80,6 +80,8 @@ function activateStage(stage) {
   if (stage === "palette" && snapshot?.active.profile !== "custom") stage = "settings";
   if (!["modules", "viewport", "messages", "settings", "palette"].includes(stage)) return;
   const previous = activeStage;
+  // Radio is a subview, not a sticky override of later VIEWPORT visits.
+  if (stage !== "viewport") radioPaneOpen = false;
   if (stage !== "viewport" && cameraWallUI) { cameraWallUI.destroy(); cameraWallUI = null; }
   if (!["settings", "palette"].includes(stage) && previewId !== snapshot?.active.profile) {
     previewId = snapshot.active.profile;
@@ -107,24 +109,38 @@ function syncRadioSubview() {
   if (!dock || !toggle) return;
   const visible = radioPaneOpen && activeStage === "viewport";
   if (visible && cameraWallUI) { cameraWallUI.destroy(); cameraWallUI = null; }
-  ui.extension.hidden = radioPaneOpen;
-  dock.hidden = !radioPaneOpen;
-  toggle.textContent = radioPaneOpen ? "◀ ACTIVE VIEW" : "RADIO / IP";
-  toggle.setAttribute("aria-pressed", String(radioPaneOpen));
+  ui.extension.hidden = visible;
+  dock.hidden = !visible;
+  toggle.textContent = visible ? "◀ ACTIVE VIEW" : "RADIO / IP";
+  toggle.setAttribute("aria-pressed", String(visible));
+  toggle.setAttribute("aria-label", visible ? "Return to active viewport" : "Open native IP radio");
   if (visible && !desktopRadioUI && window.RustBoyRadio) {
+    dock.replaceChildren();
     desktopRadioUI = window.RustBoyRadio.mount(dock, {compact:true});
-  } else if (!visible && desktopRadioUI) {
-    desktopRadioUI.destroy();
+  } else if (visible && !window.RustBoyRadio) {
+    dock.textContent = "Radio controls unavailable. Reload the desktop to retry.";
+  } else if (!visible) {
+    if (desktopRadioUI) desktopRadioUI.destroy();
     desktopRadioUI = null;
     dock.replaceChildren();
   }
 }
 function toggleRadioSubview() {
-  if (activeStage !== "viewport") return;
-  radioPaneOpen = !radioPaneOpen;
-  if (radioPaneOpen && window.RustBoyMap) window.RustBoyMap.unmount();
-  syncRadioSubview();
-  if (!radioPaneOpen && snapshot) renderExtension();
+  if (radioPaneOpen && activeStage === "viewport") {
+    radioPaneOpen = false;
+    syncRadioSubview();
+    if (snapshot) renderExtension();
+    return;
+  }
+  // This button lives in the global stage navigation: it must work from
+  // MODULES, MESSAGES and SETTINGS as well as from the normal viewport.
+  radioPaneOpen = true;
+  if (window.RustBoyMap) window.RustBoyMap.unmount();
+  // Remove stale map markup too: map-only CSS uses :has() selectors which
+  // otherwise keep the Radio navigation/header hidden after switching.
+  ui.extension.replaceChildren();
+  activatePane("workspace");
+  activateStage("viewport");
 }
 function activatePane(pane) {
   if (pane !== "workspace" && cameraWallUI) { cameraWallUI.destroy(); cameraWallUI = null; }
@@ -714,7 +730,12 @@ async function copyOutput() {
   }
 }
 
-document.querySelectorAll("[data-stage-target]").forEach(button => button.addEventListener("click", () => activateStage(button.dataset.stageTarget)));
+document.querySelectorAll("[data-stage-target]").forEach(button => button.addEventListener("click", () => {
+  // VIEWPORT is a way back to the map/workspace while the radio is open.
+  if (button.dataset.stageTarget === "viewport" && activeStage === "viewport" && radioPaneOpen)
+    toggleRadioSubview();
+  else activateStage(button.dataset.stageTarget);
+}));
 byId("open-palette").addEventListener("click", () => activateStage("palette"));
 byId("palette-back").addEventListener("click", () => activateStage("settings"));
 byId("radio-view-toggle").addEventListener("click", toggleRadioSubview);
@@ -793,11 +814,11 @@ byId("desktop-map-nav")?.addEventListener("change", (event) => {
   const destination = event.target.value;
   event.target.value = "map";
   if (destination === "radio") {
-    radioPaneOpen = true;
-    activateStage("viewport");
+    toggleRadioSubview();
   } else if (["sites", "tasks", "map"].includes(destination)) {
+    radioPaneOpen = false;
     extensionMode = destination;
-    renderExtension();
+    activateStage("viewport");
   } else if (["modules", "messages", "settings"].includes(destination)) {
     activateStage(destination);
   }
