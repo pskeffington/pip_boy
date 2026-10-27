@@ -124,7 +124,7 @@ fn dataset_byte(dataset: Dataset) -> u8 {
 
 /// Fixed-length and length-prefixed binary encoding, independent of JSON
 /// field order. Domain-separated from session proofs and future wire formats.
-fn credential_transcript(claim: &SignedCredential) -> Vec<u8> {
+pub(crate) fn credential_transcript(claim: &SignedCredential) -> Vec<u8> {
     let mut out = CREDENTIAL_DOMAIN.to_vec();
     out.extend_from_slice(&claim.schema_version.to_be_bytes());
     append_str(&mut out, &claim.organization_id);
@@ -139,7 +139,7 @@ fn credential_transcript(claim: &SignedCredential) -> Vec<u8> {
     out
 }
 
-fn proof_transcript(
+pub(crate) fn proof_transcript(
     query: &ProposedExchange<'_>,
     credential: &SignedCredential,
     nonce: &[u8; KEY_BYTES],
