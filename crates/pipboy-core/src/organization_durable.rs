@@ -156,6 +156,7 @@ impl<'s, S: ProtectedSecrets> DurableOrganization<'s, S> {
         if !valid_org_id(organization_id) { return Err(StateError::Invalid); }
         let (lock, _) = Self::open_lock(directory)?;
         let path = directory.join("org-state.json");
+        reject_symlink(&path)?;
         let mut bytes = Vec::new();
         File::open(path)?.take(MAX_FILE_BYTES + 1).read_to_end(&mut bytes)?;
         if bytes.len() as u64 > MAX_FILE_BYTES { return Err(StateError::Capacity); }
@@ -193,6 +194,7 @@ impl<'s, S: ProtectedSecrets> DurableOrganization<'s, S> {
             let meta = fs::symlink_metadata(directory)?;
             if meta.file_type().is_symlink() || !meta.is_dir() { return Err(StateError::Invalid); }
             fs::set_permissions(directory, fs::Permissions::from_mode(0o700))?;
+            reject_symlink(&directory.join("org-state.lock"))?;
             let lock = OpenOptions::new().create(true).read(true).write(true).mode(0o600)
                 .open(directory.join("org-state.lock"))?;
             lock.try_lock_exclusive()?;
@@ -200,6 +202,7 @@ impl<'s, S: ProtectedSecrets> DurableOrganization<'s, S> {
         }
         #[cfg(not(unix))]
         {
+            reject_symlink(&directory.join("org-state.lock"))?;
             let lock = OpenOptions::new().create(true).read(true).write(true)
                 .open(directory.join("org-state.lock"))?;
             lock.try_lock_exclusive()?;
@@ -366,6 +369,15 @@ pub fn verify_with_durable_evidence<S: ProtectedSecrets>(
     Ok(verified)
 }
 
+fn reject_symlink(path: &Path) -> Result<(), StateError> {
+    match fs::symlink_metadata(path) {
+        Ok(metadata) if metadata.file_type().is_symlink() => Err(StateError::Invalid),
+        Ok(_) => Ok(()),
+        Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(()),
+        Err(error) => Err(StateError::Io(error)),
+    }
+}
+
 fn sorted_nonzero(items: &[u64]) -> bool {
     items.iter().all(|v| *v > 0) && items.windows(2).all(|w| w[0] < w[1])
 }
@@ -405,6 +417,7 @@ fn persist(directory: &Path, state: &OrganizationState) -> Result<(), StateError
     }
     temp.write_all(&bytes)?;
     temp.as_file().sync_all()?;
+    reject_symlink(&directory.join("org-state.json"))?;
     temp.persist(directory.join("org-state.json")).map_err(|e| StateError::Io(e.error))?;
     #[cfg(unix)]
     File::open(directory)?.sync_all()?;
