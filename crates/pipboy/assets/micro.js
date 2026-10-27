@@ -489,6 +489,7 @@ function showTool() {
     root.append(host);
     if (window.RustBoyCameras) activeCameraUI = window.RustBoyCameras.mount(host, {
       feeds: snapshot.camera_feeds, compact:true, selected:focusedCamera,
+      location: window.RustBoyMap?.getCameraLocation?.() || null,
       onSelect:value => { focusedCamera=value; }
     });
     else host.textContent = "PUBLIC CAMERA MODULE UNAVAILABLE";
