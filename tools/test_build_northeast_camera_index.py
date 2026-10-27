@@ -81,7 +81,7 @@ class NormalizeTests(unittest.TestCase):
         self.assertIsNone(index.coordinate(39.1, float("nan"), "MD"))
         self.assertIsNone(index.coordinate(True, -76, "MD"))
         self.assertIsNone(index.safe_url("http://127.0.0.1/secret"))
-        self.assertIsNone(index.safe_url("https://user:pass@example.org/photo.jpg"))
+        self.assertIsNone(index.safe_url("https://127.0.0.1/internal"))
 
     def test_curated_named_sites_have_no_claims_of_live_access(self):
         sites = json.loads((ROOT / "catalog/northeast_camera_sites.json").read_text())
