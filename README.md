@@ -96,13 +96,14 @@ From the micro HUD open **RADIO**. Choose one of 10 publisher-referenced station
 cargo run --locked -p pipboy -- radio stations
 cargo run --locked -p pipboy -- radio check skylab --confirm
 cargo run --locked -p pipboy -- radio probe skylab --confirm
+cargo run --locked -p pipboy -- radio validate skylab --confirm
 cargo run --locked -p pipboy -- radio listen skylab --confirm --seconds 30
 ./scripts/launch-micro.command
 node tools/test_radio_ui.cjs
 node tools/test_radio_viewport.cjs  # Requires Chromium; synthetic local fixture
 ```
 
-A successful station probe only establishes that response bytes were received. Stream endpoints and applicable listening terms still need release review; publisher inclusion does not grant commercial redistribution permission. The 480×320 real-Chromium regression verifies synthetic layout and no autoplay, **not** audible sound, real Bluetooth recovery or Raspberry Pi hardware. See [RADIO engineering contract](docs/RADIO_SDR.md) and [native-radio roadmap](docs/RADIO_NATIVE_ROADMAP.md).
+The radio implementation is consumed from the standalone `rust-radio` library at a pinned Git revision, with no GUI dependency or copied playback engine. Host compatibility modules retain the existing Rust import paths, HUD and preference format. `radio validate STATION --confirm` silently verifies decoded PCM; a successful byte `probe` alone only establishes that response bytes were received. Stream endpoints and applicable listening terms still need release review; publisher inclusion does not grant commercial redistribution permission. The 480×320 real-Chromium regression verifies synthetic layout and no autoplay, **not** audible sound, real Bluetooth recovery or Raspberry Pi hardware. See [RADIO engineering contract](docs/RADIO_SDR.md) and [native-radio roadmap](docs/RADIO_NATIVE_ROADMAP.md).
 
 ## Network Engineer\n
 Load **Head Engineer → NET ENGINEER** on desktop or micro. Both views use the same Rust operation catalog and shared tool component. The handheld separates tool selection, inputs, authorization and results; large inventories have pages.

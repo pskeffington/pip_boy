@@ -26,7 +26,6 @@ mod network;
 mod peer;
 mod radio;
 mod radio_http;
-mod radio_net;
 mod radio_output;
 mod radio_playback;
 mod sampling;
@@ -56,7 +55,8 @@ fn help() {
         "  scout geo <waypoint|distance|inspect>",
         "  workbench <list|profiles|use|palette|add|remove|rename|clear|bytes|net>",
         "  radio <capabilities|source|stations [--check-ip]|check STATION_ID --confirm>",
-        "  radio <probe STATION_ID --confirm|listen STATION_ID --confirm [--seconds 1..300]>",
+        "  radio <probe STATION_ID --confirm|validate STATION_ID --confirm>",
+        "  radio listen STATION_ID --confirm [--seconds 1..300]",
         "  radio simulate FREQ_HZ MODE",
         "",
         "NETWORK & COMMUNICATIONS (explicit authorization required)",

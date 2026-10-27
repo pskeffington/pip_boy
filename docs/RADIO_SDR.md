@@ -110,3 +110,13 @@ cargo test --locked -p pipboy-core radio_pcm
 ```
 
 Playback begins only following a user command. Stop invalidates the radio session generation and requests worker cancellation; the HTTP stream has a finite per-read timeout, so stop can wait for an in-flight network read. A native ALSA audio output or equivalent macOS/Windows audio device is essential. Do not report playing until the native PCM sink consumes actual samples. Live station reliability, automatic reconnect, native device volume mixing and SDR hardware acceptance remain open. See [R1–R7 plan](RADIO_NATIVE_ROADMAP.md).
+
+## Standalone module integration
+
+The host now consumes the separately maintained `rust-radio` library at the Git revision pinned in the root workspace dependencies. Core compatibility modules re-export its shared control, directory, playlist, PCM, recovery and receive-only tuner APIs; native adapters re-export its transport, output and playback engine. The standalone egui panel is not linked into the HTML HUD. Host favorites and last station remain in `radio-presets.json` with the existing schema.
+
+`radio validate STATION --confirm` invokes the module's bounded, silent MP3/AAC validator. The HUD's `play` action also accepts an optional initial `volume` from 0 through 100; omitted values retain the previous default of 60. Invalid volume is rejected before audio/network resources or preference writes. An explicit IP Play still opens the only native engine; merely opening the host or enumerating stations never plays audio.
+
+This cutover brings the shared bounded retries, ICY cancellation fix and HTTPS-only SomaFM playlist compatibility into the host. Earlier entries describing these native implementations as pending are historical. Physical SDR reception and demodulation remain hardware acceptance gates; the receive-only tuner contract and marked simulator are shared through the module.
+
+On 2026-10-27 the integrated loopback HUD was executed with temporary preferences and low initial volume. Skylab and Groove Salad both reached native Playing after the PCM callback consumed decoded samples. The test changed volume, rejected duplicate Play, stopped before switching, preserved favorites/last selection, and verified no autoplay on reads or output selection. The two observed Stop responses were approximately 28 ms and 21 ms; these are one-run measurements, not timing guarantees. Physical SDR and Pi remain unverified.

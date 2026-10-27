@@ -356,7 +356,7 @@ pub fn verify_enrollment_evidence(
         bundle.operator_grant.approval_serial,
         bundle.device_grant.approval_serial,
     ];
-    if serials.iter().any(|n| *n == 0)
+    if serials.contains(&0)
         || serials[0] == serials[1]
         || serials[0] == serials[2]
         || serials[1] == serials[2]

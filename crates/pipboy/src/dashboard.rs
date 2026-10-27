@@ -871,6 +871,14 @@ fn radio_command(req: &Request, store: &WorkbenchStore) -> Result<Response, Resp
                 ));
             }
             let station = str_field(&body, "station")?;
+            let initial_volume = match body.get("volume") {
+                Some(value) => value
+                    .as_u64()
+                    .filter(|value| *value <= 100)
+                    .ok_or_else(|| Response::error(422, "Volume must be between 0 and 100"))?
+                    as u8,
+                None => 60,
+            };
             if !curated_stations().iter().any(|s| s.id == station) {
                 return Err(Response::error(422, "Unknown curated radio station"));
             }
@@ -899,7 +907,7 @@ fn radio_command(req: &Request, store: &WorkbenchStore) -> Result<Response, Resp
             *engine = Some(
                 NativeRadioEngine::start_internet(
                     station,
-                    60,
+                    initial_volume,
                     &RADIO_OUTPUT
                         .lock()
                         .map_err(|_| Response::error(500, "Output controller unavailable"))?,
@@ -1362,6 +1370,12 @@ mod tests {
             json!({"action":"play", "station":"unknown", "confirm":true}),
         );
         assert_eq!(dispatch(&invalid, &store, 8765).status, 422);
+        let invalid_play_volume = request(
+            "POST",
+            "/api/radio",
+            json!({"action":"play", "station":"skylab", "confirm":true, "volume":101}),
+        );
+        assert_eq!(dispatch(&invalid_play_volume, &store, 8765).status, 422);
         let absent = request(
             "POST",
             "/api/radio",

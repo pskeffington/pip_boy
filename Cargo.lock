@@ -2316,16 +2316,12 @@ checksum = "a89322df9ebe1c1578d689c92318e070967d1042b512afbe49518723f4e6d5cd"
 name = "pipboy"
 version = "0.1.0"
 dependencies = [
- "cpal",
  "crossterm",
  "pipboy-core",
  "ratatui",
- "reqwest",
- "ringbuf",
+ "rust-radio",
  "serde_json",
- "symphonia",
  "tempfile",
- "tokio",
 ]
 
 [[package]]
@@ -2336,6 +2332,7 @@ dependencies = [
  "fs2",
  "keyring",
  "ring",
+ "rust-radio",
  "serde",
  "serde_json",
  "sysinfo",
@@ -2762,6 +2759,43 @@ checksum = "0d84e8ba78bd384263e5922f084cbe1b081c3b7e69add59c8fb097b879ba968a"
 dependencies = [
  "sha2 0.11.1",
  "walkdir",
+]
+
+[[package]]
+name = "rust-radio"
+version = "0.1.0"
+source = "git+https://github.com/pskeffington/rust_radio?rev=573d841ed7839f2cce9a28a102460d15edd79533#573d841ed7839f2cce9a28a102460d15edd79533"
+dependencies = [
+ "rust-radio-audio",
+ "rust-radio-core",
+ "rust-radio-ip",
+]
+
+[[package]]
+name = "rust-radio-audio"
+version = "0.1.0"
+source = "git+https://github.com/pskeffington/rust_radio?rev=573d841ed7839f2cce9a28a102460d15edd79533#573d841ed7839f2cce9a28a102460d15edd79533"
+dependencies = [
+ "cpal",
+ "ringbuf",
+ "rust-radio-core",
+ "rust-radio-ip",
+ "symphonia",
+]
+
+[[package]]
+name = "rust-radio-core"
+version = "0.1.0"
+source = "git+https://github.com/pskeffington/rust_radio?rev=573d841ed7839f2cce9a28a102460d15edd79533#573d841ed7839f2cce9a28a102460d15edd79533"
+
+[[package]]
+name = "rust-radio-ip"
+version = "0.1.0"
+source = "git+https://github.com/pskeffington/rust_radio?rev=573d841ed7839f2cce9a28a102460d15edd79533#573d841ed7839f2cce9a28a102460d15edd79533"
+dependencies = [
+ "reqwest",
+ "rust-radio-core",
+ "tokio",
 ]
 
 [[package]]

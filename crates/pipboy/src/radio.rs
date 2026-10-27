@@ -34,6 +34,18 @@ pub fn run(args: Vec<String>) -> Result<(), Box<dyn Error>> {
             crate::radio_playback::run_demo(id, Some(seconds.parse()?))?;
             Ok(())
         }
+        [action, id, confirm] if action == "validate" && confirm == "--confirm" => {
+            let report = rust_radio::validation::validate_station(id)?;
+            println!("RADIO / {} / {:?} / {:?}", report.station_id, report.status, report.stage);
+            println!("{}", report.detail);
+            if let (Some(codec), Some(rate), Some(channels)) = (&report.codec, report.sample_rate, report.channels) {
+                println!("DECODED: {codec} / {rate} Hz / {channels} channels / {} frames", report.decoded_frames);
+            }
+            if !report.is_decoded() {
+                return Err("Station did not pass decoded-audio validation".into());
+            }
+            Ok(())
+        }
         [action, id, confirm] if action == "probe" && confirm == "--confirm" => {
             let _ = station_by_id(id).ok_or("unknown curated radio station ID")?;
             let transport = NativeRadioHttp::for_probe()?;
@@ -44,7 +56,7 @@ pub fn run(args: Vec<String>) -> Result<(), Box<dyn Error>> {
                 return Err("stream ended before audio bytes arrived".into());
             }
             println!("RADIO / {} / HTTPS AUDIO BYTES: {}", id, count);
-            println!("STREAM CHECK: bytes received, audio decoding/output not implemented.");
+            println!("BYTE PROBE ONLY: use validate to verify decoded PCM, or listen for native audio.");
             Ok(())
         }
         [action, id, confirm] if action == "check" && confirm == "--confirm" => {
@@ -63,7 +75,7 @@ pub fn run(args: Vec<String>) -> Result<(), Box<dyn Error>> {
                     station.id, station.name, station.genre, station.playlist_url
                 );
             }
-            println!("No external player launches. Native audio worker is the next integration gate.");
+            println!("Standalone rust_radio module; no playback begins until an explicit listen/Play command.");
             Ok(())
         }
         [action, confirm] if action == "stations" && confirm == "--check-ip" => {
@@ -117,7 +129,7 @@ pub fn run(args: Vec<String>) -> Result<(), Box<dyn Error>> {
             println!("SIMULATED ONLY: no antenna, live RF or audio decoder connected.");
             Ok(())
         }
-        _ => Err("usage: pipboy radio <capabilities|source|stations [--check-ip]|check STATION_ID --confirm|probe STATION_ID --confirm|listen STATION_ID --confirm [--seconds 1..300]|simulate FREQ_HZ am|nfm|wfm|usb|lsb|iq>".into()),
+        _ => Err("usage: pipboy radio <capabilities|source|stations [--check-ip]|check STATION_ID --confirm|probe STATION_ID --confirm|validate STATION_ID --confirm|listen STATION_ID --confirm [--seconds 1..300]|simulate FREQ_HZ am|nfm|wfm|usb|lsb|iq>".into()),
     }
 }
 
