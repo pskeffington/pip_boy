@@ -36,8 +36,9 @@ mute/mode settings. No PCM was saved or played by Pip-Boy.
 
 Raw I/Q returned zero pairs in IQ Lite mode. Full IQ startup displayed an
 “Update Required” device firmware notice and could not be verified. Firmware was
-not modified. Raw I/Q, native RF audio playback in the HUD, multiple independent
-listeners and Pi runtime acceptance remain open.
+not modified. Raw I/Q, human listening and Pi runtime acceptance remain open.
+Real-receiver native HUD playback and independent subscribers were subsequently
+verified as recorded below.
 
 Local default and all-feature configurations passed all 331 tests, formatting,
 check, strict Clippy and build; RADIO UI fixtures and repository validators also
@@ -54,7 +55,9 @@ I/O. Settings contains an IP:port field and SET button, plus the normal native
 output picker. Addresses remain in process memory and never enter radio presets.
 The existing IP favorites and last station keep their schema and contents.
 
-Start the receiver in SDRconnect, then press PLAY in Rust-Boy. The shared native
+Use **Refresh Device List** in SDRconnect if the receiver does not start, select
+the nRSP-ST in IQ Lite mode, and press Start. Then press PLAY in Rust-Boy. Refresh
+and shared receiver startup remain SDRconnect operator actions. The shared native
 engine subscribes to primary stereo PCM, converts/resamples on its worker and
 feeds the bounded CPAL queue. Playing requires PCM consumed by the native output
 callback. Local volume and output restart use the same engine as IP radio. Only
@@ -86,9 +89,21 @@ consumption, output restart retained the receiver source, duplicate source start
 were rejected, subscriptions closed, and switching to live Skylab succeeded.
 Observed Stop response was about 50 ms in that run, not a timing guarantee.
 The smoke found and verified a macOS fix: CPAL's CoreAudio stream is explicitly
-paused before prebuffering. Live nRSP-ST native playback could not be accepted
-because SDRconnect remained stopped after UI/API start attempts; firmware was
-not changed. Earlier actual nRSP-ST PCM ingress evidence remains distinct.
+paused before prebuffering. An earlier live attempt remained stopped after
+UI/API start attempts; the operator supplied the missing Refresh then Start
+setup step. Firmware was not changed.
+
+On 2026-10-27, the real nRSP-ST in IQ Lite mode at its existing WFM tuning
+reached Playing in the SDR-enabled Pip-Boy executable through actual native
+callback consumption, using temporary preferences and low volume. The standalone
+module passed five seconds of native playback and a further independent
+three-second session while Pip-Boy remained Playing. Local volume adjustment,
+output restart and duplicate-start rejection passed. Stop returned in 9.44 ms
+in this run, completed worker cleanup and left the shared receiver running.
+A fresh 500 ms subscription received 26,409 stereo frames afterward. These are
+real-receiver checks, separate from the synthetic fixture; no PCM was saved or
+shared tuning, firmware or receiver start/stop commands sent. Human confirmation
+of speaker audibility and RF signal quality remains open.
 
 Final checks passed 331 host tests in both default and all-feature builds,
 strict Clippy, build, UI interaction fixtures and 11 Chromium viewport scenarios.
