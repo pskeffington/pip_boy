@@ -22,7 +22,11 @@ Roles use short operator titles: **Overseer, Maintenance, Security, Doctor, Scie
 
 **Optional mini-server:** [Dedicated server workspace](server/README.md) · [Phased deployment roadmap](server/ROADMAP.md) · [Field architecture](server/ARCHITECTURE.md). The mini-server remains a no-listener scaffold; there is no active relay or live mesh.
 
-**Server literature review:** [NIST / hospital / tunnel / DTN matrix](server/LITERATURE_MATRIX.md) (proposed implementation gates; not a compliance certification).\n\n**RB-to-RB fleet synchronization:** [Phased organizational/proximity/IP/keyed-pairing roadmap](docs/RB_SYNC_ROADMAP.md). Existing pinned OpenSSH task and Messenger links are manual; automatic discovery, organizational enrollment and background synchronization are **not implemented**. Regulated clinical data is outside the present release boundary.
+**Server build priorities:** [Mining-grade COM implementation backlog](server/BUILD_PRIORITIES.md).
+
+**Server literature review:** [NIST / hospital / tunnel / DTN matrix](server/LITERATURE_MATRIX.md) (proposed implementation gates; not a compliance certification).
+
+**RB-to-RB fleet synchronization:** [Phased organizational/proximity/IP/keyed-pairing roadmap](docs/RB_SYNC_ROADMAP.md). Existing pinned OpenSSH task and Messenger links are manual; automatic discovery, organizational enrollment and background synchronization are **not implemented**. Regulated clinical data is outside the present release boundary.
 
 ## Quick start
 
