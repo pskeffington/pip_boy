@@ -27,9 +27,9 @@ const ui = {
   roleNext: $("role-next"),
   rolePaging: $("role-page")
 };
-const pages = ["stat", "role", "data", "map", "radio"];
+const pages = ["stat", "stream", "com", "data", "radio"];
 const pageTitles = {
-  stat: "STATUS", role: "ROLE", map: "MAP",
+  stat: "STATUS", stream: "STREAM", com: "COM", role: "ROLE", map: "MAP",
   data: "DATA", radio: "RADIO", conf: "SETTINGS"
 };
 const glyphs = {
@@ -146,11 +146,13 @@ function renderHeading() {
   ui.code.textContent = index < 0 ? "⚙" : String(index + 1).padStart(2, "0");
   const label = openedTool === "native-radio" ? "RADIO"
     : openedTool === "location-settings" ? "LOCATION / MAP"
+    : openedTool === "map-workspace" ? "MAP / GIS"
+    : openedTool === "role-tools" ? "ROLE TOOLS"
     : openedTool === "camera-grid" ? "CAMERAS"
     : openedTool === "secure-messenger" ? "MESSENGER"
     : openedTool === "assigned-duties" ? "ASSIGNED DUTIES"
     : openedTool ? toolInfo(openedTool)?.name : (tab === "role" ? activeProfile()?.title : pageTitles[tab]);
-  $("role-tab-label").textContent = activeProfile()?.title || "ROLE";
+  // Role selection is retained under global Settings.
   ui.title.textContent = label || pageTitles[tab];
   ui.mode.textContent = "LOCAL";
   ui.back.hidden = !openedTool && focusedCamera === null && tab === "stat";
@@ -309,7 +311,9 @@ function showMap() {
 
 function showData() {
   const root = panel();
-  const tools = ["secure-messenger", "assigned-duties", ...sectionTools("data")];
+  root.append(button("MAP / GIS", () => { openedTool = "map-workspace"; render(); }, "micro-button compact"));
+  root.append(button("ROLE TOOLS", () => { openedTool = "role-tools"; render(); }, "micro-button compact"));
+  const tools = ["assigned-duties", ...sectionTools("data")];
   root.append(sectionTop("DATA", String(tools.length) + " TOOLS"));
   pagedTiles(root, tools, "data", (id, index) => {
     if (id === "secure-messenger" || id === "assigned-duties") {
@@ -320,6 +324,22 @@ function showData() {
     }
     return toolTile(id, index);
   }, ui.viewport.clientHeight < 260 ? 4 : MICRO_PAGE_SIZE);
+  return root;
+}
+
+function showStream() {
+  const root = panel();
+  root.append(sectionTop("STREAM", "MEDIA"));
+  root.append(make("div", "block-box", "NATIVE VIDEO INTEGRATION PENDING. Existing approved camera viewer is available below; embedded direct-stream playback is not yet connected."));
+  root.append(button("CAMERA VIEW", () => { openedTool = "camera-grid"; render(); }, "micro-button solid"));
+  return root;
+}
+
+function showCom() {
+  const root = panel();
+  root.append(sectionTop("COM", "MESSAGING"));
+  root.append(button("MESSENGER", () => { openedTool = "secure-messenger"; render(); }, "micro-button solid"));
+  root.append(make("div", "block-box", "IRC MODULE: native verified-TLS integration pending. IRC messages cannot authorize Vault assignments."));
   return root;
 }
 
@@ -580,15 +600,16 @@ function render() {
   renderHeading();
   ui.screen.dataset.depth = ["assigned-duties", "mission-board"].includes(openedTool)
     ? "tasks" : openedTool ? "detail" : "root";
-  ui.content.replaceChildren(openedTool ? showTool() :
+  ui.content.replaceChildren(openedTool === "map-workspace" ? showMap() :
+    openedTool === "role-tools" ? showRole() : openedTool ? showTool() :
     tab === "stat" ? showStat() :
-      tab === "role" ? showRole() :
-        tab === "map" ? showMap() :
+      tab === "stream" ? showStream() :
+        tab === "com" ? showCom() :
           tab === "data" ? showData() :
             tab === "radio" ? showRadio() : showConf());
   // Mount only after the map host is connected, so no deferred frame can
   // reopen a detached view after navigation or suspend GPS cleanup.
-  if (!openedTool && tab === "map" && window.RustBoyMap) {
+  if (openedTool === "map-workspace" && window.RustBoyMap) {
     window.RustBoyMap.mount(ui.content.querySelector(".rb-map-mount"), {
       navigationOnly: true,
       reclamation: hasTool("reclamation")
@@ -599,7 +620,7 @@ function render() {
 async function reload({silent = false} = {}) {
   try {
     snapshot = await api("/api/state");
-    if (openedTool && !["native-radio", "secure-messenger", "assigned-duties", "camera-grid", "location-settings"].includes(openedTool) && !hasTool(openedTool)) openedTool = null;
+    if (openedTool && !["native-radio", "secure-messenger", "assigned-duties", "camera-grid", "location-settings", "map-workspace", "role-tools"].includes(openedTool) && !hasTool(openedTool)) openedTool = null;
     focusedCamera = null;
     render();
     if (!silent) notify("SYNCED");
