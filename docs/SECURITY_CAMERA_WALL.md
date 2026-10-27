@@ -69,7 +69,18 @@ Or explicitly fetch **one fixed official public metadata endpoint** (no discover
 python3 tools/build_northeast_camera_index.py --source ddot --fetch --output /tmp/ddot-camera-review.json
 ```
 
-Supported source keys: `md-socrata`, `md-imap`, `ddot`, `deldot`, `vdot`, `ridot`, `massdot-staging`. The `md-socrata` key imports official camera metadata from `opendata.maryland.gov/resource/4z3c-43ce.json`; it never activates the player URL. The import caps input at 6 MiB and 1,000 features, validates state-specific camera coordinates and writes **review-only** JSON with `image_url:null`, `live_verified:false`, no retained credentials or video. Output cannot activate a camera automatically. Official metadata/terms and media access must be reviewed before promoting each device to the runtime catalog. `python3 tools/test_build_northeast_camera_index.py` exercises the normalizers offline.
+Supported source keys: `md-socrata`, `md-imap`, `ddot`, `deldot`, `vdot`, `ridot`, `massdot-staging`, `ctroads`, `511ny`. The `md-socrata` key imports official camera metadata from `opendata.maryland.gov/resource/4z3c-43ce.json`; it never activates the player URL. The import caps input at 6 MiB and 1,000 features, validates state-specific camera coordinates and writes **review-only** JSON with `image_url:null`, `live_verified:false`, no retained credentials or video. Output cannot activate a camera automatically. Official metadata/terms and media access must be reviewed before promoting each device to the runtime catalog. `python3 tools/test_build_northeast_camera_index.py` exercises the normalizers offline.
+
+## Connecticut / New York developer-feed import (authorization required)
+
+The official CTroads and 511NY camera APIs require developer enrollment and a key. Rust-Boy deliberately **does not request, scrape, store or transmit those credentials**. Once an operator has obtained approved camera-list JSON through the publisher's authorized process, only the offline `--input` path is accepted:
+
+```bash
+python3 tools/build_northeast_camera_index.py --source ctroads --input /path/to/approved-ctroads-cameras.json --output /tmp/ctroads-review.json
+python3 tools/build_northeast_camera_index.py --source 511ny --input /path/to/approved-511ny-cameras.json --output /tmp/511ny-review.json
+```
+
+These parsers read only camera `ID`, `Name`, `Latitude`, `Longitude`, and `Disabled`/`Blocked` fields into a **review-only** list; `Url` and `VideoUrl` are never retained. Provider-disabled cameras are explicitly flagged. No API key is accepted by the command and `--fetch` is forbidden for both sources. Developer enrollment and media licensing are independent of the metadata import. <https://www.ctroads.org/developers/help> · <https://prod-ny.ibi511.com/developers/resources>
 
 ## Metadata endpoint availability check
 
