@@ -1,6 +1,48 @@
 //! Host command presentation only; networking/protocol/cleanup live in rust_radio.
 use std::error::Error;
 
+pub fn validate_peer(peer: &str) -> Result<String, String> {
+    #[cfg(feature = "sdrconnect")]
+    {
+        rust_radio::receiver::sdrconnect::Endpoint::parse(peer)
+            .map(|p| p.address().to_string())
+            .map_err(|e| e.to_string())
+    }
+    #[cfg(not(feature = "sdrconnect"))]
+    {
+        let _ = peer;
+        Err("Build with the sdrconnect feature to enable the network receiver".into())
+    }
+}
+
+pub fn start_native(
+    peer: &str,
+    volume: u8,
+    output: &str,
+) -> Result<crate::radio_playback::NativeRadioEngine, String> {
+    #[cfg(feature = "sdrconnect")]
+    {
+        crate::radio_playback::NativeRadioEngine::start_sdrconnect(peer, volume, output)
+    }
+    #[cfg(not(feature = "sdrconnect"))]
+    {
+        let _ = (peer, volume, output);
+        Err("Build with the sdrconnect feature to enable the network receiver".into())
+    }
+}
+
+pub fn receiver_info(player: &crate::radio_playback::NativeRadioEngine) -> serde_json::Value {
+    #[cfg(feature = "sdrconnect")]
+    {
+        player.receiver_status().map(|s|serde_json::json!({"name":s.active_device,"frequency_hz":s.center_frequency_hz,"demodulator":s.demodulator,"antenna":s.active_antenna})).unwrap_or(serde_json::Value::Null)
+    }
+    #[cfg(not(feature = "sdrconnect"))]
+    {
+        let _ = player;
+        serde_json::Value::Null
+    }
+}
+
 pub fn run(args: &[String]) -> Result<(), Box<dyn Error>> {
     // Confirmation and bounded command syntax are enforced even in SDK-free
     // default builds. Never construct a client before validating operator input.

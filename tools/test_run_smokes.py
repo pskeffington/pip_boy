@@ -8,7 +8,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from run_smokes import (LINUX_EXTRA, NATIVE_SMOKES, PLATFORM_SPECIFIC,
+from run_smokes import (LINUX_EXTRA, NATIVE_SMOKES, PLATFORM_SPECIFIC, MANUAL_HARDWARE,
                         SUITES, main, run_suite, validate_manifest)
 
 
@@ -19,16 +19,19 @@ class SmokeRosterTests(unittest.TestCase):
         self.root = Path(self.temp.name)
         self.tools = self.root / "tools"
         self.tools.mkdir()
-        for name in (*LINUX_EXTRA, *NATIVE_SMOKES, *PLATFORM_SPECIFIC):
+        for name in (*LINUX_EXTRA, *NATIVE_SMOKES, *PLATFORM_SPECIFIC, *MANUAL_HARDWARE):
             (self.tools / name).write_text("# test fixture\n", encoding="utf-8")
 
     def test_all_known_smokes_classified_without_duplicates(self):
-        self.assertEqual(validate_manifest(self.tools), 20)
+        self.assertEqual(validate_manifest(self.tools), 21)
         self.assertEqual(len(SUITES["linux"]), 19)
         self.assertEqual(len(SUITES["native"]), 17)
         self.assertEqual(SUITES["linux"][:2], LINUX_EXTRA)
         self.assertEqual(SUITES["linux"][2:], SUITES["native"])
         self.assertNotIn("smoke_windows_conpty.py", SUITES["native"])
+        for name in MANUAL_HARDWARE:
+            self.assertNotIn(name, SUITES["native"])
+            self.assertNotIn(name, SUITES["linux"])
 
     def test_new_smoke_requires_explicit_ci_classification(self):
         (self.tools / "smoke_future_adapter.py").write_text("", encoding="utf-8")
@@ -94,14 +97,14 @@ class SmokeRosterTests(unittest.TestCase):
             run_suite("all", self.tools, lambda *_a, **_k: self.fail("ran"))
 
     def test_check_only_never_executes_smoke(self):
-        with patch("run_smokes.validate_manifest", return_value=20):
+        with patch("run_smokes.validate_manifest", return_value=21):
             with patch("run_smokes.run_suite") as execute:
                 with patch("builtins.print"):
                     main(["--check"])
                 execute.assert_not_called()
 
     def test_list_only_never_executes_smoke(self):
-        with patch("run_smokes.validate_manifest", return_value=20):
+        with patch("run_smokes.validate_manifest", return_value=21):
             with patch("run_smokes.run_suite") as execute:
                 with patch("builtins.print") as emit:
                     main(["native", "--list"])

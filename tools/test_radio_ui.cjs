@@ -122,6 +122,13 @@ async function main() {
           assert.equal(body.confirm, true);
           state = { ...state, station: body.station, source: "native_ip", status: "playing",
             presets: { ...state.presets, last_selected: body.station } };
+        } else if (body.action === "sdrconnect") {
+          assert.equal(state.status, "stopped");
+          state = {...state, sdrconnect: {...state.sdrconnect, endpoint: body.endpoint}};
+        } else if (body.action === "play_sdr") {
+          assert.equal(body.confirm, true);
+          state = {...state, source:"native_sdr", status:"playing", station:null,
+            receiver:{frequency_hz:99100000,demodulator:"WFM",antenna:"Antenna A"}};
         } else if (body.action === "output") {
           assert.ok(state.outputs.some((device) => device.id === body.output));
           state = { ...state, output: body.output,
@@ -283,12 +290,41 @@ async function main() {
   assert.equal(control(restarted, "rb-radio-favorite").attributes["aria-pressed"], "true");
   assert.equal(calls.filter((c) => c.action === "play").length, beforeRestart,
     "Restoring favorites/selection must not autoplay");
+  state = {...state,sdrconnect:{available:true,endpoint:"127.0.0.1:5454"}};
+  poll(); await flush();
+  const receiverSelector=control(restarted,"rb-radio-station");
+  const beforeReceiverSelect=calls.length;
+  receiverSelector.value="__sdrconnect__"; receiverSelector.dispatch("change"); await flush();
+  assert.equal(calls.slice(beforeReceiverSelect).filter(c=>c.action!=="poll").length,0,
+    "Selecting receiver must not connect or persist a fake station ID");
+  assert.equal(control(restarted,"rb-radio-favorite").hidden,true);
+  assert.equal(state.presets.last_selected,"skylab");
+  control(restarted,"rb-radio-output-toggle").dispatch("click");
+  assert.equal(control(restarted,"rb-radio-receiver").hidden,false);
+  const address=control(restarted,"rb-radio-address");
+  address.value="127.0.0.1:5455"; address.dispatch("input");
+  poll(); await flush();
+  assert.equal(address.value,"127.0.0.1:5455","Polling must not overwrite an address being edited");
+  control(restarted,"rb-radio-receiver-set").dispatch("click"); await flush();
+  assert.equal(state.status,"stopped");
+  assert.equal(calls.some(c=>c.action==="play_sdr"),false);
+  control(restarted,"rb-radio-play").dispatch("click"); await flush();
+  assert.equal(state.source,"native_sdr");
+  assert.equal(control(restarted,"rb-radio-signal").textContent,"SDR / PLAYING");
+  assert.equal(address.disabled,true);
+  assert.equal(receiverSelector.disabled,true);
+  state={...state,status:"stopped",stopping:true}; poll(); await flush();
+  assert.equal(control(restarted,"rb-radio-play").disabled,true,"Stop must retain the resource cleanup gate");
+  assert.match(control(restarted,"rb-radio-message").textContent,/STOPPING/);
+  state={...state,source:"none",status:"stopped",stopping:false}; poll(); await flush();
+  receiverSelector.value="skylab"; receiverSelector.dispatch("change"); await flush();
+  assert.equal(control(restarted,"rb-radio-favorite").hidden,false);
   resumed.destroy();
 
   assert.match(css, /\.rb-radio-compact \.rb-radio-transport\{/);
   assert.match(css, /\.rb-radio-compact \.rb-radio-output-panel\{position:absolute/);
   assert.match(css, /min-height:40px/);
-  console.log("RADIO HUD: favorites, ordering, last station, no autoplay, Bluetooth recovery OK");
+  console.log("RADIO HUD: favorites, ordering, last station, no autoplay, Bluetooth recovery, SDR source and cleanup gates OK");
 }
 main().catch((error) => {
   console.error(error);

@@ -38,6 +38,9 @@ NATIVE_SMOKES = (
 # macOS PTY job. smoke_notes is not currently part of the native CI matrix.
 LINUX_EXTRA = ("smoke_runtime.py", "smoke_notes.py")
 PLATFORM_SPECIFIC = ("smoke_windows_conpty.py",)
+# These require an actual native audio output and an optional feature build.
+# They are explicit manual checks, never part of an unattended CI profile.
+MANUAL_HARDWARE = ("smoke_radio_sdrconnect.py",)
 SUITES = {"linux": LINUX_EXTRA + NATIVE_SMOKES, "native": NATIVE_SMOKES}
 
 
@@ -46,7 +49,7 @@ def validate_manifest(directory=TOOLS):
     directory = Path(directory)
     if not directory.is_dir() or directory.is_symlink():
         raise ValueError(f"invalid smoke-test directory: {directory}")
-    roster = LINUX_EXTRA + NATIVE_SMOKES + PLATFORM_SPECIFIC
+    roster = LINUX_EXTRA + NATIVE_SMOKES + PLATFORM_SPECIFIC + MANUAL_HARDWARE
     if len(roster) != len(set(roster)):
         raise ValueError("duplicate smoke script in the CI roster")
     if any(not name.startswith("smoke_") or not name.endswith(".py")

@@ -284,3 +284,11 @@ A Python subprocess/PTY harness used the built `target/debug/pipboy` with a temp
 ## Remaining acceptance work
 
 Remote GitHub Actions previously failed before jobs started; its current success is not established by these local checks. Storage is published as 2223c2c. Console and portability work remain local while the automatic approval reviewer rejects publication; no approval setting was changed. Verify any eventual pushed revisions separately in Actions. macOS/Windows smoke checks, assistive-technology/contrast acceptance, panic/signal paths, native Windows/macOS note replacement, locking and durability, observation schema migrations/field-level units, persistent per-adapter consent, and device-broker enforcement remain open. G0/G1 are not declared complete, and no hardware readiness is claimed.
+
+The optional native receiver smoke, `python3 tools/smoke_radio_sdrconnect.py`,
+is classified as a manual hardware check. Build pipboy with `--features
+sdrconnect` and provide an OS audio output; the test uses synthetic PCM at zero
+volume and temporary preferences. `--live-ip` explicitly adds Skylab playback;
+`--standalone /path/to/rust-radio-cli` also checks the standalone native player.
+It never claims synthetic samples are received RF and is excluded from CI
+profiles that lack audio hardware.

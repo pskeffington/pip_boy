@@ -53,6 +53,11 @@
   if(scenario==="output-lost")snapshot={...snapshot,source:"native_ip",status:"failed",
     station:"skylab",output:"bluetooth",output_available:false,output_failure:true,
     error:"Audio output disconnected",outputs:[output]};
+  if(scenario.startsWith("sdr-"))snapshot={...snapshot,
+    sdrconnect:{available:true,endpoint:"127.0.0.1:5454"}};
+  if(scenario==="sdr-playing"||scenario==="sdr-stopping")snapshot={...snapshot,
+    source:"native_sdr",status:scenario==="sdr-stopping"?"stopped":"playing",
+    stopping:scenario==="sdr-stopping",receiver:{frequency_hz:99100000,demodulator:"WFM",antenna:"Antenna A"}};
   const calls=[];
   window.fetch=async(url,options)=>{
     calls.push({url,method:options?.method||"GET"});
@@ -88,7 +93,13 @@
         document.querySelector(".rb-radio-filter").click();
         await tick();
       }
-      if(scenario==="settings"){
+      if(scenario==="sdr-settings"){
+        const selector=document.querySelector(".rb-radio-station");
+        selector.value="__sdrconnect__";
+        selector.dispatchEvent(new Event("change"));
+        await tick();
+      }
+      if(scenario==="settings"||scenario==="sdr-settings"){
         document.querySelector(".rb-radio-output-toggle").click();
         await tick();
       }
@@ -98,6 +109,8 @@
         ".rb-radio-next",".rb-radio-play",".rb-radio-stop",
         ".rb-radio-volume-down",".rb-radio-volume-up",".rb-radio-output-toggle"
       ];
+      if(scenario.startsWith("sdr-"))primary.splice(0,2);
+      if(scenario==="sdr-settings")primary.push(".rb-radio-address",".rb-radio-receiver-set");
       const touch=primary.map(selector=>{
         const element=document.querySelector(selector);
         return{selector,rect:geometry(element),visible:within(element,viewport)};

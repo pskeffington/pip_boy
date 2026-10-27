@@ -50,3 +50,8 @@
 @media(max-width:390px){.rb-radio-compact .rb-radio-title{display:none}.rb-radio-compact .rb-radio-count{font-size:9px}}
 /* Fit native controls below the shared touch-sized handheld header. */
 @media(max-height:360px){.rb-radio-compact{padding:3px;gap:2px}}
+
+.rb-radio-receiver{display:grid;grid-template-columns:minmax(0,1fr) 64px;gap:6px;min-width:0}
+.rb-radio-receiver[hidden]{display:none}
+.rb-radio-address{min-width:0;width:100%;min-height:40px;border:1px solid #477a58;background:#07120c;color:#d9ffcf;font:inherit;padding:5px;border-radius:5px}
+.rb-radio-address:focus-visible{outline:3px solid #f1e995;outline-offset:2px}

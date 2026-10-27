@@ -60,6 +60,8 @@ const RADIO_UI_CSS: &str = include_str!("../assets/radio-ui.css");
 
 static RADIO_ENGINE: LazyLock<Mutex<Option<NativeRadioEngine>>> =
     LazyLock::new(|| Mutex::new(None));
+static RADIO_SDRCONNECT: LazyLock<Mutex<String>> =
+    LazyLock::new(|| Mutex::new("127.0.0.1:5454".into()));
 static RADIO_OUTPUT: LazyLock<Mutex<String>> = LazyLock::new(|| Mutex::new("system".into()));
 
 struct Request {
@@ -729,6 +731,8 @@ fn radio_preset_store(store: &WorkbenchStore) -> RadioPresetStore {
 }
 
 fn radio_snapshot(engine: Option<&NativeRadioEngine>, presets: &RadioPresets) -> Value {
+    let sdrconnect = json!({"available":cfg!(feature="sdrconnect"),
+        "endpoint":RADIO_SDRCONNECT.lock().map(|p|p.clone()).unwrap_or_default()});
     let selected_output = RADIO_OUTPUT
         .lock()
         .map(|id| id.clone())
@@ -760,14 +764,21 @@ fn radio_snapshot(engine: Option<&NativeRadioEngine>, presets: &RadioPresets) ->
         Some(player) => {
             let state = player.status();
             json!({
-                "source": "native_ip",
+                "source": match state.input {
+                    Some(pipboy_core::radio_controller::InputKind::Sdr)=>"native_sdr",
+                    Some(pipboy_core::radio_controller::InputKind::Internet)=>"native_ip",
+                    None=>"none",
+                },
+                "sdrconnect":sdrconnect,
+                "receiver":crate::radio_sdrconnect::receiver_info(player),
+                "stopping":player.shutdown_pending(),
                 "status": format!("{:?}", state.state).to_ascii_lowercase(),
                 "station": state.station_id,
                 "volume": state.volume_percent,
                 "error": state.last_error,
                 "stations": stations,
                 "presets": presets,
-                "sdr": "not_connected",
+                "sdr": if state.input==Some(pipboy_core::radio_controller::InputKind::Sdr) { format!("{:?}",state.state).to_ascii_lowercase() } else { "not_connected".into() },
                 "outputs": devices,
                 "output": selected_output,
                 "output_available": output_available,
@@ -779,6 +790,7 @@ fn radio_snapshot(engine: Option<&NativeRadioEngine>, presets: &RadioPresets) ->
             "station": null, "volume": 60, "error": null,
             "stations": stations, "presets": presets,
             "sdr": "not_connected",
+            "sdrconnect":sdrconnect,"receiver":null,"stopping":false,
             "outputs": devices, "output": selected_output,
             "output_available": output_available, "output_failure": false
         }),
@@ -791,8 +803,32 @@ fn radio_state(store: &WorkbenchStore) -> Response {
         Err(_) => return Response::error(409, "Local radio presets unavailable; file preserved"),
     };
     match RADIO_ENGINE.lock() {
-        Ok(lock) => Response::json(200, &radio_snapshot(lock.as_ref(), &presets)),
+        Ok(mut lock) => {
+            radio_reap(&mut lock);
+            Response::json(200, &radio_snapshot(lock.as_ref(), &presets))
+        }
         Err(_) => Response::error(500, "Radio controller unavailable"),
+    }
+}
+
+fn radio_reap(engine: &mut Option<NativeRadioEngine>) {
+    if let Some(player) = engine.as_mut() {
+        let stopped =
+            player.status().state == pipboy_core::radio_controller::PlaybackState::Stopped;
+        if player.try_finish() && stopped {
+            *engine = None;
+        }
+    }
+}
+
+fn radio_initial_volume(body: &Value) -> Result<u8, Response> {
+    match body.get("volume") {
+        Some(value) => value
+            .as_u64()
+            .filter(|v| *v <= 100)
+            .map(|v| v as u8)
+            .ok_or_else(|| Response::error(422, "Volume must be between 0 and 100")),
+        None => Ok(60),
     }
 }
 
@@ -807,6 +843,7 @@ fn radio_command(req: &Request, store: &WorkbenchStore) -> Result<Response, Resp
             "output",
             "enabled",
             "direction",
+            "endpoint",
         ],
     )?;
     let action = str_field(&body, "action")?;
@@ -814,7 +851,53 @@ fn radio_command(req: &Request, store: &WorkbenchStore) -> Result<Response, Resp
     let mut engine = RADIO_ENGINE
         .lock()
         .map_err(|_| Response::error(500, "Radio controller unavailable"))?;
+    radio_reap(&mut engine);
     match action {
+        "sdrconnect" => {
+            if engine.is_some() {
+                return Err(Response::error(
+                    409,
+                    "Stop radio before changing the receiver",
+                ));
+            }
+            let endpoint = crate::radio_sdrconnect::validate_peer(str_field(&body, "endpoint")?)
+                .map_err(|e| Response::error(422, &e))?;
+            *RADIO_SDRCONNECT
+                .lock()
+                .map_err(|_| Response::error(500, "Receiver settings unavailable"))? = endpoint;
+        }
+        "play_sdr" => {
+            if body.get("confirm").and_then(Value::as_bool) != Some(true) {
+                return Err(Response::error(
+                    422,
+                    "Radio playback requires explicit confirmation",
+                ));
+            }
+            let volume = radio_initial_volume(&body)?;
+            // Match IP playback: invalid local configuration must fail before
+            // spawning any receiver or native output worker.
+            presets.load().map_err(|_| {
+                Response::error(409, "Local radio presets unavailable; file preserved")
+            })?;
+            if engine.as_mut().is_some_and(|old| !old.try_finish()) {
+                return Err(Response::error(
+                    409,
+                    "Stop the active radio before switching",
+                ));
+            }
+            let endpoint = RADIO_SDRCONNECT
+                .lock()
+                .map_err(|_| Response::error(500, "Receiver settings unavailable"))?
+                .clone();
+            let output = RADIO_OUTPUT
+                .lock()
+                .map_err(|_| Response::error(500, "Output settings unavailable"))?
+                .clone();
+            *engine = Some(
+                crate::radio_sdrconnect::start_native(&endpoint, volume, &output)
+                    .map_err(|e| Response::error(409, &e))?,
+            );
+        }
         "select" => {
             let station = str_field(&body, "station")?;
             if engine.as_ref().is_some_and(|current| {
@@ -871,27 +954,14 @@ fn radio_command(req: &Request, store: &WorkbenchStore) -> Result<Response, Resp
                 ));
             }
             let station = str_field(&body, "station")?;
-            let initial_volume = match body.get("volume") {
-                Some(value) => value
-                    .as_u64()
-                    .filter(|value| *value <= 100)
-                    .ok_or_else(|| Response::error(422, "Volume must be between 0 and 100"))?
-                    as u8,
-                None => 60,
-            };
+            let initial_volume = radio_initial_volume(&body)?;
             if !curated_stations().iter().any(|s| s.id == station) {
                 return Err(Response::error(422, "Unknown curated radio station"));
             }
-            if engine.as_ref().is_some_and(|current| {
-                !matches!(
-                    current.status().state,
-                    pipboy_core::radio_controller::PlaybackState::Failed
-                        | pipboy_core::radio_controller::PlaybackState::Stopped
-                )
-            }) {
+            if engine.as_mut().is_some_and(|old| !old.try_finish()) {
                 return Err(Response::error(
                     409,
-                    "Stop the active station before switching",
+                    "Stop the active radio and wait for cleanup before switching",
                 ));
             }
             // Save last selected *before* starting native I/O. A corrupt or
@@ -916,9 +986,10 @@ fn radio_command(req: &Request, store: &WorkbenchStore) -> Result<Response, Resp
             );
         }
         "stop" => {
-            if let Some(mut old) = engine.take() {
-                old.stop();
+            if let Some(old) = engine.as_ref() {
+                old.request_stop();
             }
+            radio_reap(&mut engine);
         }
         "output" => {
             let output_id = str_field(&body, "output")?;
@@ -960,6 +1031,19 @@ fn radio_command(req: &Request, store: &WorkbenchStore) -> Result<Response, Resp
                             .map_err(|_| {
                                 Response::error(409, "Cannot restart radio on selected output")
                             })?,
+                        );
+                    } else if state.input == Some(pipboy_core::radio_controller::InputKind::Sdr) {
+                        let endpoint = RADIO_SDRCONNECT
+                            .lock()
+                            .map_err(|_| Response::error(500, "Receiver settings unavailable"))?
+                            .clone();
+                        *engine = Some(
+                            crate::radio_sdrconnect::start_native(
+                                &endpoint,
+                                state.volume_percent,
+                                output_id,
+                            )
+                            .map_err(|e| Response::error(409, &e))?,
                         );
                     }
                 }
@@ -1359,6 +1443,23 @@ mod tests {
         assert!(json["outputs"].is_array());
         assert!(json["output_available"].is_boolean());
         assert_eq!(json["output_failure"], false);
+        assert_eq!(
+            json["sdrconnect"]["available"],
+            cfg!(feature = "sdrconnect")
+        );
+        assert_eq!(json["stopping"], false);
+        for bad in [
+            json!({"action":"play_sdr"}),
+            json!({"action":"play_sdr","confirm":true,"volume":101}),
+            json!({"action":"sdrconnect","endpoint":"8.8.8.8:5454"}),
+            json!({"action":"sdrconnect","endpoint":"http://127.0.0.1/"}),
+        ] {
+            assert_eq!(
+                dispatch(&request("POST", "/api/radio", bad), &store, 8765).status,
+                422
+            );
+        }
+        assert!(!radio_preset_store(&store).path().exists());
         assert!(json["outputs"]
             .as_array()
             .unwrap()
@@ -1466,6 +1567,13 @@ mod tests {
             json!({"action":"favorite","station":"skylab","enabled":true}),
         );
         assert_eq!(dispatch(&mutation, &store, 8765).status, 409);
+        let play = request(
+            "POST",
+            "/api/radio",
+            json!({"action":"play_sdr","confirm":true,"volume":0}),
+        );
+        assert_eq!(dispatch(&play, &store, 8765).status, 409);
+        assert!(RADIO_ENGINE.lock().unwrap().is_none());
         assert_eq!(std::fs::read(&pref_path).unwrap(), corrupted);
     }
 

@@ -26,6 +26,8 @@
     return result;
   };
 
+  const SDR = "__sdrconnect__";
+
   function mount(root, options = {}) {
     root.replaceChildren();
     root.classList.add("rb-radio");
@@ -94,7 +96,18 @@
     orderEarlier.setAttribute("aria-label", "Move selected favorite earlier in preset order");
     orderLater.setAttribute("aria-label", "Move selected favorite later in preset order");
     order.append(orderLabel, orderEarlier, orderLater);
-    outputPanel.append(outputLabel, fallback, order);
+    const receiverRow = node("div", "rb-radio-receiver");
+    const receiverAddress = node("input", "rb-radio-address");
+    receiverAddress.type = "text";
+    receiverAddress.maxLength = 64;
+    receiverAddress.setAttribute("aria-label", "SDRconnect receiver IP address and port");
+    receiverAddress.placeholder = "SDRconnect IP:port";
+    const receiverSet = node("button", "rb-radio-receiver-set", "SET");
+    receiverSet.type = "button";
+    receiverSet.setAttribute("aria-label", "Set receiver address without starting playback");
+    receiverRow.append(receiverAddress, receiverSet);
+    receiverRow.hidden = true;
+    outputPanel.append(outputLabel, fallback, order, receiverRow);
 
     const message = node("div", "rb-radio-message", "Select a station and press Play.");
     message.setAttribute("role", "status");
@@ -109,22 +122,26 @@
     let requestedOutput = null;
     let favoritesOnly = false;
     let outputExpanded = !compact;
+    let draftEndpoint = null;
 
     const favorites = (data) => Array.isArray(data?.presets?.favorites)
       ? data.presets.favorites : [];
     const stationList = (data) => {
       const stations = Array.isArray(data?.stations) ? data.stations : [];
-      if (!favoritesOnly) return stations;
-      const ordered = favorites(data)
-        .map((id) => stations.find((station) => station.id === id))
-        .filter(Boolean);
-      const running = data && !["stopped", "failed"].includes(data.status);
-      // A favorite removed while playing must never hide the live station.
-      if (running && data.station && !ordered.some((item) => item.id === data.station)) {
-        const active = stations.find((item) => item.id === data.station);
-        if (active) ordered.unshift(active);
+      let list = stations;
+      if (favoritesOnly) {
+        list = favorites(data).map((id) => stations.find((s) => s.id === id)).filter(Boolean);
+        if (data?.station && !["stopped", "failed"].includes(data.status) &&
+            !list.some((s) => s.id === data.station)) {
+          const active = stations.find((s) => s.id === data.station);
+          if (active) list.unshift(active);
+        }
       }
-      return ordered;
+      if (data?.sdrconnect?.available && (!favoritesOnly || data.source === "native_sdr")) {
+        return [...list, {id: SDR, name: "nRSP-ST / SDRconnect", category: "RECEIVER",
+          genre: "Tune and start the receiver in SDRconnect", format: "PCM", nominal_kbps: 0}];
+      }
+      return list;
     };
     const showOutput = (expanded) => {
       outputExpanded = expanded;
@@ -143,6 +160,16 @@
     const stationInfo = (list) => {
       const index = list.findIndex((item) => item.id === selected);
       const chosen = index < 0 ? null : list[index];
+      if (chosen?.id === SDR) {
+        setText(count, "SDRCONNECT");
+        const receiver = current?.receiver;
+        const text = receiver?.frequency_hz > 0
+          ? "CONNECTED AT " + (receiver.frequency_hz / 1000000).toFixed(3) + " MHz · " + receiver.demodulator + " · " + receiver.antenna
+          : "Tune and start in SDRconnect, then press PLAY";
+        setText(details, text);
+        details.title = text;
+        return;
+      }
       const suffix = favoritesOnly ? " ★" : " · " + (chosen?.category || "IP");
       setText(count, chosen
         ? String(index + 1).padStart(2, "0") +
@@ -159,13 +186,13 @@
     const apply = (data) => {
       if (!alive) return;
       current = data;
-      const status = data.status || "stopped";
+      const status = data.stopping ? "stopping" : (data.status || "stopped");
       const running = !["stopped", "failed"].includes(status);
       const list = stationList(data);
       const saved = favorites(data);
       // A failed native session still has a station identity. Prefer it over
       // an older saved selection so RETRY cannot target the wrong broadcaster.
-      const active = status !== "stopped" && data.station &&
+      const active = data.source === "native_sdr" && status !== "stopped" ? SDR : status !== "stopped" && data.station &&
         list.some((s) => s.id === data.station) ? data.station : null;
       const desired = active || selected || data.presets?.last_selected || data.station;
       selected = list.some((s) => s.id === desired) ? desired : (list[0]?.id || "");
@@ -195,20 +222,26 @@
       }
       selector.value = selected;
       stationInfo(list);
+      const isReceiver = selected === SDR;
+      setText(label, isReceiver ? "RADIO / SDR" : "RADIO / IP");
+      favorite.hidden = filter.hidden = isReceiver;
       const isFavorite = saved.includes(selected);
       setText(favorite, isFavorite ? "★" : "☆");
       favorite.setAttribute("aria-pressed", String(isFavorite));
       favorite.setAttribute("aria-label", isFavorite
         ? "Remove selected station from favorites" : "Add selected station to favorites");
-      favorite.disabled = busy || !selected;
+      favorite.disabled = busy || !selected || isReceiver;
       setText(filter, favoritesOnly ? "★ ONLY" : "ALL");
       filter.setAttribute("aria-pressed", String(favoritesOnly));
-      filter.disabled = busy || running;
+      filter.disabled = busy || running || isReceiver;
       const outputFailed = data.output_failure || data.output_available === false;
       const favIndex = saved.indexOf(selected);
       // When hardware is missing, keep the recovery overlay small enough for
       // 480×320 and remove nonessential reordering buttons from this view.
-      order.hidden = outputFailed || favIndex < 0;
+      order.hidden = outputFailed || favIndex < 0 || isReceiver;
+      receiverRow.hidden = !isReceiver || outputFailed;
+      if (draftEndpoint === null) receiverAddress.value = data.sdrconnect?.endpoint || "127.0.0.1:5454";
+      receiverAddress.disabled = receiverSet.disabled = busy || running || status === "failed";
       orderEarlier.disabled = busy || favIndex <= 0;
       orderLater.disabled = busy || favIndex < 0 || favIndex >= saved.length - 1;
 
@@ -232,38 +265,39 @@
       requestedOutput = null;
       if (outputFailed) showOutput(true);
       else showOutput(outputExpanded);
-      outputSelector.disabled = busy || !outputs.some((device) => device.available !== false);
+      outputSelector.disabled = busy || data.stopping || !outputs.some((device) => device.available !== false);
       const defaultOutput = outputs.find((device) => device.id === "system");
       fallback.hidden = !outputFailed;
-      fallback.disabled = busy || !defaultOutput || defaultOutput.available === false;
+      fallback.disabled = busy || data.stopping || !defaultOutput || defaultOutput.available === false;
 
       setText(indicator, data.output_failure ? "OUTPUT FAILED" :
-        data.output_available === false ? "NO OUTPUT" : "IP / " + status.toUpperCase());
+        data.output_available === false ? "NO OUTPUT" : (isReceiver ? "SDR / " : "IP / ") + status.toUpperCase());
       indicator.dataset.state = outputFailed ? "failed" : status;
       setText(volume, "VOL " + data.volume + "%");
       const canTune = !busy && !running && list.length > 0;
       selector.disabled = !canTune;
       previous.disabled = next.disabled = !canTune || list.length < 2;
       play.disabled = !canTune || data.output_available === false;
-      stop.disabled = busy || (status === "stopped" && !data.station);
-      minus.disabled = busy || !running || data.volume === 0;
-      plus.disabled = busy || !running || data.volume === 100;
+      stop.disabled = busy || data.stopping || (status === "stopped" && !data.station);
+      minus.disabled = busy || data.stopping || !running || data.volume === 0;
+      plus.disabled = busy || data.stopping || !running || data.volume === 100;
 
       if (data.output_failure) setText(message,
         "OUTPUT FAILED / Select a connected device to retry.");
       else if (data.output_available === false) setText(message,
         "NO OUTPUT / Connect audio or select System default.");
       else if (data.error) setText(message, data.error);
+      else if (status === "stopping") setText(message, "STOPPING / Releasing audio and receiver...");
       else if (running) setText(message,
         status === "playing" ? "NATIVE AUDIO / PLAYING" :
-        status === "connecting" ? "CONNECTING TO BROADCASTER" :
+        status === "connecting" ? (isReceiver ? "CONNECTING TO SDRCONNECT" : "CONNECTING TO BROADCASTER") :
         status === "buffering" ? "BUFFERING AUDIO" :
-        status === "recovering" ? "Reconnecting to approved broadcast..." :
+        status === "recovering" ? (isReceiver ? "Reconnecting to SDRconnect..." : "Reconnecting to approved broadcast...") :
         "RECEIVER / " + status.toUpperCase());
       else setText(message, favoritesOnly && !list.length
         ? "NO FAVORITES / SELECT ALL TO BROWSE"
         : status === "failed" ? "STREAM FAILED / Press PLAY to retry."
-          : "READY / SELECT STATION, PRESS PLAY");
+          : isReceiver ? "READY / START SDRCONNECT, PRESS PLAY" : "READY / SELECT STATION, PRESS PLAY");
     };
 
     const refresh = async () => {
@@ -285,10 +319,12 @@
       orderEarlier.disabled = orderLater.disabled = true;
       outputSelector.disabled = outputToggle.disabled = fallback.disabled = true;
       minus.disabled = plus.disabled = true;
+      receiverAddress.disabled = receiverSet.disabled = true;
       setText(message, "APPLYING RADIO COMMAND");
       try {
         const result = await request(data);
         if (alive) {
+          if (data.action === "sdrconnect") draftEndpoint = null;
           apply(result);
           if (data.action === "output" && !result.output_failure &&
               result.output_available !== false && compact) showOutput(false);
@@ -307,13 +343,15 @@
       }
     };
 
-    const selectStation = (id) => {
+    const selectStation = async (id) => {
       if (!current || busy || !["stopped", "failed"].includes(current.status)) return;
       const list = stationList(current);
       if (!list.some((station) => station.id === id) || selected === id) return;
       selected = id;
       selector.value = id;
       stationInfo(list);
+      if (current.status === "failed") await command({ action: "stop" });
+      if (id === SDR) { apply(current); return; }
       command({ action: "select", station: id });
     };
     const stepStation = (delta) => {
@@ -328,7 +366,7 @@
     previous.addEventListener("click", () => stepStation(-1));
     next.addEventListener("click", () => stepStation(1));
     favorite.addEventListener("click", () => {
-      if (!selected || !current) return;
+      if (!selected || !current || selected === SDR) return;
       command({ action: "favorite", station: selected,
         enabled: !favorites(current).includes(selected) });
     });
@@ -343,6 +381,8 @@
     orderLater.addEventListener("click", () => {
       if (selected) command({ action: "move_favorite", station: selected, direction: "later" });
     });
+    receiverAddress.addEventListener("input", () => { draftEndpoint = receiverAddress.value; });
+    receiverSet.addEventListener("click", () => command({ action: "sdrconnect", endpoint: receiverAddress.value }));
     outputToggle.addEventListener("click", () => {
       if (!busy) showOutput(!outputExpanded);
     });
@@ -355,7 +395,8 @@
       command({ action: "output", output: "system" });
     });
     play.addEventListener("click", () => {
-      if (selected) command({ action: "play", station: selected, confirm: true });
+      if (selected === SDR) command({ action: "play_sdr", confirm: true, volume: current?.volume ?? 60 });
+      else if (selected) command({ action: "play", station: selected, confirm: true, volume: current?.volume ?? 60 });
     });
     stop.addEventListener("click", () => command({ action: "stop" }));
     minus.addEventListener("click", () => {

@@ -119,7 +119,7 @@ function check(data, width, height, scenario) {
   assert.equal(data.window.width, width);
   assert.equal(data.window.height, height);
   assert.ok(data.viewport && data.device, "Micro shell not rendered");
-  assert.ok(data.controls.length >= 10 && data.primaryVisible,
+  assert.ok(data.controls.length >= (scenario.startsWith("sdr-") ? 8 : 10) && data.primaryVisible,
     "Radio controls clipped: " + JSON.stringify(data.controls.filter(x => !x.visible)));
   assert.ok(data.controls.every(x => x.rect && x.rect.width >= 40 && x.rect.height >= 40),
     "Radio control below 40px touch target: " +
@@ -134,7 +134,7 @@ function check(data, width, height, scenario) {
     assert.equal(data.favoriteMode, "true");
     assert.equal(data.visibleStationCount, 2);
   }
-  if (scenario === "settings" || scenario === "output-lost") {
+  if (scenario === "settings" || scenario === "sdr-settings" || scenario === "output-lost") {
     assert.equal(data.settingsExpanded, true);
     assert.equal(data.settingsVisible, true,
       "Settings overlay exceeds viewport: " + JSON.stringify(data.panel) +
@@ -157,7 +157,7 @@ async function main() {
       const scenario = url.searchParams.get("scenario");
       if (!Number.isInteger(width) || !Number.isInteger(height) ||
           width < 300 || width > 900 || height < 300 || height > 700 ||
-          !["ready", "favorites", "playing", "settings", "output-lost"].includes(scenario)) {
+          !["ready", "favorites", "playing", "settings", "output-lost", "sdr-settings", "sdr-playing", "sdr-stopping"].includes(scenario)) {
         response.writeHead(400); response.end("Invalid viewport"); return;
       }
       response.writeHead(200, {
@@ -188,7 +188,9 @@ async function main() {
       [480, 320, "ready"], [480, 320, "favorites"],
       [480, 320, "playing"], [480, 320, "settings"],
       [480, 320, "output-lost"], [320, 568, "ready"],
-      [800, 480, "ready"]
+      [800, 480, "ready"], [480,320,"sdr-settings"],
+      [480,320,"sdr-playing"], [480,320,"sdr-stopping"],
+      [320,568,"sdr-settings"]
     ]) check(await render(chrome, port, width, height, scenario), width, height, scenario);
     console.log("RADIO Chromium viewport: all compact scenarios passed");
   } finally {
