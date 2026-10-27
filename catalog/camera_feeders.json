@@ -1,0 +1,103 @@
+{
+  "schema_version": 1,
+  "priority": "DOT first; public HTTPS images before licensed feeds",
+  "last_researched_on": "2026-10-26",
+  "providers": [
+    {
+      "id": "caltrans",
+      "agency": "California Department of Transportation",
+      "coverage": "CA statewide (12 districts)",
+      "format": "cwwp2-cctv-json",
+      "catalog_url": "https://cwwp2.dot.ca.gov/documentation/cctv/cctv.htm",
+      "feed_url": "https://cwwp2.dot.ca.gov/data/d4/cctv/cctvStatusD04.json",
+      "access": "public_metadata",
+      "media": "HTTPS JPEG snapshots; some HLS",
+      "integration": "active_snapshot_seeds",
+      "notes": "Public no-charge HTTPS files documented for third-party integration; preserve attribution and review image ownership. Districts 01-12; D04 covers San Francisco. A listed image URL does not prove a current frame."
+    },
+    {
+      "id": "vdot",
+      "agency": "Virginia Department of Transportation / Virginia 511",
+      "coverage": "VA statewide; DC metro fringe",
+      "format": "geojson-featurecollection",
+      "catalog_url": "https://511.vdot.virginia.gov/",
+      "feed_url": "https://511.vdot.virginia.gov/services/map/layers/map/cams",
+      "access": "public_catalog_unconfirmed",
+      "media": "HTTPS PNG snapshots; HLS may be available",
+      "integration": "active_snapshot_seeds",
+      "notes": "Public map data exposes image_url, https_url, active and coordinates; live endpoint reachability and redistribution rights require on-device checks. DC Metro label is Virginia, not DDOT."
+    },
+    {
+      "id": "mdot",
+      "agency": "Maryland DOT / CHART",
+      "coverage": "MD statewide; DC metro fringe",
+      "format": "chart-live-cameras-json",
+      "catalog_url": "https://chart.maryland.gov/DataFeeds/GetDataFeeds",
+      "feed_url": "https://chart.maryland.gov/DataFeeds/GetDataFeeds",
+      "access": "public_catalog",
+      "media": "Public video URL per camera; image compatibility not verified",
+      "integration": "candidate_requires_media_review",
+      "notes": "Official CHART feed documents lat/lon, operation status, last cache update and publicVideoURL; do not assume it is a JPEG."
+    },
+    {
+      "id": "wsdot",
+      "agency": "Washington State DOT",
+      "coverage": "WA statewide",
+      "format": "wsdot-highwaycameras-api",
+      "catalog_url": "https://wsdot.wa.gov/traffic/api/Documentation/class_highway_cameras.html",
+      "feed_url": "https://wsdot.wa.gov/traffic/api/",
+      "access": "developer_access_code_required",
+      "media": "HTTPS snapshots",
+      "integration": "gated",
+      "notes": "WSDOT documents an AccessCode parameter; never hardcode a key in public Rust-Boy state or repository."
+    },
+    {
+      "id": "nycdot",
+      "agency": "New York City DOT / TMC",
+      "coverage": "NYC boroughs",
+      "format": "nyctmc",
+      "catalog_url": "https://webcams.nyctmc.org/subscribers",
+      "feed_url": "https://webcams.nyctmc.org/",
+      "access": "developer_agreement_required",
+      "media": "Periodically updated still images",
+      "integration": "gated",
+      "notes": "NYC DOT explicitly requires a signed data-sharing agreement for developers; do not embed camera URLs before agreement."
+    },
+    {
+      "id": "511ny",
+      "agency": "New York State 511 / NYSDOT",
+      "coverage": "NY statewide including NYC",
+      "format": "511ny-rest",
+      "catalog_url": "https://prod-ny.ibi511.com/developers/help",
+      "feed_url": "https://511ny.org/",
+      "access": "developer_key_required",
+      "media": "Camera images and video metadata",
+      "integration": "gated",
+      "notes": "A registered developer key and rate limits apply; do not ship credentials in catalog or browser state."
+    },
+    {
+      "id": "massdot",
+      "agency": "Massachusetts DOT",
+      "coverage": "MA statewide including Boston",
+      "format": "trafficland-jpeg-api",
+      "catalog_url": "https://www.mass.gov/info-details/highway-data-for-developers",
+      "feed_url": "https://www.mass.gov/info-details/highway-data-for-developers",
+      "access": "provider_access_required",
+      "media": "JPEG (1 frame per 120 seconds)",
+      "integration": "gated",
+      "notes": "MassDOT directs third-party camera API access through TrafficLand sales@trafficland.com. No anonymous Boston camera URL is approved."
+    },
+    {
+      "id": "ddot",
+      "agency": "District of Columbia DOT",
+      "coverage": "Washington DC proper",
+      "format": "ddot-cctv",
+      "catalog_url": "https://ddot.dc.gov/vi/page/open-government-material-and-foia-ddot",
+      "feed_url": "https://ddot.dc.gov/",
+      "access": "no_public_developer_feed_verified",
+      "media": "CCTV traffic camera feeds",
+      "integration": "gated",
+      "notes": "DDOT/HSEMA documentation describes CCTV/FOIA access, not an unconditional public developer API. Do not label Virginia views as DC city cameras."
+    }
+  ]
+}
