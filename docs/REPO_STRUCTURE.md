@@ -8,6 +8,7 @@ Rust-Boy keeps a deliberately small top level. **Do not relocate operational dat
 | --- | --- | --- |
 | [`../crates/pipboy-core`](../crates/pipboy-core) | Shared Rust model, policy, persistence and capability definitions | Keep business logic out of browser JavaScript; add unit tests with changes |
 | [`../crates/pipboy`](../crates/pipboy) | Native CLI/TUI, loopback HTTP server, embedded dashboard/micro assets | Keep endpoints bounded and operator gated; share one core backend |
+| [`../server`](../server) | Optional mini-server scaffold, field deployment roadmap and server-specific architecture | Keep networking code distinct from the loopback dashboard and deny-all device broker; no implicit listeners |
 | [`../crates/rust-boy-broker`](../crates/rust-boy-broker) | Deny-only peripheral broker prototype | Do not enable physical I/O without separate threat review |
 | [`../catalog`](../catalog) | Machine-readable evidence, sources, modules and role roadmaps | Stable IDs and source provenance; run catalog and role validators |
 | [`README.md`](README.md) | Operator, architecture and acceptance contracts | Add a link to this index for new operator-facing guides |
