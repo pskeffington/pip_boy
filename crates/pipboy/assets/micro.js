@@ -156,6 +156,9 @@ function renderHeading() {
   ui.title.textContent = label || pageTitles[tab];
   ui.mode.textContent = "LOCAL";
   ui.back.hidden = !openedTool && focusedCamera === null && tab === "stat";
+  const settingsButton = $("micro-settings");
+  if (tab === "conf") settingsButton.setAttribute("aria-current", "page");
+  else settingsButton.removeAttribute("aria-current");
   for (const item of ui.tabs) {
     const current = item.dataset.tab === tab;
     if (current) item.setAttribute("aria-current", "page");
