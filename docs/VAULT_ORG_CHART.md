@@ -108,6 +108,21 @@ R1 must start with **data-only schemas and deterministic tests**. The existing `
 | Hospital / clinical campus | Operations/incident command as Overseer-like coordinator; clinical chain independent | **No PHI** on current RB storage or peer sync; clinical roles, legal oversight, EHR access and emergency protocols require separate security/compliance assessment |
 | Multi-site fleet | Parent org with multiple independent `VaultSite` command trees | Cross-site exchange denied by default; avoid global master Overseer access unless separately granted |
 
+## ORG-1 Rust core implementation (2026-10-26)
+
+The first **pure-data** organizational graph now exists in [`pipboy-core::organization`](../crates/pipboy-core/src/organization.rs) and is exported by `pipboy-core/src/lib.rs`. The module includes strictly validated `Organization`, `VaultSite`, `Unit` (`Division` or `Team`), `Operator`, `Appointment`, `DeviceRecord` and draft `Grant` records. The graph is **not** read from or written to existing `PIPBOY_HOME` state; task, peer, Messenger, workbench and SSH schemas are unchanged.
+
+- Structural validation: bounded record counts, stable unique IDs, printable names, existence of referenced organizations/sites/operators, and same-Vault reporting paths.
+- Multi-tenant isolation: cross-organization appointments, device assignments or draft grants fail validation. A unit's reporting parent must be within its own Vault.
+- Human appointments: an explicit approver reference, start/end interval, optional revocation metadata and position ID. These are records, **not evidence that the approver is authenticated or authorized**.
+- Device lifecycle: `unenrolled / pending / recorded_active / suspended / revoked` are recorded *labels*, not cryptographic proof that a device key is valid.
+- Draft grants: subject may be an operator or device, with an organization/Vault scope, data category, action, validity interval and revocation flag. These are untrusted data and cannot authorize a read, assignment or sync operation until verified policy + identity are implemented.
+- Pure reporting lookup: `reporting_chain(unit_id)` follows same-Vault Unit ancestry but grants no inherited rights. It never traverses to another site or organization.
+
+The native unit fixtures exercise two organizations, three Vault sites, multiple teams and operators, reporter chains, duplicate/cyclic/missing parents, org-crossing appointments/devices/grants, reassignment, invalid dates, and strict JSON serialization. No listeners, discovery, new storage, hospital data or background sync were enabled.
+
+**Next gate:** an independently authenticated human/organization/device enrollment flow and a policy decision point before using these records to route actual jobs. Do not apply draft grants to existing `/api/tasks` or `peer` routes merely because this structural model validates.
+
 ### Upcoming implementation gates
 
 - **ORG-0 (this pass):** common, stable diagram; machine-readable role/preset mapping; documented non-role positions; CI drift detection.
