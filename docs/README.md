@@ -18,6 +18,7 @@ Technical contracts, architecture decisions, research provenance and validation 
 | [Network health and UniFi setup](NETWORK_HEALTH_UNIFI.md) | Unified 16-tool catalog, bounded ICMP/TCP tests, controller configuration and view-owned refresh |
 | [NET ENGINEER LAN diagnostics](NETWORK_ENGINEERING.md) | Explicit private-subnet scan, ICMP/TCP RTT, bounded monitor and device-count limitations |
 | [DIAG offline ingestion](DIAGNOSTICS.md) | Scoped fault-evidence JSONL intake and local host heuristics |
+| [RB <-> RB organizational synchronization roadmap](RB_SYNC_ROADMAP.md) | Trusted proximity discovery, IP/key pairing, scoped fleet enrollment, delta sync and healthcare release gates (design only) |
 | [Peer task transport](PEER_TASK_TRANSPORT.md) | Explicit OpenSSH Mac/Pi enrollment, restricted bridge, delivery and receipt sync |
 | [Overseer Task Control](TASK_CONTROL.md) | Persistent assignments, status, manual handoff and role queues |
 | [Micro handheld shell](MICRO_UI.md) | Universal location settings, single-row header, five universal sections, Rust-owned module categories and height-aware tool pages, touch pagers and compact Task Control |
@@ -51,6 +52,7 @@ Technical contracts, architecture decisions, research provenance and validation 
 | Reclamation Scout GIS | [RustGIS and Raspberry Pi / TAK architecture](SCOUT_GIS_TAK.md) |
 | Fallout 4 | [Game mode setup and protocol](GAME_MODE.md) |
 | Task management | [Task Control, local persistence and manual dispatch](TASK_CONTROL.md) |
+| Fleet and peer synchronization | [Org-bound RB synchronization (planned)](RB_SYNC_ROADMAP.md) · [Existing peer transport (implemented)](PEER_TASK_TRANSPORT.md) |
 | RADIO / SDR | [Receiver and curated stations](RADIO_SDR.md) · [Native player and acceptance passes](RADIO_NATIVE_ROADMAP.md) |
 | Micro handheld | [Launch, controls, themes, safety and acceptance](MICRO_UI.md) |
 | Graphical UI | [Dashboard launcher, API, responsive viewport and test plan](DASHBOARD_UI.md) |
