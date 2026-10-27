@@ -201,7 +201,34 @@ impl<'s, S: ProtectedSecrets> DurableOrganization<'s, S> {
         }
     }
 
-    pub fn root_public_key(&self) -> &[u8] { &self.state.root_public_key }
+
+    fn check_anchor(&self) -> Result<(), StateError> {
+        if self.poisoned { return Err(StateError::Poisoned); }
+        let actual = read_anchor(self.store, &self.anchor_name)?
+            .ok_or(StateError::UntrustedAnchor)?;
+        if actual != expected_anchor(&self.root, &self.state)? {
+            return Err(StateError::AnchorMismatch);
+        }
+        Ok(())
+    }
+
+    fn commit_state(&mut self, next: OrganizationState) -> Result<(), StateError> {
+        self.check_anchor()?;
+        let next_anchor = expected_anchor(&self.root, &next)?;
+        // A failed keyring/filesystem transition poisons this handle.
+        // No transparent rollback or plaintext recovery is permitted.
+        self.poisoned = true;
+        write_anchor(self.store, &self.anchor_name, &next_anchor)?;
+        persist(&self.root, &next)?;
+        self.state = next;
+        self.poisoned = false;
+        Ok(())
+    }
+
+    pub fn verified_root_public_key(&self) -> Result<&[u8], StateError> {
+        self.check_anchor()?;
+        Ok(&self.state.root_public_key)
+    }
     pub fn organization_id(&self) -> &str { &self.state.organization_id }
     pub fn issuer_key_epoch(&self) -> u64 { self.state.issuer_key_epoch }
     pub fn revocation_generation(&self) -> u64 { self.state.revocation_generation }
@@ -210,6 +237,7 @@ impl<'s, S: ProtectedSecrets> DurableOrganization<'s, S> {
     /// Verified expiry is enforced by the caller's separately authenticated clock.
     /// Missing or expired snapshots MUST block authentication evidence consumption.
     pub fn fresh_snapshot(&self, trusted_now: u64) -> Result<&SignedRevocations, StateError> {
+        self.check_anchor()?;
         let r = self.state.revocations.as_ref().ok_or(StateError::Stale)?;
         if !(r.not_before <= trusted_now && trusted_now < r.expires_at) {
             return Err(StateError::Stale);
@@ -222,16 +250,25 @@ impl<'s, S: ProtectedSecrets> DurableOrganization<'s, S> {
     pub fn install_revocations(&mut self, snapshot: SignedRevocations)
         -> Result<(), StateError>
     {
+        self.check_anchor()?;
         if !check_snapshot(&self.state, &snapshot) { return Err(StateError::Invalid); }
         if snapshot.generation <= self.state.revocation_generation {
             return Err(StateError::Rollback);
         }
+        if let Some(previous) = &self.state.revocations {
+            let contains_prior = |old: &[u64], new: &[u64]| {
+                old.iter().all(|serial| new.binary_search(serial).is_ok())
+            };
+            if !contains_prior(&previous.credential_serials, &snapshot.credential_serials)
+                || !contains_prior(&previous.approval_serials, &snapshot.approval_serials)
+            {
+                return Err(StateError::RevocationRegression);
+            }
+        }
         let mut next = self.state.clone();
         next.revocation_generation = snapshot.generation;
         next.revocations = Some(snapshot);
-        persist(&self.root, &next)?;
-        self.state = next;
-        Ok(())
+        self.commit_state(next)
     }
 
     /// Atomically commit a challenge before reporting an evidence result.
@@ -239,14 +276,13 @@ impl<'s, S: ProtectedSecrets> DurableOrganization<'s, S> {
     /// Capacity exhaustion fails closed. Keep ledger through expiry/rotation
     /// until a separately reviewed compaction protocol exists.
     pub fn record_nonce(&mut self, nonce: [u8; 32]) -> Result<(), StateError> {
+        self.check_anchor()?;
         if nonce == [0; 32] { return Err(StateError::Invalid); }
         if self.state.consumed_nonces.contains(&nonce) { return Err(StateError::Replay); }
         if self.state.consumed_nonces.len() >= MAX_RECORDS { return Err(StateError::Capacity); }
         let mut next = self.state.clone();
         next.consumed_nonces.push(nonce);
-        persist(&self.root, &next)?;
-        self.state = next;
-        Ok(())
+        self.commit_state(next)
     }
 }
 
