@@ -57,6 +57,7 @@ let activeTaskUI = null;
 let activeNetworkUI = null;
 let activeMessengerUI = null;
 let activeRadioUI = null;
+let activeCameraUI = null;
 const viewPage = { stat: 0, role: 0, data: 0, conf: 0 };
 let paletteOpen = false;
 let rolePage = 0;
@@ -322,19 +323,6 @@ function showData() {
   return root;
 }
 
-function cameraTile(number, focus = false) {
-  const cell = button("", () => {
-    focusedCamera = focus ? null : number;
-    render();
-  }, "camera-tile" + (focus ? " camera-focus" : ""));
-  cell.setAttribute("aria-label", focus
-    ? "Camera " + number + " placeholder, return to all four"
-    : "Focus camera " + number + " placeholder");
-  cell.append(make("strong", "", "CAM " + String(number).padStart(2, "0")),
-    make("small", "", "NO SIGNAL"));
-  return cell;
-}
-
 function showRadio() {
   const root = panel();
   const host = make("div", "rb-radio-host");
@@ -497,10 +485,13 @@ function showTool() {
     return root;
   }
   if (openedTool === "camera-grid") {
-    root.append(sectionTop("CAMERAS", "0 / 4 LIVE"));
-    const quad = make("div", "camera-grid");
-    for (let number = 1; number <= 4; number++) quad.append(cameraTile(number));
-    root.append(focusedCamera === null ? quad : cameraTile(focusedCamera, true));
+    const host = make("div", "rb-camera-host");
+    root.append(host);
+    if (window.RustBoyCameras) activeCameraUI = window.RustBoyCameras.mount(host, {
+      feeds: snapshot.camera_feeds, compact:true, selected:focusedCamera,
+      onSelect:value => { focusedCamera=value; }
+    });
+    else host.textContent = "PUBLIC CAMERA MODULE UNAVAILABLE";
     return root;
   }
   if (openedTool === "native-radio") {
@@ -577,6 +568,8 @@ function showTool() {
 
 function render() {
   if (!snapshot) return;
+  if (activeCameraUI) activeCameraUI.destroy();
+  activeCameraUI = null;
   if (activeNetworkUI) activeNetworkUI.destroy();
   activeNetworkUI = null;
   if (activeRadioUI) activeRadioUI.destroy();

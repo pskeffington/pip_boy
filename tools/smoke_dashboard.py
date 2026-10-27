@@ -84,7 +84,7 @@ with tempfile.TemporaryDirectory() as temporary:
         assert [item["id"] for item in state["profiles"]] == [
             "overseer", "head-engineer", "security-chief", "vault-doctor",
             "university-researcher", "reclamation-scout",
-            "records-custodian", "custom"
+            "recon", "records-custodian", "custom"
         ]
         assert state["profiles"][-1]["tools"] == []
         assert state["network"] == "loopback_only"
@@ -164,7 +164,7 @@ with tempfile.TemporaryDirectory() as temporary:
         assert not (home / "permissions.json").exists()
         if os.name != "nt":
             assert (home / "workbench.json").stat().st_mode & 0o777 == 0o600
-        print("PASS: Rust dashboard serves responsive assets on loopback, eight real templates, "
+        print("PASS: Rust dashboard serves responsive assets on loopback, nine real templates, "
               "persisted role switching, Custom pin/unpin, GeoJSON/CIDR/byte lab, "
               "same-origin guard, CSP, and no implicit hardware/network activity")
     finally:

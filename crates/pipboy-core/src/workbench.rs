@@ -202,7 +202,7 @@ pub struct Preset {
 pub const PRESETS: &[Preset] = &[
     Preset {
         id: "overseer",
-        title: "Overseer Operations",
+        title: "Overseer",
         description: "Operations command desk: assign work, track deadlines, log acknowledgments and manage handoffs.",
         lore_evidence: "VT-01",
         role_fidelity: "canonical_job",
@@ -210,7 +210,7 @@ pub const PRESETS: &[Preset] = &[
     },
     Preset {
         id: "head-engineer",
-        title: "Head Engineer Station",
+        title: "Maintenance",
         description: "Systems engineering: health telemetry, subnet calculations, byte analysis and synthetic rigs.",
         lore_evidence: "VT-01",
         role_fidelity: "canonical_job",
@@ -218,7 +218,7 @@ pub const PRESETS: &[Preset] = &[
     },
     Preset {
         id: "security-chief",
-        title: "Security Chief Station",
+        title: "Security",
         description: "Defensive triage: local status, offline network planning, packet bytes and incident notes.",
         lore_evidence: "VT-01",
         role_fidelity: "canonical_job",
@@ -226,7 +226,7 @@ pub const PRESETS: &[Preset] = &[
     },
     Preset {
         id: "vault-doctor",
-        title: "Vault Doctor Station",
+        title: "Doctor",
         description: "Scientific reference, research notes and workstation condition; not medical diagnosis.",
         lore_evidence: "VT-01",
         role_fidelity: "canonical_job",
@@ -234,7 +234,7 @@ pub const PRESETS: &[Preset] = &[
     },
     Preset {
         id: "university-researcher",
-        title: "University Research Station",
+        title: "Scientist",
         description: "Reproducible experimentation: bytes, references, notes, fixtures and network mathematics.",
         lore_evidence: "VT-01",
         role_fidelity: "role_inspired",
@@ -242,15 +242,23 @@ pub const PRESETS: &[Preset] = &[
     },
     Preset {
         id: "reclamation-scout",
-        title: "Reclamation Field Kit",
+        title: "Reclamations",
         description: "Offline WGS84 field mapping, records, LAN planning, status and explicit game companion.",
         lore_evidence: "VT-02",
         role_fidelity: "role_inspired",
         tools: &["reclamation", "geo-lab", "game", "net-lab", "notes", "host"],
     },
     Preset {
+        id: "recon",
+        title: "Recon",
+        description: "Field reconnaissance: offline coordinates, observations, references and device condition.",
+        lore_evidence: "RB-01",
+        role_fidelity: "role_inspired",
+        tools: &["geo-lab", "notes", "library", "host", "diag"],
+    },
+    Preset {
         id: "records-custodian",
-        title: "Records Custodian Station",
+        title: "Archivist",
         description: "Research archives, local writing, and noncryptographic byte verification.",
         lore_evidence: "VT-03",
         role_fidelity: "role_inspired",
@@ -258,7 +266,7 @@ pub const PRESETS: &[Preset] = &[
     },
     Preset {
         id: "custom",
-        title: "Custom Workbench",
+        title: "Custom",
         description: "Advanced builder: start empty, then choose every tool yourself.",
         lore_evidence: "RB-01",
         role_fidelity: "rust_boy_original",
@@ -367,8 +375,23 @@ impl Workbench {
                 "workbench exceeds 64 KiB",
             ));
         }
-        let board: Self = serde_json::from_slice(&bytes)
+        let mut board: Self = serde_json::from_slice(&bytes)
             .map_err(|error| io::Error::new(io::ErrorKind::InvalidData, error))?;
+        // Present old built-in role labels canonically without rewriting files
+        // or changing user-authored Custom/workbench titles.
+        let old_title = match board.profile.as_str() {
+            "overseer" => "Overseer Operations",
+            "head-engineer" => "Head Engineer Station",
+            "security-chief" => "Security Chief Station",
+            "vault-doctor" => "Vault Doctor Station",
+            "university-researcher" => "University Research Station",
+            "reclamation-scout" => "Reclamation Field Kit",
+            "records-custodian" => "Records Custodian Station",
+            _ => "",
+        };
+        if let Some(role) = preset(&board.profile).filter(|_| board.title == old_title) {
+            board.title = role.title.to_owned();
+        }
         board.validate()?;
         Ok(board)
     }
@@ -753,6 +776,24 @@ pub fn encode_hex(text: &str) -> io::Result<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn legacy_role_titles_are_presented_without_rewriting_saved_state() {
+        let mut board = Workbench::from_preset(preset("head-engineer").unwrap());
+        board.title = "Head Engineer Station".into();
+        let data = board.encoded().unwrap();
+        let loaded = Workbench::read(data.as_slice()).unwrap();
+        assert_eq!(loaded.title, "Maintenance");
+        assert_eq!(loaded.profile, "head-engineer");
+        assert_eq!(loaded.slots, board.slots);
+        board.title = "Operator chosen name".into();
+        assert_eq!(
+            Workbench::read(board.encoded().unwrap().as_slice())
+                .unwrap()
+                .title,
+            "Operator chosen name"
+        );
+    }
 
     #[test]
     fn default_overseer_board_is_ready_without_read_side_effects() {

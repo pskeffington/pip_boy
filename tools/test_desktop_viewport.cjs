@@ -25,11 +25,11 @@ for (const name of ["dashboard.js", "messenger.js", "radio-ui.js"]) {
 const profiles = [
   {id:"overseer", title:"Overseer Station",
     description:"Manage assignments and workbench operations.", tools:["host","diag"]},
-  {id:"head-engineer", title:"Head Engineer Station",
+  {id:"head-engineer", title:"Maintenance",
     description:"System checks, network engineering and local diagnostics.", tools:["host","net-lab","byte-lab","diag","simulator"]},
-  {id:"security-chief", title:"Security Chief Station",
+  {id:"security-chief", title:"Security",
     description:"Defensive audit and scoped triage.", tools:["host"]},
-  {id:"vault-doctor", title:"Vault Doctor Station",
+  {id:"vault-doctor", title:"Doctor",
     description:"Local reference and equipment review.", tools:["host"]},
   {id:"scout", title:"Scout Station",
     description:"GIS reference and navigation.", tools:["host"]},
@@ -236,7 +236,7 @@ function check(data,width,height) {
   assert.match(data.rolePager,/1\s*\/\s*2/,"Settings station pager unavailable");
   assert.equal(data.tools,5,"Five Head Engineer tools must be available");
   assert.equal(data.toolCount,"5","Tool count must reflect Rust data");
-  assert.equal(data.mainRole,"WORKBENCH");
+  assert.equal(data.mainRole,data.selectedStation,"Workspace title must show the current operator role");
   assert.equal(data.selectedStation,"HEAD ENGINEER STATION");
   assert.ok(data.mainVisible && data.activeStage,"Workspace tools must start visible");
   assert.ok(data.collapsedDetail,"Tool explanation should start closed");

@@ -249,6 +249,23 @@
         "tools/test_run_smokes.py",
         "tools/validate_repo.py"
       ]
+    },
+    {
+      "id": "public-camera-fallback",
+      "boundary": "Rust-owned DC/NYC/Boston/SF publisher catalog and shared browser player. No discovery, private camera credentials, native RTSP decoder or recording.",
+      "hardware_gate": "field_pending",
+      "code": [
+        "crates/pipboy-core/src/public_cameras.rs",
+        "crates/pipboy/assets/cameras.js",
+        "crates/pipboy/assets/cameras.css"
+      ],
+      "docs": [
+        "docs/SECURITY_CAMERA_WALL.md"
+      ],
+      "checks": [
+        "tools/test_cameras_ui.cjs"
+      ],
+      "acceptance": "Software catalog/lifecycle tests only; publisher playback and Mac/Pi operator acceptance remain provider/hardware dependent."
     }
   ]
 }

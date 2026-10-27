@@ -87,7 +87,7 @@ with tempfile.TemporaryDirectory() as work:
         assert b"/api/profile" in js and b"/api/custom/add" in js
         assert b"/api/experiment" in js and b"/api/custom/remove" in js
         assert b"eval(" not in js and b"innerHTML" not in js
-        assert b"RustBoyMap.mount" in js and b"NO SIGNAL" in js
+        assert b"RustBoyMap.mount" in js and b"RustBoyCameras.mount" in js
         assert b"function pagedTiles(" in js
         assert b"function renderRolePage(" in js
         assert b'root.classList.add("micro-home")' in js
@@ -125,10 +125,19 @@ with tempfile.TemporaryDirectory() as work:
         assert [entry["id"] for entry in state["profiles"]] == [
             "overseer", "head-engineer", "security-chief", "vault-doctor",
             "university-researcher", "reclamation-scout",
-            "records-custodian", "custom"
+            "recon", "records-custodian", "custom"
         ]
         assert state["profiles"][-1]["tools"] == []
-        assert state["engine"]["camera_wall"] == "not_integrated"
+        assert [role["title"] for role in state["profiles"]] == [
+            "Overseer", "Maintenance", "Security", "Doctor", "Scientist",
+            "Reclamations", "Recon", "Archivist", "Custom"
+        ]
+        assert [feed["id"] for feed in state["camera_feeds"]] == ["dc", "nyc", "boston", "sf"]
+        assert "frame-src https://www.youtube-nocookie.com;" in headers["Content-Security-Policy"]
+        for asset, marker in [("/assets/cameras.js", b"RustBoyCameras"), ("/assets/cameras.css", b"rb-camera-view")]:
+            code, _, content = request(port, "GET", asset)
+            assert code == 200 and marker in content
+        assert state["engine"]["camera_wall"] == "public_fallback_embeds"
         assert state["engine"]["rustgis"] == "not_integrated"
         assert not root.exists(), "GET must not initialize workbench or touch notes"
 
@@ -220,7 +229,7 @@ with tempfile.TemporaryDirectory() as work:
         assert not (root / "notes.json").exists()
         if os.name != "nt":
             assert (root / "workbench.json").stat().st_mode & 0o777 == 0o600
-        print("PASS: micro HTML/CSS/JS on loopback, five sections, seven roles + Custom, "
+        print("PASS: micro HTML/CSS/JS on loopback, five sections, eight roles + Custom, "
               "scope-safe switching, RustGIS MAP assets, Custom lab, CSP, offline defaults "
               "and no implicit network/device activity")
     finally:

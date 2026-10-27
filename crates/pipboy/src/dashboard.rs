@@ -53,6 +53,8 @@ const MESSENGER_JS: &str = include_str!("../assets/messenger.js");
 const MESSENGER_CSS: &str = include_str!("../assets/messenger.css");
 const RECLAMATION_JS: &str = include_str!("../assets/reclamation.js");
 const RECLAMATION_CSS: &str = include_str!("../assets/reclamation.css");
+const CAMERAS_JS: &str = include_str!("../assets/cameras.js");
+const CAMERAS_CSS: &str = include_str!("../assets/cameras.css");
 const RADIO_UI_JS: &str = include_str!("../assets/radio-ui.js");
 const RADIO_UI_CSS: &str = include_str!("../assets/radio-ui.css");
 
@@ -121,7 +123,7 @@ impl Response {
         let head = format!(
             "HTTP/1.1 {} {}\r\nContent-Type: {}\r\nContent-Length: {}\r\n\
              Cache-Control: no-store, max-age=0\r\n\
-             Content-Security-Policy: default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self' https://overpass-api.de https://tigerweb.geo.census.gov; frame-ancestors 'none'; base-uri 'none'; form-action 'none'\r\n\
+             Content-Security-Policy: default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self' https://overpass-api.de https://tigerweb.geo.census.gov; frame-src https://www.youtube-nocookie.com; frame-ancestors 'none'; base-uri 'none'; form-action 'none'\r\n\
              X-Content-Type-Options: nosniff\r\n\
              X-Frame-Options: DENY\r\n\
              Referrer-Policy: no-referrer\r\n\
@@ -297,11 +299,13 @@ fn state(store: &WorkbenchStore) -> Result<Response, Response> {
             "mode": "local_dashboard",
             "active": active,
             "profiles": PRESETS,
+            "camera_feeds": pipboy_core::public_cameras::PUBLIC_CAMERA_FEEDS,
             "palette": PALETTE,
             "net_operations": network_suite::OPERATIONS,
             "engine": {
                 "rustgis": "not_integrated",
-                "camera_wall": "not_integrated",
+                "camera_wall": "public_fallback_embeds",
+                "private_cameras": "not_configured",
                 "tak": "not_integrated",
                 "game_link": "explicit_cli_only"
             },
@@ -1003,6 +1007,12 @@ fn dispatch(req: &Request, store: &WorkbenchStore, port: u16) -> Response {
         ),
         ("GET", "/assets/radio-ui.css") => {
             Response::new(200, "text/css; charset=utf-8", RADIO_UI_CSS.as_bytes())
+        }
+        ("GET", "/assets/cameras.js") => {
+            Response::new(200, "text/javascript; charset=utf-8", CAMERAS_JS.as_bytes())
+        }
+        ("GET", "/assets/cameras.css") => {
+            Response::new(200, "text/css; charset=utf-8", CAMERAS_CSS.as_bytes())
         }
         ("GET", "/assets/micro.js") => {
             Response::new(200, "text/javascript; charset=utf-8", MICRO_JS.as_bytes())

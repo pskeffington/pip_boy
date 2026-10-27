@@ -1,10 +1,10 @@
-# Reclamation Field Kit
+# Reclamations
 
 Rust-Boy Reclamation Scout now includes a **local-only site register** with manually entered WGS84 positions. The role is pre-pinned with RECLAMATION, SCOUT GIS, GAME LINK, NET ENGINEER, NOTES and HOST STAT.
 
 ## Operator workflow
 
-1. Start `./scripts/launch-micro.command`, load **Reclamation Field Kit**, then select **SITES**.
+1. Start `./scripts/launch-micro.command`, load **Reclamations**, then select **SITES**.
 2. Select **NEW SITE** and enter a label, site type, observed condition, priority, latitude/longitude and optional position uncertainty in meters.
 3. Save locally. Sites are retained across profile changes and application restarts in `PIPBOY_HOME/reclamation.json` (default `~/.pipboy/reclamation.json`).
 4. Change a site's workflow state using **UPDATE**: `logged`, `in_progress`, `needs_assistance` or `completed`. A revision conflict rejects stale edits.

@@ -82,6 +82,7 @@ jobs:
           node tools/test_radio_ui.cjs
           node --check crates/pipboy/assets/micro.js
           node tools/test_micro_ui.cjs
+          node tools/test_cameras_ui.cjs
           node --check crates/pipboy/assets/tasks.js
           node --check crates/pipboy/assets/map.js
           node --check crates/pipboy/assets/map-import.js
