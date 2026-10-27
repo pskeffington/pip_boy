@@ -70,6 +70,29 @@ class NormalizeTests(unittest.TestCase):
         self.assertIsNone(items[0]["image_url"])
         self.assertFalse(items[0]["live_verified"])
 
+    def test_maryland_socrata_metadata_uses_actual_camera_coordinates(self):
+        sample = [{"objectid":"55", "location":"I-270 & Montgomery Village Ave (MD 124)",
+                   "feedid":"3d010dec036a0075004d823633235daa",
+                   "lat":"39.148937", "long":"-77.21702",
+                   "url":"https://chart.maryland.gov/video/video.php?feed=3d010dec036a0075004d823633235daa"}]
+        items = index.normalize("md-socrata", index.bounded_json(json.dumps(sample)))
+        self.assertEqual(len(items), 1)
+        self.assertEqual(items[0]["id"], "md-socrata-55")
+        self.assertEqual(items[0]["lat"], 39.148937)
+        self.assertEqual(items[0]["lon"], -77.21702)
+        self.assertIsNone(items[0]["image_url"])
+        self.assertFalse(items[0]["live_verified"])
+
+    def test_geolocated_seed_records_are_real_coordinates_but_not_live(self):
+        data = json.loads((ROOT / "catalog/maryland_geolocated_camera_seeds.json").read_text())
+        self.assertGreaterEqual(data["candidate_count"], 20)
+        self.assertEqual(data["candidate_count"], len(data["cameras"]))
+        self.assertEqual(len({x["id"] for x in data["cameras"]}), len(data["cameras"]))
+        for camera in data["cameras"]:
+            self.assertIsNotNone(index.coordinate(camera["lat"], camera["lon"], "MD"))
+            self.assertIsNone(camera["image_url"])
+            self.assertFalse(camera["live_verified"])
+
     def test_input_limits_and_malformed_payload_fail_closed(self):
         for payload in ('{}', '{"features": null}', '{"error": {"message": "bad"}, "features":[]}',
                         '{"features": [null]}'):
