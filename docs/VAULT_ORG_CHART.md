@@ -151,6 +151,16 @@ A positive `IdentityEvidence` requires:
 
 Synthetic `organization_identity` unit tests use fixed **test-only** key seeds and include independent signed credentials, wrong authority, tampering, wrong session binding/nonces, revocation, invalid organization/site and ungranted actions. The test-only seeds are not intended as live keys.
 
+## ORG-3.1 signed approvals and replay evidence (offline only)
+
+[`pipboy-core::organization_authority`](../crates/pipboy-core/src/organization_authority.rs) now extends the ORG-3 identity verifier with *domain-separated Ed25519 signatures* for appointments, operator/device grants, and bounded revocation snapshots. The wire-level signing transcripts use explicit field encoding and distinct `appointment`, `grant`, and `revocation` labels. Existing task and peer file formats remain unchanged.
+
+The synthetic `verify_enrollment_evidence` path requires all three distinct root-signed approval records, exact correspondence to the candidate organization graph, independently scoped operator **and** device grants, verified device/operator identity possession evidence, and an organization-root-signed revocation list with a bounded lifetime, monotonically increasing generation, sorted unique entries, and denial for explicitly revoked credentials or approvals. A capacity-limited `VolatileNonceJournal` demonstrates rejecting a second reuse of the same nonce **within one process**; it is *not* durable anti-replay.
+
+**Release-blocking trust boundaries:** The public root must be pinned through independent authorized provisioning, the issuer root and revocation generation must be stored with verified freshness, system clock and TLS/SSH channel export must be independently authenticated, and spent nonces must be atomically durable across restart. A key holder's approval signature is not proof of their job title; the org administrator must manage issuer authority, key rotation, key loss, enrollment approval and revocation procedures. Secure OS/hardware-backed private-key custody remains **unimplemented**. All current sample keys are fixed synthetic test-only seeds; do not use them on deployed devices.
+
+Neither `CandidateForVerification`, `IdentityEvidence` nor `EnrollmentEvidence` authorizes a route or transmits a record. The module is intentionally unconnected to task/SSH/live UI. In particular, the verifier does not establish that its supplied graph, clock, root, revocation floor or nonce store is trustworthy. PHI, regulated personnel data and life-critical dispatch are not supported.
+
 ### Upcoming implementation gates
 
 - **ORG-0 (this pass):** common, stable diagram; machine-readable role/preset mapping; documented non-role positions; CI drift detection.
