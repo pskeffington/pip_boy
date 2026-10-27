@@ -61,7 +61,7 @@ impl DurableOrganization {
         let fingerprint = fingerprint(root_public_key).map_err(|_| StateError::Invalid)?;
         admin.approve_root_pin(organization_id, &fingerprint)
             .map_err(|_| StateError::Unapproved)?;
-        let mut guard = Self::open_lock(directory)?;
+        let (lock, _) = Self::open_lock(directory)?;
         if directory.join("org-state.json").exists() { return Err(StateError::Unapproved); }
         let state = OrganizationState {
             schema_version: 1,
@@ -72,9 +72,8 @@ impl DurableOrganization {
             revocations: None,
             consumed_nonces: Vec::new(),
         };
-        guard.1 = Some(state.clone());
         persist(directory, &state)?;
-        Ok(Self { root: directory.to_owned(), _lock: guard.0, state })
+        Ok(Self { root: directory.to_owned(), _lock: lock, state })
     }
 
     pub fn open(directory: &Path) -> Result<Self, StateError> {
