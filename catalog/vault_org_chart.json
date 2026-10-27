@@ -1,0 +1,148 @@
+{
+  "schema_version": 1,
+  "designation": "design_only_not_authorization",
+  "document": "docs/VAULT_ORG_CHART.md",
+  "root": "organization-governance",
+  "default_template": "single_vault",
+  "role_id_authority": "Rust PRESETS in crates/pipboy-core/src/workbench.rs; template memberships do not confer permissions",
+  "governance": "organization admin/policy owner is distinct from an Overseer job profile",
+  "nodes": [
+    {
+      "id": "organization-governance",
+      "title": "Organization Governance",
+      "parent": null,
+      "kind": "governance",
+      "role_id": null,
+      "status": "organizational_policy",
+      "function": "Legal ownership, enrollment authority, audit oversight and tenant boundaries; not a Rust-Boy preset"
+    },
+    {
+      "id": "vault-command",
+      "title": "Overseer / Vault Command",
+      "parent": "organization-governance",
+      "kind": "command",
+      "role_id": "overseer",
+      "status": "existing_preset",
+      "function": "Mission priorities, assignment authority, cross-division coordination and incident accountability"
+    },
+    {
+      "id": "deputy-overseer",
+      "title": "Deputy Overseer / Duty Officer",
+      "parent": "vault-command",
+      "kind": "optional_position",
+      "role_id": null,
+      "status": "planned",
+      "function": "Time-limited delegated coordination and continuity; no inherited privilege"
+    },
+    {
+      "id": "security",
+      "title": "Security",
+      "parent": "vault-command",
+      "kind": "division",
+      "role_id": "security-chief",
+      "status": "existing_preset",
+      "function": "Physical and cyber incident triage, access incidents, camera/communications coordination"
+    },
+    {
+      "id": "recon",
+      "title": "Recon",
+      "parent": "security",
+      "kind": "field_unit",
+      "role_id": "recon",
+      "status": "existing_preset",
+      "function": "Field observation, situational reporting and mapping; reports through security by default"
+    },
+    {
+      "id": "engineering",
+      "title": "Engineering & Maintenance",
+      "parent": "vault-command",
+      "kind": "division",
+      "role_id": "head-engineer",
+      "status": "existing_preset",
+      "function": "Infrastructure, network, equipment, power and repair work orders"
+    },
+    {
+      "id": "medical",
+      "title": "Medical & Welfare",
+      "parent": "vault-command",
+      "kind": "division",
+      "role_id": "vault-doctor",
+      "status": "existing_preset",
+      "function": "Medical team coordination and safety review; independent clinical authority outside command task permissions"
+    },
+    {
+      "id": "medic",
+      "title": "Medic / Field Medical",
+      "parent": "medical",
+      "kind": "optional_position",
+      "role_id": null,
+      "status": "planned",
+      "function": "Planned field medical role, nine-line request routing to Doctor; no clinical data sync yet"
+    },
+    {
+      "id": "science",
+      "title": "Science & Analysis",
+      "parent": "vault-command",
+      "kind": "division",
+      "role_id": "university-researcher",
+      "status": "existing_preset",
+      "function": "Research, validated analytic support and scientific observations"
+    },
+    {
+      "id": "field-operations",
+      "title": "Field Operations & Reclamation",
+      "parent": "vault-command",
+      "kind": "division",
+      "role_id": "reclamation-scout",
+      "status": "existing_preset",
+      "function": "Recon-independent site surveys, material recovery, environmental and field work"
+    },
+    {
+      "id": "administration",
+      "title": "Administration & Archives",
+      "parent": "vault-command",
+      "kind": "division",
+      "role_id": "records-custodian",
+      "status": "existing_preset",
+      "function": "Records, audit registers, work documentation and retention administration"
+    },
+    {
+      "id": "quartermaster",
+      "title": "Quartermaster / Logistics",
+      "parent": "administration",
+      "kind": "optional_position",
+      "role_id": null,
+      "status": "planned",
+      "function": "Supply requests, inventory/asset issue, procurement and chain-of-custody logistics"
+    }
+  ],
+  "unmapped_preset_ids": [
+    "custom"
+  ],
+  "non_roles": [
+    "organization-governance",
+    "deputy-overseer",
+    "medic",
+    "quartermaster"
+  ],
+  "workflow": {
+    "issues_missions_at": "vault-command",
+    "division_approval": "by appointed human and server-verified scoped authority, not profile title",
+    "operator_progress": "assigned authenticated operator on receiver; synced receipts never imply human acknowledgment",
+    "clinical_authority": "medical",
+    "device_trust": "organization enrollment and per-device identity, not chart position",
+    "conflict_resolution": "issuer revision + recipient append-only progress, with auditable human escalation"
+  },
+  "sources": [
+    {
+      "id": "VT-01",
+      "url": "https://help.bethesda.net/app/answers/detail/a_id/49597/",
+      "claims": "Overseer, Security Chief, Head Engineer and Doctor are evidenced as roles in an official Fallout 76 training scenario"
+    },
+    {
+      "id": "RB-01",
+      "url": "https://github.com/pskeffington/pip_boy/blob/main/crates/pipboy-core/src/workbench.rs",
+      "claims": "Current stable Rust role IDs and visible titles"
+    }
+  ]
+}
