@@ -23,6 +23,8 @@ jobs:
         run: |
           python3 tools/validate_catalog.py
           python3 tools/validate_roles.py
+          python3 tools/validate_vault_org.py
+          python3 tools/test_validate_vault_org.py
           python3 tools/validate_rust_version.py
           python3 tools/validate_repo.py
           python3 tools/test_validate_repo.py
