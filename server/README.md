@@ -7,7 +7,7 @@ This directory owns the optional **mini-server/relay**, independent of the exist
 | Path | Responsibility |
 | --- | --- |
 | [mini-server](mini-server/) | Minimal fail-closed Rust daemon scaffold. No listening socket, peer forwarding, user authentication or background work exists yet. |
-| [roadmap](ROADMAP.md) | Ordered phases, dependencies, gates, deliverables and acceptance evidence |
+| [literature matrix](LITERATURE_MATRIX.md) | NIST, hospital, tunnel and distributed communications source-to-test crosswalk |\n| [roadmap](ROADMAP.md) | Ordered phases, dependencies, gates, deliverables and acceptance evidence |
 | [architecture](ARCHITECTURE.md) | Field agent, optional server, peer routes, failure modes and data ownership |
 
 Corresponding documentation: [organizational sync](../docs/RB_SYNC_ROADMAP.md), [peer SSH baseline](../docs/PEER_TASK_TRANSPORT.md), [architecture](../docs/ARCHITECTURE.md) and [documentation index](../docs/README.md).
