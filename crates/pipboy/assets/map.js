@@ -15,7 +15,18 @@
   const MAX_VERTICES = 30000;
   const EARTH_RADIUS_M = 6378137;
   let active = null;
-  let mapMemory = null; // volatile geographic features only; never store GPS fixes
+  let mapMemory = null; // volatile geography; no location persisted to disk
+  // Transient location handoff for camera ranking. GPS hints expire within 60s;
+  // coordinates stay in this local page session and never enter feed URLs.
+  let cameraLocation = null;
+  function getCameraLocation() {
+    if (!cameraLocation) return null;
+    if (cameraLocation.expiresAt && Date.now() > cameraLocation.expiresAt) {
+      cameraLocation = null;
+      return null;
+    }
+    return { ...cameraLocation };
+  }
   let webRequestCount = 0;
   let webNextRequestAt = 0;
   let webProbeAt = 0;
@@ -1230,6 +1241,9 @@
         view.zipStatus.textContent="ZCTA "+zip+" / GIS FAILED / PREVIOUS MAP KEPT";
         view.countyStatus="COUNTY GIS UNAVAILABLE / PREVIOUS MAP KEPT";
       }else{
+        // A ZIP matches a statistical county footprint, not a precise ZIP centroid.
+        cameraLocation = {lat:view.center.lat, lon:view.center.lon,
+          source:"zip_county", accuracy:"county_approximation"};
         if (view.root.className.includes("rb-map-settings")) stopGps(view);
         view.zipStatus.textContent="ZCTA "+zip+" → "+county.name.toUpperCase()+
           " / "+geoid+" / GIS READY";
@@ -1510,6 +1524,7 @@
     view.gpsIssue = issue;
     if (!issue) view.gpsHelp.open = false;
     refresh(view);
+    if (issue && cameraLocation?.source === "gps") cameraLocation = null;
     if (issue) void gpsPermissionState(view, view.gpsAttempt);
   }
 
@@ -1554,6 +1569,9 @@
         view.gpsPending = false;
         view.gpsIssue = null;
         view.gpsHelp.open = false;
+        cameraLocation = {lat:c.latitude, lon:c.longitude, source:"gps",
+          accuracy_m:Number.isFinite(c.accuracy) ? Math.max(0,c.accuracy) : null,
+          expiresAt:timestamp+60000};
         view.fix = {
           lat: c.latitude, lon: c.longitude, accuracy:
             Number.isFinite(c.accuracy) && c.accuracy >= 0 ? c.accuracy : 0,
@@ -1713,6 +1731,7 @@
     const sourceLines = make("pre", "rb-map-source-text");
     const clearMap = control("CLEAR MAP", () => {
       mapMemory = null;
+      cameraLocation = null;
       webOff(view, false);
       view.shapes = [];
       view.layers = [];
@@ -1848,7 +1867,10 @@
         if (settingsMode) view.countyEnabled = true;
         startGps(view);
       }
-      else stopGps(view);
+      else {
+        if (cameraLocation?.source === "gps") cameraLocation = null;
+        stopGps(view);
+      }
     }, "Enable or stop browser location with permission");
     view.followButton = control("FOLLOW", () => {
       view.follow = true;
@@ -1952,6 +1974,7 @@
       } else {
         if (settingsMode) stopGps(view);
         view.center = { lat, lon };
+        cameraLocation = {lat, lon, source:"manual"};
         view.follow = false;
         view.centerSelected = true;
         view.zoom = Math.max(view.zoom, 13);
@@ -2100,5 +2123,5 @@
   }
 
   // Public surface is intentionally small. Import and GNSS data stay in memory.
-  window.RustBoyMap = Object.freeze({ mount, mountSettings: (host, options) => mount(host, { ...options, settingsMode:true }), unmount, queueSiteFocus });
+  window.RustBoyMap = Object.freeze({ mount, mountSettings: (host, options) => mount(host, { ...options, settingsMode:true }), unmount, queueSiteFocus, getCameraLocation });
 })();
