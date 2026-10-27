@@ -133,11 +133,11 @@ with tempfile.TemporaryDirectory() as work:
             "Reclamations", "Recon", "Archivist", "Custom"
         ]
         assert [feed["id"] for feed in state["camera_feeds"]] == ["dc", "nyc", "boston", "sf"]
-        assert "frame-src https://www.youtube-nocookie.com;" in headers["Content-Security-Policy"]
+        assert "frame-src 'none';" in headers["Content-Security-Policy"]
         for asset, marker in [("/assets/cameras.js", b"RustBoyCameras"), ("/assets/cameras.css", b"rb-camera-view")]:
             code, _, content = request(port, "GET", asset)
             assert code == 200 and marker in content
-        assert state["engine"]["camera_wall"] == "public_fallback_embeds"
+        assert state["engine"]["camera_wall"] == "dot_direct_snapshots"
         assert state["engine"]["rustgis"] == "not_integrated"
         assert not root.exists(), "GET must not initialize workbench or touch notes"
 
