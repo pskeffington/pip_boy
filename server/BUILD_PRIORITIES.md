@@ -15,7 +15,7 @@
 | P8 | Mine transport gateway evaluation | adapter research | P7 | Leaky-feeder/wired-node/wireless-node/MF capability roster and vendor API assessment | Evidence from site survey; no assumed RF range, hardware certification |
 | P9 | Field/industry acceptance | operations and security | P8 | Tunnel, hospital, disconnected field runbooks; signed/rollbackable release | Intrinsic-safety/MSHA and AHJ review where applicable; emergency use independently accepted |
 
-**P1 initial software pass:** `pipboy-core::harsh_link_sim` now contains deterministic offline fault scenarios (cable cut, tunnel dead zone, relay silence, asymmetric transport, duplicate/reorder, 20-node rejoin). This is an in-memory simulation only: it does not prove disk durability, secure transport, a field relay, or hardware conditions. P1 remains open pending expanded seeds, delays, backpressure and CI verification.
+**P1 initial software pass:** `pipboy-core::harsh_link_sim` now contains deterministic offline fault scenarios (cable cut, tunnel dead zone, relay silence, asymmetric transport, duplicate/reorder, 20-node rejoin). This is an in-memory simulation only: it does not prove disk durability, secure transport, a field relay, or hardware conditions. P1 remains open pending CI and real transport evidence. A P1.2 virtual-time harness now adds seeded reproducible loss, delayed receiver arrival, bounded in-flight windows and exponential retry backoff. It models only memory-local acceptance, not verified cryptographic receipts, fsync, power recovery, retransmission after partial acknowledgement, or integrated production messaging.
 
 ## Next three development increments
 
