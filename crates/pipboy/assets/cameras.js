@@ -190,7 +190,7 @@
           tile.append(state.img);
         }
         tile.append(make("span", "rb-camera-status", showState(feed)));
-        if (feed.availableSource) {
+        if (feed.availableSource && !staleAgency(feed, Date.now())) {
           tile.append(button("REFRESH", () => retry(feed)));
         }
         const url = safeSource(feed.source_url);
