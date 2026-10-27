@@ -11,7 +11,7 @@ use ring::rand::SystemRandom;
 use ring::signature::{Ed25519KeyPair, KeyPair};
 use serde::{Deserialize, Serialize};
 use std::fmt;
-use zeroize::Zeroizing;
+use zeroize::{Zeroize, Zeroizing};
 
 const SERVICE: &str = "rust-boy.org-custody.v1";
 
@@ -153,6 +153,13 @@ struct StoredKey {
     pkcs8_hex: String,
 }
 
+impl Zeroize for StoredKey {
+    fn zeroize(&mut self) {
+        self.pkcs8_hex.zeroize();
+        self.public_hex.zeroize();
+    }
+}
+
 /// Create one independent device/operator Ed25519 identity in OS custody.
 /// The private PKCS#8 bytes are never written to the org ledger or returned.
 /// Enrollment is deliberately not exposed on a network/HTTP route.
@@ -196,7 +203,9 @@ fn identity_name(org: &str, kind: &str, principal: &str) -> Result<String, Custo
 
 fn load_key(store: &impl ProtectedSecrets, name: &str) -> Result<Ed25519KeyPair, CustodyError> {
     let value = Zeroizing::new(store.read(name)?.ok_or(CustodyError::Missing)?);
-    let parsed: StoredKey = serde_json::from_str(&value).map_err(|_| CustodyError::Corrupt)?;
+    let parsed = Zeroizing::new(
+        serde_json::from_str::<StoredKey>(&value).map_err(|_| CustodyError::Corrupt)?,
+    );
     if parsed.schema_version != 1 {
         return Err(CustodyError::Corrupt);
     }
