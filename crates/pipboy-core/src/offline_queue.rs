@@ -22,6 +22,16 @@ pub struct QueuedEvent {
 struct Journal {
     schema_version: u32,
     items: Vec<QueuedEvent>,
+    #[serde(default)]
+    receipts: Vec<ReceiptRecord>,
+}
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub struct ReceiptRecord {
+    pub source: String,
+    pub sequence: u64,
+    pub receiver: String,
+    pub remote_id: u64,
 }
 pub struct OfflineQueue {
     root: PathBuf,
@@ -43,7 +53,7 @@ impl OfflineQueue {
         let path = self.root.join("offline-queue.json");
         let mut file = match File::open(path) {
             Ok(file) => file,
-            Err(e) if e.kind() == io::ErrorKind::NotFound => return Ok(Journal { schema_version: 1, items: vec![] }),
+            Err(e) if e.kind() == io::ErrorKind::NotFound => return Ok(Journal { schema_version: 1, items: vec![], receipts: vec![] }),
             Err(e) => return Err(e),
         };
         if file.metadata()?.len() > LIMIT { return Err(io::Error::new(io::ErrorKind::InvalidData, "queue oversized")); }
@@ -51,7 +61,12 @@ impl OfflineQueue {
         file.take(LIMIT + 1).read_to_end(&mut data)?;
         if data.len() as u64 > LIMIT { return Err(io::Error::new(io::ErrorKind::InvalidData, "queue oversized")); }
         let journal: Journal = serde_json::from_slice(&data)?;
-        if journal.schema_version != 1 || journal.items.len() > MAX_ITEMS || journal.items.iter().any(|e| !valid(e)) {
+        if journal.schema_version != 1 || journal.items.len() > MAX_ITEMS || journal.receipts.len() > MAX_ITEMS
+            || journal.items.iter().any(|e| !valid(e))
+            || journal.receipts.iter().any(|r| !valid_receiver(&r.receiver) || r.remote_id == 0
+                || !journal.items.iter().any(|e| e.source == r.source && e.sequence == r.sequence))
+            || journal.receipts.iter().enumerate().any(|(i, r)| journal.receipts[..i].iter()
+                .any(|prior| prior.source == r.source && prior.sequence == r.sequence)) {
             return Err(io::Error::new(io::ErrorKind::InvalidData, "queue invalid"));
         }
         Ok(journal)
@@ -82,10 +97,43 @@ impl OfflineQueue {
         self.save(&journal)?;
         Ok(true)
     }
+    /// Record a storage receipt only AFTER an authenticated transport independently
+    /// validates peer identity and receipt binding. This method does not verify
+    /// cryptographic signatures, so it is NOT an authorization or proof API.
+    /// Retaining the event avoids reusing a sequence after restart.
+    pub fn record_receipt(&self, source: &str, sequence: u64,
+        receiver: &str, remote_id: u64) -> io::Result<bool> {
+        if !valid_receiver(receiver) || remote_id == 0 || sequence == 0 {
+            return Err(io::Error::new(io::ErrorKind::InvalidInput, "invalid receipt fields"));
+        }
+        let _guard = self.lock()?;
+        let mut journal = self.read()?;
+        if !journal.items.iter().any(|e| e.source == source && e.sequence == sequence) {
+            return Err(io::Error::new(io::ErrorKind::NotFound, "event not queued"));
+        }
+        if let Some(old) = journal.receipts.iter().find(|r| r.source == source && r.sequence == sequence) {
+            if old.receiver != receiver || old.remote_id != remote_id {
+                return Err(io::Error::new(io::ErrorKind::AlreadyExists, "conflicting receipt"));
+            }
+            return Ok(false);
+        }
+        journal.receipts.push(ReceiptRecord {source: source.to_owned(), sequence,
+            receiver: receiver.to_owned(), remote_id});
+        self.save(&journal)?;
+        Ok(true)
+    }
+    pub fn receipts(&self) -> io::Result<Vec<ReceiptRecord>> {
+        let _guard = self.lock()?;
+        Ok(self.read()?.receipts)
+    }
     pub fn pending(&self) -> io::Result<Vec<QueuedEvent>> {
         let _guard = self.lock()?;
         Ok(self.read()?.items)
     }
+}
+fn valid_receiver(s: &str) -> bool {
+    (1..=48).contains(&s.len())
+        && s.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_')
 }
 fn valid(e: &QueuedEvent) -> bool {
     (1..=48).contains(&e.source.len())
@@ -116,6 +164,30 @@ mod tests {
         fs::write(dir.path().join("offline-queue.json"), b"{corrupt").unwrap();
         assert!(q.enqueue(event(2)).is_err());
         assert_eq!(fs::read(dir.path().join("offline-queue.json")).unwrap(), b"{corrupt");
+    }
+    #[test]
+    fn receipt_records_survive_restart_and_reject_conflicts() {
+        let dir = tempfile::tempdir().unwrap();
+        let q = OfflineQueue::new(dir.path().to_path_buf());
+        q.enqueue(event(1)).unwrap();
+        assert!(q.record_receipt("rb-one", 1, "field-two", 13).unwrap());
+        let restarted = OfflineQueue::new(dir.path().to_path_buf());
+        assert_eq!(restarted.receipts().unwrap().len(), 1);
+        assert!(!restarted.record_receipt("rb-one", 1, "field-two", 13).unwrap());
+        assert_eq!(restarted.record_receipt("rb-one", 1, "field-two", 14)
+            .unwrap_err().kind(), io::ErrorKind::AlreadyExists);
+        assert_eq!(restarted.record_receipt("rb-one", 2, "field-two", 14)
+            .unwrap_err().kind(), io::ErrorKind::NotFound);
+        assert!(!restarted.enqueue(event(1)).unwrap());
+    }
+    #[test]
+    fn receipts_cannot_claim_invalid_peer_or_zero_remote_id() {
+        let dir = tempfile::tempdir().unwrap();
+        let q = OfflineQueue::new(dir.path().to_path_buf());
+        q.enqueue(event(1)).unwrap();
+        assert!(q.record_receipt("rb-one", 1, "../unsafe", 1).is_err());
+        assert!(q.record_receipt("rb-one", 1, "field-two", 0).is_err());
+        assert!(q.receipts().unwrap().is_empty());
     }
     #[test]
     fn rejects_bad_events() {
