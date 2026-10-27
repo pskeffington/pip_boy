@@ -268,8 +268,8 @@ pub fn verify_pair(
 mod tests {
     use super::*;
     use crate::organization::{
-        Appointment, DeviceRecord, Grant, GrantSubject, Operator, Organization, Unit,
-        UnitKind, VaultSite,
+        Appointment, DeviceRecord, Grant, GrantSubject, Operator, Organization, Unit, UnitKind,
+        VaultSite,
     };
     use ring::signature::{Ed25519KeyPair, KeyPair};
 
@@ -430,13 +430,7 @@ mod tests {
             q.operator_id,
             1,
         );
-        let device = credential(
-            &root,
-            &device_key,
-            PrincipalKind::Device,
-            q.device_id,
-            2,
-        );
+        let device = credential(&root, &device_key, PrincipalKind::Device, q.device_id, 2);
         Fixture {
             graph: graph(),
             operator_proof: proof(&operator_key, &operator, &q),
@@ -602,18 +596,14 @@ mod tests {
             check(&f, &query(), &NONCE, &BINDING, 20, &[]),
             Err(EvidenceError::InvalidCredential)
         );
-        assert!(
-            serde_json::from_str::<SignedCredential>(
-                r#"{"schema_version":1,"unexpected":"value"}"#,
-            )
-            .is_err()
-        );
+        assert!(serde_json::from_str::<SignedCredential>(
+            r#"{"schema_version":1,"unexpected":"value"}"#,
+        )
+        .is_err());
         let f = fixture();
         assert_eq!(
-            serde_json::from_slice::<SignedCredential>(
-                &serde_json::to_vec(&f.operator).unwrap(),
-            )
-            .unwrap(),
+            serde_json::from_slice::<SignedCredential>(&serde_json::to_vec(&f.operator).unwrap(),)
+                .unwrap(),
             f.operator
         );
     }
