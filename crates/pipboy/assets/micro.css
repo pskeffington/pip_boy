@@ -468,3 +468,34 @@ small { font-size:11px; }
 .micro-unified-header .tab-rail { grid-template-columns: repeat(5, minmax(0,1fr)); border-top-width:1px; }
 .micro-unified-header .tab-rail .tab { min-height:40px; font-size:clamp(10px, 2.3vw, 12px); padding:3px 1px; letter-spacing:0; }
 .micro-device.micro-unified-header { grid-template-rows:43px 50px minmax(0,1fr) 43px 21px; }
+
+/* Headerless handheld: leave only a contextual Back affordance for subpages.
+   The five functional destinations and settings live in a single bottom rail. */
+.micro-device.micro-unified-header { grid-template-rows:minmax(0,1fr) 43px 21px; }
+.micro-unified-header .topbar,
+.micro-unified-header .view-heading { display:contents; }
+.micro-unified-header .heading-left,
+.micro-unified-header .mode-indicator,
+.micro-unified-header .right-status { display:none; }
+.micro-unified-header #micro-back:not([hidden]) {
+  position:absolute; z-index:12; top:5px; left:7px;
+  min-height:38px; min-width:70px; background:#0a1b10ee;
+  border:1px solid var(--rb-line); border-radius:3px;
+}
+.micro-unified-header .tab-rail {
+  display:grid; grid-template-columns:repeat(5,minmax(0,1fr)) 40px;
+  overflow:hidden; min-width:0;
+}
+.micro-unified-header .tab-rail .tab { min-width:0; min-height:42px; }
+.micro-unified-header .rail-settings {
+  min-width:40px; min-height:42px; padding:0; border:0;
+  border-left:1px solid var(--rb-line-soft); background:#081b0b;
+  font-size:19px; color:var(--rb-muted); line-height:1;
+}
+.micro-unified-header .rail-settings:hover,
+.micro-unified-header .rail-settings[aria-current="page"] {
+  background:var(--rb-accent); color:#071b0a;
+}
+@media (max-width:960px) {
+  .micro-device.micro-unified-header { grid-template-rows:minmax(0,1fr) 43px; }
+}
