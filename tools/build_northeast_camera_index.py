@@ -23,6 +23,11 @@ import urllib.request
 MAX_BYTES = 6 * 1024 * 1024
 MAX_RECORDS = 1000
 SOURCES = {
+    "md-socrata": {
+        "state": "MD", "kind": "socrata", "agency": "Maryland Open Data / CHART",
+        "url": "https://opendata.maryland.gov/resource/4z3c-43ce.json?$limit=500",
+        "page": "https://opendata.maryland.gov/resource/4z3c-43ce.json",
+    },
     "md-imap": {
         "state": "MD", "kind": "arcgis", "agency": "MD iMAP / CHART",
         "url": "https://mdgeodata.md.gov/imap/rest/services/Transportation/MD_TrafficCameras/FeatureServer/0/query"
@@ -72,8 +77,12 @@ def bounded_json(text):
     if len(text) > MAX_BYTES:
         raise ValueError("Provider metadata exceeds 6 MiB")
     payload = json.loads(text)
+    if isinstance(payload, list):
+        if len(payload) > MAX_RECORDS:
+            raise ValueError("Socrata records exceed one-pass limit")
+        payload = {"features": [{"attributes":item} for item in payload if isinstance(item, dict)]}
     if not isinstance(payload, dict) or not isinstance(payload.get("features"), list):
-        raise ValueError("Expected ArcGIS or GeoJSON camera features")
+        raise ValueError("Expected ArcGIS, Socrata or GeoJSON camera features")
     if len(payload["features"]) > MAX_RECORDS:
         raise ValueError("Provider features exceed one-pass limit")
     if payload.get("error"):
@@ -88,7 +97,8 @@ def fetch_public(source):
         raise ValueError("Insecure source definition")
     if parts.hostname not in {
         "mdgeodata.md.gov", "maps2.dcgis.dc.gov",
-        "enterprise.firstmaptest.delaware.gov", "511.vdot.virginia.gov"
+        "enterprise.firstmaptest.delaware.gov", "511.vdot.virginia.gov",
+        "opendata.maryland.gov"
     }:
         raise ValueError("Unapproved metadata provider")
     request = urllib.request.Request(url, headers={"Accept": "application/json"})
@@ -100,6 +110,11 @@ def fetch_public(source):
 
 
 def coordinate(lat, lon, state):
+    # Socrata publishes numeric coordinates as short decimal strings.
+    if isinstance(lat, str) and re.fullmatch(r"-?\\d{1,3}(?:\\.\\d{1,12})?", lat):
+        lat = float(lat)
+    if isinstance(lon, str) and re.fullmatch(r"-?\\d{1,3}(?:\\.\\d{1,12})?", lon):
+        lon = float(lon)
     if isinstance(lat, bool) or isinstance(lon, bool):
         return None
     if not isinstance(lat, (int, float)) or not isinstance(lon, (int, float)):
@@ -144,10 +159,17 @@ def normalize(source, payload):
     for item in payload["features"]:
         if not isinstance(item, dict):
             continue
-        attrs = item.get("attributes") if spec["kind"] == "arcgis" else item.get("properties")
+        attrs = item.get("attributes") if spec["kind"] in ("arcgis", "socrata") else item.get("properties")
         if not isinstance(attrs, dict):
             continue
-        if source == "md-imap":
+        if source == "md-socrata":
+            ident = attrs.get("objectid")
+            name = clean_name(attrs.get("location"))
+            coords = coordinate(attrs.get("lat"), attrs.get("long"), "MD")
+            evidence = safe_url(attrs.get("url"))
+            status = "metadata_only_media_requires_review"
+            provider_id = attrs.get("feedid")
+        elif source == "md-imap":
             ident = attrs.get("OBJECTID")
             name = clean_name(attrs.get("location"))
             coords = coordinate(attrs.get("lat"), attrs.get("long"), "MD")
