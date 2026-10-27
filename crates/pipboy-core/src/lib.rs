@@ -27,6 +27,7 @@ pub mod network_suite;
 pub mod notes;
 pub mod observation;
 pub mod organization;
+pub mod organization_policy;
 pub mod peers;
 pub mod permissions;
 pub mod process_safety;
