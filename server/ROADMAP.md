@@ -2,7 +2,9 @@
 
 **Baseline:** `pipboy` supports manual enrolled-peer pinned-OpenSSH task/message exchange. The desktop connection check, hybrid route simulator and harsh-network guidance are separate pending pull requests (#66, #67, #68), not assumed merged. This roadmap does not mark those as delivered.
 
-[Research and source-to-test crosswalk](LITERATURE_MATRIX.md) documents the NIST/healthcare/tunnel/DTN evidence base and phase-specific gates.\n\n## Milestone gates
+[Research and source-to-test crosswalk](LITERATURE_MATRIX.md) documents the NIST/healthcare/tunnel/DTN evidence base and phase-specific gates.\n\n[Mining-grade network research and failure matrix](MINING_COMMUNICATIONS_MATRIX.md) is the primary harsh-network design benchmark for S5–S7.
+
+## Milestone gates
 
 | Phase | Objective | Implementation deliverable | Exit evidence |
 | --- | --- | --- | --- |
