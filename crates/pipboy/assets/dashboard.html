@@ -4,8 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#0b100f">
-  <title>Rust-Boy · Desktop</title>
-  <meta name="description" content="Rust-Boy offline-first local field dashboard">
+  <title>Rust-Boy · Vault Command Center</title>
+  <meta name="description" content="Rust-Boy local vault operations, mission assignment, and command center">
   <link rel="stylesheet" href="/assets/dashboard.css">
   <link rel="stylesheet" href="/assets/map.css">
   <link rel="stylesheet" href="/assets/tasks.css">
@@ -35,12 +35,13 @@
         <span class="brand-mark" aria-hidden="true">RB<span class="brand-tick">/</span></span>
         <div class="brand-copy">
           <strong>RUST–BOY</strong>
-          <span>DESKTOP CONSOLE</span>
+          <span>VAULT / COMMAND CENTER</span>
         </div>
       </div>
       <div class="masthead-right">
         <select id="desktop-map-nav" aria-label="Map workspace navigation">
           <option value="map">MAP</option>
+          <option value="command">COMMAND</option>
           <option value="modules">MODULES</option>
           <option value="messages">MESSAGES</option>
           <option value="settings">SETTINGS</option>
@@ -75,7 +76,8 @@
         </div>
 
         <div class="workspace-stage" id="workspace-stage">
-          <nav class="stage-tabs" aria-label="Workspace pages">
+          <nav class="stage-tabs" aria-label="Vault command center pages">
+            <button type="button" data-stage-target="command" aria-pressed="false">COMMAND</button>
             <button type="button" data-stage-target="modules" aria-pressed="true">MODULES</button>
             <button type="button" data-stage-target="viewport" aria-pressed="false">VIEWPORT</button>
             <button type="button" data-stage-target="messages" aria-pressed="false">MESSAGES</button>
@@ -83,6 +85,39 @@
             <button type="button" id="radio-view-toggle" class="secondary-button"
               aria-controls="radio-dock" aria-pressed="false">RADIO / IP</button>
           </nav>
+        <section class="command-section stage-surface" data-stage="command" aria-labelledby="command-heading" hidden>
+          <header class="command-banner">
+            <div>
+              <span class="eyebrow">VAULT OPERATIONS / LOCAL COMMAND</span>
+              <h2 id="command-heading">Mission Command</h2>
+              <p>Plan jobs, assign operators, review progress and control explicit device handoff.</p>
+            </div>
+            <span class="command-authority" id="command-authority">CHECKING ROLE</span>
+          </header>
+          <div class="command-layout">
+            <section class="command-primary" aria-label="Mission and job assignments">
+              <div class="command-section-label">MISSIONS / TASKS / JOB ASSIGNMENTS</div>
+              <div id="command-board" class="command-board" aria-live="polite"></div>
+            </section>
+            <aside class="command-rail" aria-label="Vault command navigation">
+              <div class="command-rail-card">
+                <span class="tiny-label">ACTIVE STATION</span>
+                <strong id="command-current-role">—</strong>
+                <p id="command-policy">Permissions follow the active role.</p>
+              </div>
+              <div class="command-rail-card">
+                <span class="tiny-label">DISPATCH PROTOCOL</span>
+                <strong>LOCAL UNTIL SENT</strong>
+                <p>Assignment creation never transmits automatically. A paired peer and confirmation are required to send.</p>
+              </div>
+              <div class="command-quick-actions">
+                <button type="button" id="command-open-messages">MESSAGES</button>
+                <button type="button" id="command-open-viewport">ACTIVE VIEW</button>
+                <button type="button" id="command-open-modules">MODULES</button>
+              </div>
+            </aside>
+          </div>
+        </section>
         <section class="module-section stage-surface" data-stage="modules" aria-labelledby="modules-heading">
           <div class="section-heading">
             <h2 id="modules-heading">Tools</h2>
