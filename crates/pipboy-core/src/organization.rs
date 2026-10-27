@@ -158,7 +158,7 @@ pub struct Grant {
     pub revoked: bool,
 }
 
-#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct OrgGraph {
     pub schema_version: u32,
@@ -171,12 +171,24 @@ pub struct OrgGraph {
     pub grants: Vec<Grant>,
 }
 
-impl OrgGraph {
-    pub fn empty() -> Self {
+impl Default for OrgGraph {
+    fn default() -> Self {
         Self {
             schema_version: ORG_SCHEMA,
-            ..Self::default()
+            organizations: Vec::new(),
+            vaults: Vec::new(),
+            units: Vec::new(),
+            operators: Vec::new(),
+            appointments: Vec::new(),
+            devices: Vec::new(),
+            grants: Vec::new(),
         }
+    }
+}
+
+impl OrgGraph {
+    pub fn empty() -> Self {
+        Self::default()
     }
 
     /// Validates internal structure ONLY. Caller-provided JSON remains
@@ -493,6 +505,7 @@ mod tests {
         );
         assert_eq!(graph.reporting_chain("unknown"), None);
         assert!(OrgGraph::empty().validate().is_ok());
+        assert!(OrgGraph::default().validate().is_ok());
     }
 
     #[test]
