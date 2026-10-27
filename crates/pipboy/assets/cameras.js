@@ -3,6 +3,7 @@
 // Image requests begin only after the operator opens the Cameras view.
 (function () {
   const MAX_VIEWS = 4, MAX_ATTEMPTS = 12, MAX_PARALLEL = 2;
+  const MAX_LOCAL_MILES = 200; // avoid a cross-country camera posing as a local view
   const TIMEOUT_MS = 8000, RECENT_MS = 120000;
   const make = (tag, cls, value) => {
     const node = document.createElement(tag);
@@ -94,7 +95,10 @@
     let connected = true, inFlight = 0, attempts = 0, cursor = 0, probeSerial = 0;
     const location = point(options.location);
     const feeds = rankFeeds(options.feeds, location, options.region);
-    const candidates = feeds.filter(feed => feed.availableSource);
+    const localFeeds = location ? feeds.filter(feed =>
+      feed.distance_mi !== null && feed.distance_mi <= MAX_LOCAL_MILES) : feeds;
+    // No location permission means no automatic publisher requests.
+    const candidates = location ? localFeeds.filter(feed => feed.availableSource) : [];
     const statuses = new Map(); // per-camera, in memory only; never persisted
     let wantsFailover = false;
     let focused = typeof options.selected === "string" ? options.selected :
@@ -103,7 +107,7 @@
     const healthSnapshot = () => Object.fromEntries(
       [...statuses].map(([id, value]) => [id, value.status])
     );
-    const primary = () => pickNearestActive(feeds, healthSnapshot());
+    const primary = () => pickNearestActive(localFeeds, healthSnapshot());
     const button = (label, action) => {
       const node = make("button", "rb-camera-button", label);
       node.type = "button"; node.addEventListener("click", action);
@@ -148,25 +152,26 @@
       root.replaceChildren();
       root.classList.add("rb-camera-view");
       const best = primary();
-      let title = "DOT / PUBLIC ROAD VIEWS · NO LOCATION SELECTED";
+      let title = "DOT / SET LOCATION IN UNIVERSAL SETTINGS TO SELECT NEAREST";
       if (location) {
         const label = options.location.source === "zip_county" ? "COUNTY APPROX" :
           options.location.source === "gps" ? "RECENT GPS" : "MANUAL CENTER";
         title = "DOT / " + label + " · " + (best ? "NEAREST " +
           (statuses.get(best.id)?.status === "live" ? "LIVE" : "REACHABLE") +
-          " " + best.distance_mi.toFixed(1) + " MI" : "CHECKING NEAREST CAMERA");
-      } else if (best) title = "DOT / DEFAULT REACHABLE CAMERA · SET LOCATION IN SETTINGS";
+          " " + best.distance_mi.toFixed(1) + " MI" :
+          candidates.length ? "CHECKING NEAREST CAMERA" : "NO APPROVED FEED WITHIN 200 MI");
+      }
       root.append(make("div", "rb-camera-heading", title));
-      if (!feeds.length) {
-        root.append(make("p", "", "NO CURATED DOT SOURCES AVAILABLE"));
+      if (!localFeeds.length) {
+        root.append(make("p", "", "NO DOT CAMERA SITES WITHIN 200 MI · REVIEW COVERAGE"));
         return;
       }
-      if (focused && !feeds.some(f => f.id === focused)) focused = null;
+      if (focused && !localFeeds.some(f => f.id === focused)) focused = null;
       const grid = make("div", "rb-camera-grid" + (focused ? " rb-camera-focused" : ""));
-      const ready = feeds.filter(f => ["live", "reachable"].includes(statuses.get(f.id)?.status));
-      const rest = feeds.filter(f => !ready.includes(f) && statuses.get(f.id)?.status !== "offline");
-      const failed = feeds.filter(f => statuses.get(f.id)?.status === "offline");
-      const visible = focused ? feeds.filter(f => f.id === focused) :
+      const ready = localFeeds.filter(f => ["live", "reachable"].includes(statuses.get(f.id)?.status));
+      const rest = localFeeds.filter(f => !ready.includes(f) && statuses.get(f.id)?.status !== "offline");
+      const failed = localFeeds.filter(f => statuses.get(f.id)?.status === "offline");
+      const visible = focused ? localFeeds.filter(f => f.id === focused) :
         [...(best ? [best] : []), ...ready.filter(f => f !== best), ...rest, ...failed]
           .filter((f, i, arr) => arr.indexOf(f) === i).slice(0, MAX_VIEWS);
       for (const feed of visible) {
