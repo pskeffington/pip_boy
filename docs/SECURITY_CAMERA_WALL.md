@@ -1,21 +1,23 @@
-# Security Chief | 4-camera handheld view specification
+# Security | DOT-first outside-world camera views
 
-**Status: public publisher-player fallback implemented; private IP-camera decoding/enrollment remains planned.** Applies to the [Security Chief](ROLE_ROADMAP.md#security-security-chief) role. Use only cameras and networks the operator is authorized to view. Not a surveillance discovery product.
+**Status:** DOT camera snapshot candidates are wired. Per-camera live reachability and frame freshness have not been independently certified.
 
-## Public views when private cameras are unconfigured
+## DOT first, no YouTube
 
-Security uses the shared `cameras.js` component and Rust `public_cameras::PUBLIC_CAMERA_FEEDS` catalog. Desktop opens four muted embedded publisher players only on the active Cameras view; role preview/loading does not create players. The small handheld lists four locations and opens one publisher player on selection. Leaving Cameras, opening Radio, or returning to the grid removes the old frames. No background recording, server-side video proxy, discovery, credentials, scraping, or health polling is implemented.
+The shared Rust catalog now provides direct official DOT snapshots for Virginia (DC metro fringe, clearly labeled Arlington, VA) and Caltrans (San Francisco). NYC DOT and MassDOT remain access-pending until approved agency/provider feeds are available. The [feed inventory](../catalog/camera_feeders.json) lists eight agency/provider integration candidates, coverage areas, supported media and licensing gates.
 
-| City | Publisher / view | Source checked 2026-10-26 |
+| Area | Agency | Current fallback |
 | --- | --- | --- |
-| DC | earthTV / White House | [Publisher stream](https://www.youtube.com/watch?v=5p_KGD4fJZs) |
-| NYC | EarthCam / Times Square Crossroads | [Publisher stream](https://www.youtube.com/watch?v=z-jYdOIKcTQ) |
-| Boston | Boston and Maine Live / Hyatt Regency Boston Harbor | [Publisher stream](https://www.youtube.com/watch?v=3I_cIS24AfY) |
-| SF | ABC7 News Bay Area / skyline | [Publisher stream](https://www.youtube.com/watch?v=G8RIAgPxaMc) |
+| DC metro (Arlington, Virginia) | VDOT / 511 Virginia | HTTPS road camera PNG snapshot candidate |
+| NYC | NYC DOT TMC | Developer agreement required: placeholder only |
+| Boston | MassDOT / TrafficLand | Provider agreement required: placeholder only |
+| San Francisco | Caltrans D04 | HTTPS road camera JPEG snapshot candidate |
 
-These are visibly labeled **PUBLIC VIEWS · PRIVATE CAMERAS UNCONFIGURED**. Source discovery is not a guarantee of current live playback: publishers may stop/replace a stream, limit embedding, require interaction, or display advertising. The original publisher link always remains available. Rust-Boy does not label an iframe load as verified live or invent timestamps, connection counts or private-camera health. Fixed YouTube IDs and exact publisher watch URLs are validated before creating a frame; only `https://www.youtube-nocookie.com` is added to parent `frame-src`. Parent `connect-src` remains unchanged. Each iframe is sandboxed, starts muted, and uses its own origin referrer policy for provider playback compatibility. Third-party players can make their own network requests once opened.
+The camera UI fetches snapshots only after its view opens, does not use iframes, and offers an explicit REFRESH control. It does not poll in the background, record, discover local IP cameras or send user location to agencies. An image load is labeled **IMAGE RECEIVED · FRESHNESS UNKNOWN**, not LIVE. Failure is labeled **FEED UNAVAILABLE**. The source URLs are HTTPS and constrained to exact agency-managed media hosts/path patterns; the HTTP CSP now allows only the two media hosts as additional image origins and disallows frames.
 
-`node tools/test_cameras_ui.cjs` checks four-view/focus behavior, compact opt-in, muted fixed-origin frames, malformed-source rejection and teardown with synthetic metadata. CI does not certify external playback, publisher permissions, private camera interoperability or physical handheld performance.
+**Security meaning:** road activity and visible vehicles can support situational awareness, not certify that a particular person is mobile or that a route is safe. Always preserve camera identity, original agency attribution, capture freshness uncertainty and provider access requirements. Never label Virginia traffic cameras as DC city cameras.
+
+Run `node tools/test_cameras_ui.cjs` for UI regression and `python3 tools/smoke_micro.py` with the local Rust server. These are code acceptance checks; actual provider playback remains an on-device gate.
 
 ## User task and screen state
 
