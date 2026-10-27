@@ -1119,6 +1119,9 @@ fn dispatch(req: &Request, store: &WorkbenchStore, port: u16) -> Response {
         ("POST", "/api/peer/send") => {
             task_routes::device_send(req, store).unwrap_or_else(|error| error)
         }
+        ("POST", "/api/peer/check") => {
+            task_routes::device_check(req, store).unwrap_or_else(|error| error)
+        }
         ("POST", "/api/peer/sync") => {
             task_routes::device_sync(req, store).unwrap_or_else(|error| error)
         }

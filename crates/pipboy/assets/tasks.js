@@ -309,6 +309,22 @@
       const destination = fieldSelect("peer", "PAIRED RUST-BOY", available
         .map((peer) => [peer.alias, peer.alias + " / " + peer.target]), available[0].alias);
       card.append(destination);
+      const linkStatus = node("div", "task-device-link-status", "LINK: NOT CHECKED");
+      linkStatus.setAttribute("role", "status");
+      card.append(linkStatus);
+      card.append(button("CHECK FIELD CONNECTION", async () => {
+        const alias = destination.querySelector("select").value;
+        if (!window.confirm("Verify the pinned SSH connection to " + alias + "? No tasks will be sent or synchronized.")) return;
+        linkStatus.textContent = "LINK: CHECKING";
+        try {
+          const result = await get("/api/peer/check", {alias, confirm: true});
+          linkStatus.textContent = result.connected && result.remote_device === alias
+            ? "LINK: VERIFIED / " + alias + " / ONE-SHOT SSH"
+            : "LINK: UNVERIFIED";
+        } catch {
+          linkStatus.textContent = "LINK: UNAVAILABLE / CHECK SSH PAIRING";
+        }
+      }, "ghost"));
       card.append(infoText("Uses OpenSSH with a previously pinned host key. The receiver stores the task before a delivery receipt is recorded. No automatic polling or broadcast."));
       card.append(button("SEND TO SELECTED DEVICE", () => {
         const alias = destination.querySelector("select").value;
