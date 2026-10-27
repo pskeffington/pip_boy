@@ -10,7 +10,13 @@ Technical contracts, architecture decisions, research provenance and validation 
 
 ## Server research
 
-[Mining communications research and stress tests](../server/MINING_COMMUNICATIONS_MATRIX.md) ·\n\n[Server literature matrix — NIST, healthcare, tunnels and disruption-tolerant communications](../server/LITERATURE_MATRIX.md) (on the server feature branch; pending merge).\n\n## Start here
+[COM build priorities — mining-grade resilience](../server/BUILD_PRIORITIES.md) ·
+
+[Mining communications research and stress tests](../server/MINING_COMMUNICATIONS_MATRIX.md) ·
+
+[Server literature matrix — NIST, healthcare, tunnels and disruption-tolerant communications](../server/LITERATURE_MATRIX.md) (on the server feature branch; pending merge).
+
+## Start here
 
 [Security review: data leakage and credential boundaries](SECURITY_REVIEW_2026-10-26.md) documents the current privacy audit, confirmed controls and residual risks.
 
