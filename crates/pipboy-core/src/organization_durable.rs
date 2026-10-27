@@ -383,6 +383,51 @@ mod tests {
     }
 
     #[test]
+    fn restored_old_nonce_ledger_and_root_substitution_are_rejected() {
+        let dir = tempfile::tempdir().unwrap();
+        let store = MemorySecrets::default();
+        let root = key();
+        let mut org = DurableOrganization::provision(
+            dir.path(), "test-org", root.public_key().as_ref(), &Approve, &store
+        ).unwrap();
+        let old_state = fs::read(dir.path().join("org-state.json")).unwrap();
+        org.record_nonce([42; 32]).unwrap();
+        drop(org);
+        fs::write(dir.path().join("org-state.json"), &old_state).unwrap();
+        assert!(matches!(
+            DurableOrganization::open(dir.path(), "test-org", &store),
+            Err(StateError::AnchorMismatch)
+        ));
+        let mut changed: OrganizationState = serde_json::from_slice(&old_state).unwrap();
+        let substitute = Ed25519KeyPair::from_seed_unchecked(&[99; 32]).unwrap();
+        changed.root_public_key = substitute.public_key().as_ref().to_vec();
+        fs::write(
+            dir.path().join("org-state.json"),
+            serde_json::to_vec(&changed).unwrap()
+        ).unwrap();
+        assert!(matches!(
+            DurableOrganization::open(dir.path(), "test-org", &store),
+            Err(StateError::AnchorMismatch)
+        ));
+    }
+
+    #[test]
+    fn missing_protected_anchor_fails_closed() {
+        let dir = tempfile::tempdir().unwrap();
+        let store = MemorySecrets::default();
+        let root = key();
+        let org = DurableOrganization::provision(
+            dir.path(), "test-org", root.public_key().as_ref(), &Approve, &store
+        ).unwrap();
+        drop(org);
+        store.0.lock().unwrap().remove("organization-anchor:test-org");
+        assert!(matches!(
+            DurableOrganization::open(dir.path(), "test-org", &store),
+            Err(StateError::AnchorMismatch)
+        ));
+    }
+
+    #[test]
     fn explicit_pin_replay_restart_and_generation_rollback() {
         let dir = tempfile::tempdir().unwrap();
         let root = key();
