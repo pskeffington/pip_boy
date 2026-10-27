@@ -13,6 +13,12 @@ Rust-Boy is the public product name. The existing `pip_boy` repository, `pipboy`
 
 > **Verified integration baseline:** [Five-job Linux/macOS/Windows CI](https://github.com/pskeffington/pip_boy/actions/runs/40164915215) passed at `e7d1090`, including macOS PTY, Windows ConPTY, and the strict deny-all broker suite. **This does not complete a packaged release or enable physical devices.** The catalog's `implemented_unverified` status denotes a pending module acceptance review, not an absence of CI execution.
 
+## Organizational RB-to-RB synchronization (proposed; not released)
+
+[RB fleet synchronization roadmap](RB_SYNC_ROADMAP.md) defines R0-R7 with clear separation between **nearby discovery**, **authenticated device pairing**, **organization-bound operator authorization**, **versioned dataset deltas** and **transport routing**. The immediate target is R0-R3: freeze v1 OpenSSH compatibility; model device/org/subject trust and revocation; test a bounded event ledger with simulated faults; then integrate opt-in pinned-SSH delta transfer across two physical hosts. Later passes add optional proximity discovery, admin-enrolled fleets, bounded scheduled reconciliation and separate high-sensitivity/clinical approvals.
+
+**Safety boundary:** same Wi-Fi, BLE proximity, matching key label or open-source installation never imply shared permissions. Current tasks and peer registries are plaintext; no PHI, background sync, org trust federation or device-discovery authorization has been released.
+
 ## PACE message routing
 
 [PACE routing](PACE_MESSAGING.md) now exposes per-peer plans and an explicit LINK
