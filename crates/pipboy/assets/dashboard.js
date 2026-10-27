@@ -396,7 +396,20 @@ function renderExtension() {
   ui.extension.replaceChildren();
   const selected = profile();
   if (!selected) return;
-  if (selected.id === "overseer" || selectedTool === "mission-board") {
+  if (selected.id === "overseer") {
+    // A vault console has a dedicated situational map, separate from the
+    // assignment board in COMMAND. The shared map renderer remains read-only
+    // until the operator explicitly configures an area in Settings.
+    const map = el("div", "rb-map-desktop-host");
+    ui.extension.append(map);
+    if (window.RustBoyMap && map.isConnected && activeStage === "viewport") {
+      window.RustBoyMap.mount(map, {navigationOnly:true, reclamation:false});
+    } else {
+      map.append(el("p", "panel-note", "Map renderer unavailable. Open COMMAND for the mission board."));
+    }
+    return;
+  }
+  if (selectedTool === "mission-board") {
     const manager = el("section", "job-command-panel");
     const heading = el("div", "section-heading");
     heading.append(el("h2", "", "Vault Operations"),
