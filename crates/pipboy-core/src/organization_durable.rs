@@ -1,8 +1,9 @@
 //! ORG-3.2 offline state: pinned administrator-approved trust roots, replay
 //! records, and signed revocation snapshots with durable atomic replacement.
 //! File permissions and local exclusive lock are required. No live route uses
-//! this store. Filesystem rollback after restoring a full old disk backup is
-//! not detectable without a protected monotonic hardware/remote counter.
+//! this store. The OS credential-store anchor detects replacement of the local
+//! state file, but cannot resist a simultaneous rollback/compromise of both
+//! the filesystem and the OS credential store; hardware counters are untested.
 use crate::organization_authority::SignedRevocations;
 use crate::organization_custody::{fingerprint, valid_org_id, AdministratorApproval, ProtectedSecrets};
 use fs2::FileExt;
@@ -278,6 +279,25 @@ impl<'s, S: ProtectedSecrets> DurableOrganization<'s, S> {
     /// One entire 32-byte nonce is unique within this organization's ledger.
     /// Capacity exhaustion fails closed. Keep ledger through expiry/rotation
     /// until a separately reviewed compaction protocol exists.
+    /// Import a bounded signed full snapshot from offline media. This does not
+    /// contact peers, establish freshness of time, or automatically grant access.
+    /// The signed organization's ID, signature, generation and cumulative
+    /// revocations are checked before a durable state transition.
+    pub fn import_revocations_json(&mut self, bytes: &[u8]) -> Result<(), StateError> {
+        if bytes.len() > 32_768 {
+            return Err(StateError::Capacity);
+        }
+        let snapshot: SignedRevocations =
+            serde_json::from_slice(bytes).map_err(|_| StateError::Invalid)?;
+        self.install_revocations(snapshot)
+    }
+
+    pub fn export_revocations_json(&self) -> Result<Vec<u8>, StateError> {
+        self.check_anchor()?;
+        let snapshot = self.state.revocations.as_ref().ok_or(StateError::Stale)?;
+        serde_json::to_vec(snapshot).map_err(|_| StateError::Invalid)
+    }
+
     pub fn record_nonce(&mut self, nonce: [u8; 32]) -> Result<(), StateError> {
         self.check_anchor()?;
         if nonce == [0; 32] { return Err(StateError::Invalid); }
@@ -437,6 +457,15 @@ mod tests {
         assert!(matches!(org.fresh_snapshot(20), Err(StateError::Stale)));
         assert!(org.install_revocations(snapshot(&root, 2, &[5])).is_ok());
         assert!(org.fresh_snapshot(20).is_ok());
+        let signed_export = org.export_revocations_json().unwrap();
+        assert!(matches!(
+            org.import_revocations_json(&signed_export),
+            Err(StateError::Rollback)
+        ));
+        assert!(matches!(
+            org.import_revocations_json(b"{broken json"),
+            Err(StateError::Invalid)
+        ));
         org.record_nonce([7; 32]).unwrap();
         assert!(matches!(org.record_nonce([7; 32]), Err(StateError::Replay)));
         drop(org);
