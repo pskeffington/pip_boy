@@ -117,7 +117,7 @@
       render();
     };
     function failover(failedId) {
-      if (focused === failedId) {
+      if (failedId !== null && focused === failedId) {
         focused = null;
         wantsFailover = true;
         options.onSelect?.(null);
