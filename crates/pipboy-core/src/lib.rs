@@ -26,6 +26,7 @@ pub mod network_probe;
 pub mod network_suite;
 pub mod notes;
 pub mod observation;
+pub mod organization;
 pub mod peers;
 pub mod permissions;
 pub mod process_safety;
