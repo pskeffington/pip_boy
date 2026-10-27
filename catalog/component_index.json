@@ -252,7 +252,7 @@
     },
     {
       "id": "public-camera-fallback",
-      "boundary": "Rust-owned DC/NYC/Boston/SF publisher catalog and shared browser player. No discovery, private camera credentials, native RTSP decoder or recording.",
+      "boundary": "DOT-first DC/NYC/Boston/SF catalog: HTTPS agency snapshots where public, access-pending placeholders otherwise. No embeds, discovery, credentials, recording or RTSP decode.",
       "hardware_gate": "field_pending",
       "code": [
         "crates/pipboy-core/src/public_cameras.rs",
