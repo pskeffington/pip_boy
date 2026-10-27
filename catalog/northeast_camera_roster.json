@@ -16,7 +16,8 @@
         "US-1"
       ],
       "access_status": "provider_access_required",
-      "verified_camera_count": 0
+      "verified_camera_count": 0,
+      "named_site_candidates": 0
     },
     {
       "city": "Worcester",
@@ -30,7 +31,8 @@
         "I-190"
       ],
       "access_status": "provider_access_required",
-      "verified_camera_count": 0
+      "verified_camera_count": 0,
+      "named_site_candidates": 0
     },
     {
       "city": "Springfield",
@@ -44,7 +46,8 @@
         "I-90"
       ],
       "access_status": "provider_access_required",
-      "verified_camera_count": 0
+      "verified_camera_count": 0,
+      "named_site_candidates": 0
     },
     {
       "city": "Providence",
@@ -58,7 +61,8 @@
         "RI-10"
       ],
       "access_status": "direct_media_unverified",
-      "verified_camera_count": 0
+      "verified_camera_count": 0,
+      "named_site_candidates": 6
     },
     {
       "city": "Warwick",
@@ -71,7 +75,8 @@
         "RI-37"
       ],
       "access_status": "direct_media_unverified",
-      "verified_camera_count": 0
+      "verified_camera_count": 0,
+      "named_site_candidates": 0
     },
     {
       "city": "Hartford",
@@ -84,7 +89,8 @@
         "I-91"
       ],
       "access_status": "developer_key_required",
-      "verified_camera_count": 0
+      "verified_camera_count": 0,
+      "named_site_candidates": 0
     },
     {
       "city": "New Haven",
@@ -97,7 +103,8 @@
         "I-91"
       ],
       "access_status": "developer_key_required",
-      "verified_camera_count": 0
+      "verified_camera_count": 0,
+      "named_site_candidates": 0
     },
     {
       "city": "Bridgeport",
@@ -110,7 +117,8 @@
         "CT-8"
       ],
       "access_status": "developer_key_required",
-      "verified_camera_count": 0
+      "verified_camera_count": 0,
+      "named_site_candidates": 0
     },
     {
       "city": "Stamford",
@@ -123,7 +131,8 @@
         "Merritt Parkway"
       ],
       "access_status": "developer_key_required",
-      "verified_camera_count": 0
+      "verified_camera_count": 0,
+      "named_site_candidates": 0
     },
     {
       "city": "New York City",
@@ -138,7 +147,8 @@
         "FDR Drive"
       ],
       "access_status": "developer_agreement_or_key_required",
-      "verified_camera_count": 0
+      "verified_camera_count": 0,
+      "named_site_candidates": 16
     },
     {
       "city": "Albany",
@@ -151,7 +161,8 @@
         "I-90"
       ],
       "access_status": "developer_key_required",
-      "verified_camera_count": 0
+      "verified_camera_count": 0,
+      "named_site_candidates": 0
     },
     {
       "city": "Syracuse",
@@ -164,7 +175,8 @@
         "I-90"
       ],
       "access_status": "developer_key_required",
-      "verified_camera_count": 0
+      "verified_camera_count": 0,
+      "named_site_candidates": 0
     },
     {
       "city": "Rochester",
@@ -177,7 +189,8 @@
         "I-390"
       ],
       "access_status": "developer_key_required",
-      "verified_camera_count": 0
+      "verified_camera_count": 0,
+      "named_site_candidates": 0
     },
     {
       "city": "Buffalo",
@@ -190,7 +203,8 @@
         "I-190"
       ],
       "access_status": "developer_key_required",
-      "verified_camera_count": 0
+      "verified_camera_count": 0,
+      "named_site_candidates": 0
     },
     {
       "city": "Newark",
@@ -204,7 +218,8 @@
         "US-1/9"
       ],
       "access_status": "direct_media_unverified",
-      "verified_camera_count": 0
+      "verified_camera_count": 0,
+      "named_site_candidates": 0
     },
     {
       "city": "Jersey City",
@@ -217,7 +232,8 @@
         "NJ Turnpike"
       ],
       "access_status": "direct_media_unverified",
-      "verified_camera_count": 0
+      "verified_camera_count": 0,
+      "named_site_candidates": 0
     },
     {
       "city": "Trenton",
@@ -230,7 +246,8 @@
         "US-1"
       ],
       "access_status": "direct_media_unverified",
-      "verified_camera_count": 0
+      "verified_camera_count": 0,
+      "named_site_candidates": 0
     },
     {
       "city": "Philadelphia",
@@ -244,7 +261,8 @@
         "I-676"
       ],
       "access_status": "feed_request_and_video_license_required",
-      "verified_camera_count": 0
+      "verified_camera_count": 0,
+      "named_site_candidates": 0
     },
     {
       "city": "Pittsburgh",
@@ -258,7 +276,8 @@
         "I-79"
       ],
       "access_status": "feed_request_and_video_license_required",
-      "verified_camera_count": 0
+      "verified_camera_count": 0,
+      "named_site_candidates": 0
     },
     {
       "city": "Allentown",
@@ -271,7 +290,8 @@
         "US-22"
       ],
       "access_status": "feed_request_and_video_license_required",
-      "verified_camera_count": 0
+      "verified_camera_count": 0,
+      "named_site_candidates": 0
     },
     {
       "city": "Baltimore",
@@ -285,7 +305,8 @@
         "I-695"
       ],
       "access_status": "media_type_and_terms_review",
-      "verified_camera_count": 0
+      "verified_camera_count": 0,
+      "named_site_candidates": 15
     },
     {
       "city": "Washington, DC",
@@ -301,7 +322,8 @@
         "I-66"
       ],
       "access_status": "dc_city_feed_unverified_va_suburbs_seeded",
-      "verified_camera_count": 0
+      "verified_camera_count": 0,
+      "named_site_candidates": 0
     },
     {
       "city": "Wilmington",
@@ -315,7 +337,8 @@
         "US-13"
       ],
       "access_status": "direct_media_unverified",
-      "verified_camera_count": 0
+      "verified_camera_count": 0,
+      "named_site_candidates": 0
     },
     {
       "city": "Portland",
@@ -328,7 +351,8 @@
         "I-295"
       ],
       "access_status": "direct_media_unverified",
-      "verified_camera_count": 0
+      "verified_camera_count": 0,
+      "named_site_candidates": 0
     },
     {
       "city": "Bangor",
@@ -341,7 +365,8 @@
         "US-2"
       ],
       "access_status": "direct_media_unverified",
-      "verified_camera_count": 0
+      "verified_camera_count": 0,
+      "named_site_candidates": 0
     },
     {
       "city": "Manchester",
@@ -354,7 +379,8 @@
         "I-293"
       ],
       "access_status": "direct_media_unverified",
-      "verified_camera_count": 0
+      "verified_camera_count": 0,
+      "named_site_candidates": 0
     },
     {
       "city": "Nashua",
@@ -367,7 +393,8 @@
         "NH-101A"
       ],
       "access_status": "direct_media_unverified",
-      "verified_camera_count": 0
+      "verified_camera_count": 0,
+      "named_site_candidates": 0
     },
     {
       "city": "Concord",
@@ -380,7 +407,8 @@
         "I-89"
       ],
       "access_status": "direct_media_unverified",
-      "verified_camera_count": 0
+      "verified_camera_count": 0,
+      "named_site_candidates": 0
     },
     {
       "city": "Burlington",
@@ -393,7 +421,40 @@
         "US-7"
       ],
       "access_status": "direct_media_unverified",
-      "verified_camera_count": 0
+      "verified_camera_count": 0,
+      "named_site_candidates": 0
+    },
+    {
+      "city": "Annapolis",
+      "state": "MD",
+      "provider_ids": [
+        "mdot"
+      ],
+      "major_corridors": [
+        "US-50",
+        "I-97",
+        "MD-665"
+      ],
+      "access_status": "media_type_and_terms_review",
+      "verified_camera_count": 0,
+      "named_site_candidates": 6
+    },
+    {
+      "city": "Arlington",
+      "state": "VA",
+      "provider_ids": [
+        "vdot"
+      ],
+      "major_corridors": [
+        "US-50",
+        "I-66",
+        "I-395"
+      ],
+      "access_status": "third_party_user_agreement_required",
+      "verified_camera_count": 0,
+      "named_site_candidates": 4
     }
-  ]
+  ],
+  "description": "Northeast DOT metro targets. Named site candidate counts are NOT active streams. DC-proximate Maryland and Virginia cameras retain their correct states, never relabeled as DC city feeds.",
+  "named_site_index": "catalog/northeast_camera_sites.json"
 }
