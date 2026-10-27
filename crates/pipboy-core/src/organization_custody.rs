@@ -121,11 +121,11 @@ pub fn hex(bytes: &[u8]) -> String {
 }
 
 fn unhex(input: &str) -> Result<Zeroizing<Vec<u8>>, CustodyError> {
-    if input.len() % 2 != 0 || input.len() > 8192 {
+    if !input.len().is_multiple_of(2) || input.len() > 8192 {
         return Err(CustodyError::Corrupt);
     }
     let mut output = Zeroizing::new(Vec::with_capacity(input.len() / 2));
-    for pair in input.as_bytes().chunks_exact(2) {
+    for pair in input.as_bytes().as_chunks::<2>().0 {
         let from = |b: u8| match b {
             b'0'..=b'9' => Some(b - b'0'),
             b'a'..=b'f' => Some(b - b'a' + 10),
