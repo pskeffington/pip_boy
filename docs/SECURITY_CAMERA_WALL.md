@@ -71,6 +71,17 @@ python3 tools/build_northeast_camera_index.py --source ddot --fetch --output /tm
 
 Supported source keys: `md-socrata`, `md-imap`, `ddot`, `deldot`, `vdot`, `ridot`, `massdot-staging`. The `md-socrata` key imports official camera metadata from `opendata.maryland.gov/resource/4z3c-43ce.json`; it never activates the player URL. The import caps input at 6 MiB and 1,000 features, validates state-specific camera coordinates and writes **review-only** JSON with `image_url:null`, `live_verified:false`, no retained credentials or video. Output cannot activate a camera automatically. Official metadata/terms and media access must be reviewed before promoting each device to the runtime catalog. `python3 tools/test_build_northeast_camera_index.py` exercises the normalizers offline.
 
+## Metadata endpoint availability check
+
+The read-only `tools/probe_northeast_sources.py` checks the four default official public GIS endpoints (Maryland Socrata, Maryland iMAP, DDOT and RIDOT). It checks HTTPS reachability, expected JSON shape and valid camera coordinates, and reports a distinct `metadata_reachable` / `metadata_error` result with the count of valid camera locations. It **never downloads camera images**; `image_streams_verified` is always zero. API pagination or a source limit may make counts partial. The script is opt-in, no credentials, no redirect following, no background polling and no unapproved NYC/CT/PennDOT API scraping. MassDOT staging is excluded entirely.
+
+```bash
+python3 tools/probe_northeast_sources.py --json
+python3 tools/probe_northeast_sources.py --source ridot --json
+```
+
+The two acceptance gates remain distinct: **metadata online** means locations can be indexed; **verified live camera** requires authorized direct media plus a real frame capture-time check. A public web map or agency `Enabled` flag does not satisfy the second gate.
+
 ## User task and screen state
 
 A small, approximately 4-inch handheld targets **up to four independently checked feeds** in a **2×2 grid**; restricted or offline cameras display honest placeholders. Each tile labels source identity, feed age and status (connecting, live, stale, auth failed, offline). One press opens an individual feed in a main focused viewport; one press returns to the wall with the other three streams still tracked. Design target: 800×480 landscape, adaptive 480×320 fallback, and ordinary Mac window/terminal mock before hardware testing. These resolutions are reference targets, not specifications for an approved physical screen.
