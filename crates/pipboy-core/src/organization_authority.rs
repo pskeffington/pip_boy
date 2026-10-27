@@ -386,3 +386,409 @@ pub fn verify_enrollment_evidence(
         approval_serials: serials,
     })
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::organization::{
+        DeviceLifecycle, DeviceRecord, Operator, Organization, Unit, UnitKind, VaultSite,
+    };
+    use crate::organization_identity::{
+        credential_transcript, proof_transcript, PrincipalKind,
+    };
+    use ring::signature::{Ed25519KeyPair, KeyPair};
+
+    const NONCE: [u8; 32] = [21; 32];
+    const BINDING: [u8; 32] = [24; 32];
+
+    fn key(seed: u8) -> Ed25519KeyPair {
+        // Fixed seeds are deliberately limited to synthetic test-only fixtures.
+        Ed25519KeyPair::from_seed_unchecked(&[seed; 32]).unwrap()
+    }
+
+    fn query() -> ProposedExchange<'static> {
+        ProposedExchange {
+            organization_id: "sample-org",
+            vault_id: "sample-vault",
+            operator_id: "field-operator",
+            device_id: "field-device",
+            action: GrantAction::Sync,
+            dataset: Dataset::Progress,
+            time_unverified: 11,
+        }
+    }
+
+    fn graph() -> OrgGraph {
+        OrgGraph {
+            schema_version: 1,
+            organizations: vec![Organization {
+                id: "sample-org".into(),
+                name: "Synthetic Organization".into(),
+            }],
+            vaults: vec![VaultSite {
+                id: "sample-vault".into(),
+                organization_id: "sample-org".into(),
+                name: "Sample Vault".into(),
+            }],
+            units: vec![Unit {
+                id: "field-division".into(),
+                vault_id: "sample-vault".into(),
+                parent_unit_id: None,
+                kind: UnitKind::Division,
+                name: "Field Division".into(),
+            }],
+            operators: vec![
+                Operator {
+                    id: "field-operator".into(),
+                    organization_id: "sample-org".into(),
+                    display_name: "Operator".into(),
+                    active: true,
+                },
+                Operator {
+                    id: "command-issuer".into(),
+                    organization_id: "sample-org".into(),
+                    display_name: "Issuer".into(),
+                    active: true,
+                },
+            ],
+            appointments: vec![Appointment {
+                id: "shift-one".into(),
+                operator_id: "field-operator".into(),
+                unit_id: "field-division".into(),
+                position_id: "recon".into(),
+                approved_by_operator_id: "command-issuer".into(),
+                not_before: 10,
+                expires_at: 100,
+                revoked: false,
+            }],
+            devices: vec![DeviceRecord {
+                id: "field-device".into(),
+                organization_id: "sample-org".into(),
+                vault_id: "sample-vault".into(),
+                assigned_operator_id: Some("field-operator".into()),
+                lifecycle: DeviceLifecycle::RecordedActive,
+            }],
+            grants: vec![
+                Grant {
+                    id: "operator-grant".into(),
+                    organization_id: "sample-org".into(),
+                    issuer_operator_id: "command-issuer".into(),
+                    subject: GrantSubject::Operator("field-operator".into()),
+                    vault_id: "sample-vault".into(),
+                    action: GrantAction::Sync,
+                    dataset: Dataset::Progress,
+                    not_before: 10,
+                    expires_at: 100,
+                    revoked: false,
+                },
+                Grant {
+                    id: "device-grant".into(),
+                    organization_id: "sample-org".into(),
+                    issuer_operator_id: "command-issuer".into(),
+                    subject: GrantSubject::Device("field-device".into()),
+                    vault_id: "sample-vault".into(),
+                    action: GrantAction::Sync,
+                    dataset: Dataset::Progress,
+                    not_before: 10,
+                    expires_at: 100,
+                    revoked: false,
+                },
+            ],
+        }
+    }
+
+    fn credential(
+        root: &Ed25519KeyPair,
+        holder: &Ed25519KeyPair,
+        kind: PrincipalKind,
+        principal_id: &str,
+        serial: u64,
+    ) -> SignedCredential {
+        let mut signed = SignedCredential {
+            schema_version: 1,
+            organization_id: "sample-org".into(),
+            vault_id: "sample-vault".into(),
+            principal_kind: kind,
+            principal_id: principal_id.into(),
+            serial,
+            key_epoch: 1,
+            not_before: 10,
+            expires_at: 100,
+            public_key: holder.public_key().as_ref().to_vec(),
+            issuer_signature: Vec::new(),
+        };
+        signed.issuer_signature = root.sign(&credential_transcript(&signed)).as_ref().to_vec();
+        signed
+    }
+
+    fn proof(
+        holder: &Ed25519KeyPair,
+        claim: &SignedCredential,
+        q: &ProposedExchange<'_>,
+    ) -> SessionProof {
+        SessionProof {
+            signature: holder
+                .sign(&proof_transcript(q, claim, &NONCE, &BINDING))
+                .as_ref()
+                .to_vec(),
+        }
+    }
+
+    struct Fixture {
+        root: Ed25519KeyPair,
+        graph: OrgGraph,
+        appointment: SignedAppointment,
+        operator_grant: SignedGrant,
+        device_grant: SignedGrant,
+        revocations: SignedRevocations,
+        operator_credential: SignedCredential,
+        device_credential: SignedCredential,
+        operator_proof: SessionProof,
+        device_proof: SessionProof,
+    }
+
+    impl Fixture {
+        fn sign_revocations(&mut self) {
+            self.revocations.signature = self
+                .root
+                .sign(&encode_revocations(&self.revocations))
+                .as_ref()
+                .to_vec();
+        }
+
+        fn check(
+            &self,
+            now: u64,
+            min_generation: u64,
+            nonce: &[u8; 32],
+            journal: &mut VolatileNonceJournal,
+        ) -> Result<EnrollmentEvidence, AuthorityError> {
+            let context = AuthorityContext {
+                pinned_root_key: self.root.public_key().as_ref(),
+                issuer_key_epoch: 1,
+                verified_now: now,
+                minimum_revocation_generation: min_generation,
+                verifier_nonce: nonce,
+                authenticated_channel_binding: &BINDING,
+            };
+            let approvals = ApprovalBundle {
+                appointment: &self.appointment,
+                operator_grant: &self.operator_grant,
+                device_grant: &self.device_grant,
+                revocations: &self.revocations,
+                operator_credential: &self.operator_credential,
+                operator_proof: &self.operator_proof,
+                device_credential: &self.device_credential,
+                device_proof: &self.device_proof,
+            };
+            verify_enrollment_evidence(&self.graph, &query(), &context, &approvals, journal)
+        }
+    }
+
+    fn fixture() -> Fixture {
+        let root = key(1);
+        let operator_key = key(2);
+        let device_key = key(3);
+        let graph = graph();
+        let q = query();
+        let operator_credential = credential(
+            &root,
+            &operator_key,
+            PrincipalKind::Operator,
+            q.operator_id,
+            1,
+        );
+        let device_credential = credential(
+            &root,
+            &device_key,
+            PrincipalKind::Device,
+            q.device_id,
+            2,
+        );
+        let operator_proof = proof(&operator_key, &operator_credential, &q);
+        let device_proof = proof(&device_key, &device_credential, &q);
+        let mut appointment = SignedAppointment {
+            organization_id: q.organization_id.into(),
+            vault_id: q.vault_id.into(),
+            issuer_key_epoch: 1,
+            approval_serial: 10,
+            appointment: graph.appointments[0].clone(),
+            signature: Vec::new(),
+        };
+        appointment.signature = root.sign(&encode_appointment(&appointment)).as_ref().to_vec();
+        let mut operator_grant = SignedGrant {
+            issuer_key_epoch: 1,
+            approval_serial: 11,
+            grant: graph.grants[0].clone(),
+            signature: Vec::new(),
+        };
+        operator_grant.signature = root.sign(&encode_grant(&operator_grant)).as_ref().to_vec();
+        let mut device_grant = SignedGrant {
+            issuer_key_epoch: 1,
+            approval_serial: 12,
+            grant: graph.grants[1].clone(),
+            signature: Vec::new(),
+        };
+        device_grant.signature = root.sign(&encode_grant(&device_grant)).as_ref().to_vec();
+        let mut f = Fixture {
+            root,
+            graph,
+            appointment,
+            operator_grant,
+            device_grant,
+            revocations: SignedRevocations {
+                schema_version: 1,
+                organization_id: "sample-org".into(),
+                issuer_key_epoch: 1,
+                generation: 2,
+                not_before: 10,
+                expires_at: 200,
+                credential_serials: Vec::new(),
+                approval_serials: Vec::new(),
+                signature: Vec::new(),
+            },
+            operator_credential,
+            device_credential,
+            operator_proof,
+            device_proof,
+        };
+        f.sign_revocations();
+        f
+    }
+
+    #[test]
+    fn verified_signatures_produce_evidence_not_authorization() {
+        let f = fixture();
+        let mut journal = VolatileNonceJournal::default();
+        let evidence = f.check(20, 2, &NONCE, &mut journal).unwrap();
+        assert_eq!(evidence.identity.device_id, "field-device");
+        assert_eq!(evidence.approval_serials, [10, 11, 12]);
+        assert_eq!(evidence.revocation_generation, 2);
+        assert_eq!(
+            f.check(20, 2, &NONCE, &mut journal),
+            Err(AuthorityError::ReplayDetected)
+        );
+    }
+
+    #[test]
+    fn tampered_appointment_grant_and_unsigned_edits_fail_closed() {
+        let mut f = fixture();
+        f.appointment.appointment.position_id = "overseer".into();
+        assert_eq!(
+            f.check(20, 2, &NONCE, &mut VolatileNonceJournal::default()),
+            Err(AuthorityError::StaleApproval)
+        );
+        let mut f = fixture();
+        f.operator_grant.signature[1] ^= 1;
+        assert_eq!(
+            f.check(20, 2, &NONCE, &mut VolatileNonceJournal::default()),
+            Err(AuthorityError::InvalidApproval)
+        );
+        let mut f = fixture();
+        f.graph.grants[1].action = GrantAction::Assign;
+        assert_eq!(
+            f.check(20, 2, &NONCE, &mut VolatileNonceJournal::default()),
+            Err(AuthorityError::Identity(EvidenceError::StructuralPreflight))
+        );
+    }
+
+    #[test]
+    fn revoked_credentials_and_approvals_fail_closed() {
+        let mut f = fixture();
+        f.revocations.credential_serials.push(2);
+        f.sign_revocations();
+        assert_eq!(
+            f.check(20, 2, &NONCE, &mut VolatileNonceJournal::default()),
+            Err(AuthorityError::Identity(EvidenceError::Revoked))
+        );
+        let mut f = fixture();
+        f.revocations.approval_serials.push(12);
+        f.sign_revocations();
+        assert_eq!(
+            f.check(20, 2, &NONCE, &mut VolatileNonceJournal::default()),
+            Err(AuthorityError::ApprovalRevoked)
+        );
+        let mut f = fixture();
+        f.revocations.approval_serials.extend([12, 10]);
+        f.sign_revocations();
+        assert_eq!(
+            f.check(20, 2, &NONCE, &mut VolatileNonceJournal::default()),
+            Err(AuthorityError::InvalidRevocations)
+        );
+    }
+
+    #[test]
+    fn freshness_snapshot_signature_and_generation_floor_enforced() {
+        let f = fixture();
+        assert_eq!(
+            f.check(20, 3, &NONCE, &mut VolatileNonceJournal::default()),
+            Err(AuthorityError::RevocationRollback)
+        );
+        assert_eq!(
+            f.check(200, 2, &NONCE, &mut VolatileNonceJournal::default()),
+            Err(AuthorityError::ExpiredRevocations)
+        );
+        let mut f = fixture();
+        f.revocations.signature[0] ^= 1;
+        assert_eq!(
+            f.check(20, 2, &NONCE, &mut VolatileNonceJournal::default()),
+            Err(AuthorityError::InvalidRevocations)
+        );
+        let mut f = fixture();
+        f.revocations.expires_at = 10 + MAX_SNAPSHOT_SECONDS + 1;
+        f.sign_revocations();
+        assert_eq!(
+            f.check(20, 2, &NONCE, &mut VolatileNonceJournal::default()),
+            Err(AuthorityError::InvalidRevocations)
+        );
+    }
+
+    #[test]
+    fn failed_evidence_does_not_consume_nonce_and_valid_replay_is_rejected() {
+        let mut f = fixture();
+        let mut journal = VolatileNonceJournal::default();
+        f.device_grant.signature[0] ^= 1;
+        assert_eq!(
+            f.check(20, 2, &NONCE, &mut journal),
+            Err(AuthorityError::InvalidApproval)
+        );
+        f.device_grant.signature[0] ^= 1;
+        assert!(f.check(20, 2, &NONCE, &mut journal).is_ok());
+        assert_eq!(
+            f.check(20, 2, &NONCE, &mut journal),
+            Err(AuthorityError::ReplayDetected)
+        );
+    }
+
+    #[test]
+    fn cross_vault_and_delegated_assignment_require_exact_approval() {
+        let mut f = fixture();
+        f.device_grant.grant.vault_id = "other-vault".into();
+        assert_eq!(
+            f.check(20, 2, &NONCE, &mut VolatileNonceJournal::default()),
+            Err(AuthorityError::ScopeMismatch)
+        );
+        let mut f = fixture();
+        f.graph.appointments[0].revoked = true;
+        assert_eq!(
+            f.check(20, 2, &NONCE, &mut VolatileNonceJournal::default()),
+            Err(AuthorityError::Identity(EvidenceError::StructuralPreflight))
+        );
+    }
+
+    #[test]
+    fn nonce_journal_is_bounded_and_not_a_persistent_production_store() {
+        let mut journal = VolatileNonceJournal::default();
+        for counter in 0..1024_u32 {
+            let mut nonce = [0_u8; 32];
+            nonce[..4].copy_from_slice(&counter.to_be_bytes());
+            assert!(journal.check_and_record(nonce).is_ok());
+        }
+        assert_eq!(
+            journal.check_and_record([255; 32]),
+            Err(AuthorityError::ReplayCapacityReached)
+        );
+        let mut fresh_process = VolatileNonceJournal::default();
+        assert!(fresh_process.check_and_record([0; 32]).is_ok());
+    }
+}
