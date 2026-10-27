@@ -33,7 +33,7 @@ The camera UI fetches snapshots only after its view opens, does not use iframes,
 
 **Security meaning:** road activity and visible vehicles can support situational awareness, not certify that a particular person is mobile or that a route is safe. Always preserve camera identity, original agency attribution, capture freshness uncertainty and provider access requirements. Never label Virginia traffic cameras as DC city cameras.
 
-Run `node tools/test_cameras_ui.cjs` for UI regression and `python3 tools/smoke_micro.py` with the local Rust server. These are code acceptance checks; actual provider playback remains an on-device gate.
+Run `node tools/test_cameras_ui.cjs` for UI regression and `python3 tools/smoke_micro.py` with the local Rust server. On a Mac with the dashboard already running on loopback, run `python3 tools/probe_public_cameras.py --json` to check approved direct-image HTTP responses, MIME types, image signatures and optional Last-Modified headers. The one-shot probe has an 8-second timeout, 2 MiB per-image ceiling, maximum 12 entries and no redirects, recording or automatic retries. It reports `reachable_freshness_unknown` on success: even a valid HTTPS image cannot prove live capture without agency frame timestamps. Actual provider playback remains an on-device gate.
 
 ## User task and screen state
 
