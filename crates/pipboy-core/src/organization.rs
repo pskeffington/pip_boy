@@ -224,18 +224,12 @@ impl OrgGraph {
             }
         }
         for site in &self.vaults {
-            if !id(&site.id)
-                || !name(&site.name)
-                || self.org(&site.organization_id).is_none()
-            {
+            if !id(&site.id) || !name(&site.name) || self.org(&site.organization_id).is_none() {
                 return Err("Vault references unknown organization");
             }
         }
         for unit in &self.units {
-            if !id(&unit.id)
-                || !name(&unit.name)
-                || self.site(&unit.vault_id).is_none()
-            {
+            if !id(&unit.id) || !name(&unit.name) || self.site(&unit.vault_id).is_none() {
                 return Err("Unit references unknown vault");
             }
             match (unit.kind, unit.parent_unit_id.as_deref()) {
@@ -583,7 +577,10 @@ mod tests {
         assert_eq!(graph.validate(), Err("Invalid organization identity"));
         let mut graph = fixture();
         graph.operators[0].display_name = "Commander\nInjected".into();
-        assert_eq!(graph.validate(), Err("Operator references unknown organization"));
+        assert_eq!(
+            graph.validate(),
+            Err("Operator references unknown organization")
+        );
         assert!(
             serde_json::from_str::<OrgGraph>(r#"{"schema_version":1,"unknown":true}"#).is_err()
         );
