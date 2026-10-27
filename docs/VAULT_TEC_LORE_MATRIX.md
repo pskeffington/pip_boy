@@ -26,14 +26,14 @@ Reviewed **October 25, 2026**. Every citation is a bibliographic pointer, **not*
 
 | Rust-Boy profile | Classification | Basis | Mapping policy |
 | --- | --- | --- | --- |
-| Overseer Operations | canonical job | `VT-01`, `VT-03`, `RB-01` | Real-world tool needs are project design, not game claims |
-| Head Engineer Station | canonical job | `VT-01`, `RB-01` | Real-world tool needs are project design, not game claims |
-| Security Chief Station | canonical job | `VT-01`, `STD-01`, `STD-02`, `STD-03`, `STD-05`, `STD-06` | Real-world tool needs are project design, not game claims |
-| Vault Doctor Station | canonical job | `VT-01`, `RB-01` | Real-world tool needs are project design, not game claims |
-| University Research Station | role inspired | `VT-01`, `RB-01` | Real-world tool needs are project design, not game claims |
-| Reclamation Field Kit | role inspired | `VT-02`, `VT-03`, `STD-04` | Real-world tool needs are project design, not game claims |
-| Records Custodian Station | role inspired | `VT-03`, `STD-05` | Real-world tool needs are project design, not game claims |
-| Custom Workbench | rust boy original | `RB-01` | Real-world tool needs are project design, not game claims |
+| Overseer | canonical job | `VT-01`, `VT-03`, `RB-01` | Real-world tool needs are project design, not game claims |
+| Maintenance | canonical job | `VT-01`, `RB-01` | Real-world tool needs are project design, not game claims |
+| Security | canonical job | `VT-01`, `STD-01`, `STD-02`, `STD-03`, `STD-05`, `STD-06` | Real-world tool needs are project design, not game claims |
+| Doctor | canonical job | `VT-01`, `RB-01` | Real-world tool needs are project design, not game claims |
+| Scientist | role inspired | `VT-01`, `RB-01` | Real-world tool needs are project design, not game claims |
+| Reclamations | role inspired | `VT-02`, `VT-03`, `STD-04` | Real-world tool needs are project design, not game claims |
+| Archivist | role inspired | `VT-03`, `STD-05` | Real-world tool needs are project design, not game claims |
+| Custom | rust boy original | `RB-01` | Real-world tool needs are project design, not game claims |
 
 **Canonical / evidenced** in Bethesda's *Fallout 76* quest **Overseer, Overseen**: Overseer, Security Chief, Head Engineer, Doctor. The University Researcher profile is **inspired by** Vault-Tec University and Professor-Bot, not documented as an identical staff title. Reclamation Scout is **inspired by** Vault 76's Reclamation Day, and Records Custodian by recordkeeping and archival themes. Custom is a wholly original Rust-Boy developer mode.
 

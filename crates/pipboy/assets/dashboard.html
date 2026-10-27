@@ -13,6 +13,7 @@
   <link rel="stylesheet" href="/assets/network.css">
   <link rel="stylesheet" href="/assets/reclamation.css">
   <link rel="stylesheet" href="/assets/radio-ui.css">
+  <link rel="stylesheet" href="/assets/cameras.css">
   <script defer src="/assets/network.js"></script>
   <script defer src="/assets/reclamation.js"></script>
   <script defer src="/assets/tasks.js"></script>
@@ -23,6 +24,7 @@
   <script defer src="/assets/map-zip.js"></script>
   <script defer src="/assets/map.js"></script>
   <script defer src="/assets/radio-ui.js"></script>
+  <script defer src="/assets/cameras.js"></script>
   <script defer src="/assets/dashboard.js"></script>
 </head>
 <body>
@@ -67,7 +69,7 @@
         </div>
 
         <div class="hud-strip" aria-label="Workspace status">
-          <div><span class="tiny-label">STATION</span><strong id="status-role">—</strong></div>
+          <div><span class="tiny-label">ROLE</span><strong id="status-role">—</strong></div>
           <div><span class="tiny-label">TOOLS</span><strong id="status-modules">—</strong></div>
           <div class="access-stat"><span class="tiny-label">ACCESS</span><strong class="positive">LOCAL · MANUAL</strong></div>
         </div>
@@ -92,18 +94,18 @@
         <section class="settings-surface stage-surface" data-stage="settings" aria-label="Device settings" hidden>
           <div class="section-heading"><h2>Settings</h2><span class="section-counter">LOCAL</span></div>
           <div class="settings-profile-summary">
-            <div><span class="tiny-label">ACTIVE STATION</span><strong id="settings-current-role">—</strong></div>
+            <div><span class="tiny-label">CURRENT ROLE</span><strong id="settings-current-role">—</strong></div>
           </div>
           <div class="role-panel" aria-labelledby="templates-heading">
         <div class="panel-top">
-          <h2 id="templates-heading">Stations</h2>
+          <h2 id="templates-heading">Roles</h2>
         </div>
-        <nav id="role-list" class="role-list" aria-label="Job stations"></nav>
-        <div id="role-pager" class="deck-pager" aria-label="Station pages"></div>
+        <nav id="role-list" class="role-list" aria-label="Operator roles"></nav>
+        <div id="role-pager" class="deck-pager" aria-label="Role pages"></div>
       </div>
           <div class="settings-choice">
             <button id="location-settings-open" type="button" class="secondary-button">LOCATION / MAP</button>
-            <span id="settings-selection" aria-live="polite">Select a station.</span>
+            <span id="settings-selection" aria-live="polite">Select a role.</span>
             <button id="open-palette" type="button" class="secondary-button" hidden>EDIT CUSTOM TOOLS</button>
             <button class="primary-button" id="load-role" type="button" disabled>LOAD PROFILE</button>
           </div>
@@ -177,14 +179,14 @@
 
     <footer class="statusbar">
       <div><span class="footer-pip" aria-hidden="true">◆</span> <span id="footer-message">Local · ready</span></div>
-      <div class="footer-shortcuts">SETTINGS: STATION <span class="status-separator">·</span> ESC: BACK</div>
+      <div class="footer-shortcuts">SETTINGS: ROLE <span class="status-separator">·</span> ESC: BACK</div>
     </footer>
   </div>
 
   <dialog id="confirm-dialog" aria-labelledby="confirm-title">
     <form method="dialog" class="dialog-body">
       <span class="eyebrow">CONFIRM CHANGE</span>
-      <h2 id="confirm-title">Load station?</h2>
+      <h2 id="confirm-title">Load role?</h2>
       <p id="confirm-description">Replace pinned tools? Notes and permissions remain unchanged.</p>
       <div class="dialog-buttons">
         <button type="submit" value="cancel" class="secondary-button">Cancel</button>

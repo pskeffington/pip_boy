@@ -53,6 +53,19 @@ const inside=(node,box)=>{
         height:ui.content.scrollHeight,available:ui.viewport.clientHeight,
         controlsFit:controls.every(x=>inside(x,box))});
     }
+    if(snapshot.active.profile === "security-chief" && window.RustBoyCameras) {
+      setTab("role"); openedTool="camera-grid"; render(); await settle();
+      const box=ui.viewport.getBoundingClientRect();
+      const choices=[...ui.content.querySelectorAll(".rb-camera-button")];
+      if(choices.length !== 4 || !choices.every(button=>inside(button,box)))
+        throw Error("Public camera city selectors clipped");
+      if(ui.content.querySelector("iframe"))throw Error("Compact grid must not create third-party players");
+      choices[0].click(); await settle();
+      const frame=ui.content.querySelector(".rb-camera-player");
+      if(!frame || !inside(frame,box))throw Error("Focused public player clipped");
+      back();
+      if(ui.content.querySelector("iframe"))throw Error("Back must remove the public player");
+    }
     if(hasTool("byte-lab")) {
       setTab("role"); openTool("byte-lab"); await settle();
       const header=document.querySelector(".topbar").getBoundingClientRect();

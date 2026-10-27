@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-10-26 — Operator titles and public camera fallback
+
+- Replace station/workbench labels with current operator titles; retain saved role IDs, normalize legacy built-in labels on read and add Recon with existing field tools.
+- Add a Rust-owned DC/NYC/Boston/SF publisher catalog and shared camera component. Desktop loads muted public players on Cameras entry; handheld selects one public view before loading.
+- Restrict embedded players to one fixed provider origin and validated IDs, retain source attribution, label private cameras unconfigured, and remove players on exit or Radio navigation.
+
 ## 2026-10-26 — Universal location ingestion settings
 
 - Move GPS setup, ZIP/manual location input, county acquisition, Layers and map sources behind Settings → Location / Map in micro and desktop.

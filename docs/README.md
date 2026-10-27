@@ -33,7 +33,7 @@ Technical contracts, architecture decisions, research provenance and validation 
 | [Messenger build passes A–C](MESSENGER_BUILD_PASSES.md) | Wire contract, fault simulation, opt-in encrypted queue, local-IP retry and passive USB capture |
 | [Messenger hardware acceptance](MESSENGER_INTEROPERABILITY.md) | Pending native key-store, two-host and USB field evidence |
 | [Messenger: authenticated device-to-device text](MESSENGER.md) | LINK conversation UI, SSH pairing, delivery receipts, and explicit security limitations |
-| [Reclamation Field Kit](RECLAMATION.md) | Local manual site register, offline markers, GeoJSON export and privacy controls |
+| [Reclamations](RECLAMATION.md) | Local manual site register, offline markers, GeoJSON export and privacy controls |
 | [Scout GIS + TAK on Pi](SCOUT_GIS_TAK.md) | Offline GeoJSON, RustGIS ARM64 roadmap, Pi TAK server and CoT integration gates |
 | [Role roadmap](ROLE_ROADMAP.md) | Eight occupational workbenches, operational needs and R0-R3 acceptance gates |
 | [Lore/source matrix](VAULT_TEC_LORE_MATRIX.md) | Publisher-source evidence, role name fidelity and technical standards |

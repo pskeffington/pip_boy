@@ -577,12 +577,12 @@ mod tests {
             workbench: &board,
         };
         let text = screen(100, 28, &mut navigation, view);
-        assert!(text.contains("Overseer Operations"));
+        assert!(text.contains("Overseer"));
         assert!(text.contains("VAULT PROFILE"));
         assert!(text.contains("READY TOOLS"));
         navigation.profile_move(Action::End);
         let text = screen(100, 28, &mut navigation, view);
-        assert!(text.contains("Custom Workbench"));
+        assert!(text.contains("Custom"));
         assert!(text.contains("Empty by design"));
         navigation.profile_confirm = true;
         assert!(screen(100, 28, &mut navigation, view).contains("REPLACE CURRENT PINS"));

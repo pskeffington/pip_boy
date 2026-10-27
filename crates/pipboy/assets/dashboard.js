@@ -55,6 +55,7 @@ let activeStage = "modules";
 let activePane = "workspace";
 let desktopMessenger = null;
 let desktopRadioUI = null;
+let cameraWallUI = null;
 let radioPaneOpen = false;
 let extensionMode = "map";
 let queuedSiteId = null;
@@ -79,6 +80,7 @@ function activateStage(stage) {
   if (stage === "palette" && snapshot?.active.profile !== "custom") stage = "settings";
   if (!["modules", "viewport", "messages", "settings", "palette"].includes(stage)) return;
   const previous = activeStage;
+  if (stage !== "viewport" && cameraWallUI) { cameraWallUI.destroy(); cameraWallUI = null; }
   if (!["settings", "palette"].includes(stage) && previewId !== snapshot?.active.profile) {
     previewId = snapshot.active.profile;
     renderRoles();
@@ -104,6 +106,7 @@ function syncRadioSubview() {
   const toggle = byId("radio-view-toggle");
   if (!dock || !toggle) return;
   const visible = radioPaneOpen && activeStage === "viewport";
+  if (visible && cameraWallUI) { cameraWallUI.destroy(); cameraWallUI = null; }
   ui.extension.hidden = radioPaneOpen;
   dock.hidden = !radioPaneOpen;
   toggle.textContent = radioPaneOpen ? "◀ ACTIVE VIEW" : "RADIO / IP";
@@ -124,8 +127,10 @@ function toggleRadioSubview() {
   if (!radioPaneOpen && snapshot) renderExtension();
 }
 function activatePane(pane) {
+  if (pane !== "workspace" && cameraWallUI) { cameraWallUI.destroy(); cameraWallUI = null; }
   activePane = pane;
   document.querySelector(".dashboard").dataset.pane = pane;
+  if (pane === "workspace" && activeStage === "viewport" && !radioPaneOpen && snapshot?.active.profile === "security-chief" && !cameraWallUI) renderExtension();
   for (const button of document.querySelectorAll("[data-pane-target]")) button.setAttribute("aria-pressed", String(button.dataset.paneTarget === pane));
 }
 
@@ -185,7 +190,7 @@ function renderSettingsSelection() {
   byId("open-palette").hidden = snapshot.active.profile !== "custom";
   const same = chosen?.id === snapshot.active.profile;
   const resetCustom = same && chosen?.id === "custom" && snapshot.active.slots.length > 0;
-  byId("settings-selection").textContent = !chosen ? "Choose a station."
+  byId("settings-selection").textContent = !chosen ? "Choose a role."
     : same ? "Current: " + chosen.title
       : "Selected: " + chosen.title;
   ui.load.disabled = working || (same && !resetCustom) || !chosen;
@@ -330,6 +335,8 @@ function extensionTabs(options, selected) {
 }
 
 function renderExtension() {
+  if (cameraWallUI) cameraWallUI.destroy();
+  cameraWallUI = null;
   if (window.RustBoyMap) window.RustBoyMap.unmount();
   ui.extension.replaceChildren();
   const selected = profile();
@@ -353,9 +360,10 @@ function renderExtension() {
     ui.extension.append(manager);
     return;
   }
-  if (selected.id === "reclamation-scout") {
+  if (["reclamation-scout", "recon"].includes(selected.id)) {
     if (!["map", "sites", "tasks"].includes(extensionMode)) extensionMode = "map";
-    const options = selectedAvailable() ? [["map","MAP"],["sites","SITES"],["tasks","DUTIES"]] : [["map","MAP"]];
+    const siteAccess = selectedAvailable() && snapshot.active.slots.some(slot => slot.tool === "reclamation");
+    const options = [["map","MAP"], ...(siteAccess ? [["sites","SITES"]] : []), ...(selectedAvailable() ? [["tasks","DUTIES"]] : [])];
     ui.extension.append(extensionTabs(options, extensionMode));
     const body = el("div", "extension-focused-body");
     ui.extension.append(body);
@@ -400,31 +408,14 @@ function renderExtension() {
         return;
       }
     }
-    const wall = el("div", "camera-wall" + (selectedCamera !== null ? " focused" : ""));
-    wall.append(el("div", "camera-wall-heading", "CAMERA DEMO · NO LIVE FEED"));
-    const grid = el("div", "camera-grid");
-    const available = selectedCamera === null ? [1, 2, 3, 4] : [selectedCamera];
-    for (const number of available) {
-      const cell = el("button", "camera-cell");
-      cell.type = "button";
-      cell.setAttribute("aria-label", "Camera " + number + " placeholder; " +
-        (selectedCamera === null ? "focus" : "return to grid"));
-      cell.append(
-        el("strong", "", "CAM 0" + number),
-        el("span", "", "NO FEED")
-      );
-      cell.addEventListener("click", () => {
-        selectedCamera = selectedCamera === null ? number : null;
-        renderExtension();
-      });
-      grid.append(cell);
-    }
-    wall.append(grid, el("div", "camera-hint",
-      selectedCamera === null
-        ? "Select a camera to focus."
-        : "Select again or Esc to return."
-    ));
+    const wall = el("div", "camera-wall");
     ui.extension.append(wall);
+    if (activeStage === "viewport" && activePane === "workspace" && selectedAvailable() && window.RustBoyCameras) {
+      cameraWallUI = window.RustBoyCameras.mount(wall, {
+        feeds: snapshot.camera_feeds, selected: selectedCamera,
+        onSelect: value => { selectedCamera = value; }
+      });
+    } else wall.append(el("div", "camera-wall-heading", "PUBLIC VIEWS / OPEN CAMERAS TO LOAD"));
     return;
   }
   if (selectedAvailable() && selected.id !== "custom" && window.RustBoyTasks) {
@@ -579,7 +570,7 @@ function renderAll() {
   const current = profile();
   if (!current) return;
   ui.status.innerHTML = '<span class="live-dot" aria-hidden="true"></span> READY';
-  ui.title.textContent = "WORKBENCH";
+  ui.title.textContent = profile()?.title || "ROLE";
   ui.subtitle.textContent = "Local tools only.";
   ui.viewMode.textContent = "ACTIVE";
   ui.roleStat.textContent = current.title.toUpperCase();
@@ -617,7 +608,7 @@ async function changeProfile(id) {
     modulePage = 0;
     extensionMode = "map";
     ui.detailInfo.open = false;
-    notify("Station loaded: " + profile().title);
+    notify("Role loaded: " + profile().title);
     activeStage = "modules";
     activePane = "workspace";
     renderAll();

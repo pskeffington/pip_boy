@@ -36,7 +36,7 @@ with tempfile.TemporaryDirectory() as temporary:
     env = dict(os.environ, PIPBOY_HOME=str(root))
     initial = json.loads(call(env, "list", "--json"))
     assert initial["profile"] == "overseer"
-    assert initial["title"] == "Overseer Operations"
+    assert initial["title"] == "Overseer"
     assert [slot["tool"] for slot in initial["slots"]] == [
         "mission-board", "host", "notes", "library", "game"
     ]
@@ -44,7 +44,7 @@ with tempfile.TemporaryDirectory() as temporary:
     assert [item["id"] for item in profiles] == [
         "overseer", "head-engineer", "security-chief", "vault-doctor",
         "university-researcher", "reclamation-scout",
-        "records-custodian", "custom"
+        "recon", "records-custodian", "custom"
     ]
     assert profiles[-1]["tools"] == []
     palette = json.loads(call(env, "palette", "--json"))
@@ -116,4 +116,4 @@ with tempfile.TemporaryDirectory() as temporary:
         call(env, "use", "overseer", "--replace", ok=False)
         assert persisted.read_text() == malformed
 
-print("PASS: eight role presets, default Overseer, empty Custom, no implicit I/O, offline CIDR/CRC32/hex, local pinning, legacy schema and fail-closed malformed manifests")
+print("PASS: nine role presets, default Overseer, empty Custom, no implicit I/O, offline CIDR/CRC32/hex, local pinning, legacy schema and fail-closed malformed manifests")

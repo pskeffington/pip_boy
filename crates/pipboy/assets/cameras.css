@@ -1,0 +1,15 @@
+.rb-camera-view{display:flex;flex-direction:column;gap:5px;min-height:0;flex:1;height:100%;color:var(--text,var(--rb-text));font:11px ui-monospace,monospace}
+.rb-camera-heading{flex:none;font-size:10px;line-height:1.2}
+.rb-camera-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:repeat(2,minmax(0,1fr));gap:6px;flex:1;min-height:0}
+.rb-camera-focused{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr)}
+.rb-camera-tile{display:flex;flex-direction:column;gap:3px;min-height:0;min-width:0;border:1px solid #4d7548;background:#061008;padding:4px;overflow:hidden}
+.rb-camera-top{display:flex;justify-content:space-between;align-items:center;gap:4px;flex:none}
+.rb-camera-button{min-height:44px;min-width:44px;color:#caffb5;background:#102619;border:1px solid #597d59;font:700 10px ui-monospace,monospace;cursor:pointer}
+.rb-camera-button:focus-visible,.rb-camera-source:focus-visible{outline:2px solid #d5efad;outline-offset:1px}
+.rb-camera-player{width:100%;flex:1;min-height:0;border:0;background:#000}
+.rb-camera-source{font-size:9px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;color:inherit;flex:none}
+.rb-camera-name{font-size:10px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+
+.rb-camera-host{height:100%;min-height:0}
+.micro-content:has(.rb-camera-host),.micro-content:has(.rb-camera-host)>.micro-panel{height:100%;min-height:0}
+.camera-wall.rb-camera-view{padding:5px}

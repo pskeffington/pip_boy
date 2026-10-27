@@ -1,6 +1,21 @@
 # Security Chief | 4-camera handheld view specification
 
-**Status: design only; no working IP-camera decoder or real camera feed is currently shipped.** Applies to the [Security Chief](ROLE_ROADMAP.md#security-chief-station-security-chief) role. Use only cameras and networks the operator is authorized to view. Not a surveillance discovery product.
+**Status: public publisher-player fallback implemented; private IP-camera decoding/enrollment remains planned.** Applies to the [Security Chief](ROLE_ROADMAP.md#security-security-chief) role. Use only cameras and networks the operator is authorized to view. Not a surveillance discovery product.
+
+## Public views when private cameras are unconfigured
+
+Security uses the shared `cameras.js` component and Rust `public_cameras::PUBLIC_CAMERA_FEEDS` catalog. Desktop opens four muted embedded publisher players only on the active Cameras view; role preview/loading does not create players. The small handheld lists four locations and opens one publisher player on selection. Leaving Cameras, opening Radio, or returning to the grid removes the old frames. No background recording, server-side video proxy, discovery, credentials, scraping, or health polling is implemented.
+
+| City | Publisher / view | Source checked 2026-10-26 |
+| --- | --- | --- |
+| DC | earthTV / White House | [Publisher stream](https://www.youtube.com/watch?v=5p_KGD4fJZs) |
+| NYC | EarthCam / Times Square Crossroads | [Publisher stream](https://www.youtube.com/watch?v=z-jYdOIKcTQ) |
+| Boston | Boston and Maine Live / Hyatt Regency Boston Harbor | [Publisher stream](https://www.youtube.com/watch?v=3I_cIS24AfY) |
+| SF | ABC7 News Bay Area / skyline | [Publisher stream](https://www.youtube.com/watch?v=G8RIAgPxaMc) |
+
+These are visibly labeled **PUBLIC VIEWS · PRIVATE CAMERAS UNCONFIGURED**. Source discovery is not a guarantee of current live playback: publishers may stop/replace a stream, limit embedding, require interaction, or display advertising. The original publisher link always remains available. Rust-Boy does not label an iframe load as verified live or invent timestamps, connection counts or private-camera health. Fixed YouTube IDs and exact publisher watch URLs are validated before creating a frame; only `https://www.youtube-nocookie.com` is added to parent `frame-src`. Parent `connect-src` remains unchanged. Each iframe is sandboxed, starts muted, and uses its own origin referrer policy for provider playback compatibility. Third-party players can make their own network requests once opened.
+
+`node tools/test_cameras_ui.cjs` checks four-view/focus behavior, compact opt-in, muted fixed-origin frames, malformed-source rejection and teardown with synthetic metadata. CI does not certify external playback, publisher permissions, private camera interoperability or physical handheld performance.
 
 ## User task and screen state
 

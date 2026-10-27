@@ -2,9 +2,15 @@
 
 Reviewed: **2026-10-25**. Repository: `pip_boy`; product: **Rust-Boy**. This is a **roadmap**, not a claim that every feature is implemented or hardware-certified. The authoritative machine-readable matrix is [catalog/role_roadmap.json](../catalog/role_roadmap.json); it must match `PRESETS` in [workbench.rs](../crates/pipboy-core/src/workbench.rs).
 
+## Operator titles
+
+The current title roster is **Overseer, Maintenance, Security, Doctor, Scientist, Reclamations, Recon, Archivist, Custom**. The UI uses operator titles rather than Station, Field Kit, Operations or Workbench suffixes. Existing preset IDs and task role references remain stable; exact legacy built-in titles are normalized on read without rewriting saved manifests or replacing operator-authored titles. Recon is a separate field role with mapping, observations, references and diagnostics; Custom remains last.
+
+Overseer, Security Chief, Head Engineer and Doctor have direct Bethesda support evidence (`VT-01`). Maintenance/Security are concise display groupings; Reclamations, Recon, Scientist and Archivist are role-inspired product labels, not a claim about an exhaustive canonical Vault-Tec staff hierarchy.
+
 ## Product principles
 
-1. **Ready out of the box:** Seven occupational profiles ship pre-pinned; a clean installation currently selects **Overseer Operations**. **Custom** is the deliberately blank, advanced option.
+1. **Ready out of the box:** Seven occupational profiles ship pre-pinned; a clean installation currently selects **Overseer**. **Custom** is the deliberately blank, advanced option.
 2. **A profile is a workspace, not a privilege:** Selecting or pinning a profile cannot open a camera, discover nearby hardware, use a PlayStation connection, acquire a location, or run an arbitrary program. Each real connector requires a separate user action and OS-enforced grant where appropriate.
 3. **Two real display targets:** Develop initially on macOS (keyboard/Terminal) while defining a future **4-inch handheld** at a proposed 800×480 reference resolution and 480×320 fallback. These are design targets, not selected hardware specifications. Layouts must be readable, responsive, keyboard-first, and have touch targets when touch is available.
 4. **Truthful states:** Distinguish static layout, simulation, real local tools, explicit opt-in connectors, stale data, and entirely unimplemented features. A pinned icon is not proof of a live feed.
@@ -20,7 +26,7 @@ The R1 management board now has an **opt-in SSH peer task transport**. Operators
 
 ## Base dashboard and template activation
 
-The [graphical dashboard implementation](DASHBOARD_UI.md) provides a shared UI foundation **before** role-specific extensions. Its left rail lists the seven preconfigured roles in canonical order with **Custom last**, offers non-mutating role previews and explicitly confirmed loading, and places pinned modules in a responsive deck. Custom is empty until deliberately populated. Reclamation Scout reserves a viewport for a future **real RustGIS launcher/renderer**; Security Chief currently uses four camera **mock-layout controls**, not network video. The Rust service is local only and uses the established WorkbenchStore, so CLI/TUI/web selections share one source of truth. Browser usability, accessibility and 4-inch hardware acceptance remain independent gates.
+The [graphical dashboard implementation](DASHBOARD_UI.md) provides a shared UI foundation **before** role-specific extensions. Its left rail lists the eight preconfigured roles in canonical order with **Custom last**, offers non-mutating role previews and explicitly confirmed loading, and places pinned modules in a responsive deck. Custom is empty until deliberately populated. Reclamation Scout reserves a viewport for a future **real RustGIS launcher/renderer**; Security now has a labeled public-camera fallback; private IP-camera decoding remains gated. The Rust service is local only and uses the established WorkbenchStore, so CLI/TUI/web selections share one source of truth. Browser usability, accessibility and 4-inch hardware acceptance remain independent gates.
 
 ## Shared program gates and prerequisites
 
@@ -37,18 +43,19 @@ The [graphical dashboard implementation](DASHBOARD_UI.md) provides a shared UI f
 
 | Profile ID | Job station | Lore type | Existing palette tools | Future modules |
 | --- | --- | --- | --- | --- |
-| `overseer` | Overseer Operations | canonical job | `mission-board`, `host`, `notes`, `library`, `game` | `alerts`, `reports` |
-| `head-engineer` | Head Engineer Station | canonical job | `net-lab`, `host`, `diag`, `byte-lab`, `simulator`, `notes` | `serial-console`, `sensor-console`, `device-graph` |
-| `security-chief` | Security Chief Station | canonical job | `host`, `diag`, `net-lab`, `byte-lab`, `notes` | `camera-wall`, `camera-health`, `event-log` |
-| `vault-doctor` | Vault Doctor Station | canonical job | `library`, `notes`, `host` | `environment`, `checklists`, `reference-index` |
-| `university-researcher` | University Research Station | role inspired | `byte-lab`, `library`, `notes`, `simulator`, `net-lab` | `data-lab`, `experiment-log`, `graph-view` |
-| `reclamation-scout` | Reclamation Field Kit | role inspired | `geo-lab`, `game`, `net-lab`, `notes`, `host` | `map`, `coordinate-lab`, `gnss`, `track-log`, `tak-bridge`, `rustgis-adapter` |
-| `records-custodian` | Records Custodian Station | role inspired | `library`, `notes`, `byte-lab` | `document-index`, `sha256`, `artifact-bundle` |
-| `custom` | Custom Workbench | rust boy original | None (empty by design) | `layout-editor`, `module-sdk`, `sandbox-runtime` |
+| `overseer` | Overseer | canonical job | `mission-board`, `host`, `notes`, `library`, `game` | `alerts`, `reports` |
+| `head-engineer` | Maintenance | canonical job | `net-lab`, `host`, `diag`, `byte-lab`, `simulator`, `notes` | `serial-console`, `sensor-console`, `device-graph` |
+| `security-chief` | Security | canonical job | `host`, `diag`, `net-lab`, `byte-lab`, `notes` | `camera-wall`, `camera-health`, `event-log` |
+| `vault-doctor` | Doctor | canonical job | `library`, `notes`, `host` | `environment`, `checklists`, `reference-index` |
+| `university-researcher` | Scientist | role inspired | `byte-lab`, `library`, `notes`, `simulator`, `net-lab` | `data-lab`, `experiment-log`, `graph-view` |
+| `reclamation-scout` | Reclamations | role inspired | `geo-lab`, `game`, `net-lab`, `notes`, `host` | `map`, `coordinate-lab`, `gnss`, `track-log`, `tak-bridge`, `rustgis-adapter` |
+| `recon` | Recon | role inspired | `geo-lab`, `notes`, `library`, `host`, `diag` | Field observation and orientation extensions |
+| `records-custodian` | Archivist | role inspired | `library`, `notes`, `byte-lab` | `document-index`, `sha256`, `artifact-bundle` |
+| `custom` | Custom | rust boy original | None (empty by design) | `layout-editor`, `module-sdk`, `sandbox-runtime` |
 
 ## Detailed role plans
 
-### Overseer Operations (`overseer`)
+### Overseer (`overseer`)
 
 **Purpose:** Coordinate people, systems and incidents from a concise command dashboard.  
 **Lore:** canonical job · `VT-01`, `VT-03`, `RB-01`  
@@ -69,7 +76,7 @@ The [graphical dashboard implementation](DASHBOARD_UI.md) provides a shared UI f
 | **R2** Consent-based integrations | Explicitly connected game observations and permitted sensor status; Incident-to-task linking and event acknowledgment | Disconnect immediately marks readings stale; No network activity until a user explicitly connects | planned |
 | **R3** Field command acceptance | Resource-aware handheld overview; Signed/redacted local reports and restore | Operator completes status-task-report journey on 4-inch target; Storage rollback and interrupted write are tested | planned |
 
-### Head Engineer Station (`head-engineer`)
+### Maintenance (`head-engineer`)
 
 **Purpose:** Troubleshoot embedded systems, networks and hardware using reproducible diagnostics.  
 **Lore:** canonical job · `VT-01`, `RB-01`  
@@ -90,7 +97,7 @@ The [graphical dashboard implementation](DASHBOARD_UI.md) provides a shared UI f
 | **R2** OS-authorized device diagnostics | Separately reviewed read-only serial gateway; Device identity, per-device consent, expiry and hot-unplug | USB device cannot open without OS permission and explicit session grant; Unplug/revoke closes handles and clears buffers | planned |
 | **R3** Embedded hardware integration | Sensor modules and typed adapter SDK; Battery/runtime budgets and device-specific compatibility matrix | Physical device tested on macOS and chosen handheld prototype; No transmission capability is implied by receiver diagnostics | planned |
 
-### Security Chief Station (`security-chief`)
+### Security (`security-chief`)
 
 **Purpose:** See four authorized IP-camera feeds on a small screen, instantly focus one, and investigate incidents.  
 **Lore:** canonical job · `VT-01`, `STD-01`, `STD-02`, `STD-03`, `STD-05`, `STD-06`  
@@ -112,7 +119,7 @@ The [graphical dashboard implementation](DASHBOARD_UI.md) provides a shared UI f
 | **R2** Authorized real camera streams | Manually entered allowlisted HTTPS JPEG/MJPEG sources; Per-camera credentials in secure OS storage; strict TLS verification and redaction; RTSP H.264/H.265 decoder path and ONVIF Profile T compatibility by model | Four verified real feeds display simultaneously and can focus; No URLs/credentials in logs or public config; No surprise recording/discovery, audio or PTZ | planned |
 | **R3** Operational security acceptance | Reconnect/backoff, bandwidth and frame freshness indicators; Optional local events and user-confirmed evidence export; Unplug, timeout, session expiry and offline recovery | Stale frames never carry a live indicator; Operator selects feed <1s under lab fixture load; Camera field matrix documents latency/memory/CPU on Mac and handheld | planned |
 
-### Vault Doctor Station (`vault-doctor`)
+### Doctor (`vault-doctor`)
 
 **Purpose:** Maintain non-diagnostic health/environment reference and field observations without exposing patient records.  
 **Lore:** canonical job · `VT-01`, `RB-01`  
@@ -133,7 +140,7 @@ The [graphical dashboard implementation](DASHBOARD_UI.md) provides a shared UI f
 | **R2** Opt-in environmental sensing | Approved temperature/humidity and non-clinical sensor adapters; Calibration record, source quality and stale-device warnings | Consent and calibration test gates pass; No clinical sensor device claimed compliant by default | planned |
 | **R3** Field validation and privacy | Accessible checklist export; Privacy review before any person-specific data flow | No plaintext protected health record workflow offered by default; End-to-end offline reference-checklist-export acceptance | planned |
 
-### University Research Station (`university-researcher`)
+### Scientist (`university-researcher`)
 
 **Purpose:** Run small, reproducible experiments and inspect data without requiring proprietary applications.  
 **Lore:** role inspired · `VT-01`, `RB-01`  
@@ -154,7 +161,7 @@ The [graphical dashboard implementation](DASHBOARD_UI.md) provides a shared UI f
 | **R2** Reproducible sessions | Versioned experiment manifest with parameter set, seed and source hash; Saved/replayable in-memory simulation recipes | Exact replay generates matching deterministic artifacts; No implicit upload or network access | planned |
 | **R3** Optional advanced computation | Versioned typed WASM plugin contract with capability gates; Snapshot/restore and independent process isolation tests | Untrusted plugin cannot read files, network or hardware without external enforcement; Process crash leaves project usable | planned |
 
-### Reclamation Field Kit (`reclamation-scout`)
+### Reclamations (`reclamation-scout`)
 
 **Purpose:** Build a truly offline WGS84 field kit on Mac and Pi, interoperable with RustGIS and eventually opt-in TAK nodes.  
 **Lore:** role inspired · `VT-02`, `VT-03`, `STD-04`, `STD-07`, `STD-08`, `STD-09`, `STD-10`  
@@ -175,7 +182,7 @@ The [graphical dashboard implementation](DASHBOARD_UI.md) provides a shared UI f
 | **R2** Opt-in GNSS and TAK interoperability | Explicit OS-granted GNSS with accuracy/stale indicators and revocation; Bounded Cursor-on-Target XML/Protobuf adapter with operator-selected destinations and TLS identity; Test with independent OpenTAKServer on Raspberry Pi OS and a civilian TAK client | No position sharing before the user enables it, selects recipient and approves each session; Local CoT fixture tests pass; live Pi server interoperability is field-tested and credential-safe; Revocation stops transmission and marks positions stale | planned |
 | **R3** Raspberry Pi handheld GIS acceptance | ARM64 Pi 5 native Scout build and tested RustGIS ARM64 deployment; Four-inch readout with waypoint and offline map controls, keyboard/touch fallback; Power/performance measurements plus independent Mac/PS4 game companion acceptance | Offline waypoint, coordinate and cached-map use passes on actual Pi hardware; Measured cold start, frame latency, RAM/CPU and battery draw recorded without guessed metrics; TAK server/client and PlayStation tests are reported separately from mock connections | planned |
 
-### Records Custodian Station (`records-custodian`)
+### Archivist (`records-custodian`)
 
 **Purpose:** Catalog documents and make integrity, provenance and export understandable.  
 **Lore:** role inspired · `VT-03`, `STD-05`  
@@ -196,7 +203,7 @@ The [graphical dashboard implementation](DASHBOARD_UI.md) provides a shared UI f
 | **R2** Reproducible packages | Versioned export manifest with checksums and import validation; Restorable snapshots and conflict-safe updates | Tampered archive refuses silent import; Import/export preserves source and author metadata | planned |
 | **R3** Optional private archives | Per-user encryption architecture and key-loss recovery policy; Auditable, opt-in external sharing | No credentials or contents copied to logs; Recovery and migration tests pass before encrypted storage claim | planned |
 
-### Custom Workbench (`custom`)
+### Custom (`custom`)
 
 **Purpose:** An empty, user-configured developer playground with explicit capabilities and pluggable modules.  
 **Lore:** rust boy original · `RB-01`  
@@ -228,3 +235,7 @@ The [graphical dashboard implementation](DASHBOARD_UI.md) provides a shared UI f
 **Lore evidence:** [VAULT_TEC_LORE_MATRIX.md](VAULT_TEC_LORE_MATRIX.md) tags canonical jobs separately from adaptations and cites primary publisher material. Technical standards are cited for camera, geodata, audit records, and accessibility requirements.
 
 **Validation:** `python3 tools/validate_roles.py` checks the role/phase/source/profile IDs, exact preloaded tool order and documentation link coverage. It does not prove Rust compilation, camera streaming or hardware security. See [CI validation](VALIDATION.md).
+
+### Recon (`recon`)
+
+Role-inspired field reconnaissance operator. Uses existing Survey GIS, Journal, Archives, System Stat and System Diag tools for manual observations and orientation. This is a Rust-Boy adaptation rather than a claim about a canonical Vault-Tec employee title. It shares Reclamations' R0–R3 software, manual-location, permission and hardware acceptance gates; no radio or physical surveillance capability is implied by loading the role.

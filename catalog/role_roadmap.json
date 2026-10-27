@@ -99,7 +99,7 @@
     {
       "id": "STD-07",
       "type": "upstream_software",
-      "title": "OpenGeos RustGIS — architecture, licensing, ARM64 builds",
+      "title": "OpenGeos RustGIS \u2014 architecture, licensing, ARM64 builds",
       "url": "https://github.com/opengeos/RustGIS",
       "supports": "RustGIS L0 geometry and L1 data are useful interoperability references; Apache-2.0, available Linux ARM64 distribution; workspace minimum Rust 1.90.",
       "limit": "Rust-Boy now declares Rust 1.90, removing the compiler-version mismatch. RustGIS crates are not linked yet; integration still requires API/license and ARM64 GUI/CLI verification."
@@ -107,7 +107,7 @@
     {
       "id": "STD-08",
       "type": "official_product",
-      "title": "TAK Product Center — ATAK, TAKX, PiTAK, TAK Server",
+      "title": "TAK Product Center \u2014 ATAK, TAKX, PiTAK, TAK Server",
       "url": "https://tak.gov/products",
       "supports": "ATAK-CIV is Android software, TAKX includes a Linux variant, and PiTAK is a transport-specific TAK ecosystem product.",
       "limit": "PiTAK does not imply an entire ATAK mobile client on Raspberry Pi OS; Linux TAKX ARM64 support has not been established."
@@ -115,7 +115,7 @@
     {
       "id": "STD-09",
       "type": "upstream_software",
-      "title": "OpenTAKServer — Raspberry Pi OS installation",
+      "title": "OpenTAKServer \u2014 Raspberry Pi OS installation",
       "url": "https://docs.opentakserver.io/installation/installation.html",
       "supports": "OpenTAKServer supports Raspberry Pi OS Bookworm-or-newer with a documented Pi installer; this is a TAK-compatible server for client data exchange.",
       "limit": "Separate software, not embedded in Rust-Boy; operator must review installer, certificates, access policy and live ARM64 hardware behavior."
@@ -123,7 +123,7 @@
     {
       "id": "STD-10",
       "type": "technical_standard",
-      "title": "IETF RFC 7946 — GeoJSON",
+      "title": "IETF RFC 7946 \u2014 GeoJSON",
       "url": "https://www.rfc-editor.org/rfc/rfc7946",
       "supports": "Positions use geographic longitude, latitude WGS84 axis order; GeoJSON Feature and FeatureCollection are suitable portable interchange artifacts.",
       "limit": "Raw bounding boxes may be broad across antimeridian; this first Scout reader supports Point geometries only."
@@ -132,7 +132,7 @@
   "roles": [
     {
       "id": "overseer",
-      "name": "Overseer Operations",
+      "name": "Overseer",
       "fidelity": "canonical_job",
       "source_ids": [
         "VT-01",
@@ -248,7 +248,7 @@
     },
     {
       "id": "head-engineer",
-      "name": "Head Engineer Station",
+      "name": "Maintenance",
       "fidelity": "canonical_job",
       "source_ids": [
         "VT-01",
@@ -363,7 +363,7 @@
     },
     {
       "id": "security-chief",
-      "name": "Security Chief Station",
+      "name": "Security",
       "fidelity": "canonical_job",
       "source_ids": [
         "VT-01",
@@ -373,7 +373,7 @@
         "STD-05",
         "STD-06"
       ],
-      "mission": "See four authorized IP-camera feeds on a small screen, instantly focus one, and investigate incidents.",
+      "mission": "Protect the operator environment using local diagnostics, task tracking and labeled public camera fallback views while private camera integration remains gated.",
       "baseline_tools": [
         "host",
         "diag",
@@ -437,13 +437,13 @@
           "gate": "R1",
           "title": "Four-feed UI with deterministic camera fixtures",
           "deliverables": [
-            "2×2 thumbnail wall and four separate feed state machines",
-            "1–4 choose, Enter expands, Esc returns, loading/error/stale labels",
+            "2\u00d72 thumbnail wall and four separate feed state machines",
+            "1\u20134 choose, Enter expands, Esc returns, loading/error/stale labels",
             "4-inch readable layout and input focus"
           ],
           "acceptance": [
             "All four synthetic feeds animate independently",
-            "Focus/back and missing/stale feeds tested at 800×480 and compact fallback",
+            "Focus/back and missing/stale feeds tested at 800\u00d7480 and compact fallback",
             "No external endpoints contacted"
           ],
           "dependencies": [
@@ -493,7 +493,7 @@
     },
     {
       "id": "vault-doctor",
-      "name": "Vault Doctor Station",
+      "name": "Doctor",
       "fidelity": "canonical_job",
       "source_ids": [
         "VT-01",
@@ -603,7 +603,7 @@
     },
     {
       "id": "university-researcher",
-      "name": "University Research Station",
+      "name": "Scientist",
       "fidelity": "role_inspired",
       "source_ids": [
         "VT-01",
@@ -715,7 +715,7 @@
     },
     {
       "id": "reclamation-scout",
-      "name": "Reclamation Field Kit",
+      "name": "Reclamations",
       "fidelity": "role_inspired",
       "source_ids": [
         "VT-02",
@@ -844,8 +844,132 @@
       ]
     },
     {
+      "id": "recon",
+      "name": "Recon",
+      "fidelity": "role_inspired",
+      "source_ids": [
+        "RB-01",
+        "VT-02"
+      ],
+      "mission": "Observe, orient and record field findings with offline mapping and manual reports.",
+      "baseline_tools": [
+        "geo-lab",
+        "notes",
+        "library",
+        "host",
+        "diag"
+      ],
+      "future_tools": [
+        "map",
+        "coordinate-lab",
+        "gnss",
+        "track-log",
+        "tak-bridge",
+        "rustgis-adapter"
+      ],
+      "needs": [
+        {
+          "id": "N1",
+          "priority": "must",
+          "need": "Local WGS84 waypoints, approximate great-circle distances and bounded GeoJSON Point inspection",
+          "status": "partially_available"
+        },
+        {
+          "id": "N2",
+          "priority": "must",
+          "need": "Offline trip notes, saved landmarks and position uncertainty labels",
+          "status": "partially_available"
+        },
+        {
+          "id": "N3",
+          "priority": "should",
+          "need": "Opt-in GNSS, multi-geometry GeoJSON/GPX exchange and permitted TAK CoT interoperability",
+          "status": "planned"
+        },
+        {
+          "id": "N4",
+          "priority": "later",
+          "need": "Portable RustGIS-style map rendering, offline tile caching and Raspberry Pi display performance",
+          "status": "planned"
+        }
+      ],
+      "gates": [
+        {
+          "gate": "R0",
+          "title": "Preloaded field desk",
+          "deliverables": [
+            "Pre-pinned GIS Lab plus Game, NET, notes and host tools",
+            "Offline waypoint GeoJSON, spherical distance and bounded Point-only file inspection"
+          ],
+          "acceptance": [
+            "GeoJSON exports [longitude,latitude] and accepts only -90..90 lat and -180..180 lon",
+            "All GIS commands remain offline with no GNSS, console or TAK connection on profile activation",
+            "Unit, smoke and Rust 1.90/macOS/Windows CI gates pass before release"
+          ],
+          "dependencies": [],
+          "status": "code_present_ci_pending"
+        },
+        {
+          "gate": "R1",
+          "title": "Offline RustGIS-compatible field mapping",
+          "deliverables": [
+            "Portable GeoJSON field layer, GPX imports, waypoints and manually selected cached offline tiles",
+            "Evaluate rustgis-geom/rustgis-data adapter separately, using the new Rust 1.90 minimum with explicit dependency and API tests",
+            "Touch/keyboard map navigation and DMS coordinate formats"
+          ],
+          "acceptance": [
+            "RustGIS reads exported waypoint layers and Rust-Boy inspects RustGIS Point layers without conversion errors",
+            "Golden dateline, polar, invalid-coordinate and lossless waypoint round trips",
+            "No network access required for local map navigation"
+          ],
+          "dependencies": [
+            "R0"
+          ],
+          "status": "planned"
+        },
+        {
+          "gate": "R2",
+          "title": "Opt-in GNSS and TAK interoperability",
+          "deliverables": [
+            "Explicit OS-granted GNSS with accuracy/stale indicators and revocation",
+            "Bounded Cursor-on-Target XML/Protobuf adapter with operator-selected destinations and TLS identity",
+            "Test with independent OpenTAKServer on Raspberry Pi OS and a civilian TAK client"
+          ],
+          "acceptance": [
+            "No position sharing before the user enables it, selects recipient and approves each session",
+            "Local CoT fixture tests pass; live Pi server interoperability is field-tested and credential-safe",
+            "Revocation stops transmission and marks positions stale"
+          ],
+          "dependencies": [
+            "R1",
+            "OS_BROKER"
+          ],
+          "status": "planned"
+        },
+        {
+          "gate": "R3",
+          "title": "Raspberry Pi handheld GIS acceptance",
+          "deliverables": [
+            "ARM64 Pi 5 native Scout build and tested RustGIS ARM64 deployment",
+            "Four-inch readout with waypoint and offline map controls, keyboard/touch fallback",
+            "Power/performance measurements plus independent Mac/PS4 game companion acceptance"
+          ],
+          "acceptance": [
+            "Offline waypoint, coordinate and cached-map use passes on actual Pi hardware",
+            "Measured cold start, frame latency, RAM/CPU and battery draw recorded without guessed metrics",
+            "TAK server/client and PlayStation tests are reported separately from mock connections"
+          ],
+          "dependencies": [
+            "R2",
+            "HANDHELD"
+          ],
+          "status": "planned"
+        }
+      ]
+    },
+    {
       "id": "records-custodian",
-      "name": "Records Custodian Station",
+      "name": "Archivist",
       "fidelity": "role_inspired",
       "source_ids": [
         "VT-03",
@@ -955,7 +1079,7 @@
     },
     {
       "id": "custom",
-      "name": "Custom Workbench",
+      "name": "Custom",
       "fidelity": "rust_boy_original",
       "source_ids": [
         "RB-01"
