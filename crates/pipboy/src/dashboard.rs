@@ -1463,13 +1463,17 @@ mod tests {
         assert_eq!(response.status, 200);
         let state: Value = serde_json::from_slice(&response.body).unwrap();
         assert_eq!(state["active"]["profile"], "overseer");
-        assert_eq!(state["profiles"].as_array().unwrap().len(), 8);
-        assert_eq!(state["profiles"][7]["id"], "custom");
-        assert_eq!(state["profiles"][7]["tools"], json!([]));
+        assert_eq!(state["profiles"].as_array().unwrap().len(), 9);
+        assert_eq!(state["profiles"][8]["id"], "custom");
+        assert_eq!(state["profiles"][8]["tools"], json!([]));
         assert_eq!(state["engine"]["rustgis"], "not_integrated");
+        assert_eq!(state["camera_feeds"].as_array().unwrap().len(), 4);
+        assert_eq!(state["engine"]["private_cameras"], "not_configured");
         assert!(!temp.path().join("fresh").exists());
         for endpoint in [
             "/",
+            "/assets/cameras.js",
+            "/assets/cameras.css",
             "/assets/tasks.css",
             "/assets/tasks.js",
             "/assets/dashboard.css",
