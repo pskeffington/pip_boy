@@ -12,6 +12,7 @@ pub mod catalog;
 pub mod device_simulator;
 pub mod diagnostics;
 pub mod game;
+pub mod harsh_link_sim;
 pub mod host_report;
 pub mod lifecycle;
 pub mod meshtastic_passive;
