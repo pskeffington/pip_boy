@@ -87,6 +87,8 @@ assert.match(css,/\.dashboard:has\(\.command-section:not\(\[hidden\]\)\)/,
   "Vault command must claim full desktop width");
 assert.match(css,/\.command-board\s*\{[^}]*overflow:auto/,
   "Task list should scroll internally without scrolling the desktop");
+assert.match(js,/if \(selected.id === "overseer"\) \{[\s\S]*?window.RustBoyMap.mount\(map, \{navigationOnly:true, reclamation:false\}\);/,
+  "Overseer viewport should show the map, not a redundant command-board redirect");
 // Desktop Radio is global navigation, including when MAP owns the viewport.
 assert.match(js,/function toggleRadioSubview\(\)\s*\{[\s\S]*?activateStage\("viewport"\);/,
   "Global Radio button must activate viewport from Modules, Settings and Messages");
