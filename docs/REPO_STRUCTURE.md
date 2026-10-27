@@ -33,6 +33,8 @@ NET ENGINEER's opt-in private-LAN scan and read-only UniFi HTTP handlers live in
 
 The [component ownership and acceptance index](../catalog/component_index.json) tracks mainline subsystem entrypoints, their engineering guides, tests, responsibility boundaries and physical-hardware gates. It is intentionally **not** an exhaustive inventory of every source file or a license/permissions roster. The [organizational optimization research](ORGANIZATIONAL_OPTIMIZATION.md) explains the evidence and proposed sequencing; [ADR 0001](adr/0001-mac-first-portable-core.md) records the Mac-first/Pi-later decision.
 
+Run `python3 tools/validate_server_matrix.py` and `python3 tools/test_server_matrix.py` for the server literature matrix. The repository Markdown auditor includes `server/`. External URLs require separate live provenance review; offline checks validate format and coverage only.
+
 Run `python3 tools/validate_component_index.py` and `python3 tools/test_component_index.py` when an externally visible component entrypoint, guide, test or hardware-gate label changes. CI validates both using standard-library-only, offline checks. Keep Raspberry Pi acceptance distinct from portable code compilation; `field_pending` identifies open device acceptance and `deny_only` is not a grant. Avoid unreviewed duplicate ownership of the same source entrypoint.
 
 ## Change and cleanup controls
