@@ -98,6 +98,79 @@
       "media": "CCTV traffic camera feeds",
       "integration": "gated",
       "notes": "DDOT/HSEMA documentation describes CCTV/FOIA access, not an unconditional public developer API. Do not label Virginia views as DC city cameras."
+    },
+    {
+      "id": "ctdot",
+      "agency": "Connecticut DOT / CTroads",
+      "coverage": "Hartford, New Haven, Stamford, Bridgeport, Waterbury and CT interstates",
+      "format": "ctroads-rest-cameras",
+      "catalog_url": "https://www.ctroads.org/developers/help",
+      "feed_url": "https://www.ctroads.org/developers/help",
+      "access": "developer_key_required",
+      "media": "DOT CCTV images",
+      "integration": "gated",
+      "notes": "CTroads documents a developer key and throttling of 10 calls per 60 seconds. Do not scrape its public camera page or ship a key."
+    },
+    {
+      "id": "penndot",
+      "agency": "Pennsylvania DOT / 511PA",
+      "coverage": "Philadelphia, Pittsburgh, Harrisburg, Allentown, Scranton and PA interstates",
+      "format": "511pa-camera-list-and-licensed-streams",
+      "catalog_url": "https://www.pa.gov/services/penndot/request-access-to-transportation-related-data-feeds",
+      "feed_url": "https://www.pa.gov/services/penndot/request-access-to-transportation-related-data-feeds",
+      "access": "feed_request_and_video_license_required",
+      "media": "Near-real-time traffic images and licensed streams",
+      "integration": "gated",
+      "notes": "PennDOT requires a data feed request, sharing terms and a nonexclusive video sharing license for camera streams. No unauthorized direct embeds."
+    },
+    {
+      "id": "njdot",
+      "agency": "New Jersey DOT / 511NJ",
+      "coverage": "Newark, Jersey City, Trenton, Atlantic City and NJ turnpikes",
+      "format": "511nj-public-camera-viewer",
+      "catalog_url": "https://www.nj.gov/transportation/commuter/motoristassistance/511nj.shtm",
+      "feed_url": "https://www.511nj.org/",
+      "access": "public_viewing_only_api_unverified",
+      "media": "Traffic camera images refreshed about every 30 seconds in public viewer",
+      "integration": "candidate_requires_media_review",
+      "notes": "NJDOT documents publicly viewed image cameras, but direct reuse/embedding API and camera coordinates need confirmation."
+    },
+    {
+      "id": "ridot",
+      "agency": "Rhode Island DOT",
+      "coverage": "Providence, Warwick, Pawtucket, Cranston and I-95/I-195",
+      "format": "ridot-public-traffic-cams",
+      "catalog_url": "https://dot.ri.gov/travel/",
+      "feed_url": "https://dot.ri.gov/travel/",
+      "access": "public_viewing_only_api_unverified",
+      "media": "Public Live Stream-labelled cameras",
+      "integration": "candidate_requires_media_review",
+      "notes": "Official RIDOT lists camera names and public streams; independent direct URL, terms, coordinates and freshness must be validated before ingestion."
+    },
+    {
+      "id": "deldot",
+      "agency": "Delaware DOT",
+      "coverage": "Wilmington, Newark DE, Dover and DE interstates",
+      "format": "deldot-traffic-camera-map",
+      "catalog_url": "https://deldot.gov/map/index.shtml?tab=TrafficCameras",
+      "feed_url": "https://deldot.gov/map/index.shtml?tab=TrafficCameras",
+      "access": "public_viewing_only_api_unverified",
+      "media": "Public camera map, direct source requires verification",
+      "integration": "candidate_requires_media_review",
+      "notes": "Historical XML documentation exists but cannot certify current endpoint or redistribution rights; do not assume old HTTP JPEG URLs remain valid."
+    },
+    {
+      "id": "newengland511",
+      "agency": "New England 511 / state DOT partner map",
+      "coverage": "Maine, New Hampshire and Vermont; Portland, Bangor, Manchester, Concord, Burlington",
+      "format": "newengland511-camera-map",
+      "catalog_url": "https://www.newengland511.org/",
+      "feed_url": "https://www.newengland511.org/",
+      "access": "public_viewing_only_api_unverified",
+      "media": "CCTV/RWIS camera stills",
+      "integration": "candidate_requires_media_review",
+      "notes": "VTrans points to New England 511 for public CCTV images; direct licensing, public API and capture timestamps remain unverified."
     }
-  ]
+  ],
+  "region_priority": "Northeast first: individual cameras must have provider-issued coordinates and health before automatic selection"
 }
