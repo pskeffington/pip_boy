@@ -287,6 +287,33 @@ fn positive_integer(body: &Value, key: &str) -> Result<u64, Response> {
         .ok_or_else(|| Response::error(422, "Missing or invalid task ID/revision"))
 }
 
+// Read-only design catalog. No package lookup, process spawn, grant or install.
+fn package_references() -> Response {
+    let catalog = match pipboy_core::package_socket::reference_catalog() {
+        Ok(catalog) => catalog,
+        Err(_) => return Response::error(500, "Host package reference catalog invalid"),
+    };
+    let packages: Vec<Value> = catalog
+        .entries()
+        .map(|manifest| {
+            json!({
+                "manifest": manifest,
+                "installed": false,
+                "activatable": false
+            })
+        })
+        .collect();
+    Response::json(
+        200,
+        &json!({
+            "socket_api": pipboy_core::package_socket::SOCKET_API_VERSION,
+            "catalog_state": "reference_designs_only",
+            "active_socket_package_id": Value::Null,
+            "packages": packages
+        }),
+    )
+}
+
 fn state(store: &WorkbenchStore) -> Result<Response, Response> {
     let active = store.load().map_err(|_| {
         Response::error(
@@ -1176,6 +1203,7 @@ fn dispatch(req: &Request, store: &WorkbenchStore, port: u16) -> Response {
         ("POST", "/api/map/zip") => zip_lookup(req, store).unwrap_or_else(|error| error),
         ("POST", "/api/map/county-zips") => county_zips(req, store).unwrap_or_else(|error| error),
         ("GET", "/api/state") => state(store).unwrap_or_else(|error| error),
+        ("GET", "/api/packages") => package_references(),
         ("GET", "/api/radio") => radio_state(store),
         ("POST", "/api/radio") => radio_command(req, store).unwrap_or_else(|error| error),
         ("GET", "/api/reclamation") => reclamation_read(store, false).unwrap_or_else(|error| error),
@@ -2455,6 +2483,28 @@ mod tests {
             .insert("origin".to_owned(), "https://untrusted.invalid".to_owned());
         assert_eq!(dispatch(&bad_origin, &store, 8765).status, 403);
         assert!(!tmp.path().join("state/geo_index").exists());
+    }
+
+    #[test]
+    fn socket_reference_api_is_read_only_and_does_not_activate_packages() {
+        let temp = tempfile::tempdir().unwrap();
+        let store = WorkbenchStore::new(temp.path().join("private/workbench.json"));
+        let response = dispatch(&request("GET", "/api/packages", Value::Null), &store, 8765);
+        assert_eq!(response.status, 200);
+        let body: Value = serde_json::from_slice(&response.body).unwrap();
+        assert_eq!(body["catalog_state"], "reference_designs_only");
+        assert_eq!(body["active_socket_package_id"], Value::Null);
+        let packages = body["packages"].as_array().unwrap();
+        assert_eq!(packages.len(), 4);
+        for entry in packages {
+            assert_eq!(entry["installed"], false);
+            assert_eq!(entry["activatable"], false);
+            assert_eq!(entry["manifest"]["host_api"], 1);
+        }
+        assert!(!temp.path().join("private").exists());
+        let mut bad_host = request("GET", "/api/packages", Value::Null);
+        bad_host.headers.insert("host".into(), "external.invalid".into());
+        assert_eq!(dispatch(&bad_host, &store, 8765).status, 403);
     }
 
     #[test]
