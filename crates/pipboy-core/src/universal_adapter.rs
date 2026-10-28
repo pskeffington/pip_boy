@@ -236,7 +236,8 @@ impl UniversalAdapterHost {
         let installed: BTreeSet<_> = self.mounted.keys().cloned().collect();
         // This is a trusted bootstrap roster, never the discovery roster.
         self.foreground
-            .select(&self.registry, &installed, package_id)?;
+            .select(&self.registry, &installed, package_id)
+            .map_err(|error| AdapterError::Registry(error.to_string()))?;
         if let Some(entry) = self.mounted.get_mut(package_id) {
             entry.state = AdapterState::Foreground;
         }
