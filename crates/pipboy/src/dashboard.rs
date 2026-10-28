@@ -307,8 +307,13 @@ fn package_references() -> Response {
         200,
         &json!({
             "socket_api": pipboy_core::package_socket::SOCKET_API_VERSION,
+            "adapter_protocol": pipboy_core::universal_adapter::ADAPTER_PROTOCOL,
             "catalog_state": "reference_designs_only",
             "active_socket_package_id": Value::Null,
+            "mounted_package_count": 0,
+            "adapter_mounting_available": false,
+            "foreground_mode": "single_package",
+            "settings_owner": "host",
             "packages": packages
         }),
     )
@@ -2493,6 +2498,11 @@ mod tests {
         assert_eq!(response.status, 200);
         let body: Value = serde_json::from_slice(&response.body).unwrap();
         assert_eq!(body["catalog_state"], "reference_designs_only");
+        assert_eq!(body["adapter_protocol"], 1);
+        assert_eq!(body["adapter_mounting_available"], false);
+        assert_eq!(body["mounted_package_count"], 0);
+        assert_eq!(body["foreground_mode"], "single_package");
+        assert_eq!(body["settings_owner"], "host");
         assert_eq!(body["active_socket_package_id"], Value::Null);
         let packages = body["packages"].as_array().unwrap();
         assert_eq!(packages.len(), 4);
