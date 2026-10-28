@@ -2726,6 +2726,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "rust-boy-adapter-sdk"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "rust-boy-broker"
 version = "0.1.0"
 dependencies = [
