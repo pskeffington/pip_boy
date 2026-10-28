@@ -53,6 +53,7 @@ fn help() {
         "  status [--details] [--json]",
         "  sample [--count N --interval-ms MS --details]",
         "  sources [query] | modules | plan [G0..G4] | evidence [query]",
+        "  packages <list [--json]|check FILE [--json]> (inert socket manifests)",
         "  notes <list|add TEXT|search QUERY|export|import FILE>",
         "  scout geo <waypoint|distance|inspect>",
         "  workbench <list|profiles|use|palette|add|remove|rename|clear|bytes|net>",
@@ -167,6 +168,62 @@ fn run() -> Result<(), Box<dyn Error>> {
                 );
             }
             Ok(())
+        }
+        Some("packages") => {
+            use pipboy_core::package_socket::{
+                reference_catalog, PackageManifest, MAX_MANIFEST_BYTES, SOCKET_API_VERSION,
+            };
+            use std::io::Read;
+            let options: Vec<String> = args.collect();
+            let parts: Vec<&str> = options.iter().map(String::as_str).collect();
+            match parts.as_slice() {
+                [] | ["list"] | ["list", "--json"] => {
+                    let catalog = reference_catalog()?;
+                    if parts.last() == Some(&"--json") {
+                        let entries: Vec<_> = catalog.entries().collect();
+                        println!(
+                            "{}",
+                            serde_json::to_string_pretty(&serde_json::json!({
+                                "socket_api": SOCKET_API_VERSION,
+                                "status": "reference_designs_only",
+                                "installed_count": 0,
+                                "packages": entries
+                            }))?
+                        );
+                    } else {
+                        println!("Rust-Boy / socket reference packages (NOT INSTALLED)");
+                        for package in catalog.entries() {
+                            println!(
+                                "{:<8} {:<22} {}",
+                                package.name, package.package_id, package.version
+                            );
+                        }
+                        println!("No packages were installed, started, or granted permissions.");
+                    }
+                    Ok(())
+                }
+                ["check", file] | ["check", file, "--json"] => {
+                    let mut document = String::new();
+                    let input = std::fs::File::open(file)?;
+                    input
+                        .take((MAX_MANIFEST_BYTES + 1) as u64)
+                        .read_to_string(&mut document)?;
+                    let manifest = PackageManifest::parse(&document)?;
+                    if parts.last() == Some(&"--json") {
+                        println!("{}", serde_json::to_string_pretty(&manifest)?);
+                    } else {
+                        println!(
+                            "VALID: {} {} (host API {}) — manifest only; not installed",
+                            manifest.package_id, manifest.version, SOCKET_API_VERSION
+                        );
+                    }
+                    Ok(())
+                }
+                _ => Err(
+                    format!("usage: {CLI_COMMAND} packages <list [--json]|check FILE [--json]>")
+                        .into(),
+                ),
+            }
         }
         Some("modules") => {
             if args.next().is_some() {
