@@ -1,5 +1,15 @@
 # Native Rust RADIO — phased build and evidence matrix
 
+Current implementation and acceptance gates are maintained in the standalone
+[radio roadmap](https://github.com/pskeffington/rust_radio/blob/main/docs/PORTING_PLAN.md)
+and [progress notes](https://github.com/pskeffington/rust_radio/blob/main/docs/PROGRESS.md).
+The dated phases and evidence below retain the history of the original host build.
+Module `3d77d11` fixes an IP playback edge case by starting native output as soon
+as prebuffering completes within a decoded packet, before the bounded ring fills.
+The updated host passed 344 tests serially, strict lint/build and HUD fixtures.
+A zero-volume native smoke switched from synthetic SDR PCM to live Skylab and
+reached native callback playback; this does not add a new audible listening claim.
+
 Status (2026-10-26): **R1–R4.5 native IP radio and presets merged into `main` (PR #35) after five passing CI jobs; Skylab playback and controls were separately field-demonstrated on Mac.** CI and device-change edge cases are tracked separately. Hardware SDR, recovery hardening and final micro touch certification remain open. No external media application is launched.
 
 ## Research-to-design matrix

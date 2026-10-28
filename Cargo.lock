@@ -2770,7 +2770,7 @@ dependencies = [
 [[package]]
 name = "rust-radio"
 version = "0.1.0"
-source = "git+https://github.com/pskeffington/rust_radio?rev=21045b3839ce078e9cd877a826b5c6765ecd5bdf#21045b3839ce078e9cd877a826b5c6765ecd5bdf"
+source = "git+https://github.com/pskeffington/rust_radio?rev=3d77d11da3a31fbc3144635da6d391a3febf38b7#3d77d11da3a31fbc3144635da6d391a3febf38b7"
 dependencies = [
  "rust-radio-audio",
  "rust-radio-core",
@@ -2781,7 +2781,7 @@ dependencies = [
 [[package]]
 name = "rust-radio-audio"
 version = "0.1.0"
-source = "git+https://github.com/pskeffington/rust_radio?rev=21045b3839ce078e9cd877a826b5c6765ecd5bdf#21045b3839ce078e9cd877a826b5c6765ecd5bdf"
+source = "git+https://github.com/pskeffington/rust_radio?rev=3d77d11da3a31fbc3144635da6d391a3febf38b7#3d77d11da3a31fbc3144635da6d391a3febf38b7"
 dependencies = [
  "cpal",
  "ringbuf",
@@ -2794,12 +2794,12 @@ dependencies = [
 [[package]]
 name = "rust-radio-core"
 version = "0.1.0"
-source = "git+https://github.com/pskeffington/rust_radio?rev=21045b3839ce078e9cd877a826b5c6765ecd5bdf#21045b3839ce078e9cd877a826b5c6765ecd5bdf"
+source = "git+https://github.com/pskeffington/rust_radio?rev=3d77d11da3a31fbc3144635da6d391a3febf38b7#3d77d11da3a31fbc3144635da6d391a3febf38b7"
 
 [[package]]
 name = "rust-radio-ip"
 version = "0.1.0"
-source = "git+https://github.com/pskeffington/rust_radio?rev=21045b3839ce078e9cd877a826b5c6765ecd5bdf#21045b3839ce078e9cd877a826b5c6765ecd5bdf"
+source = "git+https://github.com/pskeffington/rust_radio?rev=3d77d11da3a31fbc3144635da6d391a3febf38b7#3d77d11da3a31fbc3144635da6d391a3febf38b7"
 dependencies = [
  "reqwest",
  "rust-radio-core",
@@ -2809,7 +2809,7 @@ dependencies = [
 [[package]]
 name = "rust-radio-sdr"
 version = "0.1.0"
-source = "git+https://github.com/pskeffington/rust_radio?rev=21045b3839ce078e9cd877a826b5c6765ecd5bdf#21045b3839ce078e9cd877a826b5c6765ecd5bdf"
+source = "git+https://github.com/pskeffington/rust_radio?rev=3d77d11da3a31fbc3144635da6d391a3febf38b7#3d77d11da3a31fbc3144635da6d391a3febf38b7"
 dependencies = [
  "num-complex",
  "rust-radio-core",
