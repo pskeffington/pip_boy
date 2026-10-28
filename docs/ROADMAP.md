@@ -13,6 +13,10 @@ Rust-Boy is the public product name. The existing `pip_boy` repository, `pipboy`
 
 > **Verified integration baseline:** [Five-job Linux/macOS/Windows CI](https://github.com/pskeffington/pip_boy/actions/runs/40164915215) passed at `e7d1090`, including macOS PTY, Windows ConPTY, and the strict deny-all broker suite. **This does not complete a packaged release or enable physical devices.** The catalog's `implemented_unverified` status denotes a pending module acceptance review, not an absence of CI execution.
 
+## Sync core integration checkpoint — 2026-10-28
+
+The [sync v2 integration map](RB_SYNC_INTEGRATION.md) identifies the Rust source owners, explicit compatibility boundaries, staged adoption, and acceptance commands. `sync_delta` offers bounded offline event selection and `sync_ledger` offers local synthetic snapshot persistence with advisory cooperative writer locking. Neither performs receipt authentication, protected device enrollment, transport dispatch, or background fleet reconciliation. The [component ownership index](../catalog/component_index.json) records this as a software-only experimental component; exact-head validation remains pending.
+
 ## Organizational RB-to-RB synchronization (proposed; not released)
 
 [RB fleet synchronization roadmap](RB_SYNC_ROADMAP.md) defines R0-R7 with clear separation between **nearby discovery**, **authenticated device pairing**, **organization-bound operator authorization**, **versioned dataset deltas** and **transport routing**. The immediate target is R0-R3: freeze v1 OpenSSH compatibility; model device/org/subject trust and revocation; test a bounded event ledger with simulated faults; then integrate opt-in pinned-SSH delta transfer across two physical hosts. Later passes add optional proximity discovery, admin-enrolled fleets, bounded scheduled reconciliation and separate high-sensitivity/clinical approvals.
