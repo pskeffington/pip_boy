@@ -102,7 +102,7 @@ def check_adapter_sdk(root=ROOT):
     require("[dependencies]" in sdk_manifest,
             "SDK dependency section missing")
     deps = sdk_manifest.split("[dependencies]", 1)[1]
-    declared = set(re.findall(r"(?m)^([A-Za-z0-9_-]+)\\s*=", deps))
+    declared = set(re.findall(r"(?m)^([A-Za-z0-9_-]+)\s*=", deps))
     require(declared == {"serde", "serde_json"},
             f"unreviewed SDK dependency: {declared}")
     core_manifest = (
