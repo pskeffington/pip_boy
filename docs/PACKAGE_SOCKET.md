@@ -1,6 +1,26 @@
 # Rust-Boy package socket contract (draft v1)
 
-Status: HOST-SOCKET-0 design/fixture only. No external executable loader, runtime sandbox, or rb_gis integration is claimed.
+Status (2026-10-28): **schema-1 registry parsing and read-only local discovery committed, integration still open**. No external executable loader, runtime sandbox, package installation, foreground socket renderer, or rb_gis adapter is claimed.
+
+## Implemented registry precursor
+
+- `pipboy-core/src/package_socket.rs` implements strict schema parsing, bounded manifest sizes, known requested-capability vocabulary, host API compatibility, duplicate detection, and deterministic ordering. It embeds four reviewed **design fixtures**.
+- `pipboy packages list [--json]` lists reference fixtures only; `pipboy packages check FILE [--json]` validates a single operator-selected manifest; `pipboy packages scan DIR [--json]` scans direct JSON entries in an explicitly chosen local directory. The scan is bounded to 64 manifests, rejects symlinks and non-regular JSON entries, and performs no package activation.
+- Loopback-only `GET /api/packages` returns these four references with `installed:false` and `activatable:false`. It is deliberately not wired into navigation yet.
+- `tools/validate_host_packages.py` and `tools/test_validate_host_packages.py` provide offline schema and negative fixtures; CI runs these checks when the GitHub Actions runner starts. Rust unit tests cover the same registry contract and local scanning.
+
+This is a **metadata socket**, not an execution socket. Local scanning is operator-initiated and for trusted local files only; it is not a hardened OS-level package-store mechanism. No manifest grants hardware, filesystem, location, radio, network, background, or user permissions. The next implementation gate must introduce host-owned installed/trust state separately from document metadata.
+
+**Quick validation (after compiling Rust):**
+
+```bash
+cargo run --locked -p pipboy -- packages list --json
+cargo run --locked -p pipboy -- packages check catalog/host_packages/rb_gis.example.json
+cargo run --locked -p pipboy -- packages scan catalog/host_packages --json
+python3 tools/validate_host_packages.py
+python3 tools/test_validate_host_packages.py
+```
+
 
 ## Pop-in model
 
