@@ -20,6 +20,7 @@ Technical contracts, architecture decisions, research provenance and validation 
 | [DIAG offline ingestion](DIAGNOSTICS.md) | Scoped fault-evidence JSONL intake and local host heuristics |
 | [Common Vault organizational chart](VAULT_ORG_CHART.md) | Overseer hierarchy, Security/Recon, Engineering, Medical/Medic, Science, Reclamations, Administration, and authority boundaries |
 | [RB <-> RB organizational synchronization roadmap](RB_SYNC_ROADMAP.md) | Trusted proximity discovery, IP/key pairing, scoped fleet enrollment, delta sync and healthcare release gates (design only) |
+| [RB sync integration and boundaries](RB_SYNC_INTEGRATION.md) | Source entrypoints, compatibility, testing, and authorization/transport integration gates |
 | [RB sync v2 offline delta planner](RB_SYNC_DELTA_PLANNER.md) | Bounded cursor selection, source regression cases, and security gates (not connected to live sync) |
 | [Peer task transport](PEER_TASK_TRANSPORT.md) | Explicit OpenSSH Mac/Pi enrollment, restricted bridge, delivery and receipt sync |
 | [Overseer Task Control](TASK_CONTROL.md) | Persistent assignments, status, manual handoff and role queues |
@@ -55,7 +56,7 @@ Technical contracts, architecture decisions, research provenance and validation 
 | Fallout 4 | [Game mode setup and protocol](GAME_MODE.md) |
 | Task management | [Task Control, local persistence and manual dispatch](TASK_CONTROL.md) |
 | Vault organizational model | [Common reporting hierarchy and position IDs](VAULT_ORG_CHART.md) · [Machine-readable chart](../catalog/vault_org_chart.json) |
-| Fleet and peer synchronization | [Org-bound RB synchronization (planned)](RB_SYNC_ROADMAP.md) · [Existing peer transport (implemented)](PEER_TASK_TRANSPORT.md) |
+| Fleet and peer synchronization | [Org-bound RB synchronization (planned)](RB_SYNC_ROADMAP.md) · [Existing peer transport (implemented)](PEER_TASK_TRANSPORT.md) · [Offline sync core (experimental)](RB_SYNC_INTEGRATION.md) |
 | RADIO / SDR | [Receiver and curated stations](RADIO_SDR.md) · [Native player and acceptance passes](RADIO_NATIVE_ROADMAP.md) |
 | Micro handheld | [Launch, controls, themes, safety and acceptance](MICRO_UI.md) |
 | Graphical UI | [Dashboard launcher, API, responsive viewport and test plan](DASHBOARD_UI.md) |
