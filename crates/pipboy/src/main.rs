@@ -53,7 +53,7 @@ fn help() {
         "  status [--details] [--json]",
         "  sample [--count N --interval-ms MS --details]",
         "  sources [query] | modules | plan [G0..G4] | evidence [query]",
-        "  packages <list [--json]|check FILE [--json]> (inert socket manifests)",
+        "  packages <list [--json]|check FILE [--json]|scan DIR [--json]>",
         "  notes <list|add TEXT|search QUERY|export|import FILE>",
         "  scout geo <waypoint|distance|inspect>",
         "  workbench <list|profiles|use|palette|add|remove|rename|clear|bytes|net>",
@@ -171,7 +171,8 @@ fn run() -> Result<(), Box<dyn Error>> {
         }
         Some("packages") => {
             use pipboy_core::package_socket::{
-                reference_catalog, PackageManifest, MAX_MANIFEST_BYTES, SOCKET_API_VERSION,
+                reference_catalog, PackageManifest, PackageRegistry, MAX_MANIFEST_BYTES,
+                SOCKET_API_VERSION,
             };
             use std::io::Read;
             let options: Vec<String> = args.collect();
@@ -219,10 +220,36 @@ fn run() -> Result<(), Box<dyn Error>> {
                     }
                     Ok(())
                 }
-                _ => Err(
-                    format!("usage: {CLI_COMMAND} packages <list [--json]|check FILE [--json]>")
-                        .into(),
-                ),
+                ["scan", directory] | ["scan", directory, "--json"] => {
+                    let registry =
+                        PackageRegistry::scan_directory(std::path::Path::new(directory))?;
+                    if parts.last() == Some(&"--json") {
+                        let entries: Vec<_> = registry.entries().collect();
+                        println!(
+                            "{}",
+                            serde_json::to_string_pretty(&serde_json::json!({
+                                "socket_api": SOCKET_API_VERSION,
+                                "status": "discovered_untrusted_not_installed",
+                                "installed_count": 0,
+                                "packages": entries
+                            }))?
+                        );
+                    } else {
+                        println!("Rust-Boy / local package manifests (UNTRUSTED)");
+                        for package in registry.entries() {
+                            println!(
+                                "{:<8} {:<22} {}",
+                                package.name, package.package_id, package.version
+                            );
+                        }
+                        println!("Discovery does not install, start, or authorize packages.");
+                    }
+                    Ok(())
+                }
+                _ => Err(format!(
+                    "usage: {CLI_COMMAND} packages <list [--json]|check FILE [--json]|scan DIR [--json]>"
+                )
+                .into()),
             }
         }
         Some("modules") => {
