@@ -20,6 +20,7 @@ Technical contracts, architecture decisions, research provenance and validation 
 | [DIAG offline ingestion](DIAGNOSTICS.md) | Scoped fault-evidence JSONL intake and local host heuristics |
 | [Common Vault organizational chart](VAULT_ORG_CHART.md) | Overseer hierarchy, Security/Recon, Engineering, Medical/Medic, Science, Reclamations, Administration, and authority boundaries |
 | [RB <-> RB organizational synchronization roadmap](RB_SYNC_ROADMAP.md) | Trusted proximity discovery, IP/key pairing, scoped fleet enrollment, delta sync and healthcare release gates (design only) |
+| [RB sync v2 offline delta planner](RB_SYNC_DELTA_PLANNER.md) | Bounded cursor selection, source regression cases, and security gates (not connected to live sync) |
 | [Peer task transport](PEER_TASK_TRANSPORT.md) | Explicit OpenSSH Mac/Pi enrollment, restricted bridge, delivery and receipt sync |
 | [Overseer Task Control](TASK_CONTROL.md) | Persistent assignments, status, manual handoff and role queues |
 | [Micro handheld shell](MICRO_UI.md) | Universal location settings, single-row header, five universal sections, Rust-owned module categories and height-aware tool pages, touch pagers and compact Task Control |
