@@ -25,7 +25,7 @@ impl UniversalPackageAdapter for HelloPackage {
             AdapterCommand::Activate { .. } | AdapterCommand::Resume { .. } => {
                 self.active = true;
                 Ok(AdapterReply::View {
-                    state: json!({"label": "HELLO", "active": true}),
+                    state: json!({"label": "HELLO", "active": self.active}),
                 })
             }
             AdapterCommand::Suspend | AdapterCommand::Shutdown => {
