@@ -1,200 +1,24 @@
-//! Universal first-party package adapter socket for Rust-Boy.
+//! Host-owned lifecycle manager for trusted first-party universal adapters.
 //!
-//! A package contributes a *single* foreground view to the host. Discovery,
-//! installation approval, Settings, and capability decisions belong to the
-//! host. This code does not load executables, listen on a socket, grant device
-//! permissions, or sandbox in-process adapters.
-//!
-//! External modules should target the versioned serializable envelope; only
-//! explicitly registered trusted built-in adapters can run in this phase.
+//! The stable cross-repository protocol and trait live in the small
+//! `rust-boy-adapter-sdk` crate. This host never loads arbitrary executables,
+//! grants permissions, or treats package manifests as proof of installation.
 
 use crate::package_socket::{
     EntrypointKind, ForegroundSelection, HostSurface, PackageManifest, PackageRegistry,
     RegistryError,
 };
-use serde::{Deserialize, Serialize};
+pub use rust_boy_adapter_sdk::{
+    valid_action, AdapterCommand, AdapterEnvelope, AdapterError, AdapterReply, DenyAllScopes,
+    ScopeAuthority, UniversalPackageAdapter, Viewport, ADAPTER_PROTOCOL, MAX_INTENT_BYTES,
+    MAX_WIRE_BYTES,
+};
 use serde_json::Value;
 use std::collections::{BTreeMap, BTreeSet};
-use std::error::Error;
-use std::fmt;
-
-pub const ADAPTER_PROTOCOL: u32 = 1;
-pub const MAX_WIRE_BYTES: usize = 16 * 1024;
-pub const MAX_INTENT_BYTES: usize = 4 * 1024;
-
-#[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq, Eq)]
-#[serde(deny_unknown_fields)]
-pub struct Viewport {
-    pub width: u16,
-    pub height: u16,
-}
-
-impl Viewport {
-    pub fn new(width: u16, height: u16) -> Result<Self, AdapterError> {
-        if !(320..=4096).contains(&width) || !(240..=4096).contains(&height) {
-            return Err(AdapterError::Invalid("unsupported viewport dimensions"));
-        }
-        Ok(Self { width, height })
-    }
-}
-
-/// Serializable command vocabulary; no native handles or browser code cross
-/// the interface. Intents are data, not automatically authorized operations.
-#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
-#[serde(tag = "command", rename_all = "snake_case")]
-pub enum AdapterCommand {
-    Activate { viewport: Viewport },
-    Suspend,
-    Resume { viewport: Viewport },
-    Resize { viewport: Viewport },
-    Intent {
-        action: String,
-        required_scope: Option<String>,
-        payload: Value,
-    },
-    Shutdown,
-}
-
-#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
-#[serde(deny_unknown_fields)]
-pub struct AdapterEnvelope {
-    pub protocol: u32,
-    pub package_id: String,
-    pub request_id: u64,
-    pub body: AdapterCommand,
-}
-
-impl AdapterEnvelope {
-    /// The encoder can later be used by a bounded IPC transport. Encoding
-    /// never executes a command or grants the requested scope.
-    pub fn encode(&self) -> Result<Vec<u8>, AdapterError> {
-        self.validate()?;
-        let bytes = serde_json::to_vec(self)
-            .map_err(|_| AdapterError::Invalid("cannot encode adapter request"))?;
-        if bytes.len() > MAX_WIRE_BYTES {
-            return Err(AdapterError::Invalid("adapter request exceeds wire limit"));
-        }
-        Ok(bytes)
-    }
-
-    pub fn decode(bytes: &[u8]) -> Result<Self, AdapterError> {
-        if bytes.len() > MAX_WIRE_BYTES {
-            return Err(AdapterError::Invalid("adapter request exceeds wire limit"));
-        }
-        let decoded: Self = serde_json::from_slice(bytes)
-            .map_err(|_| AdapterError::Invalid("invalid adapter request"))?;
-        decoded.validate()?;
-        Ok(decoded)
-    }
-
-    fn validate(&self) -> Result<(), AdapterError> {
-        if self.protocol != ADAPTER_PROTOCOL || self.request_id == 0 {
-            return Err(AdapterError::Invalid("incompatible adapter envelope"));
-        }
-        // The host's package IDs are already validated by PackageManifest.
-        if self.package_id.is_empty() || self.package_id.len() > 96 {
-            return Err(AdapterError::Invalid("invalid envelope package ID"));
-        }
-        match &self.body {
-            AdapterCommand::Activate { viewport }
-            | AdapterCommand::Resume { viewport }
-            | AdapterCommand::Resize { viewport } => {
-                Viewport::new(viewport.width, viewport.height)?;
-            }
-            AdapterCommand::Intent {
-                action,
-                required_scope,
-                payload,
-            } => {
-                if !valid_action(action) {
-                    return Err(AdapterError::Invalid("invalid package intent action"));
-                }
-                if required_scope
-                    .as_deref()
-                    .is_some_and(|scope| scope.is_empty() || scope.len() > 80)
-                {
-                    return Err(AdapterError::Invalid("invalid requested scope"));
-                }
-                if serde_json::to_vec(payload)
-                    .map_err(|_| AdapterError::Invalid("cannot encode package intent"))?
-                    .len()
-                    > MAX_INTENT_BYTES
-                {
-                    return Err(AdapterError::Invalid("package intent exceeds 4 KiB"));
-                }
-            }
-            AdapterCommand::Suspend | AdapterCommand::Shutdown => {}
-        }
-        Ok(())
-    }
-}
-
-fn valid_action(action: &str) -> bool {
-    !action.is_empty()
-        && action.len() <= 64
-        && action
-            .as_bytes()
-            .first()
-            .is_some_and(u8::is_ascii_lowercase)
-        && action.bytes().all(|c| {
-            c.is_ascii_lowercase() || c.is_ascii_digit() || matches!(c, b'.' | b'-' | b'_')
-        })
-}
-
-/// Replies contain inert JSON state. The host renderer must never interpret
-/// view data as executable script, raw HTML, a Host Settings panel, or a URL.
-#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
-#[serde(tag = "result", rename_all = "snake_case")]
-pub enum AdapterReply {
-    Ack,
-    View { state: Value },
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub enum AdapterError {
-    Invalid(&'static str),
-    Denied(&'static str),
-    Unavailable(String),
-    Fault(String),
-    Registry(String),
-}
-
-impl fmt::Display for AdapterError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::Invalid(message) | Self::Denied(message) => write!(f, "{message}"),
-            Self::Unavailable(message) | Self::Fault(message) | Self::Registry(message) => {
-                write!(f, "{message}")
-            }
-        }
-    }
-}
-impl Error for AdapterError {}
 
 impl From<RegistryError> for AdapterError {
     fn from(value: RegistryError) -> Self {
         Self::Registry(value.to_string())
-    }
-}
-
-/// For trusted *built-in* Rust adapters only. This is not a stable Rust ABI,
-/// plugin loader, sandbox, or permission boundary. External modules will use
-/// a separately reviewed IPC runner for the same serialized wire vocabulary.
-pub trait UniversalPackageAdapter: Send {
-    fn package_id(&self) -> &str;
-    fn handle(&mut self, request: AdapterEnvelope) -> Result<AdapterReply, AdapterError>;
-}
-
-/// Only the host's already-authorized policy authority may approve a scope.
-/// The default policy is deny-all. A manifest declaration is never a grant.
-pub trait ScopeAuthority {
-    fn is_granted(&self, package_id: &str, scope: &str) -> bool;
-}
-
-pub struct DenyAllScopes;
-impl ScopeAuthority for DenyAllScopes {
-    fn is_granted(&self, _package_id: &str, _scope: &str) -> bool {
-        false
     }
 }
 
