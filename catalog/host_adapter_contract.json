@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "adapter_protocol": 1,
+  "manifest_host_api": 1,
+  "max_wire_bytes": 16384,
+  "max_intent_bytes": 4096,
+  "viewport": {
+    "minimum_width": 320,
+    "minimum_height": 240,
+    "maximum_width": 4096,
+    "maximum_height": 4096
+  },
+  "host_surfaces": [
+    "empty",
+    "settings",
+    "package"
+  ],
+  "commands": [
+    "activate",
+    "suspend",
+    "resume",
+    "resize",
+    "intent",
+    "shutdown"
+  ],
+  "replies": [
+    "ack",
+    "view"
+  ],
+  "package_ids": [
+    "org.rustboy.comms",
+    "org.rustboy.gis",
+    "org.rustboy.radio",
+    "org.rustboy.tv"
+  ],
+  "ownership": {
+    "navigation": "host",
+    "settings": "host",
+    "capability_policy": "host",
+    "view_content": "package"
+  },
+  "execution": "trusted_first_party_adapter_source_only",
+  "third_party_execution": "not_implemented",
+  "notes": "Declarative protocol index only; not a package installer, OS sandbox, or permissions grant."
+}
