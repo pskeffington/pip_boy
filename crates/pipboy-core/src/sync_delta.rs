@@ -3,7 +3,7 @@
 //! This is NOT a transport, authorization, or trusted acknowledgement service.
 //! Callers must separately verify organization, operator, device, dataset and
 //! receipt authenticity before using any cursor in a live protocol.
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 pub const MAX_BATCH: usize = 64;
 pub const MAX_ORIGINS: usize = 256;
@@ -68,6 +68,7 @@ pub fn plan_batch(
     }
     ordered.sort_by(|a, b| (&a.origin, a.sequence, &a.event_id).cmp(&(&b.origin, b.sequence, &b.event_id)));
     let mut seen = BTreeMap::<String, u64>::new();
+    let mut seen_sequences = BTreeSet::new();
     let mut selected = Vec::new();
     for event in ordered {
         if !seen.contains_key(&event.origin) && seen.len() >= MAX_ORIGINS {
@@ -76,6 +77,10 @@ pub fn plan_batch(
         let current = seen.entry(event.origin.clone()).or_insert_with(|| {
             receiver.positions.get(&event.origin).copied().unwrap_or(0)
         });
+        if event.sequence > receiver.positions.get(&event.origin).copied().unwrap_or(0)
+            && !seen_sequences.insert((event.origin.clone(), event.sequence)) {
+            return Err(PlanError::DuplicateSequence);
+        }
         if event.sequence <= *current {
             // Historical events at or below the durable cursor are not sent.
             continue;
@@ -127,7 +132,7 @@ mod tests {
     }
     #[test]
     fn duplicate_future_sequences_are_rejected() {
-        assert_eq!(plan_batch(&[event("unit-a", 1), event("unit-a", 1)], &CursorSet::default(), 2), Err(PlanError::SequenceGap));
+        assert_eq!(plan_batch(&[event("unit-a", 1), event("unit-a", 1)], &CursorSet::default(), 2), Err(PlanError::DuplicateSequence));
     }
     #[test]
     fn receipt_cursor_cannot_skip_or_replay() {
