@@ -47,6 +47,7 @@ pub mod runtime;
 pub mod scout_gis;
 pub mod simulator_replay;
 pub mod sync_delta;
+pub mod sync_ledger;
 pub mod tasks;
 pub mod telemetry;
 pub mod unifi;
