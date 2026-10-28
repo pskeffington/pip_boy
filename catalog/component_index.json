@@ -283,6 +283,25 @@
         "tools/validate_component_index.py"
       ],
       "acceptance": "Unit cases added; exact-head build/CI not yet confirmed. No field deployment or secure fleet sync."
+    },
+    {
+      "id": "universal-package-adapter",
+      "boundary": "Portable versioned socket SDK and host-owned one-package lifecycle; trusted in-process tests only, with no executable loader, broker grants, or real peripheral access.",
+      "code": [
+        "crates/rust-boy-adapter-sdk/Cargo.toml",
+        "crates/rust-boy-adapter-sdk/src/lib.rs",
+        "crates/pipboy-core/src/universal_adapter.rs",
+        "crates/pipboy-core/src/package_socket.rs"
+      ],
+      "docs": [
+        "docs/UNIVERSAL_ADAPTER.md",
+        "docs/PACKAGE_SOCKET.md"
+      ],
+      "checks": [
+        "tools/validate_host_packages.py",
+        "tools/test_validate_host_packages.py"
+      ],
+      "hardware_gate": "software_only"
     }
   ]
 }
