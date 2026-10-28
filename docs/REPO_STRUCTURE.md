@@ -19,6 +19,8 @@ Rust-Boy keeps a deliberately small top level. **Do not relocate operational dat
 
 Operator state belongs under **`PIPBOY_HOME`**, not in source control. This includes notes, task boards, peer configuration, messaging queues, geospatial caches, diagnostics and other local records. See [storage](STORAGE.md) and [security](../SECURITY.md). Do not add example files taken from real users or field devices.
 
+The [universal adapter contract index](../catalog/host_adapter_contract.json) is the machine-readable socket vocabulary; the [implementation guide](UNIVERSAL_ADAPTER.md) owns the phase and security explanation. `tools/validate_host_packages.py` checks both the manifests and SDK boundary without executing a module.
+
 ## Documentation entrypoints
 
 Start at the [project README](../README.md), then the [documentation index](README.md), [architecture](ARCHITECTURE.md), [storage contract](STORAGE.md), and [validation evidence](VALIDATION.md). Keep the root README as a concise operator-oriented landing page; put module internals and research matrices under `docs/` or `catalog/` instead of appending extensive technical content to the repository root.
