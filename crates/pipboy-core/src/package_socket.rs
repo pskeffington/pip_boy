@@ -328,6 +328,63 @@ pub fn reference_catalog() -> Result<PackageRegistry, RegistryError> {
     Ok(registry)
 }
 
+/// Host-only foreground selection. Does not start/suspend any package and
+/// cannot itself authorize an adapter or mutate the installed package roster.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct ForegroundSelection {
+    active_package_id: Option<String>,
+    settings_open: bool,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum HostSurface<'a> {
+    Empty,
+    Settings,
+    Package(&'a str),
+}
+
+impl ForegroundSelection {
+    /// The approved IDs must come from a future host-owned trusted installation
+    /// registry. A reference manifest never counts as an installation.
+    pub fn select(
+        &mut self,
+        registry: &PackageRegistry,
+        approved_installed_ids: &BTreeSet<String>,
+        package_id: &str,
+    ) -> Result<(), RegistryError> {
+        if registry.get(package_id).is_none() || !approved_installed_ids.contains(package_id) {
+            return Err(RegistryError::InvalidManifest(
+                "package not approved and installed by the host",
+            ));
+        }
+        self.active_package_id = Some(package_id.to_owned());
+        self.settings_open = false;
+        Ok(())
+    }
+
+    pub fn open_settings(&mut self) {
+        self.settings_open = true;
+    }
+
+    pub fn close_settings(&mut self) {
+        self.settings_open = false;
+    }
+
+    pub fn clear_package(&mut self) {
+        self.active_package_id = None;
+    }
+
+    pub fn surface(&self) -> HostSurface<'_> {
+        if self.settings_open {
+            HostSurface::Settings
+        } else if let Some(id) = self.active_package_id.as_deref() {
+            HostSurface::Package(id)
+        } else {
+            HostSurface::Empty
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -451,6 +508,58 @@ mod tests {
             PackageRegistry::scan_directory(temp.path()),
             Err(RegistryError::InvalidDirectory(_))
         ));
+    }
+
+    #[test]
+    fn one_foreground_package_and_permanent_settings_are_host_owned() {
+        let registry = reference_catalog().unwrap();
+        let mut foreground = ForegroundSelection::default();
+        let mut approved = BTreeSet::new();
+        assert_eq!(foreground.surface(), HostSurface::Empty);
+        assert!(foreground
+            .select(&registry, &approved, "org.rustboy.radio")
+            .is_err());
+        assert_eq!(foreground.surface(), HostSurface::Empty);
+        foreground.open_settings();
+        assert_eq!(foreground.surface(), HostSurface::Settings);
+        foreground.close_settings();
+        assert_eq!(foreground.surface(), HostSurface::Empty);
+
+        // Synthetic host approval for pure navigation tests only.
+        approved.insert("org.rustboy.radio".to_owned());
+        approved.insert("org.rustboy.gis".to_owned());
+        foreground
+            .select(&registry, &approved, "org.rustboy.radio")
+            .unwrap();
+        assert_eq!(
+            foreground.surface(),
+            HostSurface::Package("org.rustboy.radio")
+        );
+        foreground.open_settings();
+        assert_eq!(foreground.surface(), HostSurface::Settings);
+        foreground.close_settings();
+        assert_eq!(
+            foreground.surface(),
+            HostSurface::Package("org.rustboy.radio")
+        );
+        foreground
+            .select(&registry, &approved, "org.rustboy.gis")
+            .unwrap();
+        assert_eq!(
+            foreground.surface(),
+            HostSurface::Package("org.rustboy.gis")
+        );
+        assert!(foreground
+            .select(&registry, &approved, "org.rustboy.comms")
+            .is_err());
+        assert_eq!(
+            foreground.surface(),
+            HostSurface::Package("org.rustboy.gis")
+        );
+        foreground.clear_package();
+        assert_eq!(foreground.surface(), HostSurface::Empty);
+        foreground.open_settings();
+        assert_eq!(foreground.surface(), HostSurface::Settings);
     }
 
     #[test]
