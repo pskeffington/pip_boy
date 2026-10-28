@@ -22,6 +22,10 @@ Operator state belongs under **`PIPBOY_HOME`**, not in source control. This incl
 
 Start at the [project README](../README.md), then the [documentation index](README.md), [architecture](ARCHITECTURE.md), [storage contract](STORAGE.md), and [validation evidence](VALIDATION.md). Keep the root README as a concise operator-oriented landing page; put module internals and research matrices under `docs/` or `catalog/` instead of appending extensive technical content to the repository root.
 
+## Synchronization module ownership
+
+The offline-only sync v2 source boundaries are [`sync_delta.rs`](../crates/pipboy-core/src/sync_delta.rs) for bounded cursor planning and [`sync_ledger.rs`](../crates/pipboy-core/src/sync_ledger.rs) for cooperative locked local snapshots. Neither is a live transport or authorization authority. Keep peer SSH and Messenger v1 compatibility unchanged while integration gates are open. The [sync integration guide](RB_SYNC_INTEGRATION.md) documents module consumers, storage preconditions and regression commands.
+
 ## HTTP route ownership
 
 `crates/pipboy/src/dashboard.rs` is the single loopback HTTP entrypoint and remains responsible for request bounds, host/origin validation and route dispatch. Task Control CRUD, manual handoff and explicit peer-send/receipt-sync implementations live in [`../crates/pipboy/src/dashboard/task_routes.rs`](../crates/pipboy/src/dashboard/task_routes.rs). This is a **source-module extraction**, not a new API server: callers still use the same `/api/tasks`, `/api/tasks/*`, `/api/peers` and `/api/peer/*` URLs. Messenger/PACE read/send/retry handlers are independently owned by [`../crates/pipboy/src/dashboard/messenger_routes.rs`](../crates/pipboy/src/dashboard/messenger_routes.rs), with the unchanged `/api/messages`, `/api/messages/send` and `/api/messages/retry` endpoints. The parent retains HTTP parsing and same-origin enforcement; the Messenger adapter delegates core policy to `pipboy-core` and explicit SSH dispatch to `peer.rs`. No route family creates a second HTTP listener. Other route families remain in the parent until separate contract-preserving extraction passes tests.
