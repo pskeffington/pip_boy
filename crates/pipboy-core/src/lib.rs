@@ -52,6 +52,7 @@ pub mod sync_ledger;
 pub mod tasks;
 pub mod telemetry;
 pub mod unifi;
+pub mod universal_adapter;
 pub mod virtual_transport;
 pub mod workbench;
 
