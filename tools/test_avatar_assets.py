@@ -133,10 +133,44 @@ def assert_no_walk_hip_leaks():
         )
 
 
+def assert_hip_is_anchored_to_waist():
+    """Catch connected hip flaps that connected-component tests cannot detect.
+
+    The waist/upper thigh must have a consistent silhouette in all eight walk
+    poses after subtracting the intentional 0..4 pixel torso bob. The original
+    affine leg rotation changed 23..50 opaque pixels in this precise hip box,
+    despite having only one connected silhouette. The anchored deform changes
+    at most a handful of edge antialiasing pixels.
+    """
+    alpha = png_rgba_alpha(ASSET / 'avatar-approved-atlas.png')
+    tile_width, tile_height = 196, 300
+    left, top, right, bottom = 100, 153, 129, 176
+    torso_bob = (0, -2, -4, -2, 0, -2, -4, -2)
+
+    def silhouette(frame, y_shift):
+        col, row = frame % 3, frame // 3
+        return [
+            value >= 127
+            for y in range(top + y_shift, bottom + y_shift)
+            for value in alpha[row * tile_height + y]
+                [col * tile_width + left:col * tile_width + right]
+        ]
+
+    baseline = silhouette(0, torso_bob[0])
+    for frame, bob in enumerate(torso_bob):
+        shifted = silhouette(frame, bob)
+        changed = sum(before != after for before, after in zip(baseline, shifted))
+        assert changed <= 8, (
+            f'walk frame {frame}: {changed} shifting pixels at the left hip '
+            '(waist/upper-thigh animation is not anchored)'
+        )
+
+
 def validate():
     assert png_properties(ASSET/'avatar-approved-reference.png')[:2]==(1536,1024)
     assert png_properties(ASSET/'avatar-approved-atlas.png')==(588,900,6)
     assert_no_walk_hip_leaks()
+    assert_hip_is_anchored_to_waist()
     rust=(ROOT/'crates/pipboy/src/avatar.rs').read_text()
     assert 'include_bytes!("../assets/avatar-approved-atlas.png")' in rust
     assert 'ROD_PANEL: UniformPanel = UniformPanel::FrontLeft' in rust
@@ -152,6 +186,6 @@ def validate():
     assert 'https://' not in js and 'fetch(' not in js and 'eval(' not in js
     assert 'frameIndex' in js and 'requestAnimationFrame' in js
     assert 'front-left' in html
-    print('PASS: source-derived CRT avatar atlas, PNG CRCs, hip-island regression, frame contract and reduced motion')
+    print('PASS: source-derived CRT avatar atlas, PNG CRCs, hip-island and anchored-waist regressions, frame contract and reduced motion')
 
 if __name__=='__main__': validate()

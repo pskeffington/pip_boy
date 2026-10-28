@@ -30,6 +30,9 @@ POLYS = {
     'core': [(41,7),(111,4),(126,20),(119,67),(98,81),(108,87),(114,104),(112,123),(105,139),(111,150),(103,159),(49,158),(44,148),(44,126),(46,109),(50,95),(54,82),(43,72),(39,54)],
 }
 STRIDES = [0, 13, 32, 54, 54, 32, 13, 0]
+# Pant upper seams are anchored to the static torso rather than rotated as
+# rigid hip attachments. Limb rotation eases in farther down the thigh.
+HIP_ANCHOR_Y, HIP_FULL_SWING_Y = 150, 190
 ARMS = [0, 5, 12, 20, 20, 12, 5, 0]
 BOBS = [0, -2, -4, -2, 0, -2, -4, -2]
 
@@ -84,6 +87,33 @@ def shifted(layer, degrees=0, pivot=(0,0), bob=0):
     return Image.fromarray(image, 'RGBA')
 
 
+def bend_leg(layer, degrees, pivot, bob):
+    """Articulate lower legs while keeping the trouser top fixed under the belt.
+
+    A single affine rotation pivots the entire thigh, including the source's
+    highlighted crotch seam; that makes a green triangular flap move beside
+    the left hip even when the PNG alpha remains connected. Use a smooth
+    inverse remap so pixels at/above HIP_ANCHOR_Y don't rotate at all. By
+    HIP_FULL_SWING_Y the full stride angle applies, preserving the feet.
+    """
+    x, y = np.meshgrid(np.arange(TILE_W, dtype=np.float32),
+                       np.arange(TILE_H, dtype=np.float32))
+    local_x = x - 18
+    local_y = y - (16 + bob)
+    influence = np.clip((local_y - HIP_ANCHOR_Y) /
+                        (HIP_FULL_SWING_Y - HIP_ANCHOR_Y), 0.0, 1.0)
+    influence = influence * influence * (3.0 - 2.0 * influence)
+    theta = np.deg2rad(degrees) * influence
+    cosine, sine = np.cos(theta), np.sin(theta)
+    dx, dy = local_x - pivot[0], local_y - pivot[1]
+    lookup_x = cosine * dx - sine * dy + pivot[0]
+    lookup_y = sine * dx + cosine * dy + pivot[1]
+    warped = cv2.remap(np.asarray(layer), lookup_x.astype(np.float32),
+                       lookup_y.astype(np.float32), interpolation=cv2.INTER_LINEAR,
+                       borderMode=cv2.BORDER_CONSTANT, borderValue=(0, 0, 0, 0))
+    return Image.fromarray(warped, 'RGBA')
+
+
 def build_frames(source):
     art = np.asarray(source.convert('RGB'))
     walk = isolate(art, SOURCE_BOX)
@@ -92,8 +122,8 @@ def build_frames(source):
     for idx in range(WALK_FRAMES):
         stride, arm, bob = STRIDES[idx], ARMS[idx], BOBS[idx]
         frame = Image.new('RGBA', (TILE_W,TILE_H))
-        frame.alpha_composite(shifted(pieces['back_leg'], stride, (69,152), bob))
-        frame.alpha_composite(shifted(pieces['front_leg'], -stride, (86,153), bob))
+        frame.alpha_composite(bend_leg(pieces['back_leg'], stride, (69,152), bob))
+        frame.alpha_composite(bend_leg(pieces['front_leg'], -stride, (86,153), bob))
         frame.alpha_composite(shifted(pieces['back_arm'], -arm, (56,88), bob))
         frame.alpha_composite(shifted(pieces['core'], bob=bob))
         # The original character sheet has the rod on wearer's front-left

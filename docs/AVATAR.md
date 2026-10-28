@@ -31,13 +31,31 @@ python3 tools/test_avatar_assets.py
 
 Only use the supplied reference (or a user-approved replacement) and retain all four-panel uniform constraints. The Python authoring pipeline traces the silhouette, isolates real source limb pixels, pivots them without horizontal mirroring, and packs one idle frame. Its geometry/limb motion is an authoring choice, not a medical or physical gait model.
 
-## Left-hip walk-cycle repair (2026-10-28)
+## Left-hip correction: anchored-gait pass (2026-10-28)
 
-The prior atlas could show a moving fleck to the viewer-right of the waistband (the operator's left hip) during frames 1–6. The authoring rig mistakenly included a tiny upper-right corner of the **front-leg source polygon** at x≈105–112, y≈139–144. Rotating that clipped corner about the hip detached it from the main figure, producing a 13–25 pixel floating patch. The source art did **not** contain a pouch or hip attachment.
+The approved sheet shows a small seam at the operator's left hip. The first
+atlas attempted to rotate the complete top of each trouser leg as a rigid
+piece. That swung the highlighted crotch fold past the fixed waistband,
+creating a moving triangular green projection. An earlier front-leg polygon
+trim removed a **detached** fleck but did not eliminate the **connected** flap,
+which was visible in a later close-up.
 
-The polygon cap is now kept tucked beneath the waist: its upper-right point was shifted from `(111, 140)` to `(104, 140)` with a transition at `(104, 146)`. This removes the stray fleck while preserving the approved face, beard, uniform, wrist terminal and front-left-only rod. The 3×3 atlas is regenerated; the Rust and browser frame-sampling APIs remain unchanged, as do the eight 100 ms walking frames.
+The latest authoring rig keeps the top of **both** trouser legs aligned with
+the waistband and eases the rotation down each leg: at source `y=150` swing
+influence is zero; by source `y=190`, the full existing leg stride is reached.
+The eased inverse remap uses OpenCV for **offline sprite generation only**.
+The shipped Rust application still embeds the same 588×900 RGBA atlas and
+renders the original eight 100 ms walk frames without running Python or CV.
+No right-chest or back decal is introduced; the rod stays on front-left only.
 
-The stdlib-only asset test now decodes PNG alpha and checks that each walking frame has one contiguous silhouette and no detached pixel islands of eight pixels or larger. Keep this regression gate when adjusting stride angles or limb polygons. Local visual verification should check all eight frames at normal and enlarged scale.
+Regression coverage now checks both disconnected sprite islands **and**
+the waist-anchored silhouette after accounting for intentional body bob. The
+second check is important: connected hip protrusions pass the old island test.
+In the defined 29×23-pixel left-hip reference window, the original rigid
+rotation altered up to 50 opaque silhouette pixels between frames. The new
+articulated frames differ by at most 1 pixel in the same window. Keep the
+regression when modifying the limb polygons, pivots, stride amplitude, or
+body bob; validate all eight frames and the idle pose visually as well.
 
 ## Verification
 
