@@ -185,7 +185,6 @@ impl ScopeAuthority for DenyAllScopes {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
