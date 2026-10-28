@@ -2,6 +2,10 @@
 
 Status (2026-10-28): **schema-1 registry parsing and read-only local discovery committed, integration still open**. No external executable loader, runtime sandbox, package installation, foreground socket renderer, or rb_gis adapter is claimed.
 
+## Shared universal adapter source (2026-10-28)
+
+A portable [`rust-boy-adapter-sdk`](../crates/rust-boy-adapter-sdk/src/lib.rs) now defines the versioned `AdapterEnvelope`, common `UniversalPackageAdapter` trait, bounded messages and inert `AdapterReply` view state. [`pipboy-core::universal_adapter`](../crates/pipboy-core/src/universal_adapter.rs) implements trusted in-process mounting, one-foreground lifecycle, Settings preservation and explicit unmount. The standalone [adapter guide](UNIVERSAL_ADAPTER.md) maps MAP, TV, RADIO and COMMS to this one contract. **No external loader, OS sandbox, signed install path, physical permission grants or live shell adapter are claimed.**
+
 ## Implemented registry precursor
 
 -  `crates/pipboy-core/src/package_socket.rs` implements strict schema parsing, bounded manifest sizes, known requested-capability vocabulary, host API compatibility, duplicate detection, and deterministic ordering. It embeds four reviewed **design fixtures**.
