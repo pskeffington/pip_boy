@@ -2338,6 +2338,7 @@ dependencies = [
  "fs2",
  "keyring",
  "ring",
+ "rust-boy-adapter-sdk",
  "rust-radio",
  "serde",
  "serde_json",
