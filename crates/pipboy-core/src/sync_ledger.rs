@@ -92,7 +92,8 @@ impl Ledger {
         if bytes.len() as u64 > MAX_LEDGER_BYTES {
             return Err(invalid("ledger too large"));
         }
-        let ledger: Self = serde_json::from_slice(&bytes)?;
+        let ledger: Self = serde_json::from_slice(&bytes)
+            .map_err(|_| invalid("malformed ledger JSON"))?;
         ledger.validate()?;
         Ok(ledger)
     }
@@ -111,7 +112,8 @@ impl Ledger {
             Err(e) => return Err(e),
             _ => {},
         }
-        let bytes = serde_json::to_vec(self)?;
+        let bytes = serde_json::to_vec(self)
+            .map_err(|_| invalid("ledger serialization failed"))?;
         if bytes.len() as u64 > MAX_LEDGER_BYTES {
             return Err(invalid("ledger too large"));
         }
