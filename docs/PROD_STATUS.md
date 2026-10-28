@@ -6,7 +6,7 @@ Updated: 2026-10-28
 
 - **Current gate:** PROD-1 / adapter protocol contract — **in progress**.
 - **Last completed gate:** PROD-0 baseline repair — **not accepted**. Mainline working tree and local validation are understood; GitHub Actions evidence is currently unavailable for the inspected commit, and CI startup failure has not been diagnosed.
-- **Branch:** `codex/package-adapter-protocol`, based on `2c13594` (`docs: record pure single foreground selector and remaining GUI integration gate`). No task commit exists yet.
+- **Branch:** `codex/package-adapter-protocol`, based on `2c13594` (`docs: record pure single foreground selector and remaining GUI integration gate`). Protocol implementation commit: `5749054` (`feat: add bounded package adapter protocol codec`).
 - **Relevant pinned module revision:** `rust_radio` dependency revision `3d77d11da3a31fbc3144635da6d391a3febf38b7` from the workspace lock/config. The local `rust_radio/` directory is a separate untracked nested repository and was preserved untouched.
 
 ## Implementation and evidence
@@ -16,7 +16,7 @@ Updated: 2026-10-28
 - `cargo fmt --all -- --check` — passed.
 - `cargo check --workspace --all-targets --locked` — passed.
 - `cargo clippy --workspace --all-targets --locked -- -D warnings` — passed.
-- `cargo test --workspace --locked -- --test-threads=1` — passed: 271 `pipboy` tests and 12 broker tests; doc tests passed (0 present). The ordinary parallel run first failed because sandbox policy blocked three synthetic loopback socket fixtures; after permission to bind localhost, one unrelated shared task-store assertion flaked under parallel execution, passed in isolation, and the serial full suite passed.
+- `cargo test --workspace --locked -- --test-threads=1` — passed: 74 `pipboy`, 271 `pipboy-core` and 12 broker tests (357 total); doc tests passed (0 present). The ordinary parallel run first failed because sandbox policy blocked three synthetic loopback socket fixtures; after permission to bind localhost, one unrelated shared task-store assertion flaked under parallel execution, passed in isolation, and the serial full suite passed.
 - `python3 tools/validate_host_packages.py` — passed.
 - `python3 tools/test_validate_host_packages.py` — passed (8 tests).
 - `python3 tools/validate_component_index.py` — passed.
