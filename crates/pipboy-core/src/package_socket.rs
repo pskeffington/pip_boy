@@ -302,6 +302,12 @@ impl PackageRegistry {
         Ok(registry)
     }
 
+    /// Host-owned registry removal for an explicitly unmounted adapter.
+    /// Does not remove packages from disk or revoke OS permissions.
+    pub fn remove(&mut self, package_id: &str) -> Option<PackageManifest> {
+        self.entries.remove(package_id)
+    }
+
     pub fn get(&self, package_id: &str) -> Option<&PackageManifest> {
         self.entries.get(package_id)
     }
