@@ -31,6 +31,14 @@ python3 tools/test_avatar_assets.py
 
 Only use the supplied reference (or a user-approved replacement) and retain all four-panel uniform constraints. The Python authoring pipeline traces the silhouette, isolates real source limb pixels, pivots them without horizontal mirroring, and packs one idle frame. Its geometry/limb motion is an authoring choice, not a medical or physical gait model.
 
+## Left-hip walk-cycle repair (2026-10-28)
+
+The prior atlas could show a moving fleck to the viewer-right of the waistband (the operator's left hip) during frames 1–6. The authoring rig mistakenly included a tiny upper-right corner of the **front-leg source polygon** at x≈105–112, y≈139–144. Rotating that clipped corner about the hip detached it from the main figure, producing a 13–25 pixel floating patch. The source art did **not** contain a pouch or hip attachment.
+
+The polygon cap is now kept tucked beneath the waist: its upper-right point was shifted from `(111, 140)` to `(104, 140)` with a transition at `(104, 146)`. This removes the stray fleck while preserving the approved face, beard, uniform, wrist terminal and front-left-only rod. The 3×3 atlas is regenerated; the Rust and browser frame-sampling APIs remain unchanged, as do the eight 100 ms walking frames.
+
+The stdlib-only asset test now decodes PNG alpha and checks that each walking frame has one contiguous silhouette and no detached pixel islands of eight pixels or larger. Keep this regression gate when adjusting stride angles or limb polygons. Local visual verification should check all eight frames at normal and enlarged scale.
+
 ## Verification
 
 ```bash
