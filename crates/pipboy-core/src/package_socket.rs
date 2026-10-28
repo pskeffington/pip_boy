@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
 use std::error::Error;
 use std::fmt;
+use std::path::Path;
 
 pub const SOCKET_API_VERSION: u32 = 1;
 pub const MANIFEST_SCHEMA_VERSION: u32 = 1;
@@ -95,6 +96,7 @@ pub enum RegistryError {
     DuplicatePackage(String),
     TooManyPackages,
     ManifestTooLarge,
+    InvalidDirectory(String),
 }
 
 impl fmt::Display for RegistryError {
@@ -105,6 +107,7 @@ impl fmt::Display for RegistryError {
             Self::DuplicatePackage(id) => write!(f, "Duplicate package ID: {id}"),
             Self::TooManyPackages => write!(f, "Package catalog limit exceeded"),
             Self::ManifestTooLarge => write!(f, "Package manifest exceeds 16 KiB"),
+            Self::InvalidDirectory(detail) => write!(f, "Unsafe package directory: {detail}"),
         }
     }
 }
@@ -248,6 +251,57 @@ impl PackageRegistry {
         Ok(())
     }
 
+    /// Explicit local-only discovery. A scanned manifest is still untrusted,
+    /// not installed, not activatable and never executed by this registry.
+    pub fn scan_directory(directory: &Path) -> Result<Self, RegistryError> {
+        use std::fs;
+        let metadata = match fs::symlink_metadata(directory) {
+            Ok(metadata) => metadata,
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+                return Ok(Self::default());
+            }
+            Err(error) => return Err(RegistryError::InvalidDirectory(error.to_string())),
+        };
+        if metadata.file_type().is_symlink() || !metadata.is_dir() {
+            return Err(RegistryError::InvalidDirectory(
+                "directory must be a real local directory".into(),
+            ));
+        }
+        let mut paths = Vec::new();
+        for entry in fs::read_dir(directory)
+            .map_err(|error| RegistryError::InvalidDirectory(error.to_string()))?
+        {
+            let entry =
+                entry.map_err(|error| RegistryError::InvalidDirectory(error.to_string()))?;
+            let path = entry.path();
+            if path.extension().and_then(|suffix| suffix.to_str()) != Some("json") {
+                continue;
+            }
+            if paths.len() >= MAX_CATALOG_PACKAGES {
+                return Err(RegistryError::TooManyPackages);
+            }
+            paths.push(path);
+        }
+        paths.sort();
+        let mut registry = Self::default();
+        for path in paths {
+            let metadata = fs::symlink_metadata(&path)
+                .map_err(|error| RegistryError::InvalidDirectory(error.to_string()))?;
+            if !metadata.is_file() || metadata.file_type().is_symlink() {
+                return Err(RegistryError::InvalidDirectory(
+                    "linked or nonregular JSON manifest".into(),
+                ));
+            }
+            if metadata.len() > MAX_MANIFEST_BYTES as u64 {
+                return Err(RegistryError::ManifestTooLarge);
+            }
+            let document = fs::read_to_string(&path)
+                .map_err(|error| RegistryError::InvalidDirectory(error.to_string()))?;
+            registry.insert_json(&document)?;
+        }
+        Ok(registry)
+    }
+
     pub fn get(&self, package_id: &str) -> Option<&PackageManifest> {
         self.entries.get(package_id)
     }
@@ -356,6 +410,47 @@ mod tests {
         assert!(registry.insert_json("{").is_err());
         assert!(registry.insert_json(&" ".repeat(MAX_MANIFEST_BYTES + 1)).is_err());
         assert!(registry.is_empty());
+    }
+
+    #[test]
+    fn scan_discovers_local_manifests_without_installing_them() {
+        let temp = tempfile::tempdir().unwrap();
+        std::fs::write(temp.path().join("map.json"), REFERENCE_MANIFESTS[0]).unwrap();
+        std::fs::write(temp.path().join("ignored.txt"), "not a manifest").unwrap();
+        let registry = PackageRegistry::scan_directory(temp.path()).unwrap();
+        assert_eq!(registry.len(), 1);
+        assert_eq!(registry.get("org.rustboy.gis").unwrap().name, "MAP");
+        assert!(PackageRegistry::scan_directory(&temp.path().join("absent"))
+            .unwrap()
+            .is_empty());
+        // No handles, runners, package install state or grants are created.
+    }
+
+    #[test]
+    fn scan_rejects_ambiguous_duplicate_package_ids() {
+        let temp = tempfile::tempdir().unwrap();
+        std::fs::write(temp.path().join("a.json"), REFERENCE_MANIFESTS[0]).unwrap();
+        std::fs::write(temp.path().join("b.json"), REFERENCE_MANIFESTS[0]).unwrap();
+        assert!(matches!(
+            PackageRegistry::scan_directory(temp.path()),
+            Err(RegistryError::DuplicatePackage(_))
+        ));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn scan_rejects_symlinked_manifest_files() {
+        let temp = tempfile::tempdir().unwrap();
+        std::fs::write(temp.path().join("original.json"), REFERENCE_MANIFESTS[0]).unwrap();
+        std::os::unix::fs::symlink(
+            temp.path().join("original.json"),
+            temp.path().join("linked.json"),
+        )
+        .unwrap();
+        assert!(matches!(
+            PackageRegistry::scan_directory(temp.path()),
+            Err(RegistryError::InvalidDirectory(_))
+        ));
     }
 
     #[test]
