@@ -374,6 +374,15 @@ impl ForegroundSelection {
         self.active_package_id = None;
     }
 
+    /// Selected package remains known while host Settings is open.
+    pub fn active_package_id(&self) -> Option<&str> {
+        self.active_package_id.as_deref()
+    }
+
+    pub fn settings_open(&self) -> bool {
+        self.settings_open
+    }
+
     pub fn surface(&self) -> HostSurface<'_> {
         if self.settings_open {
             HostSurface::Settings
