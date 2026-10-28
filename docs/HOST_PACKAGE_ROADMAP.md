@@ -15,6 +15,10 @@ Rust-Boy is the host shell, identity/policy boundary, capability broker, and net
 - Background messaging, audio and emergency monitoring may continue only through declared background capabilities, lifecycle and authorization rules. Emergency services must not depend on which package is visible.
 - Third-party packages are not assumed trustworthy. In-process Rust crates are not security containers: deploy an IPC process/sandbox boundary before permitting untrusted code.
 
+## Socket extraction decision (2026-10-28)
+
+The reusable **pop-in package socket** is specified in [PACKAGE_SOCKET.md](PACKAGE_SOCKET.md), with a non-executable [GIS manifest fixture](../catalog/host_packages/rb_gis.example.json). The MAP implementation is being extracted into [rb_gis](https://github.com/pskeffington/rb_gis). Gate ordering: SOCKET-0 -> GIS-EXTRACT-1/2 -> trusted GIS-EXTRACT-3 -> process/socket security and eventual legacy removal. Do not delete existing map logic before behavioral parity and rollback evidence.
+
 ## Lifecycle and package contract
 
 Each registered package has an immutable identifier, display title, semantic package version, host API compatibility range, entrypoint type, capability requests, background-behavior declaration, supported viewport sizes, and human-readable source/license metadata. A signed distribution/verification policy is a separate release gate.
