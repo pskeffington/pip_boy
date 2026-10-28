@@ -4,7 +4,7 @@ Status (2026-10-28): **schema-1 registry parsing and read-only local discovery c
 
 ## Implemented registry precursor
 
-- `pipboy-core/src/package_socket.rs` implements strict schema parsing, bounded manifest sizes, known requested-capability vocabulary, host API compatibility, duplicate detection, and deterministic ordering. It embeds four reviewed **design fixtures**.
+-  `crates/pipboy-core/src/package_socket.rs` implements strict schema parsing, bounded manifest sizes, known requested-capability vocabulary, host API compatibility, duplicate detection, and deterministic ordering. It embeds four reviewed **design fixtures**.
 - `pipboy packages list [--json]` lists reference fixtures only; `pipboy packages check FILE [--json]` validates a single operator-selected manifest; `pipboy packages scan DIR [--json]` scans direct JSON entries in an explicitly chosen local directory. The scan is bounded to 64 manifests, rejects symlinks and non-regular JSON entries, and performs no package activation.
 - Loopback-only `GET /api/packages` returns these four references with `installed:false` and `activatable:false`. It is deliberately not wired into navigation yet.
 - `tools/validate_host_packages.py` and `tools/test_validate_host_packages.py` provide offline schema and negative fixtures; CI runs these checks when the GitHub Actions runner starts. Rust unit tests cover the same registry contract and local scanning.
@@ -26,7 +26,7 @@ python3 tools/test_validate_host_packages.py
 
 The **socket** belongs to Rust-Boy; packages are independently maintained, installed and replaced. A package must not modify host navigation, Settings, role authority, device credentials, networking policy, or other packages' UI. The host shows **exactly one** package in its foreground viewport. The socket is a **versioned protocol**, not a Rust `dyn Trait` binary ABI and not an OS container.
 
-Package discovery reads an installed manifest from a local allowlisted package directory; discovery must do **zero I/O other than local manifest reads**. Resolve package ID -> compatible runner -> package view and service capabilities. The host must retain Settings when the package fails.
+Target installation discovery will use a host-owned allowlisted package directory, with zero I/O beyond bounded local manifest reads. The currently implemented `scan DIR` requires an explicitly selected local directory and returns untrusted metadata only. The future installed-state layer must separately resolve package ID -> compatible trusted runner -> package view and services, while retaining Settings on failure.
 
 ### Required manifest keys
 
