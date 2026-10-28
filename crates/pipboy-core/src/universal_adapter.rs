@@ -368,6 +368,15 @@ impl UniversalAdapterHost {
         Ok(())
     }
 
+    /// Explicitly remove a trusted adapter from the host after shutdown.
+    /// This does not delete a package installation or change OS-level trust.
+    pub fn unmount(&mut self, package_id: &str) -> Result<(), AdapterError> {
+        self.shutdown(package_id)?;
+        self.mounted.remove(package_id);
+        self.registry.remove(package_id);
+        Ok(())
+    }
+
     pub fn shutdown(&mut self, package_id: &str) -> Result<(), AdapterError> {
         let status = self
             .state(package_id)
@@ -389,6 +398,17 @@ impl UniversalAdapterHost {
             self.foreground.clear_package();
         }
         Ok(())
+    }
+}
+
+impl Drop for UniversalAdapterHost {
+    fn drop(&mut self) {
+        // Best-effort trusted adapter cleanup. Production isolation must also
+        // handle hung/crashed processes independently of Rust Drop.
+        let ids: Vec<_> = self.mounted.keys().cloned().collect();
+        for id in ids {
+            let _ = self.shutdown(&id);
+        }
     }
 }
 
@@ -618,6 +638,59 @@ mod tests {
             .is_err());
         assert_eq!(host.len(), 1);
         assert!(calls.lock().unwrap().is_empty());
+    }
+
+    #[test]
+    fn unmount_releases_socket_and_accepts_replacement_adapter() {
+        let mut host = UniversalAdapterHost::new(Viewport::new(480, 320).unwrap());
+        let calls = mount(&mut host, "org.rustboy.tv", None);
+        host.select("org.rustboy.tv").unwrap();
+        host.unmount("org.rustboy.tv").unwrap();
+        assert_eq!(host.surface(), HostSurface::Empty);
+        assert!(host.package_ids().next().is_none());
+        assert_eq!(host.len(), 0);
+        assert_eq!(calls.lock().unwrap().len(), 2);
+        mount(&mut host, "org.rustboy.tv", None);
+        host.select("org.rustboy.tv").unwrap();
+        assert_eq!(host.surface(), HostSurface::Package("org.rustboy.tv"));
+    }
+
+    #[test]
+    fn failed_resume_does_not_hide_settings() {
+        let mut host = UniversalAdapterHost::new(Viewport::new(480, 320).unwrap());
+        mount(&mut host, "org.rustboy.comms", Some("resume"));
+        host.select("org.rustboy.comms").unwrap();
+        host.open_settings();
+        assert!(host.close_settings().is_err());
+        assert_eq!(host.surface(), HostSurface::Settings);
+        assert_eq!(host.state("org.rustboy.comms"), Some(AdapterState::Faulted));
+    }
+
+    #[test]
+    fn oversized_adapter_view_is_faulted_before_display() {
+        struct HugeView;
+        impl UniversalPackageAdapter for HugeView {
+            fn package_id(&self) -> &str {
+                "org.rustboy.gis"
+            }
+
+            fn handle(
+                &mut self,
+                _request: AdapterEnvelope,
+            ) -> Result<AdapterReply, AdapterError> {
+                Ok(AdapterReply::View {
+                    state: json!({"payload": "x".repeat(MAX_WIRE_BYTES)}),
+                })
+            }
+        }
+        let mut host = UniversalAdapterHost::new(Viewport::new(480, 320).unwrap());
+        host.mount_trusted(&manifest("org.rustboy.gis"), Box::new(HugeView))
+            .unwrap();
+        assert!(host.select("org.rustboy.gis").is_err());
+        assert_eq!(host.surface(), HostSurface::Empty);
+        assert_eq!(host.state("org.rustboy.gis"), Some(AdapterState::Faulted));
+        host.open_settings();
+        assert_eq!(host.surface(), HostSurface::Settings);
     }
 
     #[test]
