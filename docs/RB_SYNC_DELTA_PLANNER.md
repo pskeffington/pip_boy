@@ -20,9 +20,15 @@ cargo test --locked -p pipboy-core sync_delta
 cargo clippy --workspace --all-targets --locked -- -D warnings
 ```
 
+## Local snapshot ledger (experimental)
+
+`pipboy_core::sync_ledger` now defines a versioned, local-only snapshot for synthetic event headers. It limits total events to 4,096 and serialized size to 1 MiB; rejects invalid ordering, duplicate IDs, malformed JSON, missing files, symlink targets, and unsupported versions. `save` writes a temporary file, syncs it, renames it over the snapshot, and syncs the parent directory on Unix. Tests cover restart, replay/gap rejection, truncated snapshots, missing files and Unix symlink reads.
+
+**Not production-ready:** the snapshot contains no payload, encryption, signed provenance, multi-process lock, receipt evidence, trusted-time handling, or append-only tamper resistance. Parent directory trust and writer serialization are external preconditions. Neither the ledger nor the delta planner is connected to live APIs or RB peer dispatch. Never place private tasks, secrets or clinical content in it.
+
 ## Next integration
 
-1. Add a bounded persisted append-only event ledger under `PIPBOY_HOME` with atomic write/fsync and simulated crash/restart coverage.
+1. Upgrade the experimental atomic snapshot into a locked append-only event journal under `PIPBOY_HOME`, with bounded retention, recovery tests and a protected-storage policy.
 2. Bind immutable origin identity and monotonic sequences to signed v2 envelopes. Validate organization, dataset, sender grant and receiver grant independently.
 3. Implement authenticated durable receipt verification and anti-replay storage. Prevent cursor advancement on signature mismatch, rejection, uncertainty, or persistence failure.
 4. Connect only a synthetic `public_demo` dataset to an explicitly initiated pinned-SSH exchange, with two-host loss/recovery acceptance.
