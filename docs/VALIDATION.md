@@ -1,5 +1,14 @@
 # Rust-Boy | Validation evidence
 
+## Universal adapter SDK and host manager — 2026-10-28 (source committed; CI startup failure)
+
+The new `crates/rust-boy-adapter-sdk` crate defines `AdapterEnvelope`, `AdapterCommand`, `AdapterReply`, `UniversalPackageAdapter` and a deny-all `ScopeAuthority` interface. `pipboy-core::universal_adapter` manages trusted in-process registrations, bounded requests/replies, one foreground package, separate Settings, scoped intents and explicit unmount/replacement. Unit test sources exercise four synthetic package IDs, lifecycle, protocol bounds, rollback, Settings persistence and oversized replies. The portable hello adapter example contains no network or device requests.
+
+**Static checks performed:** GitHub repository tree and component ownership index matched the new SDK/host/docs paths (17 indexed components, no duplicate code ownership); `Cargo.toml` workspace membership, path dependency and `Cargo.lock` SDK entry were inspected for consistency; the SDK source has no direct `std::net`, `std::process` or `std::fs` imports. These inspections do not establish Rust compilation or runtime correctness.
+
+**Not yet executed:** `cargo check --workspace --all-targets --locked`, `cargo fmt --all -- --check`, `cargo test --workspace --locked`, `cargo clippy --workspace --all-targets --locked -- -D warnings`, Mac GUI and Raspberry Pi physical tests. [Actions run 40669004392](https://github.com/pskeffington/pip_boy/actions/runs/40669004392) reported `startup_failure` before any job, not a demonstrated source-level test failure. Neither rb_gis nor TV, RADIO or COMMS is mounted through the new manager.
+
+
 ## Host package socket registry — 2026-10-28 (CI not executed)
 
 The read-only `pipboy_core::package_socket` source implements a schema-1 manifest parser, reference registry, bounded explicit local directory scan, and rejection of malformed manifests, incompatible host API versions, duplicate IDs, unknown capability requests, unsafe executable manifest keys and symlinks. The `packages list|check|scan` CLI is metadata-only; `GET /api/packages` serves four `installed:false`, `activatable:false` design references. Added Rust unit regressions (including local directory scan and pure single-foreground/Settings selection), offline standard-library `tools/validate_host_packages.py` and `tools/test_validate_host_packages.py`, and a CI catalog step.
