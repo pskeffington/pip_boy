@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "package_id": "org.rustboy.radio",
+  "name": "RADIO",
+  "version": "0.0.0-design",
+  "publisher": "Rust-Boy contributors",
+  "license": "MIT",
+  "source_repository": "https://github.com/pskeffington/rust_radio",
+  "host_api": 1,
+  "entrypoint": {
+    "type": "builtin_adapter"
+  },
+  "ui": {
+    "mode": "host_view",
+    "min_width": 320,
+    "min_height": 240
+  },
+  "capabilities": [
+    "media.audio",
+    "network.fetch.explicit",
+    "radio.device"
+  ],
+  "background": {
+    "allowed": true
+  },
+  "status": "design_fixture_not_installed"
+}
