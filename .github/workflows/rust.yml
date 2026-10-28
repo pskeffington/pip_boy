@@ -30,6 +30,7 @@ jobs:
           python3 tools/validate_rust_version.py
           python3 tools/validate_repo.py
           python3 tools/test_validate_repo.py
+          python3 tools/test_avatar_assets.py
           python3 tools/validate_component_index.py
           python3 tools/test_component_index.py
           python3 tools/validate_security.py

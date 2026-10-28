@@ -24,6 +24,8 @@ Micro mode uses an original dark-green field monitor treatment with subtle scanl
 
 See the [micro UI operator guide](docs/MICRO_UI.md), [lore naming crosswalk](docs/LORE_NAMING.md) and [county source policy](docs/COUNTY_SOURCES.md).
 
+The [approved CRT operator character](docs/AVATAR.md) uses user-provided source art and a local transparent sprite atlas. The old generated stand-in vector is not part of the brand asset set. The separate STATUS screen remains unimplemented.
+
 ## Dashboard visual identity
 
 The local dashboard adopts its own charcoal and green phosphor visual language, a generic `RB/` mark, original typography and responsive module cards. It uses no official Fallout, Pip-Boy or Vault-Tec images, icons, proprietary interface code or font assets. Seven role titles are inspired by the documented job taxonomy and Custom is an original advanced-workbench designation. Distinguish a dashboard **template** from an approved capability: the appearance of a camera tile or map viewport cannot imply a live video feed or working navigation. See [graphical UI guide](docs/DASHBOARD_UI.md).

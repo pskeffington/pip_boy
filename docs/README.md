@@ -36,6 +36,7 @@ Technical contracts, architecture decisions, research provenance and validation 
 | [RB sync v2 offline delta planner](RB_SYNC_DELTA_PLANNER.md) | Bounded cursor selection, source regression cases, and security gates (not connected to live sync) |
 | [Peer task transport](PEER_TASK_TRANSPORT.md) | Explicit OpenSSH Mac/Pi enrollment, restricted bridge, delivery and receipt sync |
 | [Overseer Task Control](TASK_CONTROL.md) | Persistent assignments, status, manual handoff and role queues |
+| [Approved Rust-Boy character animation](AVATAR.md) | Source-derived phosphor CRT sprite atlas, native Rust frame sampler, and isolated local preview |
 | [Micro handheld shell](MICRO_UI.md) | Universal location settings, single-row header, five universal sections, Rust-owned module categories and height-aware tool pages, touch pagers and compact Task Control |
 | [Graphical dashboard](DASHBOARD_UI.md) | Run local browser UI on Mac, load role templates, test offline tools and Custom |
 | [Native RADIO and station presets](RADIO_NATIVE_ROADMAP.md) | In-process IP playback, favorites, output selection, 480×320 screen checks and hardware release gates |
