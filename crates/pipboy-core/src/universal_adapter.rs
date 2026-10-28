@@ -6,7 +6,6 @@
 
 use crate::package_socket::{
     EntrypointKind, ForegroundSelection, HostSurface, PackageManifest, PackageRegistry,
-    RegistryError,
 };
 pub use rust_boy_adapter_sdk::{
     valid_action, AdapterCommand, AdapterEnvelope, AdapterError, AdapterReply, DenyAllScopes,
@@ -15,12 +14,6 @@ pub use rust_boy_adapter_sdk::{
 };
 use serde_json::Value;
 use std::collections::{BTreeMap, BTreeSet};
-
-impl From<RegistryError> for AdapterError {
-    fn from(value: RegistryError) -> Self {
-        Self::Registry(value.to_string())
-    }
-}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum AdapterState {
@@ -67,7 +60,8 @@ impl UniversalAdapterHost {
         manifest_json: &str,
         runner: Box<dyn UniversalPackageAdapter>,
     ) -> Result<(), AdapterError> {
-        let manifest = PackageManifest::parse(manifest_json)?;
+        let manifest = PackageManifest::parse(manifest_json)
+            .map_err(|error| AdapterError::Registry(error.to_string()))?;
         if manifest.status.is_some() || manifest.entrypoint.kind != EntrypointKind::BuiltinAdapter {
             return Err(AdapterError::Denied(
                 "only approved installed built-in adapters can be mounted",
@@ -76,7 +70,9 @@ impl UniversalAdapterHost {
         if runner.package_id() != manifest.package_id {
             return Err(AdapterError::Invalid("adapter ID does not match manifest"));
         }
-        self.registry.insert_json(manifest_json)?;
+        self.registry
+            .insert_json(manifest_json)
+            .map_err(|error| AdapterError::Registry(error.to_string()))?;
         self.mounted.insert(
             manifest.package_id.clone(),
             MountedAdapter {
