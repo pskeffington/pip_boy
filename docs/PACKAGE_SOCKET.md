@@ -1,6 +1,6 @@
 # Rust-Boy package socket contract (draft v1)
 
-Status (2026-10-28): **schema-1 registry parsing and read-only local discovery committed, integration still open**. No external executable loader, runtime sandbox, package installation, foreground socket renderer, or rb_gis adapter is claimed.
+Status (2026-10-28): **schema-1 registry parsing, read-only local discovery, and a bounded typed protocol codec are implemented; integration remains open**. No external executable loader, runtime sandbox, package installation, foreground socket renderer, or rb_gis adapter is claimed.
 
 ## Implemented registry precursor
 
@@ -10,6 +10,8 @@ Status (2026-10-28): **schema-1 registry parsing and read-only local discovery c
 - `tools/validate_host_packages.py` and `tools/test_validate_host_packages.py` provide offline schema and negative fixtures; CI runs these checks when the GitHub Actions runner starts. Rust unit tests cover the same registry contract and local scanning.
 
 A pure `ForegroundSelection` controller has also been added in core. It maintains at most one selected package and a host-owned Settings surface; selection refuses IDs not present in a separate, host-approved installed roster. Its tests use a synthetic approval set. **It is not yet connected to desktop/micro rendering or runtime execution.**
+
+`pipboy_core::package_socket::AdapterMessage` provides a version-1 JSON frame codec for `activate`, `suspend`, `resume`, `resize`, `intent` and `shutdown`. Frames are capped at 64 KiB, requests require nonzero correlation IDs and valid package IDs, resize bounds are checked, and unknown JSON fields are rejected. Codec tests exercise valid round trips and invalid headers/frames. **This does not provide a transport, handshake, timeout, authentication, dispatch, capability broker or process isolation.**
 
 This is a **metadata socket**, not an execution socket. Local scanning is operator-initiated and for trusted local files only; it is not a hardened OS-level package-store mechanism. No manifest grants hardware, filesystem, location, radio, network, background, or user permissions. The next implementation gate must introduce host-owned installed/trust state separately from document metadata.
 
@@ -74,7 +76,7 @@ Existing Rust-Boy map behavior is the compatibility baseline. GIS implementation
 
 `package -> host: render_state, request_capability, emit_event, health, fatal_error`
 
-All messages are bounded and versioned. Module content is clipped to one host viewport. The socket denies implicit location/device/network access and never lets packages forge host-origin control actions. Use opaque handles for granted capabilities rather than passing bearer credentials. Do not use an unconstrained shell command from user-provided JSON.
+The versioned bounded request envelope is implemented in core; the package response messages and external transport are still design requirements. All messages must be bounded and versioned. Module content is clipped to one host viewport. The socket denies implicit location/device/network access and never lets packages forge host-origin control actions. Use opaque handles for granted capabilities rather than passing bearer credentials. Do not use an unconstrained shell command from user-provided JSON.
 
 ### Disconnect, failure and recovery
 

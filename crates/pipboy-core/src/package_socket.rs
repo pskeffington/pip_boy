@@ -14,6 +14,8 @@ pub const SOCKET_API_VERSION: u32 = 1;
 pub const MANIFEST_SCHEMA_VERSION: u32 = 1;
 pub const MAX_MANIFEST_BYTES: usize = 16 * 1024;
 pub const MAX_CATALOG_PACKAGES: usize = 64;
+/// Maximum encoded size of one adapter protocol message.
+pub const MAX_PROTOCOL_MESSAGE_BYTES: usize = 64 * 1024;
 
 const REFERENCE_MANIFESTS: [&str; 4] = [
     include_str!("../../../catalog/host_packages/rb_gis.example.json"),
@@ -89,6 +91,101 @@ pub struct BackgroundDeclaration {
     pub allowed: bool,
 }
 
+/// One bounded request on the future host/package transport. This type is a
+/// codec contract only; decoding a message never dispatches it to an adapter.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub struct AdapterMessage {
+    pub protocol_version: u32,
+    pub request_id: u64,
+    pub package_id: String,
+    pub command: AdapterCommand,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(tag = "type", rename_all = "snake_case", deny_unknown_fields)]
+pub enum AdapterCommand {
+    Activate,
+    Suspend,
+    Resume,
+    Resize { width: u16, height: u16 },
+    Intent { name: String },
+    Shutdown,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ProtocolError {
+    MessageTooLarge,
+    MalformedJson(String),
+    UnsupportedVersion(u32),
+    InvalidRequestId,
+    InvalidPackageId,
+    InvalidCommand,
+}
+
+impl fmt::Display for ProtocolError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::MessageTooLarge => write!(f, "Adapter message exceeds 64 KiB"),
+            Self::MalformedJson(message) => write!(f, "Invalid adapter message: {message}"),
+            Self::UnsupportedVersion(version) => {
+                write!(f, "Unsupported adapter protocol version: {version}")
+            }
+            Self::InvalidRequestId => write!(f, "Adapter request ID must be nonzero"),
+            Self::InvalidPackageId => write!(f, "Invalid adapter package ID"),
+            Self::InvalidCommand => write!(f, "Invalid adapter command"),
+        }
+    }
+}
+
+impl Error for ProtocolError {}
+
+impl AdapterMessage {
+    /// Parses one complete JSON frame and validates its bounded header/body.
+    pub fn decode(frame: &[u8]) -> Result<Self, ProtocolError> {
+        if frame.len() > MAX_PROTOCOL_MESSAGE_BYTES {
+            return Err(ProtocolError::MessageTooLarge);
+        }
+        let message: Self = serde_json::from_slice(frame)
+            .map_err(|error| ProtocolError::MalformedJson(error.to_string()))?;
+        message.validate()?;
+        Ok(message)
+    }
+
+    pub fn encode(&self) -> Result<Vec<u8>, ProtocolError> {
+        self.validate()?;
+        let frame = serde_json::to_vec(self)
+            .map_err(|error| ProtocolError::MalformedJson(error.to_string()))?;
+        if frame.len() > MAX_PROTOCOL_MESSAGE_BYTES {
+            return Err(ProtocolError::MessageTooLarge);
+        }
+        Ok(frame)
+    }
+
+    fn validate(&self) -> Result<(), ProtocolError> {
+        if self.protocol_version != SOCKET_API_VERSION {
+            return Err(ProtocolError::UnsupportedVersion(self.protocol_version));
+        }
+        if self.request_id == 0 {
+            return Err(ProtocolError::InvalidRequestId);
+        }
+        if !valid_id(&self.package_id) {
+            return Err(ProtocolError::InvalidPackageId);
+        }
+        match &self.command {
+            AdapterCommand::Resize { width, height }
+                if !(320..=4096).contains(width) || !(240..=4096).contains(height) =>
+            {
+                Err(ProtocolError::InvalidCommand)
+            }
+            AdapterCommand::Intent { name } if !valid_label(name, 96) => {
+                Err(ProtocolError::InvalidCommand)
+            }
+            _ => Ok(()),
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum RegistryError {
     MalformedJson(String),
@@ -145,9 +242,9 @@ fn valid_version(value: &str) -> bool {
                 && part.bytes().all(|byte| byte.is_ascii_digit())
                 && (part.len() == 1 || !part.starts_with('0'))
         })
-        && value.bytes().all(|byte| {
-            byte.is_ascii_alphanumeric() || matches!(byte, b'.' | b'-' | b'+')
-        })
+        && value
+            .bytes()
+            .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'.' | b'-' | b'+'))
         && !value.ends_with('-')
         && !value.ends_with('+')
         && !value.ends_with('.')
@@ -180,7 +277,9 @@ impl PackageManifest {
             return Err(Invalid("incompatible host_api"));
         }
         if !valid_id(&self.package_id) {
-            return Err(Invalid("package_id must be a bounded reverse-DNS identifier"));
+            return Err(Invalid(
+                "package_id must be a bounded reverse-DNS identifier",
+            ));
         }
         if !valid_label(&self.name, 48)
             || !valid_label(&self.publisher, 96)
@@ -409,11 +508,19 @@ mod tests {
             .collect();
         assert_eq!(
             ids,
-            ["org.rustboy.comms", "org.rustboy.gis", "org.rustboy.radio", "org.rustboy.tv"]
+            [
+                "org.rustboy.comms",
+                "org.rustboy.gis",
+                "org.rustboy.radio",
+                "org.rustboy.tv"
+            ]
         );
         assert_eq!(catalog.len(), 4);
         for entry in catalog.entries() {
-            assert_eq!(entry.status.as_deref(), Some("design_fixture_not_installed"));
+            assert_eq!(
+                entry.status.as_deref(),
+                Some("design_fixture_not_installed")
+            );
             assert_eq!(entry.host_api, SOCKET_API_VERSION);
         }
     }
@@ -431,19 +538,37 @@ mod tests {
             ("source_repository", json!("http://example.invalid/map")),
             ("status", json!("installed")),
         ] {
-            assert!(PackageManifest::parse(&altered(field, value)).is_err(), "{field}");
+            assert!(
+                PackageManifest::parse(&altered(field, value)).is_err(),
+                "{field}"
+            );
         }
     }
 
     #[test]
     fn no_commands_unknown_fields_or_unreviewed_capabilities() {
         for document in [
-            altered("entrypoint", json!({"type":"external_process","command":"/bin/sh"})),
-            altered("entrypoint", json!({"type":"external_process","args":["--run"]})),
-            altered("capabilities", json!(["network.fetch.explicit", "secrets.read"])),
+            altered(
+                "entrypoint",
+                json!({"type":"external_process","command":"/bin/sh"}),
+            ),
+            altered(
+                "entrypoint",
+                json!({"type":"external_process","args":["--run"]}),
+            ),
+            altered(
+                "capabilities",
+                json!(["network.fetch.explicit", "secrets.read"]),
+            ),
             altered("capabilities", json!(["location.read", "location.read"])),
-            altered("ui", json!({"mode":"host_view","min_width":1,"min_height":240})),
-            altered("ui", json!({"mode":"browser_window","min_width":320,"min_height":240})),
+            altered(
+                "ui",
+                json!({"mode":"host_view","min_width":1,"min_height":240}),
+            ),
+            altered(
+                "ui",
+                json!({"mode":"browser_window","min_width":320,"min_height":240}),
+            ),
         ] {
             assert!(PackageManifest::parse(&document).is_err());
         }
@@ -465,7 +590,9 @@ mod tests {
     fn corrupt_and_oversized_documents_are_rejected_without_execution() {
         let mut registry = PackageRegistry::default();
         assert!(registry.insert_json("{").is_err());
-        assert!(registry.insert_json(&" ".repeat(MAX_MANIFEST_BYTES + 1)).is_err());
+        assert!(registry
+            .insert_json(&" ".repeat(MAX_MANIFEST_BYTES + 1))
+            .is_err());
         assert!(registry.is_empty());
     }
 
@@ -568,5 +695,66 @@ mod tests {
         assert!(manifest.background.allowed);
         // PackageRegistry stores no grants, capabilities handles or runnable entrypoints.
         assert_eq!(manifest.entrypoint.kind, EntrypointKind::BuiltinAdapter);
+    }
+
+    #[test]
+    fn adapter_protocol_round_trips_typed_lifecycle_messages() {
+        let messages = [
+            AdapterCommand::Activate,
+            AdapterCommand::Suspend,
+            AdapterCommand::Resume,
+            AdapterCommand::Resize {
+                width: 800,
+                height: 480,
+            },
+            AdapterCommand::Intent {
+                name: "open-map".into(),
+            },
+            AdapterCommand::Shutdown,
+        ];
+        for (request_id, command) in messages.into_iter().enumerate() {
+            let message = AdapterMessage {
+                protocol_version: SOCKET_API_VERSION,
+                request_id: request_id as u64 + 1,
+                package_id: "org.rustboy.gis".into(),
+                command,
+            };
+            let frame = message.encode().unwrap();
+            assert_eq!(AdapterMessage::decode(&frame).unwrap(), message);
+        }
+    }
+
+    #[test]
+    fn adapter_protocol_rejects_bad_headers_commands_and_oversized_frames() {
+        let base = json!({
+            "protocol_version": SOCKET_API_VERSION,
+            "request_id": 1,
+            "package_id": "org.rustboy.gis",
+            "command": { "type": "activate" }
+        });
+        for (field, value, expected) in [
+            ("protocol_version", json!(2), "version"),
+            ("request_id", json!(0), "request"),
+            ("package_id", json!("../gis"), "package"),
+        ] {
+            let mut document = base.clone();
+            document[field] = value;
+            let error = AdapterMessage::decode(document.to_string().as_bytes()).unwrap_err();
+            assert!(error.to_string().contains(expected));
+        }
+        let resize = json!({
+            "protocol_version": SOCKET_API_VERSION,
+            "request_id": 1,
+            "package_id": "org.rustboy.gis",
+            "command": { "type": "resize", "width": 1, "height": 480 }
+        });
+        assert_eq!(
+            AdapterMessage::decode(resize.to_string().as_bytes()),
+            Err(ProtocolError::InvalidCommand)
+        );
+        assert_eq!(
+            AdapterMessage::decode(&vec![b' '; MAX_PROTOCOL_MESSAGE_BYTES + 1]),
+            Err(ProtocolError::MessageTooLarge)
+        );
     }
 }

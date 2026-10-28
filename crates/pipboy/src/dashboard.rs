@@ -2503,7 +2503,9 @@ mod tests {
         }
         assert!(!temp.path().join("private").exists());
         let mut bad_host = request("GET", "/api/packages", Value::Null);
-        bad_host.headers.insert("host".into(), "external.invalid".into());
+        bad_host
+            .headers
+            .insert("host".into(), "external.invalid".into());
         assert_eq!(dispatch(&bad_host, &store, 8765).status, 403);
     }
 

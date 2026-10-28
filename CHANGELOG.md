@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-10-28 — Bounded package adapter request codec
+
+- Add a typed version-1 request envelope for activate, suspend, resume, resize, intent and shutdown with nonzero correlation IDs, package ID validation, viewport bounds and a 64 KiB frame limit.
+- Exercise valid round trips and invalid version, ID, resize and oversized-frame inputs.
+- Keep the codec inert: transport, handshake, dispatch, authentication, capabilities and process isolation remain open gates.
+
 ## 2026-10-26 — Operator titles and public camera fallback
 
 - Replace station/workbench labels with current operator titles; retain saved role IDs, normalize legacy built-in labels on read and add Recon with existing field tools.
