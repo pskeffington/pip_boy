@@ -26,6 +26,7 @@ pub mod network_probe;
 pub mod network_suite;
 pub mod notes;
 pub mod observation;
+pub mod package_socket;
 pub mod organization;
 pub mod organization_authority;
 pub mod organization_identity;
