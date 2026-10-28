@@ -291,7 +291,8 @@
         "crates/rust-boy-adapter-sdk/Cargo.toml",
         "crates/rust-boy-adapter-sdk/src/lib.rs",
         "crates/pipboy-core/src/universal_adapter.rs",
-        "crates/pipboy-core/src/package_socket.rs"
+        "crates/pipboy-core/src/package_socket.rs",
+        "catalog/host_adapter_contract.json"
       ],
       "docs": [
         "docs/UNIVERSAL_ADAPTER.md",
