@@ -12,6 +12,8 @@ Rust-Boy is a Rust workbench for local diagnostics, field maps, network engineer
 
 Roles use short operator titles: **Overseer, Maintenance, Security, Doctor, Scientist, Reclamations, Recon, Archivist, Custom**. Security's unconfigured camera view offers labeled public publisher views for **DC, NYC, Boston and SF**; private IP-camera enrollment/decoding remains a separate gate. See [camera sources and lifecycle](docs/SECURITY_CAMERA_WALL.md).
 
+**Planned host redesign:** [Single-package viewport and phased package gates](docs/HOST_PACKAGE_ROADMAP.md). The target shell displays one package at a time with permanent Settings; the existing desktop/micro interface remains in place until the acceptance gates pass.
+
 ## Project navigation
 
 [Documentation index](docs/README.md) · [Repository structure](docs/REPO_STRUCTURE.md) · [Architecture](docs/ARCHITECTURE.md) · [Organizational research](docs/ORGANIZATIONAL_OPTIMIZATION.md) · [Validation](docs/VALIDATION.md) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md).
