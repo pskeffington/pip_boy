@@ -139,6 +139,40 @@ def check_adapter_sdk(root=ROOT):
 
 
 
+
+def check_adapter_contract(root=ROOT):
+    """Keep the machine-readable contract aligned with the actual SDK."""
+    contract = json.loads(
+        (root / "catalog/host_adapter_contract.json").read_text(encoding="utf-8")
+    )
+    require(contract.get("schema_version") == 1
+            and contract.get("adapter_protocol") == 1
+            and contract.get("manifest_host_api") == 1,
+            "adapter protocol index version mismatch")
+    require(contract.get("max_wire_bytes") == 16384
+            and contract.get("max_intent_bytes") == 4096,
+            "adapter protocol size limit drift")
+    require(contract.get("commands") ==
+            ["activate", "suspend", "resume", "resize", "intent", "shutdown"],
+            "adapter command index drift")
+    require(contract.get("replies") == ["ack", "view"],
+            "adapter reply index drift")
+    require(contract.get("host_surfaces") == ["empty", "settings", "package"],
+            "adapter host surface index drift")
+    require(contract.get("package_ids") == sorted(v[0] for v in EXPECTED.values()),
+            "adapter target list differs from manifest fixtures")
+    sdk = (
+        root / "crates/rust-boy-adapter-sdk/src/lib.rs"
+    ).read_text(encoding="utf-8")
+    require("pub const ADAPTER_PROTOCOL: u32 = 1;" in sdk
+            and "pub const MAX_WIRE_BYTES: usize = 16 * 1024;" in sdk
+            and "pub const MAX_INTENT_BYTES: usize = 4 * 1024;" in sdk,
+            "adapter machine index and Rust constants disagree")
+    require(contract.get("third_party_execution") == "not_implemented",
+            "adapter contract must not claim unreviewed external execution")
+
+
+
 def validate(root=ROOT):
     folder = root / "catalog/host_packages"
     require(folder.is_dir() and not folder.is_symlink(), "missing or linked fixtures directory")
@@ -163,6 +197,7 @@ def validate(root=ROOT):
     require(set(referenced) == set(EXPECTED) and len(referenced) == len(EXPECTED),
             "Rust reference registry and checked-in fixtures drift")
     check_adapter_sdk(root)
+    check_adapter_contract(root)
     print(f"PASS: {len(seen)} inert manifests and portable SDK boundary; no executable package installed")
     return len(seen)
 
