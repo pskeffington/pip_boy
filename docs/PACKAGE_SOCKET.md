@@ -21,6 +21,21 @@ Package discovery reads an installed manifest from a local allowlisted package d
 
 Reference fixtures in [host package fixtures](../catalog/host_packages/) are **examples only**, not installed package inventory or executable instructions. Never trust publisher/source strings to authorize execution.
 
+## Initial four-package integration set
+
+The following source repositories are **independent development projects**, not installed or executable host packages. Their manifests are schema-1 **design fixtures** only.
+
+| Display | Repository | Fixture | Intended foreground |
+| --- | --- | --- | --- |
+| MAP | [rb_gis](https://github.com/pskeffington/rb_gis) | [GIS fixture](../catalog/host_packages/rb_gis.example.json) | Full map viewport |
+| TV | [rust_tv](https://github.com/pskeffington/rust_tv) | [TV fixture](../catalog/host_packages/rust_tv.example.json) | Single TV player viewport |
+| RADIO | [rust_radio](https://github.com/pskeffington/rust_radio) | [Radio fixture](../catalog/host_packages/rust_radio.example.json) | Native radio controls |
+| COMMS | [rusti_rc](https://github.com/pskeffington/rusti_rc) | [Comms fixture](../catalog/host_packages/rusti_rc.example.json) | Native message interface |
+
+All four must implement the same host adapter boundary: version negotiation, no-IO discovery, one foreground viewport, host-owned Settings, explicit capability grant, fault isolation and deterministic unavailability. TV may not automatically fetch streams, RADIO may not automatically access SDR, COMMS may not automatically join channels, MAP may not automatically acquire location or download layers. Background declarations in fixtures are **requests**, never grants.
+
+Integration order: manifest validation for all four first, then independently validated MAP / RADIO / TV / COMMS adapters. Module internals and independent CI remain in their own repositories.
+
 ## GIS extraction: strangler adapter
 
 Existing Rust-Boy map behavior is the compatibility baseline. GIS implementation and county/ZIP logic move to `pskeffington/rb_gis` in deliberate slices. Maintain a temporary Rust-Boy-owned **MAP adapter** at the socket boundary, instead of reimplementing GIS in host shell.
