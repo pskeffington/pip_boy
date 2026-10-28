@@ -292,6 +292,18 @@ impl UniversalAdapterHost {
         self.viewport = viewport;
         if let HostSurface::Package(id) = self.foreground.surface() {
             let id = id.to_owned();
+            if self.viewport_supported(&id).is_err() {
+                // Keep the shell usable and retain installed package metadata.
+                let _ = self.invoke(&id, AdapterCommand::Suspend);
+                if let Some(entry) = self.mounted.get_mut(&id) {
+                    entry.state = AdapterState::Suspended;
+                    entry.last_view = None;
+                }
+                self.foreground.clear_package();
+                return Err(AdapterError::Unavailable(
+                    "active package cannot fit the resized viewport".into(),
+                ));
+            }
             if let Err(error) = self.invoke(&id, AdapterCommand::Resize { viewport }) {
                 self.fail(&id);
                 self.foreground.clear_package();
