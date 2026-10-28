@@ -1,6 +1,13 @@
 # Rust-Boy host and single-package viewport roadmap
 
-Status: **architecture accepted; implementation gates open** (2026-10-28). This document describes target behavior, not a claim that a dynamic package runtime or isolated containers exist.
+Status (2026-10-28): **architecture accepted; read-only manifest registry source committed; activation/UI gates open**. This document describes target behavior, not a claim that dynamic package activation, approved installation, or isolated containers exist.
+
+### Current gate evidence
+
+- **HOST-REG-1 / SOCKET-0, implementation candidate:** strict manifest parser in `crates/pipboy-core/src/package_socket.rs`; read-only CLI `pipboy packages list|check|scan`; loopback-only `GET /api/packages`; four indexed design fixtures, Rust unit tests, and offline Python validation.
+- **Not yet accepted:** GitHub Actions startup failed before jobs ran on the latest push; Rust compilation, `cargo fmt`, Clippy, tests, and Mac/Pi integration remain unverified. The read-only registry is intentionally not the executable package loader.
+- **Next priority:** host-owned, one-foreground-package navigation with an always-available Settings control, then trusted adapter mounting for MAP / TV / RADIO / COMMS. No module is activated merely because it appears in the reference registry.
+
 
 ## Non-negotiable host contract
 
