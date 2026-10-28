@@ -31,7 +31,7 @@ def frame(opcode, payload):
 
 
 class SyntheticReceiver:
-    def __init__(self):
+    def __init__(self, start_succeeds=True):
         self.listener = socket.socket()
         self.listener.bind(("127.0.0.1", 0))
         self.listener.listen()
@@ -42,6 +42,7 @@ class SyntheticReceiver:
         self.subscriptions = 0
         self.unsubscribed = 0
         self.starts = 0
+        self.start_succeeds = start_succeeds
         self.lock = threading.Lock()
         self.listener.settimeout(0.2)
         threading.Thread(target=self.accept, daemon=True).start()
@@ -129,7 +130,7 @@ class SyntheticReceiver:
                             raise ValueError("Unexpected receiver activation request")
                         with self.lock:
                             self.starts += 1
-                        properties["started"] = "true"
+                        properties["started"] = "true" if self.start_succeeds else "false"
                     elif event == "audio_stream_enable":
                         enabled = message["value"] == "true"
                         with self.lock:
@@ -146,6 +147,12 @@ class SyntheticReceiver:
             client.close()
             with self.lock:
                 self.clients -= 1
+
+    def wait_closed(self):
+        until = time.monotonic() + 3
+        while self.clients and time.monotonic() < until:
+            time.sleep(0.02)
+        assert self.clients == 0, "Receiver fixture still has an owned connection"
 
     def close(self):
         self.running = False
@@ -174,14 +181,14 @@ def main():
         except urllib.error.HTTPError as error:
             return error.code, json.load(error)
 
-    def wait_for(predicate, timeout=15):
+    def wait_for(predicate, timeout=15, allow_failure=False):
         until = time.monotonic() + timeout
         while time.monotonic() < until:
             code, state = api()
             assert code == 200, state
             if predicate(state):
                 return state
-            assert state["status"] != "failed", state
+            assert allow_failure or state["status"] != "failed", state
             time.sleep(0.04)
         raise AssertionError("Timed out waiting for radio state: " + str(state))
 
@@ -222,19 +229,36 @@ def main():
             stop_ms = (time.monotonic() - before) * 1000
             assert stop_ms < 500, "Stop blocked on worker cleanup"
             wait_for(lambda s: s["status"] == "stopped" and not s["stopping"])
+            stalled = SyntheticReceiver(start_succeeds=False)
+            try:
+                assert api({"action": "sdrconnect", "endpoint": stalled.endpoint})[0] == 200
+                assert api({"action": "play_sdr", "confirm": True, "volume": 0})[0] == 200
+                failed = wait_for(lambda s: s["status"] == "failed" and not s["stopping"], timeout=8, allow_failure=True)
+                assert "did not confirm receiver startup" in failed["error"], failed
+                assert stalled.starts == 1, "Unconfirmed startup repeated device activation"
+                stalled.wait_closed()
+                assert stalled.subscriptions == 0
+                stalled.start_succeeds = True  # Simulate correcting setup before explicit retry.
+                assert api({"action": "play_sdr", "confirm": True, "volume": 0})[0] == 200
+                wait_for(lambda s: s["status"] == "playing" and s["source"] == "native_sdr")
+                assert stalled.starts == 2, "Explicit Play did not retry the selected receiver"
+                assert api({"action": "stop"})[0] == 200
+                wait_for(lambda s: s["status"] == "stopped" and not s["stopping"])
+                stalled.wait_closed()
+                assert stalled.unsubscribed == 1
+                assert not stalled.errors, stalled.errors
+            finally:
+                stalled.close()
             if args.live_ip:
                 assert api({"action": "play", "station": "skylab", "confirm": True, "volume": 0})[0] == 200
                 wait_for(lambda s: s["status"] == "playing" and s["source"] == "native_ip", 25)
                 assert api({"action": "stop"})[0] == 200
                 wait_for(lambda s: s["status"] == "stopped" and not s["stopping"])
-            until = time.monotonic() + 3
-            while receiver.clients and time.monotonic() < until:
-                time.sleep(0.02)
-            assert receiver.clients == 0
+            receiver.wait_closed()
             assert receiver.starts >= 2, "Standalone and HUD Play must activate the stopped receiver"
             assert receiver.subscriptions >= 2 and receiver.unsubscribed >= 2
             assert not receiver.errors, receiver.errors
-            print(json.dumps({"fixture": "SYNTHETIC PCM - NO RF", "native_callback_playing": True, "stopped_receiver_activation": receiver.starts, "standalone": bool(args.standalone), "output_restart": True, "stop_ms": round(stop_ms, 2), "subscriptions_closed": True, "live_ip": args.live_ip}))
+            print(json.dumps({"fixture": "SYNTHETIC PCM - NO RF", "native_callback_playing": True, "stopped_receiver_activation": receiver.starts, "unconfirmed_start_requires_explicit_retry": True, "standalone": bool(args.standalone), "output_restart": True, "stop_ms": round(stop_ms, 2), "subscriptions_closed": True, "live_ip": args.live_ip}))
         finally:
             if process.poll() is None:
                 try:
