@@ -22,6 +22,8 @@ jobs:
       - name: Offline manifest validation
         run: |
           python3 tools/validate_catalog.py
+          python3 tools/validate_host_packages.py
+          python3 tools/test_validate_host_packages.py
           python3 tools/validate_roles.py
           python3 tools/validate_vault_org.py
           python3 tools/test_validate_vault_org.py
