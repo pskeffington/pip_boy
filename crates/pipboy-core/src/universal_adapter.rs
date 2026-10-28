@@ -653,6 +653,31 @@ mod tests {
     }
 
     #[test]
+    fn viewport_downsize_removes_only_package_canvas_and_preserves_settings() {
+        let mut host = UniversalAdapterHost::new(Viewport::new(800, 480).unwrap());
+        let mut wide: Value = serde_json::from_str(&manifest("org.rustboy.gis")).unwrap();
+        wide["ui"]["min_width"] = json!(640);
+        let calls = Arc::new(Mutex::new(Vec::new()));
+        host.mount_trusted(
+            &wide.to_string(),
+            Box::new(Fixture {
+                id: "org.rustboy.gis".into(),
+                calls,
+                fail: None,
+            }),
+        )
+        .unwrap();
+        host.select("org.rustboy.gis").unwrap();
+        assert!(host.resize(480, 320).is_err());
+        assert_eq!(host.surface(), HostSurface::Empty);
+        host.open_settings();
+        assert_eq!(host.surface(), HostSurface::Settings);
+        host.resize(800, 480).unwrap();
+        host.select("org.rustboy.gis").unwrap();
+        assert_eq!(host.surface(), HostSurface::Package("org.rustboy.gis"));
+    }
+
+    #[test]
     fn failed_resume_does_not_hide_settings() {
         let mut host = UniversalAdapterHost::new(Viewport::new(480, 320).unwrap());
         mount(&mut host, "org.rustboy.comms", Some("resume"));
