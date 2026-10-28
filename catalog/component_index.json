@@ -266,6 +266,23 @@
         "tools/test_cameras_ui.cjs"
       ],
       "acceptance": "Software catalog/lifecycle tests only; publisher playback and Mac/Pi operator acceptance remain provider/hardware dependent."
+    },
+    {
+      "id": "offline-sync-v2",
+      "boundary": "Offline-only synthetic delta planning and cooperative locked ledger; no live transport, authorization, or authenticated receipts.",
+      "hardware_gate": "software_only",
+      "code": [
+        "crates/pipboy-core/src/sync_delta.rs",
+        "crates/pipboy-core/src/sync_ledger.rs"
+      ],
+      "docs": [
+        "docs/RB_SYNC_INTEGRATION.md",
+        "docs/RB_SYNC_DELTA_PLANNER.md"
+      ],
+      "checks": [
+        "tools/validate_component_index.py"
+      ],
+      "acceptance": "Unit cases added; exact-head build/CI not yet confirmed. No field deployment or secure fleet sync."
     }
   ]
 }
