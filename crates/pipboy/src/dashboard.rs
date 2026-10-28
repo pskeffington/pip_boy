@@ -39,6 +39,9 @@ const JS: &str = include_str!("../assets/dashboard.js");
 const MICRO_HTML: &str = include_str!("../assets/micro.html");
 const MICRO_CSS: &str = include_str!("../assets/micro.css");
 const MICRO_JS: &str = include_str!("../assets/micro.js");
+const AVATAR_HTML: &str = include_str!("../assets/avatar-preview.html");
+const AVATAR_CSS: &str = include_str!("../assets/avatar-preview.css");
+const AVATAR_JS: &str = include_str!("../assets/avatar-preview.js");
 const MAP_JS: &str = include_str!("../assets/map.js");
 const MAP_IMPORT_JS: &str = include_str!("../assets/map-import.js");
 const MAP_ONLINE_JS: &str = include_str!("../assets/map-online.js");
@@ -1120,6 +1123,18 @@ fn dispatch(req: &Request, store: &WorkbenchStore, port: u16) -> Response {
         ("GET", "/") => Response::new(200, "text/html; charset=utf-8", HTML.as_bytes()),
         ("GET", "/micro") | ("GET", "/micro/") => {
             Response::new(200, "text/html; charset=utf-8", MICRO_HTML.as_bytes())
+        }
+        ("GET", "/avatar") | ("GET", "/avatar/") => {
+            Response::new(200, "text/html; charset=utf-8", AVATAR_HTML.as_bytes())
+        }
+        ("GET", "/assets/avatar-preview.css") => {
+            Response::new(200, "text/css; charset=utf-8", AVATAR_CSS.as_bytes())
+        }
+        ("GET", "/assets/avatar-preview.js") => {
+            Response::new(200, "text/javascript; charset=utf-8", AVATAR_JS.as_bytes())
+        }
+        ("GET", "/assets/avatar-approved-atlas.png") => {
+            Response::new(200, "image/png", crate::avatar::ATLAS_PNG.to_vec())
         }
         ("GET", "/assets/micro.css") => {
             Response::new(200, "text/css; charset=utf-8", MICRO_CSS.as_bytes())
@@ -2515,6 +2530,31 @@ mod tests {
         let mut bad_host = request("GET", "/api/packages", Value::Null);
         bad_host.headers.insert("host".into(), "external.invalid".into());
         assert_eq!(dispatch(&bad_host, &store, 8765).status, 403);
+    }
+
+    #[test]
+    fn approved_avatar_assets_are_local_and_status_independent() {
+        let temp = tempfile::tempdir().unwrap();
+        let store = WorkbenchStore::new(temp.path().join("avatar-fixture"));
+        for (path, mime) in [
+            ("/avatar", "text/html; charset=utf-8"),
+            ("/avatar/", "text/html; charset=utf-8"),
+            ("/assets/avatar-preview.css", "text/css; charset=utf-8"),
+            ("/assets/avatar-preview.js", "text/javascript; charset=utf-8"),
+            ("/assets/avatar-approved-atlas.png", "image/png"),
+        ] {
+            let response = dispatch(&request("GET", path, Value::Null), &store, 8765);
+            assert_eq!(response.status, 200, "{path}");
+            assert_eq!(response.content_type, mime, "{path}");
+            assert!(!response.body.is_empty(), "{path}");
+            if path.ends_with(".png") {
+                assert_eq!(&response.body[..8], &[137, 80, 78, 71, 13, 10, 26, 10]);
+            }
+        }
+        assert!(!temp.path().join("avatar-fixture").exists());
+        assert!(!AVATAR_HTML.contains("/assets/avatar-approved-atlas.png"));
+        assert!(AVATAR_JS.contains("/assets/avatar-approved-atlas.png"));
+        assert!(!MICRO_HTML.contains("/assets/avatar-approved-atlas.png"));
     }
 
     #[test]
