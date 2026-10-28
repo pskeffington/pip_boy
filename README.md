@@ -20,7 +20,7 @@ Roles use short operator titles: **Overseer, Maintenance, Security, Doctor, Scie
 
 **Common Vault organization:** [Default hierarchy and responsibility matrix](docs/VAULT_ORG_CHART.md) defines Overseer → Security/Recon, Engineering, Medical/Medic, Science, Reclamations and Administration. The [machine-readable positions](catalog/vault_org_chart.json) are design-only; actual users, permissions and keys require separate institutional enrollment.
 
-**RB-to-RB fleet synchronization:** [Phased organizational/proximity/IP/keyed-pairing roadmap](docs/RB_SYNC_ROADMAP.md). Existing pinned OpenSSH task and Messenger links are manual; automatic discovery, organizational enrollment and background synchronization are **not implemented**. Regulated clinical data is outside the present release boundary.
+**RB-to-RB fleet synchronization:** [Phased organizational/proximity/IP/keyed-pairing roadmap](docs/RB_SYNC_ROADMAP.md). Existing pinned OpenSSH task and Messenger links are manual; automatic discovery, organizational enrollment and background synchronization are **not implemented**. Regulated clinical data is outside the present release boundary. The [sync integration guide](docs/RB_SYNC_INTEGRATION.md) maps implemented source modules, interfaces, safe integration order, and verification commands; the [delta and ledger contract](docs/RB_SYNC_DELTA_PLANNER.md) covers local-only batching and locked snapshot writes.
 
 ## Quick start
 
