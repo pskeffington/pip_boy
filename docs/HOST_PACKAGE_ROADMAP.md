@@ -6,7 +6,8 @@ Status (2026-10-28): **architecture accepted; read-only manifest registry source
 
 - **HOST-REG-1 / SOCKET-0, implementation candidate:** strict manifest parser in `crates/pipboy-core/src/package_socket.rs`; read-only CLI `pipboy packages list|check|scan`; loopback-only `GET /api/packages`; four indexed design fixtures, Rust unit tests, and offline Python validation.
 - **Not yet accepted:** A GitHub Actions validation run returned `startup_failure` before any jobs ran; Rust compilation, `cargo fmt`, Clippy, tests, and Mac/Pi integration remain unverified. The read-only registry is intentionally not the executable package loader.
-- **Next priority:** host-owned, one-foreground-package navigation with an always-available Settings control, then trusted adapter mounting for MAP / TV / RADIO / COMMS. No module is activated merely because it appears in the reference registry.
+- **HOST-UI-1, pure-state precursor only:** `ForegroundSelection` models exactly one selected package, host Settings, and rejection of packages absent from a separately approved installed roster; Rust tests use synthetic approval only. The desktop/micro shell is not yet bound to this controller.
+- **Next priority:** bind host-owned foreground selection and always-available Settings to desktop/micro rendering, then trusted adapter mounting for MAP / TV / RADIO / COMMS. No module is activated merely because it appears in the reference registry.
 
 
 ## Non-negotiable host contract
