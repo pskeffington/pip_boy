@@ -18,6 +18,8 @@ Rust-Boy behaves like a universal socket: the shell owns the compact package swi
 
 The lightweight SDK depends only on `serde` and `serde_json`. The four independently developed packages can depend on this crate rather than on `pipboy-core` (which includes unrelated host and radio dependencies). Pin a reviewed Git commit when using the SDK in another repository; do not follow an unbounded main branch in released binaries.
 
+The [machine-readable adapter contract](../catalog/host_adapter_contract.json) indexes version, bounds, command/reply vocabulary, the four package IDs and host ownership for automation. Its consistency with the Rust SDK is checked by the offline catalog validator.
+
 ## Common module contract
 
 A trusted native adapter implements:
