@@ -3,9 +3,9 @@
 //! cooperating writers on a trusted local filesystem.
 //! Use only under a trusted per-device PIPBOY_HOME directory.
 use crate::sync_delta::{EventHeader, PlanError, MAX_ORIGINS};
+use fs2::FileExt;
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
-use fs2::FileExt;
 use std::fs::{self, OpenOptions};
 use std::io::{self, ErrorKind, Write};
 use std::path::Path;
@@ -147,11 +147,15 @@ impl Ledger {
 /// inode, because save replaces that inode. Existing corrupt ledgers fail closed.
 /// This is not a remote lock, a protected key store, or an append-only audit log.
 pub fn append_locked(path: &Path, event: StoredEvent, initialize: bool) -> io::Result<()> {
-    let parent = path.parent().ok_or_else(|| invalid("missing parent directory"))?;
+    let parent = path
+        .parent()
+        .ok_or_else(|| invalid("missing parent directory"))?;
     if !fs::symlink_metadata(parent)?.file_type().is_dir() {
         return Err(invalid("invalid parent directory"));
     }
-    let filename = path.file_name().and_then(|name| name.to_str())
+    let filename = path
+        .file_name()
+        .and_then(|name| name.to_str())
         .ok_or_else(|| invalid("invalid ledger filename"))?;
     if filename.is_empty() || filename == "." || filename == ".." {
         return Err(invalid("invalid ledger filename"));
@@ -162,7 +166,12 @@ pub fn append_locked(path: &Path, event: StoredEvent, initialize: bool) -> io::R
             return Err(invalid("unsafe lock file type"));
         }
     }
-    let lock = OpenOptions::new().read(true).write(true).create(true).open(&lock_path)?;
+    let lock = OpenOptions::new()
+        .read(true)
+        .write(true)
+        .create(true)
+        .truncate(false)
+        .open(&lock_path)?;
     if !lock.metadata()?.file_type().is_file() {
         return Err(invalid("unsafe lock file"));
     }
