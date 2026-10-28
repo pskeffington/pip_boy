@@ -149,9 +149,9 @@ impl UniversalAdapterHost {
             .ok_or_else(|| AdapterError::Unavailable("package is not mounted".into()))?;
         let reply = entry.runner.handle(message)?;
         let encoded = serde_json::to_vec(&reply)
-            .map_err(|_| AdapterError::Invalid("invalid package reply"))?;
+            .map_err(|_| AdapterError::Fault("invalid package reply".into()))?;
         if encoded.len() > MAX_WIRE_BYTES {
-            return Err(AdapterError::Invalid("package reply exceeds wire limit"));
+            return Err(AdapterError::Fault("package reply exceeds wire limit".into()));
         }
         if let AdapterReply::View { state } = reply {
             entry.last_view = Some(state);
