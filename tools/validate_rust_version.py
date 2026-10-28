@@ -28,6 +28,7 @@ for path in (
     "crates/pipboy-core/Cargo.toml",
     "crates/pipboy/Cargo.toml",
     "crates/rust-boy-broker/Cargo.toml",
+    "crates/rust-boy-adapter-sdk/Cargo.toml",
 ):
     require("rust-version.workspace = true" in read(path),
             f"workspace Rust version not inherited by {path}")
