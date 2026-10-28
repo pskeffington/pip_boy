@@ -33,7 +33,9 @@ pub struct CursorSet {
 
 fn valid_id(id: &str) -> bool {
     (2..=64).contains(&id.len())
-        && id.bytes().all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == b'-')
+        && id
+            .bytes()
+            .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == b'-')
         && id.as_bytes().first().is_some_and(u8::is_ascii_lowercase)
         && !id.ends_with('-')
 }
@@ -52,7 +54,7 @@ pub fn plan_batch(
     if receiver.positions.len() > MAX_ORIGINS {
         return Err(PlanError::TooManyOrigins);
     }
-    for (origin, _) in &receiver.positions {
+    for origin in receiver.positions.keys() {
         if !valid_id(origin) {
             return Err(PlanError::InvalidIdentifier);
         }
@@ -66,7 +68,9 @@ pub fn plan_batch(
             return Err(PlanError::InvalidSequence);
         }
     }
-    ordered.sort_by(|a, b| (&a.origin, a.sequence, &a.event_id).cmp(&(&b.origin, b.sequence, &b.event_id)));
+    ordered.sort_by(|a, b| {
+        (&a.origin, a.sequence, &a.event_id).cmp(&(&b.origin, b.sequence, &b.event_id))
+    });
     let mut seen = BTreeMap::<String, u64>::new();
     let mut seen_sequences = BTreeSet::new();
     let mut selected = Vec::new();
@@ -74,11 +78,12 @@ pub fn plan_batch(
         if !seen.contains_key(&event.origin) && seen.len() >= MAX_ORIGINS {
             return Err(PlanError::TooManyOrigins);
         }
-        let current = seen.entry(event.origin.clone()).or_insert_with(|| {
-            receiver.positions.get(&event.origin).copied().unwrap_or(0)
-        });
+        let current = seen
+            .entry(event.origin.clone())
+            .or_insert_with(|| receiver.positions.get(&event.origin).copied().unwrap_or(0));
         if event.sequence > receiver.positions.get(&event.origin).copied().unwrap_or(0)
-            && !seen_sequences.insert((event.origin.clone(), event.sequence)) {
+            && !seen_sequences.insert((event.origin.clone(), event.sequence))
+        {
             return Err(PlanError::DuplicateSequence);
         }
         if event.sequence <= *current {
@@ -98,7 +103,11 @@ pub fn plan_batch(
 
 /// Advance only a contiguous cursor, *after* the caller has verified a
 /// durable, authenticated receipt and committed its evidence locally.
-pub fn advance_verified(cursor: &mut CursorSet, origin: &str, sequence: u64) -> Result<(), PlanError> {
+pub fn advance_verified(
+    cursor: &mut CursorSet,
+    origin: &str,
+    sequence: u64,
+) -> Result<(), PlanError> {
     if !valid_id(origin) {
         return Err(PlanError::InvalidIdentifier);
     }
@@ -117,7 +126,11 @@ pub fn advance_verified(cursor: &mut CursorSet, origin: &str, sequence: u64) -> 
 mod tests {
     use super::*;
     fn event(origin: &str, sequence: u64) -> EventHeader {
-        EventHeader { origin: origin.into(), sequence, event_id: format!("event-{sequence}") }
+        EventHeader {
+            origin: origin.into(),
+            sequence,
+            event_id: format!("event-{sequence}"),
+        }
     }
     #[test]
     fn selects_contiguous_delta_deterministically() {
@@ -127,25 +140,47 @@ mod tests {
     }
     #[test]
     fn rejects_gaps_and_invalid_limits() {
-        assert_eq!(plan_batch(&[event("unit-a", 2)], &CursorSet::default(), 1), Err(PlanError::SequenceGap));
-        assert_eq!(plan_batch(&[], &CursorSet::default(), 0), Err(PlanError::InvalidLimit));
+        assert_eq!(
+            plan_batch(&[event("unit-a", 2)], &CursorSet::default(), 1),
+            Err(PlanError::SequenceGap)
+        );
+        assert_eq!(
+            plan_batch(&[], &CursorSet::default(), 0),
+            Err(PlanError::InvalidLimit)
+        );
     }
     #[test]
     fn duplicate_future_sequences_are_rejected() {
-        assert_eq!(plan_batch(&[event("unit-a", 1), event("unit-a", 1)], &CursorSet::default(), 2), Err(PlanError::DuplicateSequence));
+        assert_eq!(
+            plan_batch(
+                &[event("unit-a", 1), event("unit-a", 1)],
+                &CursorSet::default(),
+                2
+            ),
+            Err(PlanError::DuplicateSequence)
+        );
     }
     #[test]
     fn receipt_cursor_cannot_skip_or_replay() {
         let mut cursor = CursorSet::default();
-        assert_eq!(advance_verified(&mut cursor, "unit-a", 2), Err(PlanError::SequenceGap));
+        assert_eq!(
+            advance_verified(&mut cursor, "unit-a", 2),
+            Err(PlanError::SequenceGap)
+        );
         advance_verified(&mut cursor, "unit-a", 1).unwrap();
-        assert_eq!(advance_verified(&mut cursor, "unit-a", 1), Err(PlanError::SequenceGap));
+        assert_eq!(
+            advance_verified(&mut cursor, "unit-a", 1),
+            Err(PlanError::SequenceGap)
+        );
         assert_eq!(cursor.positions["unit-a"], 1);
     }
     #[test]
     fn existing_cursor_filters_prior_history() {
         let mut c = CursorSet::default();
         c.positions.insert("unit-a".into(), 2);
-        assert_eq!(plan_batch(&[event("unit-a", 1), event("unit-a", 3)], &c, 5).unwrap(), vec![event("unit-a", 3)]);
+        assert_eq!(
+            plan_batch(&[event("unit-a", 1), event("unit-a", 3)], &c, 5).unwrap(),
+            vec![event("unit-a", 3)]
+        );
     }
 }

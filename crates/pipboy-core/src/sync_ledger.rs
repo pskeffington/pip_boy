@@ -28,7 +28,11 @@ pub struct StoredEvent {
 
 impl From<&StoredEvent> for EventHeader {
     fn from(event: &StoredEvent) -> Self {
-        Self { origin: event.origin.clone(), sequence: event.sequence, event_id: event.event_id.clone() }
+        Self {
+            origin: event.origin.clone(),
+            sequence: event.sequence,
+            event_id: event.event_id.clone(),
+        }
     }
 }
 
@@ -38,7 +42,10 @@ fn invalid(message: &'static str) -> io::Error {
 
 impl Ledger {
     pub fn empty() -> Self {
-        Self { schema_version: 1, events: Vec::new() }
+        Self {
+            schema_version: 1,
+            events: Vec::new(),
+        }
     }
 
     pub fn validate(&self) -> io::Result<()> {
@@ -51,7 +58,9 @@ impl Ledger {
             let header = EventHeader::from(event);
             // Reuse planner's ID validation, without assuming any transport trust.
             if crate::sync_delta::plan_batch(std::slice::from_ref(&header), &Default::default(), 1)
-                .is_err_and(|e| matches!(e, PlanError::InvalidIdentifier | PlanError::InvalidSequence))
+                .is_err_and(|e| {
+                    matches!(e, PlanError::InvalidIdentifier | PlanError::InvalidSequence)
+                })
             {
                 return Err(invalid("invalid event header"));
             }
@@ -92,8 +101,8 @@ impl Ledger {
         if bytes.len() as u64 > MAX_LEDGER_BYTES {
             return Err(invalid("ledger too large"));
         }
-        let ledger: Self = serde_json::from_slice(&bytes)
-            .map_err(|_| invalid("malformed ledger JSON"))?;
+        let ledger: Self =
+            serde_json::from_slice(&bytes).map_err(|_| invalid("malformed ledger JSON"))?;
         ledger.validate()?;
         Ok(ledger)
     }
@@ -102,18 +111,21 @@ impl Ledger {
     /// already exist and be operator-controlled; writer coordination is external.
     pub fn save(&self, path: &Path) -> io::Result<()> {
         self.validate()?;
-        let parent = path.parent().ok_or_else(|| invalid("missing parent directory"))?;
+        let parent = path
+            .parent()
+            .ok_or_else(|| invalid("missing parent directory"))?;
         if !fs::symlink_metadata(parent)?.file_type().is_dir() {
             return Err(invalid("parent must be a directory"));
         }
         match fs::symlink_metadata(path) {
-            Ok(m) if !m.file_type().is_file() => return Err(invalid("existing target is not regular file")),
-            Err(e) if e.kind() == ErrorKind::NotFound => {},
+            Ok(m) if !m.file_type().is_file() => {
+                return Err(invalid("existing target is not regular file"))
+            }
+            Err(e) if e.kind() == ErrorKind::NotFound => {}
             Err(e) => return Err(e),
-            _ => {},
+            _ => {}
         }
-        let bytes = serde_json::to_vec(self)
-            .map_err(|_| invalid("ledger serialization failed"))?;
+        let bytes = serde_json::to_vec(self).map_err(|_| invalid("ledger serialization failed"))?;
         if bytes.len() as u64 > MAX_LEDGER_BYTES {
             return Err(invalid("ledger too large"));
         }
@@ -132,7 +144,11 @@ impl Ledger {
 mod tests {
     use super::*;
     fn e(n: u64) -> StoredEvent {
-        StoredEvent { origin: "unit-a".into(), sequence: n, event_id: format!("ev-{n}") }
+        StoredEvent {
+            origin: "unit-a".into(),
+            sequence: n,
+            event_id: format!("ev-{n}"),
+        }
     }
     #[test]
     fn restart_round_trip() {
@@ -165,7 +181,12 @@ mod tests {
     #[test]
     fn missing_snapshot_is_not_initialized_implicitly() {
         let dir = tempfile::tempdir().unwrap();
-        assert_eq!(Ledger::load(&dir.path().join("missing")).unwrap_err().kind(), ErrorKind::NotFound);
+        assert_eq!(
+            Ledger::load(&dir.path().join("missing"))
+                .unwrap_err()
+                .kind(),
+            ErrorKind::NotFound
+        );
     }
     #[cfg(unix)]
     #[test]
