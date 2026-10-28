@@ -1,5 +1,9 @@
 # Rust-Boy | Architecture
 
+## Target host and package architecture
+
+The [host package roadmap](HOST_PACKAGE_ROADMAP.md) defines a future **one-foreground-package-at-a-time** shell with an always-available host Settings control. Package registry, background lifecycle, capability broker and independent adapter release gates remain planned; the current in-process ModuleHost is not a security sandbox. Existing dashboard and micro navigation remain the implemented baseline pending HOST-UI gates.
+
 ## Current Network Engineer integration
 
 `pipboy_core::network_suite` provides the shared 16-operation catalog and nine deterministic offline tools. `network_health` computes statistics without I/O. The binary's `endpoint_probe` performs finite ICMP/TCP tests; the existing core `network_probe` and `unifi` adapters provide private-LAN evidence and controller-connected clients.
