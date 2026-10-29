@@ -13,9 +13,16 @@ Commit `91753624bd39dfd9e7efccd85d5d1e33fe327891` pins official Node.js 22.23.4 
 
 Updated: 2026-10-29
 
+## Current PR and default-branch CI status — 2026-10-29
+
+- PR #71 head `da8e3cefa805fa1bb741ab815c371f6cbbce3720` passed all seven checks in [PR run 40839242430](https://github.com/pskeffington/pip_boy/actions/runs/40839242430). The branch-specific workflow badge reports **passing**.
+- The default `main` branch remains at `629f34f0ce21e37c6d2bc6567919ccc5c862c80d`; its latest listed run [40669977589](https://github.com/pskeffington/pip_boy/actions/runs/40669977589) concluded `startup_failure` with zero jobs. The failing badge visible on the default-branch README reflects this separate main run; it is not the status of PR #71.
+- The main workflow still contains third-party Action imports. The PR branch replaces these with repository-owned exact-SHA checkout and official toolchain bootstrap, preserving the stable/1.90, SDR and native platform gates. Main's badge will reflect the repaired workflow after the change is merged.
+- PR #71 remains draft because RB-CX-05's independent `rb_gis` renderer parity and operator/field acceptance remain open. Do not treat the green PR CI matrix as acceptance of those gates.
+
 ## Gate state
 
-- **Latest completed exact-head validation:** documentation commit `ea30d048fb0f58ae6c2f997beb289eb61408e0c6`; manual run [40838125904](https://github.com/pskeffington/pip_boy/actions/runs/40838125904) and push-triggered PR run [40838127662](https://github.com/pskeffington/pip_boy/actions/runs/40838127662) each passed all seven jobs, including stable/Rust 1.90, both SDR features, source/catalog policy, desktop/handheld Chromium, native macOS MAP and Windows ConPTY. CI policy continues to require zero external GitHub Action `uses:` dependencies.
+- **Latest completed exact-head validation:** PR documentation head `da8e3cefa805fa1bb741ab815c371f6cbbce3720`; push-triggered [run 40839242430](https://github.com/pskeffington/pip_boy/actions/runs/40839242430) passed all seven jobs, including stable/Rust 1.90, both SDR features, source/catalog policy, desktop/handheld Chromium, native macOS MAP and Windows ConPTY. CI policy continues to require zero external GitHub Action `uses:` dependencies.
 - **Acceptance/index checkpoint:** `7e0a19b440e9a8531390e00fb165b2b8df06f3d9`; [run 40831001927](https://github.com/pskeffington/pip_boy/actions/runs/40831001927) passed all seven jobs, including stable MAP browser regressions, Rust 1.90, SDR features, native Mac MAP and Windows ConPTY.
 - **Current gate:** RB-CX-05 is next, limited to host-owned GIS integration/parity work. `rb_gis` remains an independent repository and will not be modified from this checkout. RB-CX-04 is accepted software-only; its remaining blocker is external package launch because no approved launcher or binary identity is bound to a package.
 - **Last accepted Codex pass:** RB-CX-04. **Last completed PROD roadmap gate:** PROD-0 remains **not accepted**; these software pass acceptances do not certify the broader production baseline or release.

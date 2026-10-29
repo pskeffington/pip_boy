@@ -12,6 +12,12 @@ PR documentation head `bfe8570fc62fcac7ab570d405241ab7835834a76` passed the comp
 
 Final PR head `ea30d048fb0f58ae6c2f997beb289eb61408e0c6` then passed all seven jobs in the manual exact-head [run 40838125904](https://github.com/pskeffington/pip_boy/actions/runs/40838125904) and push-triggered [run 40838127662](https://github.com/pskeffington/pip_boy/actions/runs/40838127662). The PR-triggered run is the status-check evidence for the open pull request.
 
+### Current PR status versus `main` — 2026-10-29
+
+PR head `da8e3cefa805fa1bb741ab815c371f6cbbce3720` passed all seven checks in [run 40839242430](https://github.com/pskeffington/pip_boy/actions/runs/40839242430). The branch-specific README badge SVG reports **passing**. By contrast, default `main` at `629f34f0ce21e37c6d2bc6567919ccc5c862c80d` still has [run 40669977589](https://github.com/pskeffington/pip_boy/actions/runs/40669977589) recorded as `startup_failure` with zero jobs; a default-branch README therefore continues to render its main badge as failing until the CI repair is merged. The main workflow still has external Action imports; PR #71 removes those while retaining the full validation matrix. PR #71 remains draft because independent `rb_gis` parity and operator/field acceptance have not passed.
+
+On the current PR worktree, all six indexed RB-CX-05 checks passed: `node tools/test_rustgis_map_import.cjs`, `node tools/test_county_sources.cjs`, `node tools/test_county_boundary_cache.cjs`, `node tools/test_map_viewport.cjs`, `node tools/test_map_zip.cjs`, and `node tools/test_map_layers.cjs`. Chromium viewports passed at 480×320, 800×480 and 320×568 without provider requests. The first sandboxed viewport attempt returned loopback `EPERM`; the same unchanged viewport/ZIP/layer checks passed when local loopback test access was authorized. These are host-side GIS regressions and do not prove independent renderer parity.
+
 
 ## Admitted CI and local validation — 2026-10-29
 
