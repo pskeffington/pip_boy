@@ -50,6 +50,7 @@
       "hardware_gate": "software_only",
       "code": [
         "crates/pipboy-core/src/package_socket.rs",
+        "crates/pipboy-core/src/package_listener.rs",
         "crates/pipboy-core/src/package_transport.rs"
       ],
       "docs": [
@@ -61,7 +62,7 @@
         "tools/validate_host_packages.py",
         "tools/test_validate_host_packages.py"
       ],
-      "acceptance": "Typed protocol negotiation, sequencing, correlation, frame bounds and deadline-bounded Unix stream exchanges are unit-tested; socket creation/permissions, cryptographic peer authentication, capability brokerage, process launch and isolation remain unimplemented."
+      "acceptance": "Typed protocol negotiation, sequencing, correlation, frame bounds and deadline-bounded Unix exchanges are unit-tested. Private-directory socket creation, mode 0600, OS-reported peer UID/PID matching, occupied-path refusal and guarded cleanup are tested; host process launch, binary signature verification, capability brokerage and process isolation remain open."
     },
     {
       "id": "workbenches",

@@ -15,11 +15,14 @@ Updated: 2026-10-29
 - **Implemented, software validated:** generic stream frame helpers use a 4-byte big-endian length, accept clean EOF, reject empty/truncated/oversized frames, and cap reads before allocation at 64 KiB.
 - **Implemented, focused software validated:** `pipboy-core::package_transport::UnixAdapterSession` adds an absolute-deadline Unix stream handshake and serial request/response exchange; a peer's hello identity must match the expected package ID, and request IDs/package IDs are correlated. This accepts an already-open socket only; hello identity is not authentication and the transport does not authorize, dispatch, spawn, or isolate packages.
 - **Implemented, software validated:** desktop and micro package selectors consume the mounted roster in `/api/state`; selection, Settings and foreground clearing update `UniversalAdapterHost` through same-origin endpoints. Both shells display host-provided views as inert text and preserve package selection across Settings/reload. The current candidate bootstrap mounts one passive RADIO catalogue, but it does not auto-select, start playback or grant hardware access.
-- **Still unimplemented:** secure listener/socket-path ownership, peer authentication, timeout cancellation, domain dispatch, capability brokerage, signed/persistent installation state, process launch and isolation. Newly committed passive RADIO and Codex-index source requires exact-head Rust, CI and browser verification.
+- **Implemented, focused software validated:** `PrivateUnixListener` binds only in an existing current-user-owned private directory, refuses occupied paths, sets socket permissions to `0600`, checks the OS-reported UID and PID against the host's expected child process, and removes only the socket inode it created. Linux uses peer credentials; macOS uses `getpeereid` and `LOCAL_PEERPID`. This establishes process/account provenance at connection time, not module identity or signature; no listener is connected to a process launcher yet.
+- **Still unimplemented:** timeout cancellation, domain dispatch, capability brokerage, signed/persistent installation state, process launch and isolation. Newly integrated passive RADIO and Codex-index source still requires exact-head validation.
 - `cargo fmt --all -- --check` — passed.
 - `cargo check --workspace` — passed.
 - `cargo clippy --workspace --all-targets -- -D warnings` — passed.
-- `cargo test --workspace -- --test-threads=1` — passed: 77 `pipboy`, 294 core, 3 SDK and 12 broker tests (386 total), doc tests passed. The sandbox blocked three localhost fixtures on the first attempt; the full suite passed with localhost socket access.
+- `cargo test --workspace --locked -- --test-threads=1` — passed before integrating the newer remote RADIO/index commits: 77 `pipboy`, 298 core, 3 SDK and 12 broker tests (390 total), doc tests passed. Exact merged-head rerun is pending.
+- `cargo test -p pipboy-core package_listener --locked -- --test-threads=1` — passed before integrating the newer remote RADIO/index commits: 4 listener security/lifecycle tests, including rejection of an unexpected peer PID.
+- `cargo check -p pipboy-core --target aarch64-unknown-linux-gnu --locked` — **not completed**. The target is installed, but a target dependency was not cached and crates.io DNS failed while downloading `event-listener-strategy 0.5.4`. Linux-specific compilation is therefore not verified.
 - `cargo test -p pipboy-core package_transport --locked` — passed: 6 transport tests.
 - `cargo test --workspace --locked -- --test-threads=8` — passed on current controller-binding changes: 75 `pipboy`, 281 `pipboy-core` and 12 broker tests (368 total); doc tests passed (0 present). The first sandboxed attempt had three loopback permission failures; the same suite passed after granting local bind permission. The `pipboy` suite also passed five consecutive 8-thread runs at the prior checkpoint.
 - `python3 tools/validate_host_packages.py` — passed.
@@ -35,18 +38,19 @@ Updated: 2026-10-29
 
 ## Release acceptance
 
-- **Planned:** secure socket listener/peer provenance and all remaining production gates.
+- **Planned:** bind expected peer credentials to a real host launcher and verified binary identity, plus all remaining production gates.
 - **Implemented but unverified:** compiled-in passive RADIO station-catalogue bootstrap and shell selection. Interactive native adapter playback, signed installation and hardware UI acceptance are open.
-- **Software validated:** manifest registry, request codec/framing, deadline-bounded Unix stream session precursor, and desktop/micro shell lifecycle linkage.
+- **Software validated:** manifest registry, request codec/framing, deadline-bounded Unix stream session, private Unix socket path/permissions and expected-process OS peer credential checks, and desktop/micro shell lifecycle linkage.
 - **Hardware validated:** none for adapter integration.
 - **Release candidate / production accepted:** neither. **Accepted roadmap gates: 0/12**; PROD-3 is a source candidate, not a hardware-accepted interactive package.
 
 ## Open defects and blockers
 
-- Diagnose the historical GitHub Actions `startup_failure` using an actual affected run and its job/runner diagnostics; no run is currently exposed for the inspected main commit.
+- GitHub Actions `startup_failure` has zero-job evidence from earlier runs, but no diagnosis; exact-head CI remains pending.
 - One earlier full parallel run returned HTTP 422 in `manager_can_create_assign_dispatch_and_track_but_other_roles_cannot_reassign`; the failure did not reproduce in isolation, serial execution, five consecutive parallel suite runs or the latest full workspace run. The test now includes task-state context if it recurs.
 - One explicitly compiled, capability-free RADIO catalogue adapter is mounted by default, but not selected automatically. MAP, TV and COMMS remain inert references; signed installation and real audio-adapter integration remain open.
 - Local Mac/Pi hardware, media output and independently maintained package integration have not been accepted.
+- Expected UID/PID checks do not establish package identity, signature, or binary integrity.
 
 ## Codex development handoff
 

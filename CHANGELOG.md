@@ -15,6 +15,7 @@
 
 ## 2026-10-29 — Host lifecycle binding and SDK-aligned transport
 
+- Add `PrivateUnixListener` for current-user-owned private runtime directories, mode-0600 sockets, existing-path refusal, expected OS PID/UID matching and guarded cleanup; keep launch verification, code signing, broker policy and isolation explicitly separate.
 - Add a compact mounted-package selector and inert full-canvas view to desktop and micro shells; both remain disabled with an empty roster.
 - Route selector changes, Settings transitions and returns to shell navigation through the host foreground APIs, keeping shell state synchronized with lifecycle responses.
 - Add desktop focus and micro interaction regressions for empty/mounted rosters, switching, safe text rendering and foreground clearing.

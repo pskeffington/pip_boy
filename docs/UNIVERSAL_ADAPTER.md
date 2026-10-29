@@ -110,6 +110,7 @@ Once mounted, `select(id)` delivers activation/resume, suspending the previous f
 | ADAPTER-SDK-1 | SDK crate, stable typed envelope, bounded JSON, example | Workspace tests and build pass; protocol preview, not a published compatibility promise |
 | ADAPTER-HOST-1 | One trait, four synthetic adapters, lifecycle/error/Settings tests, unmount | Workspace tests pass for trusted in-process fixtures |
 | HOST-UI-1 | Bind shared foreground to micro and desktop, keep permanent Settings, no split panes | Desktop and micro selectors use shared host foreground APIs and inert text views; the newly compiled passive RADIO catalogue is mounted but its real browser acceptance is open |
+| ADAPTER-IPC-LISTENER-0 | Private Unix listener with expected-process peer credentials | Focused tests pass on macOS; listener is not wired to a launcher, adapter session, or signature verification |
 | ADAPTER-RADIO-CATALOG-0 | Compile-time `rust_radio` metadata adapter without audio/network/background grants | Candidate; new Rust, CI and browser validation pending |
 | ADAPTER-MAP-1 | Real rb_gis adapter and offline ZIP/county parity | Open |
 | ADAPTER-TV-1 | Native rust_tv display/audio contract | Open |

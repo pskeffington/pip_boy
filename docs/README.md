@@ -14,7 +14,7 @@ Technical contracts, architecture decisions, research provenance and validation 
 
 ## Package socket and GIS extraction
 
-[Pop-in package socket and GIS extraction](PACKAGE_SOCKET.md) defines the host-owned viewport boundary, package manifest, and independent rb_gis migration gates.
+[Package socket and GIS extraction](PACKAGE_SOCKET.md) documents the registry and bounded Unix transport, private socket-path helper, desktop/micro foreground linkage, and independent rb_gis migration gates.
 
 ## Host package roadmap
 
