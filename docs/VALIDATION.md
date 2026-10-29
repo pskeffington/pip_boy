@@ -13,7 +13,7 @@ Run [40823597748](https://github.com/pskeffington/pip_boy/actions/runs/408235977
 
 On the current local repair working tree, stable and Rust 1.90 each passed `cargo fmt --all -- --check`, locked all-target workspace check, `cargo test --workspace --locked` (393 tests), and Clippy with `-D warnings`. The first sandboxed stable test attempt had three loopback `EPERM`s; the unchanged suite passed with local loopback permission. Both `pipboy/soapy-sdr` and `pipboy/sdrconnect` passed stable locked check, Clippy and workspace test suites. Offline pass-index, CI-policy, component-index, host-package, repository, catalog, roles, Vault, security and smoke-roster validators/tests passed. `bash -n scripts/ci_bootstrap.sh` and `git diff --check` passed. The local Node v22.23.4 bootstrap is not network-validated: this environment cannot resolve `nodejs.org`.
 
-The working-tree repair pins Node v22.23.4 and its published architecture-specific digests, routes Rust bootstrap through the repository script, and adds a regression guard against external Action imports or dropped required matrices. It is not accepted until exact-head hosted CI passes, including the Mac Node bootstrap and Mac-first MAP step.
+Source commit `91753624bd39dfd9e7efccd85d5d1e33fe327891` pins Node v22.23.4 and its published architecture-specific digests, routes Rust bootstrap through the repository script, and adds a regression guard against external Action imports or dropped required matrices. It is not accepted until exact-head hosted CI passes, including the Mac Node bootstrap and Mac-first MAP step.
 
 ## Earlier exact-head rerun — 2026-10-29
 
