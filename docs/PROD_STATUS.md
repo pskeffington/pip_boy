@@ -6,7 +6,7 @@ Updated: 2026-10-28
 
 - **Current gate:** PROD-2 / host UI integration — **in progress**; PROD-1 protocol precursor remains software validated.
 - **Last completed gate:** PROD-0 baseline repair — **not accepted**. Mainline working tree and local validation are understood; GitHub Actions evidence is currently unavailable for the inspected commit, and CI startup failure has not been diagnosed.
-- **Branch:** `codex/package-adapter-protocol`; latest implementation commit `4800d3a` (single-view workspace and persistent Settings). Protocol commits: `5749054` (request codec), `28fa747` (negotiation/correlation), `c15fbe3` (bounded stream framing), and `fac8a85` (checkpoint).
+- **Branch:** `codex/package-adapter-protocol`; latest implementation commit `4800d3a` (single-view workspace and persistent Settings), checkpoint commit `918265b`. Protocol commits: `5749054` (request codec), `28fa747` (negotiation/correlation), `c15fbe3` (bounded stream framing), and `fac8a85` (checkpoint).
 - **Relevant pinned module revision:** `rust_radio` dependency revision `3d77d11da3a31fbc3144635da6d391a3febf38b7` from the workspace lock/config. The local `rust_radio/` directory is a separate untracked nested repository and was preserved untouched.
 
 ## Implementation and evidence
@@ -14,10 +14,10 @@ Updated: 2026-10-28
 - **Implemented, software validated:** `pipboy-core::package_socket` provides bounded JSON request, hello-claim and response codecs; highest-common-version negotiation; strictly increasing request IDs; and a 64-entry request correlator that validates package and ID matches. Identity in a hello remains an unauthenticated claim.
 - **Implemented, software validated:** generic stream frame helpers use a 4-byte big-endian length, accept clean EOF, reject empty/truncated/oversized frames, and cap reads before allocation at 64 KiB.
 - **Still unimplemented:** connected IPC, handshake deadlines, timeouts/cancellation, cryptographic authentication, dispatch, capability brokerage, trusted installation state and process isolation.
-- `cargo fmt --all -- --check` — passed.
-- `cargo check --workspace --all-targets --locked` — passed.
-- `cargo clippy --workspace --all-targets --locked -- -D warnings` — passed.
-- `cargo test --workspace --locked -- --test-threads=8` — passed: 74 `pipboy`, 275 `pipboy-core` and 12 broker tests (361 total); doc tests passed (0 present). The `pipboy` suite also passed five consecutive 8-thread runs. Earlier sandbox denial of localhost binds was resolved by granting the test process local bind permission.
+- `cargo fmt --all -- --check` — passed on the current UI branch.
+- `cargo check --workspace --all-targets --locked` — passed on the current UI branch.
+- `cargo clippy --workspace --all-targets --locked -- -D warnings` — passed on the current UI branch.
+- `cargo test --workspace --locked -- --test-threads=8` — passed on the current UI branch: 74 `pipboy`, 275 `pipboy-core` and 12 broker tests (361 total); doc tests passed (0 present). The first sandboxed attempt had three loopback permission failures; the same suite passed after granting local bind permission. The `pipboy` suite also passed five consecutive 8-thread runs at the prior checkpoint.
 - `python3 tools/validate_host_packages.py` — passed.
 - `python3 tools/test_validate_host_packages.py` — passed (8 tests).
 - `python3 tools/validate_component_index.py` — passed.
