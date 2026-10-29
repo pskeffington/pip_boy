@@ -23,6 +23,11 @@ Updated: 2026-10-29
 
 The screenshot reported by the operator was captured at 4:01 AM local time, before the successful main run started at 8:18 AM. The authoritative latest default-branch evidence is run `40872168761` above: completed successfully on `main`, all seven jobs passed. If the old failure remains visible, the README badge image may be cached; the linked run conclusion is authoritative.
 
+## Current Rust-Boy candidate — 2026-10-29
+
+- Pushed candidate commit `dc26a4705f1156faa5e1cfaa5cfbf277c7c58127` to PR #71 by fast-forward from its inspected head `4092b0fb2444e86546432e9e81de99fc64e11563`. Stable and Rust 1.90 workspace plus both SDR feature matrices, offline validators, and indexed MAP/desktop/handheld browser checks passed locally on this exact content.
+- GitHub has not admitted an exact-head workflow run for `dc26a4705f1156faa5e1cfaa5cfbf277c7c58127`; the GitHub API ref update did not create a push-triggered run. Treat hosted status as pending and keep PR #71 draft. Do not reuse prior-head success as exact-head evidence.
+
 ## Current exact-head and independent GIS source check — 2026-10-29
 
 - Historical PR #71 head `0fc2d9376d045c67071594fdc7363570561cba37` passed all seven jobs in [run 40865570902](https://github.com/pskeffington/pip_boy/actions/runs/40865570902). At that time `main`'s independent badge remained red; the later merged PR #72 and passing main run are recorded above.
