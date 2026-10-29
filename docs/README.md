@@ -4,6 +4,10 @@ Technical contracts, architecture decisions, research provenance and validation 
 
 **Current scope:** Rust 1.90+ desktop CLI/TUI, a separate micro-handheld shell and a loopback-only graphical dashboard, bundled reference library, notes and synthetic-only device workflows. NET ENGINEER performs an explicitly authorized, bounded LAN scan; OS-enforced peripheral permissions and physical device permissions remain separate; a TLS-only, explicitly configured UniFi connected-client reader is implemented. Physical controller acceptance remains open.
 
+## Terminal module command integration
+
+[Terminal-to-module command surface](TERMINAL_MODULE_COMMANDS.md) defines the gated shared command catalog, selected-toolset TUI workflow, dispatcher authorization, and acceptance tests. This is an implementation contract, not a claim that modules can execute in the terminal.
+
 ## Universal adapter SDK
 
 [Universal adapter implementation and four-module integration](UNIVERSAL_ADAPTER.md) documents the portable SDK, trusted host lifecycle manager, one-package viewport contract and open acceptance gates.
