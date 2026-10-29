@@ -15,12 +15,18 @@ Updated: 2026-10-29
 
 ## Gate state
 
-- **Latest completed source validation:** `a148bfdd112917bc8de9ae66784a8e2c1c31ba87`; [run 40833358785](https://github.com/pskeffington/pip_boy/actions/runs/40833358785) passed all seven jobs after rerunning the initial stable and Soapy failures. Stable rerun included the full GIS and desktop/mobile UI suites; Rust 1.90, both SDR feature jobs, native macOS and Windows passed. CI policy validation continues to require zero external GitHub Action `uses:` dependencies.
+- **Latest completed source validation:** `520b3bf2801d8a0a261ff16e96c40c3a2a02e5fb`; [run 40836201769](https://github.com/pskeffington/pip_boy/actions/runs/40836201769) passed all seven jobs, including the repaired county activation fixtures, both Rust toolchains, both SDR features, desktop/handheld Chromium, macOS MAP and Windows ConPTY. The following documentation checkpoint `a36d1ae3d7c937d72df12f3ab738d9d6a126711b` passed the same seven-job workflow in [run 40836904039](https://github.com/pskeffington/pip_boy/actions/runs/40836904039). CI policy continues to require zero external GitHub Action `uses:` dependencies.
 - **Acceptance/index checkpoint:** `7e0a19b440e9a8531390e00fb165b2b8df06f3d9`; [run 40831001927](https://github.com/pskeffington/pip_boy/actions/runs/40831001927) passed all seven jobs, including stable MAP browser regressions, Rust 1.90, SDR features, native Mac MAP and Windows ConPTY.
 - **Current gate:** RB-CX-05 is next, limited to host-owned GIS integration/parity work. `rb_gis` remains an independent repository and will not be modified from this checkout. RB-CX-04 is accepted software-only; its remaining blocker is external package launch because no approved launcher or binary identity is bound to a package.
 - **Last accepted Codex pass:** RB-CX-04. **Last completed PROD roadmap gate:** PROD-0 remains **not accepted**; these software pass acceptances do not certify the broader production baseline or release.
 - **Branch:** draft [PR #71](https://github.com/pskeffington/pip_boy/pull/71), `codex/package-adapter-protocol`. First-party CI repair is included. `rust_radio/` remains an independent untracked nested repository and is untouched.
 - **Relevant pinned module revision:** `rust_radio` dependency revision `3d77d11da3a31fbc3144635da6d391a3febf38b7` from the workspace lock/config. The local `rust_radio/` directory is a separate untracked nested repository and was preserved untouched.
+
+## Clean `main` user build — 2026-10-29
+
+- Fetched remote `main` at `629f34f0ce21e37c6d2bc6567919ccc5c862c80d`, exported that exact tree to a clean temporary source directory, and successfully ran `cargo +stable build --workspace --locked` on macOS ARM64.
+- `cargo +stable run --locked -p pipboy -- --help` also succeeded from the clean build, confirming the documented executable entry point.
+- The README now lists Rust 1.90+, the Debian/Ubuntu C toolchain, `pkg-config` and ALSA header prerequisites, and locked workspace build/CLI commands. This build result is source-compilation evidence; it does not replace native Windows/Pi operator, hardware or field acceptance.
 
 ## RB-CX-02 accepted — backend approvals and media ownership
 

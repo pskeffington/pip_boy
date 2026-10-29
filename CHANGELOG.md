@@ -1,10 +1,17 @@
 # Changelog
 
-## 2026-10-29 — Codex development-pass indexing (draft; run evidence pending)
+## 2026-10-29 — First-party CI and user build verification
+
+- Verify the PR branch's seven-job, zero-external-Action workflow on exact source `520b3bf2801d8a0a261ff16e96c40c3a2a02e5fb` ([run 40836201769](https://github.com/pskeffington/pip_boy/actions/runs/40836201769)).
+- Clean-build the remote `main` source snapshot `629f34f0ce21e37c6d2bc6567919ccc5c862c80d` with `cargo +stable build --workspace --locked`; run the resulting CLI help successfully on macOS ARM64.
+- Document Debian/Ubuntu ALSA build prerequisites and the locked workspace build/CLI smoke commands. Hardware, Mac operator and field acceptance remain separate.
+
+
+## 2026-10-29 — Codex development-pass indexing (validated)
 
 - Add root Codex development instructions, a typed 11-pass dependency/index queue and source-of-truth navigation guide.
 - Repair duplicate dashboard HTTP entrypoint ownership in the component index; cross-module integration remains documented without a second code owner.
-- Add offline pass-index validator/negative tests to the existing catalog CI job; update production checkpoint to distinguish the passive RADIO source candidate from earlier executed UI/transport checks.
+- Add offline pass-index validator/negative tests to the existing catalog CI job; update production checkpoint to distinguish the passive RADIO source candidate from earlier executed UI/transport checks. Checkpoint head `520b3bf2801d8a0a261ff16e96c40c3a2a02e5fb` passed all seven jobs in [run 40836201769](https://github.com/pskeffington/pip_boy/actions/runs/40836201769).
 
 
 ## 2026-10-29 — Compile-time first-party RADIO catalogue (draft)

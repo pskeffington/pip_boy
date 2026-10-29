@@ -4,6 +4,10 @@
 
 Removed `dtolnay/rust-toolchain@stable`, `actions/checkout@v4` and `actions/setup-node@v4` from the draft workflow and replaced them with first-party checkout/bootstrap commands. The repository bootstrap pins official Node.js v22.23.4 and verifies architecture-specific SHA-256 values published in the [official Node.js release record](https://github.com/nodejs/nodejs.org/blob/main/apps/site/pages/en/blog/release/v22.23.4.md). Exact-head run [40824698037](https://github.com/pskeffington/pip_boy/actions/runs/40824698037) verified the pinned Mac Node, Mac-first MAP and all other CI jobs on `c425994eb8a172c357c6920e29d2b4d38cdc5050`. This establishes first-party GitHub Action orchestration, not a fully offline dependency supply chain.
 
+## Clean `main` user build — 2026-10-29
+
+Fetched the actual remote `main` branch at `629f34f0ce21e37c6d2bc6567919ccc5c862c80d` and exported it to a clean temporary directory, without using the PR branch's source files. On macOS ARM64, `cargo +stable build --workspace --locked` compiled every workspace package successfully; `cargo +stable run --locked -p pipboy -- --help` launched the resulting binary and printed the CLI usage. The README documents the matching commands and the ALSA development headers/pkg-config prerequisite for Debian/Ubuntu. This verifies a clean source build and CLI startup on one host; it is not a cross-platform or field-acceptance claim.
+
 
 ## Admitted CI and local validation — 2026-10-29
 

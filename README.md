@@ -1,6 +1,6 @@
 # Rust-Boy
 
-**CI supply-chain boundary:** the draft [Rust workflow](.github/workflows/rust.yml) replaces third-party GitHub Action imports with first-party checkout/toolchain verification commands. This is not a fully offline build: Rustup, system packages and pinned Cargo dependencies still require their respective sources. CI admission remains unverified.
+**First-party CI:** the [Rust workflow](.github/workflows/rust.yml) uses zero external GitHub Action `uses:` dependencies, checks out the exact triggering SHA, and validates stable Rust, the 1.90 MSRV, both optional SDR features, and native macOS/Windows builds. PR #71's source head `520b3bf2801d8a0a261ff16e96c40c3a2a02e5fb` passed all seven jobs in [run 40836201769](https://github.com/pskeffington/pip_boy/actions/runs/40836201769). This is not a fully offline build: Rustup, system packages and pinned Cargo dependencies still require their respective sources.
 
 
 [![Rust-Boy quality gates](https://github.com/pskeffington/pip_boy/actions/workflows/rust.yml/badge.svg?branch=main)](https://github.com/pskeffington/pip_boy/actions/workflows/rust.yml)
@@ -36,7 +36,21 @@ Roles use short operator titles: **Overseer, Maintenance, Security, Doctor, Scie
 
 ## Quick start
 
-Install [Rust and Cargo](https://www.rust-lang.org/tools/install) — **Rust 1.90 or newer** — and Git. Daily development uses stable Rust; CI also checks the exact 1.90.0 minimum. The workspace retains Rust edition 2021.
+Install [Rust and Cargo](https://www.rust-lang.org/tools/install) — **Rust 1.90 or newer** — and Git. Daily development uses stable Rust; CI also checks the exact 1.90.0 minimum. The workspace retains Rust edition 2021. Linux builds need a C toolchain, `pkg-config` and ALSA development headers. On Debian/Ubuntu:
+
+```bash
+sudo apt-get update
+sudo apt-get install --no-install-recommends build-essential pkg-config libasound2-dev
+```
+
+Build the complete workspace from the locked dependency set, then verify the CLI:
+
+```bash
+cargo +stable build --workspace --locked
+cargo +stable run --locked -p pipboy -- --help
+```
+
+The remote `main` branch at `629f34f0ce21e37c6d2bc6567919ccc5c862c80d` was extracted into a clean directory and both commands passed on macOS ARM64. This verifies that source snapshot's build; it does not certify hardware or field acceptance.
 
 ```bash
 git clone https://github.com/pskeffington/pip_boy.git
