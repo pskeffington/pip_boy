@@ -6,6 +6,8 @@ The catalog job additionally registers `python3 tools/validate_codex_passes.py` 
 
 For exact source revision `8a5c9d162af5ede9449dcf924f88fba15e9bdb38`, [Actions run 40822394927](https://github.com/pskeffington/pip_boy/actions/runs/40822394927) also ended `startup_failure`. PR check diagnostics returned zero jobs, checks and statuses. Local stable and Rust 1.90 gates passed, but this run provides no CI execution result or root-cause explanation; the pass remains open.
 
+The next exact-head run, [40822764662](https://github.com/pskeffington/pip_boy/actions/runs/40822764662) for `6f1e8d276595e62930b506d5f878e0b952832777`, failed the same way: REST reports `startup_failure` and its jobs endpoint returns `total_count: 0`. The checked-in workflow has an unfiltered `pull_request` trigger and statically defines the catalog, stable/1.90 Rust matrix, optional SDR and native jobs; no workflow-level skip condition is visible. [GitHub Status](https://www.githubstatus.com/) lists Actions operational and no incident for Oct 29. These observations narrow the evidence to pre-job admission but do not identify whether the repository policy, account settings, or GitHub's run service caused it. Keep workflow gates unchanged and obtain repository Actions settings or GitHub support diagnostics before altering YAML.
+
 
 ## Current smoke-test inventory (2026-10-26)
 

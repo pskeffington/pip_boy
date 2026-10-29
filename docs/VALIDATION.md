@@ -1,5 +1,9 @@
 # Rust-Boy | Validation evidence
 
+## Current exact-head rerun — 2026-10-29
+
+At PR head `6f1e8d276595e62930b506d5f878e0b952832777`, stable and Rust 1.90 both passed format, locked workspace check, locked workspace tests (77 `pipboy`, 301 core, 3 SDK, 12 broker; 393 total) and Clippy. The test runs used local socket access. The Actions run for this head, [40822764662](https://github.com/pskeffington/pip_boy/actions/runs/40822764662), failed at startup and exposed zero jobs/checks/statuses. GitHub Status showed Actions operational with no Oct 29 incident, which does not explain this run. RB-CX-00 remains pending CI execution and physical acceptance.
+
 ## Rust 1.90 and exact-head CI follow-up — 2026-10-29
 
 At source revision `8a5c9d162af5ede9449dcf924f88fba15e9bdb38`, both stable and Rust 1.90 passed `cargo fmt --all -- --check`, `cargo check --workspace --all-targets --locked`, `cargo test --workspace --locked -- --test-threads=1` (393 tests), and `cargo clippy --workspace --all-targets --locked -- -D warnings`. An isolated Rust 1.90 aarch64 Linux check of `package_listener.rs` also passed with `rustix` net/process features. The full workspace cross-build is not verified: vendored D-Bus requires `aarch64-linux-gnu-gcc`, which is absent on this Mac.

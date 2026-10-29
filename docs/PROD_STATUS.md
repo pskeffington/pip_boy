@@ -4,7 +4,7 @@ Updated: 2026-10-29
 
 ## Gate state
 
-- **Latest locally tested source revision:** `8a5c9d162af5ede9449dcf924f88fba15e9bdb38`; stable and Rust 1.90 checks both passed. Exact-head Actions run [40822394927](https://github.com/pskeffington/pip_boy/actions/runs/40822394927) ended `startup_failure`; diagnostics show zero jobs, checks or statuses. Local tests are not CI evidence.
+- **Latest locally tested source revision:** `6f1e8d276595e62930b506d5f878e0b952832777`; stable and Rust 1.90 checks both passed. Exact-head Actions run [40822764662](https://github.com/pskeffington/pip_boy/actions/runs/40822764662) ended `startup_failure`; diagnostics show zero jobs, checks or statuses. Local tests are not CI evidence.
 - **Current gate:** PROD-3 / passive RADIO bootstrap — **stable and Rust 1.90 software and browser checks pass; pass remains open pending a runnable exact-head CI job and field acceptance**. Desktop and micro shells now select only mounted packages via host APIs, show inert package view data, and clear foreground on shell navigation. A passive, compiled-in RADIO catalogue now populates one roster entry; interactive playback and device acceptance remain open.
 - **Last completed gate:** PROD-0 baseline repair — **not accepted**. Mainline working tree and local validation are understood; GitHub Actions evidence is currently unavailable for the inspected commit, and CI startup failure has not been diagnosed.
 - **Branch:** draft [PR #71](https://github.com/pskeffington/pip_boy/pull/71), `codex/package-adapter-protocol`. Previous UI/transport integration checkpoints are documented below; inspect the live PR HEAD before claiming a build or CI result. The passive RADIO pilot and new Codex indexing changes are still validation candidates.
@@ -52,7 +52,7 @@ Updated: 2026-10-29
 
 ## Open defects and blockers
 
-- GitHub Actions run `40822394927` for the tested source revision ended `startup_failure` with zero jobs; the root cause remains unknown and CI for this candidate remains pending.
+- GitHub Actions run `40822764662` for the tested source revision ended `startup_failure` with zero jobs; the root cause remains unknown and CI for this candidate remains pending. GitHub Status reports Actions operational and no Oct 29 incident; this does not identify the repository/run-specific cause.
 - One earlier full parallel run returned HTTP 422 in `manager_can_create_assign_dispatch_and_track_but_other_roles_cannot_reassign`; the failure did not reproduce in isolation, serial execution, five consecutive parallel suite runs or the latest full workspace run. The test now includes task-state context if it recurs.
 - One explicitly compiled, capability-free RADIO catalogue adapter is mounted by default, but not selected automatically. MAP, TV and COMMS remain inert references; signed installation and real audio-adapter integration remain open.
 - Local Mac/Pi hardware, media output and independently maintained package integration have not been accepted.
