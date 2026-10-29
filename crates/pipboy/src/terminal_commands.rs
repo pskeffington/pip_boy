@@ -69,30 +69,60 @@ fn dispatch(id: &str, tokens: &[&str]) -> Result<(), Box<dyn Error>> {
     }
 }
 
-fn route<'a>(board: &'a Workbench, selected: &mut Option<&'a str>, input: &str) -> Result<bool, Box<dyn Error>> {
+fn select_tool<'a>(
+    board: &'a Workbench,
+    selected: &mut Option<&'a str>,
+    id: &str,
+) -> Result<(), Box<dyn Error>> {
+    let pinned = board.slots.iter()
+        .find(|slot| slot.tool == id && supported(id))
+        .ok_or("tool is not pinned or has no validated offline terminal handler")?;
+    *selected = Some(pinned.tool.as_str());
+    println!("SELECTED {id}; available: {}", commands(id));
+    Ok(())
+}
+
+fn route<'a>(
+    board: &'a Workbench,
+    selected: &mut Option<&'a str>,
+    input: &str,
+) -> Result<bool, Box<dyn Error>> {
     if input.len() > MAX_INPUT || input.chars().any(|c| c.is_control()) {
         return Err("invalid or oversized command".into());
     }
     let tokens: Vec<&str> = input.split_whitespace().collect();
     match tokens.as_slice() {
         [] => Ok(true),
-        ["quit"] | ["exit"] => Ok(false),
+        ["q" | "quit" | "exit"] => Ok(false),
         ["tools"] => {
-            println!("Installed terminal handlers for pinned Workbench tools:");
-            for id in selected_tools(board) { println!("  {id}{}", if Some(id) == *selected { " [selected]" } else { "" }); }
-            println!("Other pinned tools are not executable in this terminal.");
+            println!("Available offline handlers for pinned Workbench tools:");
+            for id in selected_tools(board) {
+                println!("  {id}{}", if Some(id) == *selected { " [selected]" } else { "" });
+            }
+            println!("Select a tool by typing its name, e.g. net-lab.");
+            println!("Other pinned modules are not connected to this terminal.");
             Ok(true)
         }
         ["select", id] => {
-            let pinned = board.slots.iter().find(|slot| slot.tool == *id && supported(id))
-                .ok_or("tool is not pinned or has no validated offline terminal handler")?;
-            *selected = Some(pinned.tool.as_str());
-            println!("SELECTED {id}; no action started");
+            select_tool(board, selected, id)?;
             Ok(true)
         }
-        ["help"] => {
-            println!("tools | select TOOL | help | run COMMAND | quit");
-            println!("Only explicitly supported offline Rust handlers are callable.");
+        [id] if supported(id) => {
+            // Direct names are selectors except where an active tool owns that verb.
+            // For instance, 'host' runs the diagnostic when diag is selected.
+            if let Some(active) = *selected {
+                if active == "diag" && *id == "host" {
+                    dispatch(active, &tokens)?;
+                    return Ok(true);
+                }
+            }
+            select_tool(board, selected, id)?;
+            Ok(true)
+        }
+        ["help" | "?"] => {
+            println!("tools | TOOL | select TOOL | COMMAND | run COMMAND | q | quit | exit");
+            println!("The tool name selects a pinned offline handler without executing it.");
+            println!("Commands are available only for the selected tool; no shell commands.");
             if let Some(id) = selected { println!("{id}: {}", commands(id)); }
             Ok(true)
         }
@@ -101,7 +131,14 @@ fn route<'a>(board: &'a Workbench, selected: &mut Option<&'a str>, input: &str) 
             dispatch(id, rest)?;
             Ok(true)
         }
-        _ => Err("unknown command; use help (no shell commands accepted)".into()),
+        [first, ..] if first.starts_with("rb:") || *first == "null@nulls-Laptop" => {
+            Err("paste only the command text after the prompt (for example: run status)".into())
+        }
+        _ => {
+            let id = selected.ok_or("no offline tool selected; use tools and select TOOL")?;
+            dispatch(id, &tokens)?;
+            Ok(true)
+        }
     }
 }
 
@@ -153,6 +190,31 @@ mod tests {
         assert!(route(&board, &mut selected, "run status").is_err());
         assert!(route(&board, &mut selected, "sh -c id").is_err());
         assert!(route(&board, &mut selected, "run net scan local --confirm").is_err());
+    }
+
+    #[test]
+    fn direct_selection_and_commands() {
+        let board = Workbench::from_preset(&PRESETS[2]); // Security
+        let mut selected = None;
+        assert!(route(&board, &mut selected, "net-lab").unwrap());
+        assert_eq!(selected, Some("net-lab"));
+        assert!(route(&board, &mut selected, "list").unwrap());
+        assert!(route(&board, &mut selected, "host").unwrap());
+        assert_eq!(selected, Some("host"));
+        assert!(route(&board, &mut selected, "status").unwrap());
+        assert!(route(&board, &mut selected, "byte-lab").unwrap());
+        assert!(route(&board, &mut selected, "encode Rust Boy").unwrap());
+        assert!(!route(&board, &mut selected, "q").unwrap());
+    }
+
+    #[test]
+    fn prompt_paste_and_active_network_remain_rejected() {
+        let board = Workbench::from_preset(&PRESETS[2]); // Security
+        let mut selected = Some("host");
+        assert!(route(&board, &mut selected, "rb:host> run status").is_err());
+        assert!(route(&board, &mut selected, "net scan local --confirm").is_err());
+        assert!(route(&board, &mut selected, "select net-lab run").is_err());
+        assert!(route(&board, &mut selected, "radio").is_err());
     }
 
     #[test]
