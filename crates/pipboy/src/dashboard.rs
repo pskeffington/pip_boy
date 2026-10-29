@@ -407,11 +407,19 @@ fn host_packages_value(host: &UniversalAdapterHost) -> Value {
 
 fn host_select_package(req: &Request) -> Result<Response, Response> {
     let body = parse_json_body(req, &["package_id"])?;
-    let package_id = str_field(&body, "package_id")?;
     let mut host = UNIVERSAL_ADAPTER_HOST
         .lock()
         .map_err(|_| Response::error(500, "Host package state unavailable"))?;
-    select_host_package(&mut host, package_id)
+    match body.get("package_id") {
+        Some(Value::String(package_id)) if !package_id.is_empty() => {
+            select_host_package(&mut host, package_id)
+        }
+        Some(Value::Null) => clear_host_foreground(&mut host),
+        _ => Err(Response::error(
+            422,
+            "package_id must be a mounted ID or null",
+        )),
+    }
 }
 
 fn select_host_package(
@@ -420,6 +428,20 @@ fn select_host_package(
 ) -> Result<Response, Response> {
     host.select(package_id)
         .map_err(|_| Response::error(409, "Package is not mounted or cannot be activated"))?;
+    Ok(Response::json(
+        200,
+        &json!({
+            "selected_package_id": host.selected_package_id(),
+            "foreground": host_foreground_value(host.surface()),
+            "settings_open": host.settings_open(),
+            "foreground_view": host.foreground_view()
+        }),
+    ))
+}
+
+fn clear_host_foreground(host: &mut UniversalAdapterHost) -> Result<Response, Response> {
+    host.clear_foreground()
+        .map_err(|_| Response::error(409, "Unable to suspend the foreground package"))?;
     Ok(Response::json(
         200,
         &json!({
@@ -2735,6 +2757,15 @@ mod tests {
             8765,
         );
         assert_eq!(reference_selection.status, 409);
+
+        let clear = dispatch(
+            &request("POST", "/api/host/foreground", json!({"package_id":null})),
+            &store,
+            8765,
+        );
+        assert_eq!(clear.status, 200);
+        let cleared: Value = serde_json::from_slice(&clear.body).unwrap();
+        assert_eq!(cleared["selected_package_id"], Value::Null);
 
         let mut cross_origin = request(
             "POST",

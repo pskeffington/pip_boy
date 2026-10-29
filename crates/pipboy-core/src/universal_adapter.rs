@@ -295,6 +295,25 @@ impl UniversalAdapterHost {
         Ok(())
     }
 
+    /// Returns foreground ownership to the host shell without uninstalling the
+    /// adapter. When Settings is open the package is already suspended.
+    pub fn clear_foreground(&mut self) -> Result<(), AdapterError> {
+        if let Some(package_id) = self.foreground.active_package_id().map(str::to_owned) {
+            if !self.foreground.settings_open() {
+                if let Err(error) = self.invoke(&package_id, AdapterCommand::Suspend) {
+                    self.fail(&package_id);
+                    self.foreground.clear_package();
+                    return Err(error);
+                }
+                if let Some(entry) = self.mounted.get_mut(&package_id) {
+                    entry.state = AdapterState::Suspended;
+                }
+            }
+            self.foreground.clear_package();
+        }
+        Ok(())
+    }
+
     pub fn resize(&mut self, width: u16, height: u16) -> Result<(), AdapterError> {
         let viewport = Viewport::new(width, height)?;
         self.viewport = viewport;
@@ -555,6 +574,39 @@ mod tests {
         assert_eq!(calls.lock().unwrap().len(), 3);
         host.resize(800, 480).unwrap();
         assert_eq!(calls.lock().unwrap().len(), 4);
+    }
+
+    #[test]
+    fn clearing_foreground_suspends_without_unmounting_and_keeps_settings_open() {
+        let mut host = UniversalAdapterHost::new(Viewport::new(480, 320).unwrap());
+        let calls = mount(&mut host, "org.rustboy.radio", None);
+        host.select("org.rustboy.radio").unwrap();
+        host.clear_foreground().unwrap();
+        assert_eq!(host.surface(), HostSurface::Empty);
+        assert_eq!(
+            host.state("org.rustboy.radio"),
+            Some(AdapterState::Suspended)
+        );
+        assert_eq!(host.len(), 1);
+        assert_eq!(calls.lock().unwrap().len(), 2);
+
+        host.select("org.rustboy.radio").unwrap();
+        host.open_settings();
+        let before = calls.lock().unwrap().len();
+        host.clear_foreground().unwrap();
+        assert_eq!(host.surface(), HostSurface::Settings);
+        assert_eq!(host.selected_package_id(), None);
+        assert_eq!(calls.lock().unwrap().len(), before);
+    }
+
+    #[test]
+    fn failed_suspend_clears_foreground_and_faults_adapter() {
+        let mut host = UniversalAdapterHost::new(Viewport::new(480, 320).unwrap());
+        mount(&mut host, "org.rustboy.radio", Some("suspend"));
+        host.select("org.rustboy.radio").unwrap();
+        assert!(host.clear_foreground().is_err());
+        assert_eq!(host.surface(), HostSurface::Empty);
+        assert_eq!(host.state("org.rustboy.radio"), Some(AdapterState::Faulted));
     }
 
     #[test]
