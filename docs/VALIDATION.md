@@ -1,5 +1,11 @@
 # Rust-Boy | Validation evidence
 
+## Rust 1.90 and exact-head CI follow-up — 2026-10-29
+
+At source revision `8a5c9d162af5ede9449dcf924f88fba15e9bdb38`, both stable and Rust 1.90 passed `cargo fmt --all -- --check`, `cargo check --workspace --all-targets --locked`, `cargo test --workspace --locked -- --test-threads=1` (393 tests), and `cargo clippy --workspace --all-targets --locked -- -D warnings`. An isolated Rust 1.90 aarch64 Linux check of `package_listener.rs` also passed with `rustix` net/process features. The full workspace cross-build is not verified: vendored D-Bus requires `aarch64-linux-gnu-gcc`, which is absent on this Mac.
+
+The Actions workflow run for this exact source revision, [40822394927](https://github.com/pskeffington/pip_boy/actions/runs/40822394927), concluded `startup_failure`; PR diagnostics returned zero jobs, checks and statuses. This supplies an affected run but no job logs or root-cause diagnosis. RB-CX-00 remains pending; local compiler results do not substitute for CI or field acceptance.
+
 ## RB-CX-00 local merged-branch validation — 2026-10-29
 
 At tested source revision `8edff4b948b24187786dcde61db74e212b26485d`, after integrating the passive RADIO catalogue and Codex pass-index commits into `codex/package-adapter-protocol`, local stable-toolchain validation passed for the merged source plus `cargo fmt` cleanup in `builtin_packages.rs` and `lib.rs`. The Rust suite passed 77 `pipboy`, 301 `pipboy-core`, 3 SDK and 12 broker tests (393 total), plus doc tests. `cargo check --workspace --all-targets --locked`, `cargo clippy --workspace --all-targets --locked -- -D warnings`, and `cargo fmt --all -- --check` passed. Workspace tests needed local socket permissions; the first sandboxed run failed three existing loopback fixtures with `EPERM`.

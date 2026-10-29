@@ -4,6 +4,8 @@
 
 The catalog job additionally registers `python3 tools/validate_codex_passes.py` and `python3 tools/test_validate_codex_passes.py`. These are filesystem-only schema, dependency, component-ID and path checks; they do not build Rust or certify a release. [Actions run 40821379695](https://github.com/pskeffington/pip_boy/actions/runs/40821379695) at `5b4a66e` ended in `startup_failure` with zero jobs, so the new pass checks did not execute. Investigate run-level annotations and runner admission without asserting a compiler failure. Inspect exact-head workflow evidence before marking a pass accepted. The existing component owner index must remain single-owner even when a module is used by multiple integration layers.
 
+For exact source revision `8a5c9d162af5ede9449dcf924f88fba15e9bdb38`, [Actions run 40822394927](https://github.com/pskeffington/pip_boy/actions/runs/40822394927) also ended `startup_failure`. PR check diagnostics returned zero jobs, checks and statuses. Local stable and Rust 1.90 gates passed, but this run provides no CI execution result or root-cause explanation; the pass remains open.
+
 
 ## Current smoke-test inventory (2026-10-26)
 
