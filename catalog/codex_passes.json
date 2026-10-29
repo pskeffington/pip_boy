@@ -258,6 +258,7 @@
       ],
       "checks": [
         "tools/test_rustgis_map_import.cjs",
+        "tools/test_rustgis_map_view.cjs",
         "tools/test_county_sources.cjs",
         "tools/test_county_boundary_cache.cjs",
         "tools/test_map_viewport.cjs",
