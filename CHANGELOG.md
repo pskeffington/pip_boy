@@ -3,6 +3,7 @@
 ## 2026-10-28 — Bounded package adapter request codec
 
 - Add typed version-1 request, hello-claim and response codecs with monotonic request sequencing, request correlation, a 64-request in-flight cap, package ID validation, viewport bounds and a 64 KiB frame limit.
+- Add generic 4-byte length-prefixed stream framing with clean EOF, truncation and oversized-frame handling.
 - Exercise version negotiation, valid round trips, duplicate/out-of-order IDs, mismatched responses and invalid or oversized frames.
 - Keep the codec inert: transport, cryptographic authentication, dispatch, capabilities and process isolation remain open gates.
 

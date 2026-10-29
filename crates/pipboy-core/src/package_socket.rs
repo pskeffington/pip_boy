@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
 use std::error::Error;
 use std::fmt;
+use std::io::{self, Read, Write};
 use std::path::Path;
 
 pub const SOCKET_API_VERSION: u32 = 1;
@@ -18,6 +19,7 @@ pub const MAX_CATALOG_PACKAGES: usize = 64;
 pub const MAX_PROTOCOL_MESSAGE_BYTES: usize = 64 * 1024;
 pub const MAX_PROTOCOL_VERSIONS: usize = 8;
 pub const MAX_IN_FLIGHT_REQUESTS: usize = 64;
+pub const PROTOCOL_FRAME_HEADER_BYTES: usize = 4;
 
 const REFERENCE_MANIFESTS: [&str; 4] = [
     include_str!("../../../catalog/host_packages/rb_gis.example.json"),
@@ -359,6 +361,85 @@ impl RequestCorrelator {
     pub fn pending_count(&self) -> usize {
         self.pending.len()
     }
+}
+
+#[derive(Debug)]
+pub enum FrameError {
+    Io(io::Error),
+    TruncatedHeader,
+    TruncatedPayload,
+    EmptyFrame,
+    FrameTooLarge,
+}
+
+impl fmt::Display for FrameError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Io(error) => write!(f, "Adapter stream I/O failed: {error}"),
+            Self::TruncatedHeader => write!(f, "Adapter frame header was truncated"),
+            Self::TruncatedPayload => write!(f, "Adapter frame payload was truncated"),
+            Self::EmptyFrame => write!(f, "Adapter frame must not be empty"),
+            Self::FrameTooLarge => write!(f, "Adapter frame exceeds 64 KiB"),
+        }
+    }
+}
+
+impl Error for FrameError {
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
+        match self {
+            Self::Io(error) => Some(error),
+            _ => None,
+        }
+    }
+}
+
+/// Reads one big-endian length-prefixed frame. A clean EOF before any header
+/// byte returns `Ok(None)`; partial headers and payloads are rejected.
+pub fn read_protocol_frame<R: Read>(reader: &mut R) -> Result<Option<Vec<u8>>, FrameError> {
+    let mut header = [0u8; PROTOCOL_FRAME_HEADER_BYTES];
+    loop {
+        match reader.read(&mut header[..1]) {
+            Ok(0) => return Ok(None),
+            Ok(1) => break,
+            Ok(_) => unreachable!("one-byte read returned more than one byte"),
+            Err(error) if error.kind() == io::ErrorKind::Interrupted => continue,
+            Err(error) => return Err(FrameError::Io(error)),
+        }
+    }
+    reader
+        .read_exact(&mut header[1..])
+        .map_err(|error| match error.kind() {
+            io::ErrorKind::UnexpectedEof => FrameError::TruncatedHeader,
+            _ => FrameError::Io(error),
+        })?;
+    let length = u32::from_be_bytes(header) as usize;
+    if length == 0 {
+        return Err(FrameError::EmptyFrame);
+    }
+    if length > MAX_PROTOCOL_MESSAGE_BYTES {
+        return Err(FrameError::FrameTooLarge);
+    }
+    let mut frame = vec![0; length];
+    reader
+        .read_exact(&mut frame)
+        .map_err(|error| match error.kind() {
+            io::ErrorKind::UnexpectedEof => FrameError::TruncatedPayload,
+            _ => FrameError::Io(error),
+        })?;
+    Ok(Some(frame))
+}
+
+/// Writes one complete, nonempty, bounded length-prefixed protocol frame.
+pub fn write_protocol_frame<W: Write>(writer: &mut W, frame: &[u8]) -> Result<(), FrameError> {
+    if frame.is_empty() {
+        return Err(FrameError::EmptyFrame);
+    }
+    if frame.len() > MAX_PROTOCOL_MESSAGE_BYTES {
+        return Err(FrameError::FrameTooLarge);
+    }
+    let header = (frame.len() as u32).to_be_bytes();
+    writer.write_all(&header).map_err(FrameError::Io)?;
+    writer.write_all(frame).map_err(FrameError::Io)
 }
 
 impl AdapterMessage {
@@ -1097,5 +1178,44 @@ mod tests {
             correlator.complete(&response(1, "org.rustboy.gis")),
             Err(CorrelationError::UnknownRequestId)
         );
+    }
+
+    #[test]
+    fn stream_frames_round_trip_and_reject_truncation_and_unbounded_lengths() {
+        let mut encoded = Vec::new();
+        write_protocol_frame(&mut encoded, b"hello").unwrap();
+        write_protocol_frame(&mut encoded, b"world").unwrap();
+        let mut reader = encoded.as_slice();
+        assert_eq!(read_protocol_frame(&mut reader).unwrap().unwrap(), b"hello");
+        assert_eq!(read_protocol_frame(&mut reader).unwrap().unwrap(), b"world");
+        assert_eq!(read_protocol_frame(&mut reader).unwrap(), None);
+
+        assert!(matches!(
+            read_protocol_frame(&mut &[0, 0][..]),
+            Err(FrameError::TruncatedHeader)
+        ));
+        assert!(matches!(
+            read_protocol_frame(&mut &[0, 0, 0, 3, 1, 2][..]),
+            Err(FrameError::TruncatedPayload)
+        ));
+        assert!(matches!(
+            read_protocol_frame(&mut &[0, 0, 0, 0][..]),
+            Err(FrameError::EmptyFrame)
+        ));
+        let oversized_length = (MAX_PROTOCOL_MESSAGE_BYTES as u32 + 1).to_be_bytes();
+        assert!(matches!(
+            read_protocol_frame(&mut oversized_length.as_slice()),
+            Err(FrameError::FrameTooLarge)
+        ));
+        let mut output = Vec::new();
+        assert!(matches!(
+            write_protocol_frame(&mut output, &[]),
+            Err(FrameError::EmptyFrame)
+        ));
+        assert!(matches!(
+            write_protocol_frame(&mut output, &vec![0; MAX_PROTOCOL_MESSAGE_BYTES + 1]),
+            Err(FrameError::FrameTooLarge)
+        ));
+        assert!(output.is_empty());
     }
 }

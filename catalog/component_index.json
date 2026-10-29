@@ -46,7 +46,7 @@
     },
     {
       "id": "package-socket-contract",
-      "boundary": "Bounded manifest registry, typed message codecs, version negotiation and request correlation; no package execution or transport dispatch.",
+      "boundary": "Bounded manifest registry, typed message codecs, stream frame helpers, version negotiation and request correlation; no package execution or transport dispatch.",
       "hardware_gate": "software_only",
       "code": [
         "crates/pipboy-core/src/package_socket.rs"
@@ -59,7 +59,7 @@
         "tools/validate_host_packages.py",
         "tools/test_validate_host_packages.py"
       ],
-      "acceptance": "Typed protocol negotiation, sequencing, correlation and bounds are unit-tested; OS IPC, cryptographic authentication, timeouts and isolation remain unimplemented."
+      "acceptance": "Typed protocol negotiation, sequencing, correlation and frame bounds are unit-tested; connected IPC, cryptographic authentication, timeouts and isolation remain unimplemented."
     },
     {
       "id": "workbenches",

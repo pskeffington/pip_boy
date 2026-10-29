@@ -2007,19 +2007,22 @@ mod tests {
             .status,
             200
         );
+        let started = dispatch(
+            &request(
+                "POST",
+                "/api/tasks/change",
+                json!({"id":1,"revision":3,"operation":"status","status":"in_progress",
+                "note":"Inspection underway"}),
+            ),
+            &store,
+            8765,
+        );
         assert_eq!(
-            dispatch(
-                &request(
-                    "POST",
-                    "/api/tasks/change",
-                    json!({"id":1,"revision":3,"operation":"status","status":"in_progress",
-                    "note":"Inspection underway"})
-                ),
-                &store,
-                8765,
-            )
-            .status,
-            200
+            started.status,
+            200,
+            "response={} task={:?}",
+            String::from_utf8_lossy(&started.body),
+            task_store(&store).task(1)
         );
         assert_eq!(
             task_store(&store).task(1).unwrap().status,
