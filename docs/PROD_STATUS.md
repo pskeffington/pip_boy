@@ -6,7 +6,7 @@ Updated: 2026-10-29
 
 - **Current gate:** PROD-2 / host UI integration — **in progress**; Settings transitions are controller-bound, while package selection and the rest of navigation are not.
 - **Last completed gate:** PROD-0 baseline repair — **not accepted**. Mainline working tree and local validation are understood; GitHub Actions evidence is currently unavailable for the inspected commit, and CI startup failure has not been diagnosed.
-- **Branch:** `codex/package-adapter-protocol`; latest committed transport work is `c020483`, checkpoint `0598d8d`. UI implementation is `4800d3a`; protocol commits include `5749054`, `28fa747`, and `c15fbe3`.
+- **Branch:** `codex/package-adapter-protocol`; latest UI/controller commit `8197ffc`. Transport implementation is `c020483`, checkpoint `0598d8d`; earlier UI increment `4800d3a`; protocol commits include `5749054`, `28fa747`, and `c15fbe3`.
 - **Relevant pinned module revision:** `rust_radio` dependency revision `3d77d11da3a31fbc3144635da6d391a3febf38b7` from the workspace lock/config. The local `rust_radio/` directory is a separate untracked nested repository and was preserved untouched.
 
 ## Implementation and evidence
