@@ -34,6 +34,7 @@ mod sampling;
 mod scout;
 mod status;
 mod tui;
+mod terminal_commands;
 mod workbench;
 mod zip_index;
 
@@ -44,6 +45,7 @@ fn help() {
         "",
         "INTERFACES",
         "  tui                                terminal console (default)",
+        "  terminal                           selected-tool command terminal (offline handlers)",
         "  dashboard [--port PORT] [--open] [--micro]",
         "  game --discover-ps4 --confirm [--json]",
         "  game (--connect IP:PORT | --playstation IP | --ps4 IP) --confirm",
@@ -96,6 +98,7 @@ fn run() -> Result<(), Box<dyn Error>> {
     let mut args = std::env::args().skip(1);
     match args.next().as_deref() {
         None | Some("tui") => tui::run(),
+        Some("terminal") => terminal_commands::run(args.collect()),
         Some("help" | "--help" | "-h") => {
             help();
             Ok(())
