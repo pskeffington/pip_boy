@@ -2563,11 +2563,8 @@ mod tests {
 
         let cached_dir = temp.path().join("state/county_cache");
         std::fs::create_dir_all(&cached_dir).unwrap();
-        std::fs::write(
-            cached_dir.join("tl_2025_25025_roads.zip"),
-            b"PK\x03\x04local-cached-test",
-        )
-        .unwrap();
+        let cached_archive = crate::county_cache::tests::test_zip_archive("25025", "roads");
+        std::fs::write(cached_dir.join("tl_2025_25025_roads.zip"), &cached_archive).unwrap();
         let response = dispatch(
             &request(
                 "POST",
@@ -2579,7 +2576,7 @@ mod tests {
         );
         assert_eq!(response.status, 200);
         assert_eq!(response.content_type, "application/zip");
-        assert_eq!(response.body, b"PK\x03\x04local-cached-test");
+        assert_eq!(response.body, cached_archive);
         let before_activation =
             dispatch(&request("GET", "/api/map/cache", Value::Null), &store, 8765);
         let before_activation: Value = serde_json::from_slice(&before_activation.body).unwrap();

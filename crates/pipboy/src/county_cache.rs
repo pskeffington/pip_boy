@@ -238,6 +238,10 @@ impl CountyCache {
         Ok(bytes)
     }
 
+    fn validate_archive(bytes: &[u8], geoid: &str, layer: &str) -> io::Result<()> {
+        validate_tiger_archive(bytes, geoid, layer)
+    }
+
     fn ensure_root(&self) -> io::Result<()> {
         #[cfg(unix)]
         {
@@ -304,8 +308,8 @@ impl CountyCache {
         let mut cached = Vec::new();
         if let Some(ref id) = geoid {
             for (source_id, _, layer) in SOURCE_LIST {
-                if let Ok(file) = fs::metadata(self.path(id, layer)) {
-                    if (4..=MAX_ARCHIVE).contains(&file.len()) {
+                if let Ok(bytes) = Self::read_zip(&self.path(id, layer)) {
+                    if Self::validate_archive(&bytes, id, layer).is_ok() {
                         cached.push(source_id);
                     }
                 }
@@ -417,7 +421,10 @@ impl CountyCache {
         // Previously even offline reads could fail WouldBlock when unrelated
         // county jobs/tests were running in parallel (notably on Windows).
         match Self::read_zip(&path) {
-            Ok(bytes) => return Ok(bytes),
+            Ok(bytes) => {
+                Self::validate_archive(&bytes, geoid, layer)?;
+                return Ok(bytes);
+            }
             Err(error) if error.kind() == io::ErrorKind::NotFound => {}
             Err(error) => return Err(error),
         }
@@ -437,7 +444,10 @@ impl CountyCache {
         // Recheck after acquiring the exclusive download gate: another
         // caller may have completed this archive between the two reads.
         match Self::read_zip(&path) {
-            Ok(bytes) => return Ok(bytes),
+            Ok(bytes) => {
+                Self::validate_archive(&bytes, geoid, layer)?;
+                return Ok(bytes);
+            }
             Err(error) if error.kind() == io::ErrorKind::NotFound => {}
             Err(error) => return Err(error),
         }
@@ -483,6 +493,7 @@ impl CountyCache {
             ));
         }
         let bytes = Self::read_zip(tmp.path())?;
+        Self::validate_archive(&bytes, geoid, layer)?;
         tmp.as_file().sync_all()?;
         tmp.persist(&path).map_err(|error| error.error)?;
         Ok(bytes)
@@ -501,7 +512,10 @@ impl CountyCache {
             if source_id == "tiger-pointlm" {
                 continue;
             }
-            if Self::read_zip(&self.path(geoid, layer)).is_ok() {
+            if Self::read_zip(&self.path(geoid, layer))
+                .and_then(|bytes| Self::validate_archive(&bytes, geoid, layer))
+                .is_ok()
+            {
                 cached_sources.push(source_id);
             }
         }
@@ -517,9 +531,495 @@ impl CountyCache {
     }
 }
 
+const MAX_UNPACKED_SHP: usize = 64 * 1024 * 1024;
+const MAX_UNPACKED_DBF: usize = 24 * 1024 * 1024;
+const MAX_ARCHIVE_ENTRIES: usize = 24;
+const MAX_SHAPE_RECORDS: u32 = 60_000;
+
+struct ZipMember<'a> {
+    method: u16,
+    crc: u32,
+    packed: &'a [u8],
+    unpacked: usize,
+}
+
+fn archive_invalid(message: &'static str) -> io::Error {
+    io::Error::new(io::ErrorKind::InvalidData, message)
+}
+
+fn slice_at(bytes: &[u8], offset: usize, len: usize) -> io::Result<&[u8]> {
+    let end = offset
+        .checked_add(len)
+        .filter(|end| *end <= bytes.len())
+        .ok_or_else(|| archive_invalid("Census ZIP member is truncated"))?;
+    Ok(&bytes[offset..end])
+}
+
+fn zip_u16(bytes: &[u8], offset: usize) -> io::Result<u16> {
+    Ok(u16::from_le_bytes(
+        slice_at(bytes, offset, 2)?
+            .try_into()
+            .expect("length checked"),
+    ))
+}
+
+fn zip_u32(bytes: &[u8], offset: usize) -> io::Result<u32> {
+    Ok(u32::from_le_bytes(
+        slice_at(bytes, offset, 4)?
+            .try_into()
+            .expect("length checked"),
+    ))
+}
+
+fn census_member_limit(extension: &str) -> Option<usize> {
+    match extension {
+        "shp" => Some(MAX_UNPACKED_SHP),
+        "dbf" => Some(MAX_UNPACKED_DBF),
+        _ => None,
+    }
+}
+
+fn zip_crc32(bytes: &[u8]) -> u32 {
+    let mut crc = !0u32;
+    for byte in bytes {
+        crc ^= u32::from(*byte);
+        for _ in 0..8 {
+            crc = (crc >> 1) ^ (0xEDB8_8320 & (0u32.wrapping_sub(crc & 1)));
+        }
+    }
+    !crc
+}
+
+fn unpack_member(member: &ZipMember<'_>) -> io::Result<Vec<u8>> {
+    let data = match member.method {
+        0 if member.packed.len() == member.unpacked => member.packed.to_vec(),
+        0 => return Err(archive_invalid("Census ZIP stored size mismatch")),
+        8 => miniz_oxide::inflate::decompress_to_vec_with_limit(member.packed, member.unpacked)
+            .map_err(|_| archive_invalid("Census ZIP deflate data is invalid"))?,
+        _ => return Err(archive_invalid("Unsupported Census ZIP compression method")),
+    };
+    if data.len() != member.unpacked || zip_crc32(&data) != member.crc {
+        return Err(archive_invalid("Census ZIP CRC or expanded size mismatch"));
+    }
+    Ok(data)
+}
+
+fn validate_shape_file(bytes: &[u8], layer: &str) -> io::Result<u32> {
+    if bytes.len() < 100 || !bytes.len().is_multiple_of(2) {
+        return Err(archive_invalid("Census SHP header or size is invalid"));
+    }
+    let file_code = u32::from_be_bytes(bytes[0..4].try_into().expect("header checked"));
+    let file_words = u32::from_be_bytes(bytes[24..28].try_into().expect("header checked"));
+    let version = u32::from_le_bytes(bytes[28..32].try_into().expect("header checked"));
+    let shape_type = u32::from_le_bytes(bytes[32..36].try_into().expect("header checked"));
+    let expected_type = match layer {
+        "roads" | "linearwater" => 3,
+        "areawater" => 5,
+        "pointlm" => 1,
+        _ => return Err(archive_invalid("Unknown Census geometry layer")),
+    };
+    if file_code != 9994
+        || usize::try_from(file_words)
+            .ok()
+            .and_then(|words| words.checked_mul(2))
+            != Some(bytes.len())
+        || version != 1000
+        || shape_type != expected_type
+    {
+        return Err(archive_invalid(
+            "Census SHP header does not match its layer",
+        ));
+    }
+    let mut offset = 100usize;
+    let mut records = 0u32;
+    while offset < bytes.len() {
+        let header = slice_at(bytes, offset, 8)?;
+        let record_number = u32::from_be_bytes(header[0..4].try_into().expect("header checked"));
+        let content_words = u32::from_be_bytes(header[4..8].try_into().expect("header checked"));
+        let content_len = usize::try_from(content_words)
+            .ok()
+            .and_then(|words| words.checked_mul(2))
+            .filter(|len| *len >= 4)
+            .ok_or_else(|| archive_invalid("Census SHP record length is invalid"))?;
+        let content_start = offset + 8;
+        let content = slice_at(bytes, content_start, content_len)?;
+        let record_type = u32::from_le_bytes(content[0..4].try_into().expect("record checked"));
+        records = records
+            .checked_add(1)
+            .filter(|count| *count <= MAX_SHAPE_RECORDS)
+            .ok_or_else(|| archive_invalid("Census SHP has too many records"))?;
+        if record_number != records || record_type != expected_type {
+            return Err(archive_invalid(
+                "Census SHP record sequence or type is invalid",
+            ));
+        }
+        let minimum = if expected_type == 1 { 20 } else { 44 };
+        if content_len < minimum {
+            return Err(archive_invalid(
+                "Census SHP record is shorter than its type",
+            ));
+        }
+        offset = content_start
+            .checked_add(content_len)
+            .ok_or_else(|| archive_invalid("Census SHP record length overflow"))?;
+    }
+    if offset != bytes.len() {
+        return Err(archive_invalid(
+            "Census SHP records do not match file length",
+        ));
+    }
+    Ok(records)
+}
+
+fn validate_dbf_file(bytes: &[u8]) -> io::Result<u32> {
+    if bytes.len() < 65 {
+        return Err(archive_invalid("Census DBF header is truncated"));
+    }
+    let records = u32::from_le_bytes(bytes[4..8].try_into().expect("header checked"));
+    let header_len = usize::from(u16::from_le_bytes(
+        bytes[8..10].try_into().expect("header checked"),
+    ));
+    let record_len = usize::from(u16::from_le_bytes(
+        bytes[10..12].try_into().expect("header checked"),
+    ));
+    if records > MAX_SHAPE_RECORDS || header_len < 33 || header_len > bytes.len() || record_len < 1
+    {
+        return Err(archive_invalid("Census DBF dimensions exceed bounds"));
+    }
+    let data_end = header_len
+        .checked_add(
+            usize::try_from(records)
+                .ok()
+                .and_then(|count| count.checked_mul(record_len))
+                .ok_or_else(|| archive_invalid("Census DBF dimensions overflow"))?,
+        )
+        .filter(|end| *end <= bytes.len())
+        .ok_or_else(|| archive_invalid("Census DBF records exceed the file"))?;
+    let mut offset = 32usize;
+    let mut field_width = 1usize; // deletion marker
+    let mut terminated = false;
+    while offset < header_len {
+        let marker = bytes[offset];
+        if marker == 0x0d {
+            terminated = true;
+            break;
+        }
+        let descriptor = slice_at(bytes, offset, 32)?;
+        let name = &descriptor[..11];
+        if name.iter().all(|byte| *byte == 0)
+            || !name
+                .iter()
+                .all(|byte| byte.is_ascii_graphic() || *byte == 0)
+        {
+            return Err(archive_invalid("Census DBF field name is invalid"));
+        }
+        field_width = field_width
+            .checked_add(usize::from(descriptor[16]))
+            .filter(|width| *width <= record_len)
+            .ok_or_else(|| archive_invalid("Census DBF field widths exceed record"))?;
+        offset += 32;
+    }
+    if !terminated || field_width > record_len || data_end > bytes.len() {
+        return Err(archive_invalid("Census DBF field table is invalid"));
+    }
+    if bytes.len() > data_end && !(bytes.len() == data_end + 1 && bytes[data_end] == 0x1a) {
+        return Err(archive_invalid("Census DBF has unexpected trailing data"));
+    }
+    Ok(records)
+}
+
+fn validate_tiger_archive(bytes: &[u8], geoid: &str, layer: &str) -> io::Result<()> {
+    if !geoid_valid(geoid) || !(22..=MAX_ARCHIVE as usize).contains(&bytes.len()) {
+        return Err(archive_invalid("Census ZIP size or county is invalid"));
+    }
+    let search_from = bytes.len().saturating_sub(65_557);
+    let eocd = (search_from..=bytes.len() - 22)
+        .rev()
+        .find(|offset| bytes.get(*offset..*offset + 4) == Some(b"PK\x05\x06"))
+        .ok_or_else(|| archive_invalid("Census ZIP directory is missing"))?;
+    let disk = zip_u16(bytes, eocd + 4)?;
+    let directory_disk = zip_u16(bytes, eocd + 6)?;
+    let disk_count = usize::from(zip_u16(bytes, eocd + 8)?);
+    let count = usize::from(zip_u16(bytes, eocd + 10)?);
+    let directory_size = usize::try_from(zip_u32(bytes, eocd + 12)?)
+        .map_err(|_| archive_invalid("Census ZIP directory is too large"))?;
+    let directory_offset = usize::try_from(zip_u32(bytes, eocd + 16)?)
+        .map_err(|_| archive_invalid("Census ZIP directory offset is invalid"))?;
+    let comment_len = usize::from(zip_u16(bytes, eocd + 20)?);
+    let directory_end = directory_offset
+        .checked_add(directory_size)
+        .ok_or_else(|| archive_invalid("Census ZIP directory length overflow"))?;
+    if disk != 0
+        || directory_disk != 0
+        || count == 0
+        || count > MAX_ARCHIVE_ENTRIES
+        || disk_count != count
+        || directory_end != eocd
+        || eocd + 22 + comment_len != bytes.len()
+    {
+        return Err(archive_invalid(
+            "Census ZIP must be a bounded single-volume archive",
+        ));
+    }
+
+    let expected_state = if layer == "pointlm" {
+        &geoid[..2]
+    } else {
+        geoid
+    };
+    let expected_stem = format!("tl_{VINTAGE}_{expected_state}_{layer}.");
+    let mut offset = directory_offset;
+    let mut seen = BTreeSet::new();
+    let mut ranges = Vec::with_capacity(count);
+    let mut shp = None;
+    let mut dbf = None;
+    for _ in 0..count {
+        if zip_u32(bytes, offset)? != 0x0201_4b50 {
+            return Err(archive_invalid(
+                "Census ZIP central directory entry is invalid",
+            ));
+        }
+        let flags = zip_u16(bytes, offset + 8)?;
+        let method = zip_u16(bytes, offset + 10)?;
+        let crc = zip_u32(bytes, offset + 16)?;
+        let packed_len = usize::try_from(zip_u32(bytes, offset + 20)?)
+            .map_err(|_| archive_invalid("Census ZIP member is too large"))?;
+        let unpacked = usize::try_from(zip_u32(bytes, offset + 24)?)
+            .map_err(|_| archive_invalid("Census ZIP member is too large"))?;
+        let name_len = usize::from(zip_u16(bytes, offset + 28)?);
+        let extra_len = usize::from(zip_u16(bytes, offset + 30)?);
+        let comment_len = usize::from(zip_u16(bytes, offset + 32)?);
+        let local_offset = usize::try_from(zip_u32(bytes, offset + 42)?)
+            .map_err(|_| archive_invalid("Census ZIP local offset is invalid"))?;
+        let entry_end = offset
+            .checked_add(46)
+            .and_then(|value| value.checked_add(name_len))
+            .and_then(|value| value.checked_add(extra_len))
+            .and_then(|value| value.checked_add(comment_len))
+            .filter(|end| *end <= directory_end)
+            .ok_or_else(|| archive_invalid("Census ZIP central directory is truncated"))?;
+        let name = std::str::from_utf8(slice_at(bytes, offset + 46, name_len)?)
+            .map_err(|_| archive_invalid("Census ZIP filename is not UTF-8"))?;
+        if name.is_empty()
+            || name.contains('/')
+            || name.contains('\\')
+            || name.contains(':')
+            || name.contains("..")
+            || !name
+                .bytes()
+                .all(|byte| byte.is_ascii_alphanumeric() || b"._-".contains(&byte))
+            || !seen.insert(name.to_ascii_lowercase())
+            || flags & !0x080e != 0
+            || !matches!(method, 0 | 8)
+            || unpacked > MAX_UNPACKED_SHP
+        {
+            return Err(archive_invalid(
+                "Census ZIP contains an unsafe or unsupported member",
+            ));
+        }
+        let name_bytes = name.as_bytes();
+        if zip_u32(bytes, local_offset)? != 0x0403_4b50 {
+            return Err(archive_invalid("Census ZIP local member header is invalid"));
+        }
+        let local_flags = zip_u16(bytes, local_offset + 6)?;
+        let local_method = zip_u16(bytes, local_offset + 8)?;
+        let local_crc = zip_u32(bytes, local_offset + 14)?;
+        let local_packed = zip_u32(bytes, local_offset + 18)?;
+        let local_unpacked = zip_u32(bytes, local_offset + 22)?;
+        let local_name_len = usize::from(zip_u16(bytes, local_offset + 26)?);
+        let local_extra_len = usize::from(zip_u16(bytes, local_offset + 28)?);
+        let local_name = slice_at(bytes, local_offset + 30, local_name_len)?;
+        let data_start = local_offset
+            .checked_add(30)
+            .and_then(|value| value.checked_add(local_name_len))
+            .and_then(|value| value.checked_add(local_extra_len))
+            .ok_or_else(|| archive_invalid("Census ZIP member offset overflow"))?;
+        let data_end = data_start
+            .checked_add(packed_len)
+            .filter(|end| *end <= directory_offset)
+            .ok_or_else(|| archive_invalid("Census ZIP member data is truncated"))?;
+        if local_name != name_bytes
+            || local_flags != flags
+            || local_method != method
+            || (flags & 0x0008 == 0
+                && (local_crc != crc
+                    || usize::try_from(local_packed).ok() != Some(packed_len)
+                    || usize::try_from(local_unpacked).ok() != Some(unpacked)))
+        {
+            return Err(archive_invalid(
+                "Census ZIP local and central headers disagree",
+            ));
+        }
+        ranges.push((local_offset, data_end));
+        if let Some(extension) = name.strip_prefix(&expected_stem) {
+            if let Some(member_limit) = census_member_limit(extension) {
+                if unpacked > member_limit || (method == 0 && packed_len != unpacked) {
+                    return Err(archive_invalid("Census SHP/DBF exceeds its size bound"));
+                }
+                let member = ZipMember {
+                    method,
+                    crc,
+                    packed: slice_at(bytes, data_start, packed_len)?,
+                    unpacked,
+                };
+                match extension {
+                    "shp" if shp.is_none() => shp = Some(member),
+                    "dbf" if dbf.is_none() => dbf = Some(member),
+                    _ => return Err(archive_invalid("Census ZIP has duplicate data members")),
+                }
+            }
+        }
+        offset = entry_end;
+    }
+    if offset != directory_end {
+        return Err(archive_invalid(
+            "Census ZIP directory length does not match entries",
+        ));
+    }
+    ranges.sort_unstable_by_key(|range| range.0);
+    if ranges.windows(2).any(|pair| pair[0].1 > pair[1].0) {
+        return Err(archive_invalid("Census ZIP members overlap"));
+    }
+    let shp = shp.ok_or_else(|| archive_invalid("Census ZIP has no matching SHP"))?;
+    let dbf = dbf.ok_or_else(|| archive_invalid("Census ZIP has no matching DBF"))?;
+    let shape_count = validate_shape_file(&unpack_member(&shp)?, layer)?;
+    let dbf_count = validate_dbf_file(&unpack_member(&dbf)?)?;
+    if shape_count != dbf_count {
+        return Err(archive_invalid("Census SHP/DBF record counts do not match"));
+    }
+    Ok(())
+}
+
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use super::*;
+
+    fn shape_file(layer: &str) -> Vec<u8> {
+        let mut bytes = vec![0; 100];
+        bytes[0..4].copy_from_slice(&9994u32.to_be_bytes());
+        bytes[24..28].copy_from_slice(&50u32.to_be_bytes());
+        bytes[28..32].copy_from_slice(&1000u32.to_le_bytes());
+        let kind: u32 = match layer {
+            "roads" | "linearwater" => 3,
+            "areawater" => 5,
+            "pointlm" => 1,
+            _ => unreachable!(),
+        };
+        bytes[32..36].copy_from_slice(&kind.to_le_bytes());
+        bytes
+    }
+
+    fn dbf_file() -> Vec<u8> {
+        let mut bytes = vec![0; 65];
+        bytes[0] = 3;
+        bytes[8..10].copy_from_slice(&65u16.to_le_bytes());
+        bytes[10..12].copy_from_slice(&1u16.to_le_bytes());
+        bytes[32] = 0x0d;
+        bytes
+    }
+
+    fn test_zip(geoid: &str, layer: &str) -> Vec<u8> {
+        let stem = CountyCache::remote_name(geoid, layer)
+            .strip_suffix(".zip")
+            .unwrap()
+            .to_owned();
+        let files = [
+            (format!("{stem}.shp"), shape_file(layer)),
+            (format!("{stem}.dbf"), dbf_file()),
+            (format!("{stem}.shx"), shape_file(layer)),
+            (format!("{stem}.prj"), b"NAD83".to_vec()),
+            (format!("{stem}.shp.xml"), b"<metadata/>".to_vec()),
+        ];
+        let entry_count = files.len() as u16;
+        let mut bytes = Vec::new();
+        let mut central = Vec::new();
+        for (name, data) in files {
+            let name_bytes = name.as_bytes();
+            let offset = bytes.len() as u32;
+            let crc = zip_crc32(&data);
+            bytes.extend_from_slice(&0x0403_4b50u32.to_le_bytes());
+            bytes.extend_from_slice(&20u16.to_le_bytes());
+            bytes.extend_from_slice(&0u16.to_le_bytes());
+            bytes.extend_from_slice(&0u16.to_le_bytes());
+            bytes.extend_from_slice(&0u16.to_le_bytes());
+            bytes.extend_from_slice(&0u16.to_le_bytes());
+            bytes.extend_from_slice(&crc.to_le_bytes());
+            bytes.extend_from_slice(&(data.len() as u32).to_le_bytes());
+            bytes.extend_from_slice(&(data.len() as u32).to_le_bytes());
+            bytes.extend_from_slice(&(name_bytes.len() as u16).to_le_bytes());
+            bytes.extend_from_slice(&0u16.to_le_bytes());
+            bytes.extend_from_slice(name_bytes);
+            bytes.extend_from_slice(&data);
+
+            central.extend_from_slice(&0x0201_4b50u32.to_le_bytes());
+            central.extend_from_slice(&20u16.to_le_bytes());
+            central.extend_from_slice(&20u16.to_le_bytes());
+            central.extend_from_slice(&0u16.to_le_bytes());
+            central.extend_from_slice(&0u16.to_le_bytes());
+            central.extend_from_slice(&0u16.to_le_bytes());
+            central.extend_from_slice(&0u16.to_le_bytes());
+            central.extend_from_slice(&crc.to_le_bytes());
+            central.extend_from_slice(&(data.len() as u32).to_le_bytes());
+            central.extend_from_slice(&(data.len() as u32).to_le_bytes());
+            central.extend_from_slice(&(name_bytes.len() as u16).to_le_bytes());
+            central.extend_from_slice(&0u16.to_le_bytes());
+            central.extend_from_slice(&0u16.to_le_bytes());
+            central.extend_from_slice(&0u16.to_le_bytes());
+            central.extend_from_slice(&0u16.to_le_bytes());
+            central.extend_from_slice(&0u32.to_le_bytes());
+            central.extend_from_slice(&offset.to_le_bytes());
+            central.extend_from_slice(name_bytes);
+        }
+        let central_offset = bytes.len() as u32;
+        bytes.extend_from_slice(&central);
+        bytes.extend_from_slice(&0x0605_4b50u32.to_le_bytes());
+        bytes.extend_from_slice(&0u16.to_le_bytes());
+        bytes.extend_from_slice(&0u16.to_le_bytes());
+        bytes.extend_from_slice(&entry_count.to_le_bytes());
+        bytes.extend_from_slice(&entry_count.to_le_bytes());
+        bytes.extend_from_slice(&(central.len() as u32).to_le_bytes());
+        bytes.extend_from_slice(&central_offset.to_le_bytes());
+        bytes.extend_from_slice(&0u16.to_le_bytes());
+        bytes
+    }
+
+    pub(crate) fn test_zip_archive(geoid: &str, layer: &str) -> Vec<u8> {
+        test_zip(geoid, layer)
+    }
+
+    #[test]
+    fn census_archive_validation_matches_source_and_checks_integrity() {
+        for layer in ["roads", "areawater", "linearwater", "pointlm"] {
+            let archive = test_zip("25025", layer);
+            validate_tiger_archive(&archive, "25025", layer).unwrap();
+        }
+
+        let mut corrupted = test_zip("25025", "roads");
+        let name_len = usize::from(u16::from_le_bytes([corrupted[26], corrupted[27]]));
+        corrupted[30 + name_len] ^= 1;
+        assert!(validate_tiger_archive(&corrupted, "25025", "roads").is_err());
+        assert!(validate_tiger_archive(&test_zip("25025", "roads"), "25025", "areawater").is_err());
+        assert!(validate_tiger_archive(&test_zip("25025", "pointlm"), "36061", "pointlm").is_err());
+    }
+
+    #[test]
+    fn census_archive_validator_accepts_bounded_raw_deflate() {
+        let plain = b"small TIGER member";
+        let packed = miniz_oxide::deflate::compress_to_vec(plain, 6);
+        let member = ZipMember {
+            method: 8,
+            crc: zip_crc32(plain),
+            packed: &packed,
+            unpacked: plain.len(),
+        };
+        assert_eq!(unpack_member(&member).unwrap(), plain);
+
+        let oversized = ZipMember {
+            unpacked: plain.len() - 1,
+            ..member
+        };
+        assert!(unpack_member(&oversized).is_err());
+    }
 
     fn county_fixture(geoid: &str) -> Vec<u8> {
         json!({
@@ -618,11 +1118,9 @@ mod tests {
         let tmp = tempfile::tempdir().unwrap();
         let cache = CountyCache::new(tmp.path().to_path_buf());
         let path = cache.path("25025", "roads");
-        fs::write(&path, b"PK\x03\x04test").unwrap();
-        assert_eq!(
-            cache.fetch("25025", "tiger-roads", false).unwrap(),
-            b"PK\x03\x04test"
-        );
+        let archive = test_zip("25025", "roads");
+        fs::write(&path, &archive).unwrap();
+        assert_eq!(cache.fetch("25025", "tiger-roads", false).unwrap(), archive);
         assert!(cache.fetch("25025", "tiger-areawater", false).is_err());
         cache.remember("25025").unwrap();
         let active = cache.active().unwrap();
@@ -636,7 +1134,7 @@ mod tests {
         let tmp = tempfile::tempdir().unwrap();
         let cache = CountyCache::new(tmp.path().to_path_buf());
         fs::write(cache.boundary_path("25025"), county_fixture("25025")).unwrap();
-        fs::write(cache.path("25025", "roads"), b"PK\x03\x04cached-roads").unwrap();
+        fs::write(cache.path("25025", "roads"), test_zip("25025", "roads")).unwrap();
 
         cache.boundary("25025", true).unwrap();
         cache.fetch("25025", "tiger-roads", true).unwrap();
@@ -653,13 +1151,11 @@ mod tests {
     fn cache_reads_do_not_contend_with_unrelated_downloads() {
         let temp = tempfile::tempdir().unwrap();
         let cache = CountyCache::new(temp.path().to_path_buf());
-        fs::write(cache.path("25025", "roads"), b"PK\x03\x04local").unwrap();
+        let archive = test_zip("25025", "roads");
+        fs::write(cache.path("25025", "roads"), &archive).unwrap();
         let gate = FETCH_LOCK.get_or_init(|| Mutex::new(()));
         let _held = gate.lock().unwrap();
-        assert_eq!(
-            cache.fetch("25025", "tiger-roads", false).unwrap(),
-            b"PK\x03\x04local"
-        );
+        assert_eq!(cache.fetch("25025", "tiger-roads", false).unwrap(), archive);
         let missing = cache.fetch("25025", "tiger-areawater", false).unwrap_err();
         assert_eq!(missing.kind(), io::ErrorKind::NotFound);
     }
@@ -672,6 +1168,33 @@ mod tests {
         fs::write(&p, b"broken").unwrap();
         assert!(cache.fetch("25025", "tiger-roads", true).is_err());
         assert_eq!(fs::read(&p).unwrap(), b"broken");
+    }
+
+    #[test]
+    fn structurally_invalid_cached_archive_is_preserved_and_not_activated() {
+        let tmp = tempfile::tempdir().unwrap();
+        let cache = CountyCache::new(tmp.path().to_path_buf());
+        let path = cache.path("25025", "roads");
+        let mut archive = test_zip("25025", "roads");
+        let name = b"tl_2025_25025_roads.shp";
+        let local_name = archive
+            .windows(name.len())
+            .position(|window| window == name)
+            .unwrap();
+        let data_start = local_name + name.len();
+        archive[data_start] ^= 1;
+        fs::write(&path, &archive).unwrap();
+
+        assert_eq!(
+            cache
+                .fetch("25025", "tiger-roads", true)
+                .unwrap_err()
+                .kind(),
+            io::ErrorKind::InvalidData
+        );
+        assert_eq!(fs::read(&path).unwrap(), archive);
+        assert_eq!(cache.active().unwrap()["cached_sources"], json!([]));
+        assert!(cache.activate("25025").is_err());
     }
 
     #[test]

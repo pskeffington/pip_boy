@@ -268,10 +268,11 @@
       "acceptance": [
         "Match legacy roads, counties, ZIPs, cache and location-follow behavior offline.",
         "Keep location ingestion in host Settings and map near-full-canvas.",
-        "Verify rollback before legacy map removal."
+        "Verify rollback before legacy map removal.",
+        "Validate cached Census ZIP identity and SHP/DBF integrity before use or activation."
       ],
       "blockers": [
-        "Independent draft rb_gis PR #1 at aaa7b26e46eaa9e57f0901026bda41da0ec08249 passed hosted run 40869798576: exact-SHA checkout, stable rustup, offline CI policy, formatting, Clippy, and tests. On code source fc27c82, locked stable and Rust 1.90 fmt/check/clippy/test also pass. Polygon fill/holes/clipping and Census loader/cache/ZIP remain pending. Keep parity open until legacy fixtures and field gates pass."
+        "rb_gis PR #1 head aaa7b26e46eaa9e57f0901026bda41da0ec08249 passed run 40869798576 (checkout, toolchain, policy, format, Clippy and tests); source fc27c82 passes locked stable/1.90 checks. Rust-Boy now has a Census ZIP/SHP/DBF integrity preflight, but geometry/service integration and renderer fill/holes/clipping remain pending. Require legacy fixtures, hosted exact-head CI and field gates before parity acceptance."
       ],
       "external_repositories": [
         "pskeffington/rb_gis"
