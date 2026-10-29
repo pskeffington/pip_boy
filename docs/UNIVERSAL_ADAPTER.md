@@ -1,6 +1,6 @@
 # Rust-Boy universal package adapter (v1 development contract)
 
-**Status (2026-10-28): first-party Rust SDK and host manager committed; CI/compiler acceptance open.** This guide distinguishes a *working protocol and pure in-process host manager* from an external plug-in loader, a secure OS sandbox, or a finished GUI integration. None of MAP, TV, RADIO, or COMMS is yet mounted through this manager in the live desktop/micro UI.
+**Status (2026-10-28): first-party Rust SDK and host manager committed; CI/compiler acceptance open.** This guide distinguishes a *working protocol and pure in-process host manager* from an external plug-in loader, a secure OS sandbox, or a finished GUI integration. A read-only first-party RADIO catalogue is now mounted by explicit compile-time bootstrap; MAP, TV and COMMS remain unmounted. The new pass has not yet received Rust/CI/physical acceptance.
 
 ## Goal
 
@@ -13,7 +13,8 @@ Rust-Boy behaves like a universal socket: the shell owns the compact package swi
 | Portable SDK | [`rust-boy-adapter-sdk`](../crates/rust-boy-adapter-sdk/src/lib.rs) | Versioned wire vocabulary, viewport, reply, `UniversalPackageAdapter` trait and deny-all scope policy interface |
 | Core host | [`universal_adapter.rs`](../crates/pipboy-core/src/universal_adapter.rs) | Trusted adapter registration, lifecycle orchestration, one-package foreground ownership, host Settings, conservative intent gating |
 | Manifest registry | [`package_socket.rs`](../crates/pipboy-core/src/package_socket.rs) | Strict schema-1 manifests, four inert reference fixtures, explicit local discovery |
-| Shell UI | `crates/pipboy/assets/` | **Not yet bound** to the universal adapter manager; existing UI kept as compatibility baseline |
+| First-party bootstrap | [`builtin_packages.rs`](../crates/pipboy-core/src/builtin_packages.rs) | Passive pinned `rust_radio` catalogue; zero capabilities, no playback or network I/O |
+| Shell UI | `crates/pipboy/assets/` | Mounted-roster selection and host Settings linked; package view is inert text, legacy tools retained |
 | Device / network broker | `crates/rust-boy-broker/` | Deny-only precursor; no external module hardware privilege bridge yet |
 
 The lightweight SDK depends only on `serde` and `serde_json`. The four independently developed packages can depend on this crate rather than on `pipboy-core` (which includes unrelated host and radio dependencies). Pin a reviewed Git commit when using the SDK in another repository; do not follow an unbounded main branch in released binaries.
@@ -100,7 +101,7 @@ Once mounted, `select(id)` delivers activation/resume, suspending the previous f
 | RADIO | [rust_radio](https://github.com/pskeffington/rust_radio) | Native radio controls; requested audio/SDR/network capabilities need host authority |
 | COMMS | [rusti_rc](https://github.com/pskeffington/rusti_rc) | Message interface with explicit connect/send consent; background receipt separately gated |
 
-**All four remain independent development repositories.** The core tests use synthetic adapters for each package identity; no real stream, RF device, IRC server, or GIS network endpoint is opened by these tests.
+**All four remain independent development repositories.** The core tests use synthetic adapters for each identity plus a read-only pinned `rust_radio` catalogue; no stream, RF device, IRC server or GIS endpoint is opened on host registration or catalogue selection.
 
 ## Acceptance ladder
 
@@ -108,7 +109,8 @@ Once mounted, `select(id)` delivers activation/resume, suspending the previous f
 | --- | --- | --- |
 | ADAPTER-SDK-1 | SDK crate, stable typed envelope, bounded JSON, example | Workspace tests and build pass; protocol preview, not a published compatibility promise |
 | ADAPTER-HOST-1 | One trait, four synthetic adapters, lifecycle/error/Settings tests, unmount | Workspace tests pass for trusted in-process fixtures |
-| HOST-UI-1 | Bind shared foreground to micro and desktop, keep permanent Settings, no split panes | Desktop and micro selectors call the mounted-roster and foreground APIs; navigation clears foreground; view data is inert text. No package is mounted yet, so real adapter and device acceptance remain open |
+| HOST-UI-1 | Bind shared foreground to micro and desktop, keep permanent Settings, no split panes | Desktop and micro selectors use shared host foreground APIs and inert text views; the newly compiled passive RADIO catalogue is mounted but its real browser acceptance is open |
+| ADAPTER-RADIO-CATALOG-0 | Compile-time `rust_radio` metadata adapter without audio/network/background grants | Candidate; new Rust, CI and browser validation pending |
 | ADAPTER-MAP-1 | Real rb_gis adapter and offline ZIP/county parity | Open |
 | ADAPTER-TV-1 | Native rust_tv display/audio contract | Open |
 | ADAPTER-RADIO-1 | rust_radio interface and audio ownership | Open |

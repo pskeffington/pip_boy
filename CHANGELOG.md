@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-10-29 — Compile-time first-party RADIO catalogue (draft)
+
+- Register one reviewed passive RADIO adapter using the pinned `rust_radio` station directory, with zero requested capabilities and no automatic playback/network I/O.
+- Bind the live mounted roster to the existing desktop/micro selector; preserve legacy explicit radio playback and host-owned Settings.
+- Add lifecycle, denial and manifest-negative regressions, plus component index. New Rust/CI/browser verification is pending.
+
 ## 2026-10-29 — Host lifecycle binding and SDK-aligned transport
 
 - Add a compact mounted-package selector and inert full-canvas view to desktop and micro shells; both remain disabled with an empty roster.
