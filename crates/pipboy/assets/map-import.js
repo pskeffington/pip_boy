@@ -60,7 +60,7 @@
     const featureLimit=Number.isInteger(limits.maxFeatures)?limits.maxFeatures:2000;
     const vertexLimit=Number.isInteger(limits.maxVertices)?limits.maxVertices:30000;
     function coordinate(value) {
-      if (!Array.isArray(value)||value.length<2||!valid(value[0])||!valid(value[1])||
+      if (!Array.isArray(value)||value.length<2||!value.every(valid)||
           Math.abs(value[0])>180||Math.abs(value[1])>90) bad("Layer needs valid WGS84 [longitude, latitude] coordinates");
       return [value[0],value[1]];
     }
@@ -69,6 +69,13 @@
       vertices+=values.length;
       if(vertices>vertexLimit)bad("GeoJSON vertex budget exceeded");
       return values.map(coordinate);
+    }
+    function ring(values) {
+      const points=path(values,4);
+      const first=values[0],last=values[values.length-1];
+      if(first.length!==last.length||first.some((value,index)=>value!==last[index]))
+        bad("GeoJSON polygon ring must be closed");
+      return points;
     }
     function geometry(item,label,depth) {
       if(depth>6||!item||typeof item!=="object"||Array.isArray(item))bad("Unsupported GeoJSON geometry");
@@ -82,12 +89,12 @@
           shapes.push({kind:"line",paths:c.map(part=>path(part,2)),label});break;
         case "Polygon":
           if(!Array.isArray(c)||!c.length)bad("Empty Polygon");
-          shapes.push({kind:"polygon",paths:c.map(ring=>path(ring,4)),label});break;
+          shapes.push({kind:"polygon",paths:c.map(ring),label});break;
         case "MultiPolygon":
           if(!Array.isArray(c)||!c.length)bad("Empty MultiPolygon");
           for(const polygon of c){
             if(!Array.isArray(polygon)||!polygon.length)bad("Empty polygon part");
-            shapes.push({kind:"polygon",paths:polygon.map(ring=>path(ring,4)),label});
+            shapes.push({kind:"polygon",paths:polygon.map(ring),label});
           }
           break;
         case "GeometryCollection":
@@ -100,6 +107,7 @@
     function feature(item){
       if(!item||item.type!=="Feature")bad("Expected GeoJSON Feature");
       if(++features>featureLimit)bad("GeoJSON feature budget exceeded");
+      if(item.geometry===null)return;
       const raw=item.properties&&item.properties.name;
       geometry(item.geometry,typeof raw==="string"?raw.slice(0,36):"",0);
     }

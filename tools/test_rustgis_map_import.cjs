@@ -105,6 +105,21 @@ async function check() {
   const geo = JSON.stringify({type:"FeatureCollection",features:[
     {type:"Feature",properties:{name:"Main road"},geometry:{type:"LineString",coordinates:[[-81,37],[-81.1,37.1]]}}
   ]});
+  const geoWithNullFeature=JSON.stringify({type:"FeatureCollection",features:[
+    {type:"Feature",properties:{name:"No geometry"},geometry:null},
+    {type:"Feature",properties:{name:"Closed area"},geometry:{type:"Polygon",coordinates:[[
+      [-81,37],[-80.9,37],[-80.9,37.1],[-81,37.1],[-81,37]
+    ]]}}
+  ]});
+  const nullGeometryImport=api.parseGeoJSON(geoWithNullFeature);
+  assert.equal(nullGeometryImport.features,2,"null feature geometry is valid GeoJSON and remains counted");
+  assert.equal(nullGeometryImport.shapes.length,1);
+  assert.throws(()=>api.parseGeoJSON(JSON.stringify({type:"Polygon",coordinates:[[
+    [-81,37],[-80.9,37],[-80.9,37.1],[-81,37.1]
+  ]]})),/ring must be closed/,"GeoJSON polygon rings must repeat their first position");
+  assert.throws(()=>api.parseGeoJSON(JSON.stringify({type:"FeatureCollection",features:[
+    {type:"Feature",properties:{},geometry:null}
+  ]})),/No drawable/,"a null-only collection must not replace the current map");
   const manifest = {schema:"rb-gis-package/v1",description:"County sample",layers:[{
     file:"roads.geojson",name:"Road network",role:"roads",source:"County GIS",vintage:"2025",
     attribution:"County GIS office"
