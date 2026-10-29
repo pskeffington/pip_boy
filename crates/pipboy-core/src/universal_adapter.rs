@@ -9,8 +9,8 @@ use crate::package_socket::{
 };
 pub use rust_boy_adapter_sdk::{
     valid_action, AdapterCommand, AdapterEnvelope, AdapterError, AdapterReply, DenyAllScopes,
-    ScopeAuthority, UniversalPackageAdapter, Viewport, ADAPTER_PROTOCOL, MAX_INTENT_BYTES,
-    MAX_WIRE_BYTES,
+    PackageView, ScopeAuthority, UniversalPackageAdapter, ViewBlock, Viewport, ADAPTER_PROTOCOL,
+    MAX_INTENT_BYTES, MAX_WIRE_BYTES,
 };
 use serde_json::Value;
 use std::collections::{BTreeMap, BTreeSet};
@@ -161,6 +161,10 @@ impl UniversalAdapterHost {
             ));
         }
         if let AdapterReply::View { state } = reply {
+            let view: PackageView = serde_json::from_value(state.clone())
+                .map_err(|_| AdapterError::Fault("invalid package view schema".into()))?;
+            view.validate()
+                .map_err(|_| AdapterError::Fault("invalid package view schema".into()))?;
             entry.last_view = Some(state);
         }
         Ok(())
@@ -475,7 +479,9 @@ mod tests {
                 return Err(AdapterError::Fault("synthetic adapter fault".into()));
             }
             Ok(AdapterReply::View {
-                state: json!({"ready": true, "module": self.id}),
+                state: json!({"version": 1, "title": "Test package", "blocks": [
+                    {"kind": "status", "label": "Module", "value": self.id}
+                ]}),
             })
         }
     }
@@ -788,6 +794,31 @@ mod tests {
         assert_eq!(host.state("org.rustboy.gis"), Some(AdapterState::Faulted));
         host.open_settings();
         assert_eq!(host.surface(), HostSurface::Settings);
+    }
+
+    #[test]
+    fn malformed_adapter_view_is_faulted_and_never_becomes_foreground() {
+        struct InvalidView;
+        impl UniversalPackageAdapter for InvalidView {
+            fn package_id(&self) -> &str {
+                "org.rustboy.gis"
+            }
+
+            fn handle(&mut self, _request: AdapterEnvelope) -> Result<AdapterReply, AdapterError> {
+                Ok(AdapterReply::View {
+                    state: json!({"version": 1, "title": "Bad", "blocks": [
+                        {"kind": "raw_html", "text": "<script>alert(1)</script>"}
+                    ]}),
+                })
+            }
+        }
+        let mut host = UniversalAdapterHost::new(Viewport::new(480, 320).unwrap());
+        host.mount_trusted(&manifest("org.rustboy.gis"), Box::new(InvalidView))
+            .unwrap();
+        assert!(host.select("org.rustboy.gis").is_err());
+        assert_eq!(host.surface(), HostSurface::Empty);
+        assert_eq!(host.state("org.rustboy.gis"), Some(AdapterState::Faulted));
+        assert!(host.foreground_view().is_none());
     }
 
     #[test]

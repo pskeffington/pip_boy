@@ -43,11 +43,13 @@ impl RadioCatalogAdapter {
             .collect();
         AdapterReply::View {
             state: json!({
-                "package_id": RADIO_PACKAGE_ID,
-                "mode": "catalog_only",
-                "player_state": "not_started",
-                "network_state": "not_connected",
-                "stations": stations
+                "version": 1,
+                "title": "Radio catalogue",
+                "blocks": [
+                    {"kind":"status", "label":"Player", "value":"Not started"},
+                    {"kind":"status", "label":"Network", "value":"Not connected"},
+                    {"kind":"list", "label":"Stations", "items": stations.iter().map(|station| station["name"].as_str().unwrap_or_default()).collect::<Vec<_>>()}
+                ]
             }),
         }
     }
@@ -108,18 +110,14 @@ mod tests {
         assert!(mount_approved_builtins(&mut host).is_err());
         host.select(RADIO_PACKAGE_ID).unwrap();
         let view = host.foreground_view().unwrap();
-        assert_eq!(view["mode"], "catalog_only");
-        assert_eq!(view["player_state"], "not_started");
-        assert_eq!(view["network_state"], "not_connected");
+        assert_eq!(view["version"], 1);
+        assert_eq!(view["title"], "Radio catalogue");
+        assert_eq!(view["blocks"][0]["value"], "Not started");
+        assert_eq!(view["blocks"][1]["value"], "Not connected");
         assert_eq!(
-            view["stations"].as_array().unwrap().len(),
+            view["blocks"][2]["items"].as_array().unwrap().len(),
             curated_stations().len()
         );
-        assert!(view["stations"].as_array().unwrap().iter().all(|station| {
-            station["id"].is_string()
-                && station["name"].is_string()
-                && station.get("playlist_url").is_none()
-        }));
         host.open_settings();
         assert_eq!(host.surface(), HostSurface::Settings);
         assert!(host.foreground_view().is_none());

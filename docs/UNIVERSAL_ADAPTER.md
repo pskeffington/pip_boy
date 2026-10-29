@@ -1,6 +1,6 @@
 # Rust-Boy universal package adapter (v1 development contract)
 
-**Status (2026-10-28): first-party Rust SDK and host manager committed; CI/compiler acceptance open.** This guide distinguishes a *working protocol and pure in-process host manager* from an external plug-in loader, a secure OS sandbox, or a finished GUI integration. A read-only first-party RADIO catalogue is now mounted by explicit compile-time bootstrap; MAP, TV and COMMS remain unmounted. The new pass has not yet received Rust/CI/physical acceptance.
+**Status (2026-10-29): RB-CX-00 accepted; RB-CX-01 implementation in progress.** Exact-head first-party CI passed RB-CX-00 on `c425994eb8a172c357c6920e29d2b4d38cdc5050` (run [40824698037](https://github.com/pskeffington/pip_boy/actions/runs/40824698037)). The bounded host-rendered view contract below is being added in RB-CX-01. This remains distinct from an external plug-in loader, OS sandbox, or production release. A read-only first-party RADIO catalogue is mounted by explicit compile-time bootstrap; MAP, TV and COMMS remain unmounted.
 
 ## Goal
 
@@ -10,11 +10,11 @@ Rust-Boy behaves like a universal socket: the shell owns the compact package swi
 
 | Layer | Rust source | Role |
 | --- | --- | --- |
-| Portable SDK | [`rust-boy-adapter-sdk`](../crates/rust-boy-adapter-sdk/src/lib.rs) | Versioned wire vocabulary, viewport, reply, `UniversalPackageAdapter` trait and deny-all scope policy interface |
+| Portable SDK | [`rust-boy-adapter-sdk`](../crates/rust-boy-adapter-sdk/src/lib.rs) | Versioned wire vocabulary, viewport, bounded data-only `PackageView`, `UniversalPackageAdapter` trait and deny-all scope policy interface |
 | Core host | [`universal_adapter.rs`](../crates/pipboy-core/src/universal_adapter.rs) | Trusted adapter registration, lifecycle orchestration, one-package foreground ownership, host Settings, conservative intent gating |
 | Manifest registry | [`package_socket.rs`](../crates/pipboy-core/src/package_socket.rs) | Strict schema-1 manifests, four inert reference fixtures, explicit local discovery |
 | First-party bootstrap | [`builtin_packages.rs`](../crates/pipboy-core/src/builtin_packages.rs) | Passive pinned `rust_radio` catalogue; zero capabilities, no playback or network I/O |
-| Shell UI | `crates/pipboy/assets/` | Mounted-roster selection and host Settings linked; package view is inert text, legacy tools retained |
+| Shell UI | `crates/pipboy/assets/` | Mounted-roster selection and host Settings linked; package view schema maps only to host-created DOM, legacy tools retained |
 | Device / network broker | `crates/rust-boy-broker/` | Deny-only precursor; no external module hardware privilege bridge yet |
 
 The lightweight SDK depends only on `serde` and `serde_json`. The four independently developed packages can depend on this crate rather than on `pipboy-core` (which includes unrelated host and radio dependencies). Pin a reviewed Git commit when using the SDK in another repository; do not follow an unbounded main branch in released binaries.
@@ -66,8 +66,9 @@ The full [hello example](../crates/rust-boy-adapter-sdk/examples/hello_adapter.r
 - Version: `protocol=1`, independent from manifest `schema_version=1` and `host_api=1`.
 - Request: `AdapterEnvelope { protocol, package_id, request_id, body }`; request IDs are monotonic within the host instance.
 - Commands: `activate(viewport)`, `suspend`, `resume(viewport)`, `resize(viewport)`, `intent(action, required_scope, payload)`, `shutdown`.
-- Replies: inert `ack` or `view(state)` JSON. The host renderer must use safe DOM/text APIs, **never** execute JavaScript/HTML supplied by a package.
+- Replies: inert `ack` or `view(state)` JSON. A `view` must validate as `PackageView { version: 1, title, blocks }`; blocks are `heading`, `text`, `status`, or `list` data only. The core rejects malformed/unknown blocks and faults the adapter before exposing the view. Desktop and micro render supported blocks with host-created elements and text nodes; they **never** execute package-supplied JavaScript, HTML, links, or callbacks.
 - Bounds: 16 KiB serialized request/reply; 4 KiB intent payload; viewport dimensions 320..4096 wide, 240..4096 high.
+- View bounds: title 80 bytes, at most 24 blocks, text 512 bytes, status labels 80/value 160 bytes, and lists of at most 24 items of 160 bytes each. The current view contract is display-only; package input actions and host capability dispatch belong to the later RB-CX-02 security gate.
 - A host suspend means **loss of foreground ownership**, not implicit permission for background transmissions. A separate reviewed service layer must grant, supervise and revoke any permitted background work.
 
 An example activation envelope:

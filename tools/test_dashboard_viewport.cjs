@@ -174,6 +174,8 @@ async function main() {
       assert.equal(r.width,width);assert.equal(r.height,height);
       assert.equal(r.documentFits,true,"Page scrollbar present on load");
       assert.equal(r.documentFitsAfter,true,"Page scrollbar present after navigation");
+      assert.equal(r.packageView,true,"Bounded host-rendered package view is clipped or interpreted as markup");
+      assert.equal(r.packageSelectorAccessible,true,"Desktop package selector must be keyboard-labeled and touch-sized");
       assert.equal(r.initial.deckFits,true,"Module deck clipped");
       assert.equal(r.initial.cardsFit,true,"Module cards clipped");
       assert.equal(r.initial.rolesHidden,true,"Role selection must be hidden outside Settings");

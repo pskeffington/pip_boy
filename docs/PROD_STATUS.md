@@ -15,7 +15,7 @@ Updated: 2026-10-29
 
 ## Gate state
 
-- **Latest exact PR head:** `c425994eb8a172c357c6920e29d2b4d38cdc5050`; [run 40824698037](https://github.com/pskeffington/pip_boy/actions/runs/40824698037) completed successfully with all seven checks green.
+- **Latest exact PR head with complete CI:** `b4719dcfa896d9d08c38e68d5c11567e8e7f9561`; [run 40825620885](https://github.com/pskeffington/pip_boy/actions/runs/40825620885) completed successfully with all seven checks green. The run verified the RB-CX-00 acceptance-index/documentation checkpoint.
 - **Current gate:** RB-CX-01 is `next`; RB-CX-00 is accepted with exact commit/run evidence in `catalog/codex_passes.json`. Its software-only acceptance does not waive desktop/mobile regression checks required by later passes.
 - **Last accepted Codex pass:** RB-CX-00. **Last completed PROD roadmap gate:** PROD-0 remains **not accepted**; accepting this software validation pass does not certify the broader production baseline or release.
 - **Branch:** draft [PR #71](https://github.com/pskeffington/pip_boy/pull/71), `codex/package-adapter-protocol`. First-party CI repair is included. `rust_radio/` remains an independent untracked nested repository and is untouched.
@@ -26,7 +26,8 @@ Updated: 2026-10-29
 - **Implemented, software validated:** `pipboy-core::package_socket` provides bounded JSON request, hello-claim and response codecs; highest-common-version negotiation; strictly increasing request IDs; and a 64-entry request correlator that validates package and ID matches. Identity in a hello remains an unauthenticated claim.
 - **Implemented, software validated:** generic stream frame helpers use a 4-byte big-endian length, accept clean EOF, reject empty/truncated/oversized frames, and cap reads before allocation at 64 KiB.
 - **Implemented, focused software validated:** `pipboy-core::package_transport::UnixAdapterSession` adds an absolute-deadline Unix stream handshake and serial request/response exchange; a peer's hello identity must match the expected package ID, and request IDs/package IDs are correlated. This accepts an already-open socket only; hello identity is not authentication and the transport does not authorize, dispatch, spawn, or isolate packages.
-- **Implemented, software validated:** desktop and micro package selectors consume the mounted roster in `/api/state`; selection, Settings and foreground clearing update `UniversalAdapterHost` through same-origin endpoints. Both shells display host-provided views as inert text and preserve package selection across Settings/reload. The current candidate bootstrap mounts one passive RADIO catalogue, but it does not auto-select, start playback or grant hardware access.
+- **Implemented, software validated:** desktop and micro package selectors consume the mounted roster in `/api/state`; selection, Settings and foreground clearing update `UniversalAdapterHost` through same-origin endpoints. The accepted host mounts one passive RADIO catalogue and never auto-selects or starts playback.
+- **RB-CX-01 implementation candidate (not accepted):** the SDK now defines a bounded version-1 display-only `PackageView` (heading/text/status/list), the core validates it before exposing a foreground, and desktop/micro render host-created DOM using text content. Native selectors are keyboard-labeled with 44px touch targets; interactive package actions remain deferred to RB-CX-02. Local Rust and viewport results for this candidate are recorded in `VALIDATION.md`; complete exact-head CI is still required before pass acceptance.
 - **Implemented, focused software validated:** `PrivateUnixListener` binds only in an existing current-user-owned private directory, refuses occupied paths, sets socket permissions to `0600`, checks the OS-reported UID and PID against the host's expected child process, and removes only the socket inode it created. Linux uses peer credentials; macOS uses `getpeereid` and `LOCAL_PEERPID`. This establishes process/account provenance at connection time, not module identity or signature; no listener is connected to a process launcher yet.
 - **Still unimplemented:** timeout cancellation, domain dispatch, capability brokerage, signed/persistent installation state, process launch and isolation. The listener is not wired to a launcher; these remain later package trust/security passes.
 - The listener module passed an isolated Rust 1.90 aarch64 Linux check. A full workspace Linux cross-check remains unverified because this Mac lacks `aarch64-linux-gnu-gcc` for the vendored D-Bus dependency.
@@ -80,23 +81,23 @@ Updated: 2026-10-29
 
 ## Codex development handoff
 
-`python3 tools/codex_next.py --json` is a read-only, validated handoff of the next eligible RB-CX-01 pass. The `validate_ci_policy.py` / `test_validate_ci_policy.py` guard the zero-`uses:` rule, exact-SHA checkout, stable/1.90, SDR/native matrices and pinned Node bootstrap. Index status is backed by the exact run recorded above.
+`python3 tools/codex_next.py --json` is a read-only, validated handoff of RB-CX-01. The `validate_ci_policy.py` / `test_validate_ci_policy.py` guard the zero-`uses:` rule, exact-SHA checkout, stable/1.90, SDR/native matrices and pinned Node bootstrap. RB-CX-00 acceptance is supported by run 40824698037; the acceptance-index checkpoint then passed all seven checks on run 40825620885. The RB-CX-01 implementation candidate remains unaccepted in the machine index until a complete exact-head run passes.
 
 
-The [machine pass queue](../catalog/codex_passes.json) records **RB-CX-00 accepted** with exact source SHA and successful workflow URL, and names **RB-CX-01** as the only `next` pass. Historical startup failures, cancellation and the repaired macOS Node mismatch remain documented below; the latest exact run has all checks green. See [Codex instructions](../AGENTS.md), [pass plan](CODEX_PASSES.md) and [index hierarchy](INDEXING.md).
+The [machine pass queue](../catalog/codex_passes.json) records **RB-CX-00 accepted** with exact source SHA and successful workflow URL, and names **RB-CX-01** as the only `next` pass. The acceptance-index checkpoint at `b4719dc` passed all seven CI jobs. Historical startup failures, cancellation, the repaired macOS Node mismatch, and a stale handoff-test fixture are documented below; see [Codex instructions](../AGENTS.md), [pass plan](CODEX_PASSES.md) and [index hierarchy](INDEXING.md).
 
 ### RB-CX-01 handoff requirements
 
-- Implement and validate the bounded host-owned view model with safe text/input handling on desktop and micro.
-- Preserve one foreground, permanent Settings, failure recovery, accessibility and no document scrolling; package selection must never start playback, network or device activity.
-- Run negative/regression and desktop/micro/Radio viewport checks, then require a new successful exact-head matrix. Keep PR #71 draft.
+- Finish the bounded host-owned view schema, strict validation, native DOM rendering and keyboard/touch selector sizing.
+- Keep package views display-only; preserve one foreground, host Settings, fault isolation and no document scrolling without any implicit media/network/device work.
+- Run the focused Rust/desktop/micro suites, offline validators and full exact-head matrix. Keep PR #71 draft and do not advance RB-CX-01 to accepted until that matrix passes.
 
 ## Next three implementation actions
 
-1. Inspect RB-CX-01's declared renderer/SDK entrypoints and current package-view representation; design a bounded versioned schema.
-2. Implement desktop and micro safe rendering with host-owned lifecycle, Settings restoration and fault behavior, plus negative tests.
-3. Run offline/Rust/UI checks and exact-head CI; document evidence without merging or weakening gates.
+1. Finish final validation of the current bounded schema/rendering candidate and update the protocol/ownership index.
+2. Commit the focused RB-CX-01 work to the existing branch, push fast-forward, and review every exact-head CI job.
+3. Record source SHA, local and hosted results; accept RB-CX-01 only after all declared checks pass. Keep PR #71 draft.
 
 ## Release risks
 
-No package loader or process boundary exists. Manifest metadata and the typed codec confer no trust or capability. Hardware acceptance, UI integration, package provenance/signatures, IPC security, rollback, SBOM and deployment packaging remain open.
+No external package loader or OS process isolation exists. Manifest metadata and the typed codec confer no trust or capability. Physical hardware acceptance, interactive package intents, package provenance/signatures, IPC security, rollback, SBOM and deployment packaging remain open.

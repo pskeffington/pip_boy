@@ -115,6 +115,25 @@
         $("#palette-back").click();
         result.palette.back=shown($('[data-stage="settings"]'));
       }
+      snapshot.host_packages={
+        packages:[{package_id:"org.rustboy.radio",state:"registered"}],
+        selected_package_id:"org.rustboy.radio",
+        foreground:{surface:"package"},settings_open:false,
+        foreground_view:{version:1,title:"Radio catalogue",blocks:[
+          {kind:"status",label:"Player",value:"Not started"},
+          {kind:"list",label:"Stations",items:["<img src=x onerror=alert(1)>","Fixture station"]}
+        ]}
+      };
+      updateHostPackageSelect(snapshot.host_packages);
+      activateStage("adapter");
+      const packageView=$("#host-adapter-view");
+      const packageList=packageView?.querySelector(".package-view-list");
+      const packageSelect=$("#host-package-select");
+      result.packageView=!!packageView && shown($('[data-stage="adapter"]')) &&
+        packageView.textContent.includes("<img src=x onerror=alert(1)>") &&
+        !packageView.querySelector("img") && !!packageList && inside(packageView,$("#workspace-stage"));
+      result.packageSelectorAccessible=packageSelect?.getAttribute("aria-label") === "Mounted package foreground" &&
+        packageSelect.getBoundingClientRect().height >= 44 && inside(packageSelect,$(".masthead"));
       result.documentFitsAfter=documentFits();
       result.ok=true;
     }catch(e){result.error=e.stack || e.message;}

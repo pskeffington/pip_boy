@@ -15,6 +15,9 @@ pub const ADAPTER_PROTOCOL: u32 = 1;
 pub const MAX_WIRE_BYTES: usize = 16 * 1024;
 pub const MAX_INTENT_BYTES: usize = 4 * 1024;
 pub const MAX_PROTOCOL_VERSIONS: usize = 8;
+pub const MAX_VIEW_BLOCKS: usize = 24;
+pub const MAX_VIEW_LIST_ITEMS: usize = 24;
+pub const MAX_VIEW_TEXT_BYTES: usize = 512;
 
 /// Negotiation metadata from a local peer. A claimed package ID does not
 /// authenticate the process or prove installation.
@@ -89,6 +92,68 @@ impl Viewport {
         }
         Ok(Self { width, height })
     }
+}
+
+/// Versioned, data-only package view. Renderers map these nodes to host-owned
+/// DOM elements; packages cannot supply markup, scripts, links, or callbacks.
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub struct PackageView {
+    pub version: u32,
+    pub title: String,
+    pub blocks: Vec<ViewBlock>,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
+pub enum ViewBlock {
+    Heading { text: String },
+    Text { text: String },
+    Status { label: String, value: String },
+    List { label: String, items: Vec<String> },
+}
+
+impl PackageView {
+    pub fn validate(&self) -> Result<(), AdapterError> {
+        if self.version != 1 || !valid_view_text(&self.title, 80) {
+            return Err(AdapterError::Invalid("invalid package view header"));
+        }
+        if self.blocks.is_empty() || self.blocks.len() > MAX_VIEW_BLOCKS {
+            return Err(AdapterError::Invalid("invalid package view block count"));
+        }
+        for block in &self.blocks {
+            match block {
+                ViewBlock::Heading { text } | ViewBlock::Text { text } => {
+                    if !valid_view_text(text, MAX_VIEW_TEXT_BYTES) {
+                        return Err(AdapterError::Invalid("invalid package view text"));
+                    }
+                }
+                ViewBlock::Status { label, value } => {
+                    if !valid_view_text(label, 80) || !valid_view_text(value, 160) {
+                        return Err(AdapterError::Invalid("invalid package view status"));
+                    }
+                }
+                ViewBlock::List { label, items } => {
+                    if !valid_view_text(label, 80)
+                        || items.is_empty()
+                        || items.len() > MAX_VIEW_LIST_ITEMS
+                        || items.iter().any(|item| !valid_view_text(item, 160))
+                    {
+                        return Err(AdapterError::Invalid("invalid package view list"));
+                    }
+                }
+            }
+        }
+        Ok(())
+    }
+}
+
+fn valid_view_text(value: &str, max_bytes: usize) -> bool {
+    !value.trim().is_empty()
+        && value.len() <= max_bytes
+        && !value
+            .chars()
+            .any(|ch| ch.is_control() && !matches!(ch, '\n' | '\t'))
 }
 
 /// Serializable command vocabulary; no native handles or browser code cross
@@ -394,5 +459,42 @@ mod tests {
             },
         };
         assert!(frame.encode().is_err());
+    }
+
+    #[test]
+    fn package_view_schema_is_bounded_and_only_contains_display_data() {
+        let view = PackageView {
+            version: 1,
+            title: "Radio catalogue".into(),
+            blocks: vec![
+                ViewBlock::Status {
+                    label: "Player".into(),
+                    value: "Not started".into(),
+                },
+                ViewBlock::List {
+                    label: "Stations".into(),
+                    items: vec!["<img src=x onerror=alert(1)>".into()],
+                },
+            ],
+        };
+        view.validate().unwrap();
+        let encoded = serde_json::to_vec(&view).unwrap();
+        assert_eq!(
+            serde_json::from_slice::<PackageView>(&encoded).unwrap(),
+            view
+        );
+
+        let unknown = serde_json::json!({"version":1,"title":"bad","blocks":[{
+            "kind":"html","markup":"<script>alert(1)</script>"
+        }]});
+        assert!(serde_json::from_value::<PackageView>(unknown).is_err());
+        let oversized = PackageView {
+            version: 1,
+            title: "X".into(),
+            blocks: vec![ViewBlock::Text {
+                text: "x".repeat(MAX_VIEW_TEXT_BYTES + 1),
+            }],
+        };
+        assert!(oversized.validate().is_err());
     }
 }

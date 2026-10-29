@@ -115,6 +115,10 @@ See [role roadmap](ROLE_ROADMAP.md), [Scout GIS/TAK plan](SCOUT_GIS_TAK.md), [se
 
 The desktop shell must fit one viewport without document-level scrolling. At wide widths, the central workspace and inspector remain visible together; **no persistent role rail** is displayed. Below 1100 CSS pixels, **WORKSPACE / INSPECTOR** becomes an explicit two-way screen switch. The central workspace always exposes **COMMAND / MODULES / VIEWPORT / MESSAGES / SETTINGS**. Role selection is a nested Settings page, while MANAGE CUSTOM TOOLS opens a paged subview only when Custom is active. Modules, roles, and palette use visible PREV/NEXT controls instead of long vertical lists.
 
+### Host-owned package viewport
+
+The package stage renders the portable v1 `PackageView` schema through host-created headings, paragraphs, status rows and lists. Content is assigned as text; package HTML, scripts, URLs and callbacks are not accepted. The view has an internal bounded scroll region, preserving document-level no-scroll behavior. Package selection remains a native keyboard-accessible control and Settings remains host-owned and always reachable. Interactive package actions are deferred until capability policy passes RB-CX-02.
+
 **Acceptance criteria:** at normal browser zoom, do not expose a body scrollbar; keep the masthead, page switches, active screen and its navigation in the visible window; never hide the last module behind a clipping mask. At 480×320, use the dedicated `/micro` shell, which was specifically designed for the handheld. Dense data output, long device messages, authorization forms, and accessibility zoom may still use *internal* scrolling when needed; hiding essential controls is not an acceptable no-scroll implementation. The desktop radio and other future modules should use the same focused-panel/paging contract rather than adding sections below the fold.
 
 Browser/physical hardware acceptance is still required at 480×320, 800×480, 1280×720, and 1920×1080, including focus, touch operation, enlarged fonts, and no clipped buttons. A CSS-only no-scroll result does not establish that all embedded components fit.

@@ -3,10 +3,13 @@
 
 import copy
 import json
+import tempfile
 import unittest
 from pathlib import Path
 
-from validate_host_packages import ROOT, check_manifest, check_builtin_radio_manifest, validate
+from validate_host_packages import (
+    ROOT, check_adapter_contract, check_manifest, check_builtin_radio_manifest, validate,
+)
 
 
 class SocketCatalogTests(unittest.TestCase):
@@ -21,6 +24,27 @@ class SocketCatalogTests(unittest.TestCase):
 
     def test_four_reference_fixtures_validate(self):
         self.assertEqual(validate(), 4)
+
+    def test_package_view_contract_drift_is_rejected(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            (root / "catalog").mkdir()
+            (root / "crates/rust-boy-adapter-sdk/src").mkdir(parents=True)
+            (root / "catalog/host_adapter_contract.json").write_text(
+                (ROOT / "catalog/host_adapter_contract.json").read_text(encoding="utf-8"),
+                encoding="utf-8",
+            )
+            (root / "crates/rust-boy-adapter-sdk/src/lib.rs").write_text(
+                (ROOT / "crates/rust-boy-adapter-sdk/src/lib.rs").read_text(encoding="utf-8"),
+                encoding="utf-8",
+            )
+            check_adapter_contract(root)
+            contract_path = root / "catalog/host_adapter_contract.json"
+            contract = json.loads(contract_path.read_text(encoding="utf-8"))
+            contract["package_view"]["blocks"].append("html")
+            contract_path.write_text(json.dumps(contract), encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "package view schema drift"):
+                check_adapter_contract(root)
 
     def test_builtin_radio_denies_all_capabilities(self):
         m = json.loads(

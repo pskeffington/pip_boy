@@ -38,6 +38,10 @@ Role and Data decks show four tools below 260 CSS pixels of content height and s
 
 Back/Escape returns from a result to its inputs before leaving a tool. Network inputs return to the tool menu; the next Back exits the module. Local input drafts survive tab navigation and GIS-mode changes within this browser session, scoped by role/tool/mode. They are not written to disk and clear on reload. Completed local results focus EDIT INPUTS; editing focuses the first field. Detached requests cannot update the current status or show stale errors.
 
+## Host-owned package viewport
+
+The package stage renders only the portable v1 view blocks (heading, text, status and list) into host-created elements. Text is inserted through DOM text nodes; package markup, scripts, links and callbacks are unsupported. Lists scroll inside their own bounded region so the 480×320 shell does not acquire document scrolling. Package activation is display-only until the later capability gate authorizes input actions; the native host selector and Settings remain available.
+
 ## Micro readability pass
 
 **STATUS, [active role], DATA, MAP, RADIO** are the universal five-section labels. Settings is accessed from the header. The heading has one consistent Back control, including return from non-home tabs; Escape follows the same route. Head Engineer opens NETWORK, which presents the available operations rather than implying a scan has already started. Local tools show results separately with EDIT INPUTS preserving the entered values. Root pages retain overflow access at accessibility zoom.

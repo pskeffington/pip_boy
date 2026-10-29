@@ -167,12 +167,50 @@ function renderHostAdapterSurface() {
   const packageId = state?.selected_package_id;
   byId("host-adapter-id").textContent = packageId || "HOST";
   byId("host-adapter-status").textContent = packageId
-    ? "Package view data is rendered as inert text by the host."
+    ? "Package view is rendered by the host from bounded data."
     : "No package is mounted.";
-  const view = state?.foreground_view;
-  byId("host-adapter-view").textContent = view == null
-    ? "No foreground view data is available."
-    : JSON.stringify(view, null, 2);
+  renderPackageView(byId("host-adapter-view"), state?.foreground_view);
+}
+
+function renderPackageView(root, view) {
+  root.replaceChildren();
+  if (!view || view.version !== 1 || typeof view.title !== "string" ||
+      !Array.isArray(view.blocks) || view.blocks.length > 24) {
+    root.textContent = "No valid foreground view is available.";
+    return;
+  }
+  const validText = (value, limit) => typeof value === "string" && value.trim().length > 0 &&
+    value.length <= limit && !/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/.test(value);
+  const validBlock = block => block && (
+    (block.kind === "heading" && validText(block.text, 512)) ||
+    (block.kind === "text" && validText(block.text, 512)) ||
+    (block.kind === "status" && validText(block.label, 80) && validText(block.value, 160)) ||
+    (block.kind === "list" && validText(block.label, 80) && Array.isArray(block.items) &&
+      block.items.length > 0 && block.items.length <= 24 && block.items.every(item => validText(item, 160)))
+  );
+  if (!validText(view.title, 80) || view.blocks.length === 0 || !view.blocks.every(validBlock)) {
+    root.textContent = "No valid foreground view is available.";
+    return;
+  }
+  const title = el("h3", "package-view-title", view.title);
+  root.append(title);
+  for (const block of view.blocks) {
+    if (block.kind === "heading") {
+      root.append(el("h4", "package-view-heading", block.text));
+    } else if (block.kind === "text") {
+      root.append(el("p", "package-view-text", block.text));
+    } else if (block.kind === "status") {
+      const row = el("div", "package-view-status");
+      row.append(el("span", "package-view-label", block.label),
+        el("strong", "package-view-value", block.value));
+      root.append(row);
+    } else if (block.kind === "list") {
+      root.append(el("h4", "package-view-heading", block.label));
+      const list = el("ul", "package-view-list");
+      for (const item of block.items) list.append(el("li", "", item));
+      root.append(list);
+    }
+  }
 }
 
 function selectHostPackage(packageId) {

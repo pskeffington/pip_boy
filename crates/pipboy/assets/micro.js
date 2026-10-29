@@ -645,11 +645,46 @@ function showHostAdapter() {
   const root = panel();
   const id = snapshot?.host_packages?.selected_package_id;
   root.append(sectionTop(id ? id.toUpperCase() : "PACKAGE", "HOST"));
-  const view = snapshot?.host_packages?.foreground_view;
-  const pre = make("pre", "adapter-view-data");
-  pre.textContent = view == null ? "No foreground view data is available." : JSON.stringify(view, null, 2);
-  root.append(make("p", "micro-copy", "Package view data is rendered as inert text by the host."), pre);
+  root.append(make("p", "micro-copy", "Host-rendered package view."));
+  renderPackageView(root, snapshot?.host_packages?.foreground_view);
   return root;
+}
+
+function renderPackageView(root, view) {
+  if (!view || view.version !== 1 || typeof view.title !== "string" ||
+      !Array.isArray(view.blocks) || view.blocks.length > 24) {
+    root.append(make("p", "adapter-view-empty", "No valid foreground view is available."));
+    return;
+  }
+  const validText = (value, limit) => typeof value === "string" && value.trim().length > 0 &&
+    value.length <= limit && !/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/.test(value);
+  const validBlock = block => block && (
+    (block.kind === "heading" && validText(block.text, 512)) ||
+    (block.kind === "text" && validText(block.text, 512)) ||
+    (block.kind === "status" && validText(block.label, 80) && validText(block.value, 160)) ||
+    (block.kind === "list" && validText(block.label, 80) && Array.isArray(block.items) &&
+      block.items.length > 0 && block.items.length <= 24 && block.items.every(item => validText(item, 160)))
+  );
+  if (!validText(view.title, 80) || view.blocks.length === 0 || !view.blocks.every(validBlock)) {
+    root.append(make("p", "adapter-view-empty", "No valid foreground view is available."));
+    return;
+  }
+  root.append(make("h2", "adapter-view-title", view.title));
+  for (const block of view.blocks) {
+    if (block.kind === "heading" || block.kind === "text") {
+      root.append(make(block.kind === "heading" ? "h3" : "p",
+        block.kind === "heading" ? "adapter-view-heading" : "adapter-view-text", block.text));
+    } else if (block.kind === "status") {
+      const row = make("div", "adapter-view-status");
+      row.append(make("span", "", block.label), make("strong", "", block.value));
+      root.append(row);
+    } else if (block.kind === "list") {
+      root.append(make("h3", "adapter-view-heading", block.label));
+      const list = make("ul", "adapter-view-list");
+      for (const item of block.items) list.append(make("li", "", item));
+      root.append(list);
+    }
+  }
 }
 
 function selectHostPackage(packageId) {

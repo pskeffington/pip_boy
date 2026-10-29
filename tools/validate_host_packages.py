@@ -157,6 +157,14 @@ def check_adapter_contract(root=ROOT):
             "adapter command index drift")
     require(contract.get("replies") == ["ack", "view"],
             "adapter reply index drift")
+    require(contract.get("package_view") == {
+                "version": 1,
+                "blocks": ["heading", "text", "status", "list"],
+                "max_blocks": 24,
+                "max_list_items": 24,
+                "max_text_bytes": 512,
+                "input_actions": "not_implemented",
+            }, "adapter package view schema drift")
     require(contract.get("host_surfaces") == ["empty", "settings", "package"],
             "adapter host surface index drift")
     require(contract.get("package_ids") == sorted(v[0] for v in EXPECTED.values()),
@@ -166,8 +174,14 @@ def check_adapter_contract(root=ROOT):
     ).read_text(encoding="utf-8")
     require("pub const ADAPTER_PROTOCOL: u32 = 1;" in sdk
             and "pub const MAX_WIRE_BYTES: usize = 16 * 1024;" in sdk
-            and "pub const MAX_INTENT_BYTES: usize = 4 * 1024;" in sdk,
+            and "pub const MAX_INTENT_BYTES: usize = 4 * 1024;" in sdk
+            and "pub const MAX_VIEW_BLOCKS: usize = 24;" in sdk
+            and "pub const MAX_VIEW_LIST_ITEMS: usize = 24;" in sdk
+            and "pub const MAX_VIEW_TEXT_BYTES: usize = 512;" in sdk,
             "adapter machine index and Rust constants disagree")
+    require("pub struct PackageView" in sdk and "pub enum ViewBlock" in sdk
+            and 'rename_all = "snake_case", deny_unknown_fields' in sdk,
+            "adapter SDK is missing the strict package view schema")
     require(contract.get("third_party_execution") == "not_implemented",
             "adapter contract must not claim unreviewed external execution")
 

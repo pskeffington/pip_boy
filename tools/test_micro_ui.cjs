@@ -69,7 +69,10 @@ const context = vm.createContext({document, window, Element, console, Intl, Date
       const body = JSON.parse(options.body);
       return {ok:true, json:async () => body.package_id
         ? {selected_package_id:body.package_id, foreground:{surface:"package"}, settings_open:false,
-            foreground_view:{message:"<img src=x onerror=alert(1)>"}}
+            foreground_view:{version:1,title:"Fixture package",blocks:[
+              {kind:"text",text:"<img src=x onerror=alert(1)>"},
+              {kind:"status",label:"State",value:"Read only"}
+            ]}}
         : {selected_package_id:null, foreground:{surface:"empty"}, settings_open:false, foreground_view:null}};
     }
     return {ok:true, json:async () => fixture};
@@ -173,9 +176,17 @@ const tiles = () => content.querySelectorAll(".tile");
   packageSelect.events.get("change")({currentTarget:packageSelect});
   await new Promise(setImmediate);
   assert.equal(run("tab"), "adapter", "Selecting a mounted package opens the host package surface");
-  const packageView = walk(content).find(node => node.className === "adapter-view-data");
+  const packageView = walk(content).find(node => node.className === "adapter-view-text");
   assert.ok(packageView?.textContent.includes("<img src=x onerror=alert(1)>"));
-  assert.equal(packageView.children.length, 0, "Adapter view data is text, never interpreted as markup");
+  assert.equal(walk(content).some(node => node.tagName === "img"), false,
+    "Package view text is placed in host-created DOM nodes, never interpreted as markup");
+  assert.ok(walk(content).some(node => node.className === "adapter-view-status"),
+    "Portable status blocks receive a native handheld rendering");
+  const invalidPackageView = run(`(()=>{const root=document.createElement("div");
+    renderPackageView(root,{version:1,title:"Bad",blocks:[{kind:"html",markup:"<script>run()</script>"}]});
+    return root;})()`);
+  assert.match(invalidPackageView.textContent,/No valid foreground view/,
+    "Unknown package view blocks must be rejected instead of ignored or interpreted");
   run('setTab("stat")');
   await new Promise(setImmediate);
   assert.equal(run("tab"), "stat", "Leaving the package returns to the host workbench");

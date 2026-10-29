@@ -163,6 +163,8 @@ async function main() {
       assert.ok(!r.error,r.error);
       assert.deepEqual(r.tabs,["stat","role","data","map","radio"]);
       assert.equal(r.settings,true,"Settings header target clipped");
+      assert.equal(r.packageView,true,"Bounded host-rendered package view clipped or interpreted text as markup");
+      assert.equal(r.packageSelectorAccessible,true,"Micro package selector must be keyboard-labeled and touch-sized");
       for(const page of r.pages){
         assert.ok(page.fits,`${w}x${h} ${page.id} overflow: ${JSON.stringify(page)}`);
         assert.ok(page.controlsFit,`${w}x${h} ${page.id} controls clipped`);

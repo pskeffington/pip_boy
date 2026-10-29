@@ -12,7 +12,7 @@ Rust-Boy keeps **separate indexes for separate kinds of evidence**. They are sou
 | [`docs/PROD_STATUS.md`](PROD_STATUS.md), [`docs/VALIDATION.md`](VALIDATION.md) | What actually ran; current limitations and evidence | **Validation checkpoint** |
 | [`docs/HOST_PACKAGE_ROADMAP.md`](HOST_PACKAGE_ROADMAP.md) | Host architecture and security gate ordering | **Design contract** |
 | [`catalog/module_plan.json`](../catalog/module_plan.json), [`catalog/role_roadmap.json`](../catalog/role_roadmap.json), [`catalog/vault_org_chart.json`](../catalog/vault_org_chart.json) | Domain capabilities, user roles and organization design | Planning only |
-| [`catalog/host_adapter_contract.json`](../catalog/host_adapter_contract.json) | Protocol constants and SDK vocabulary | Contract, not trust |
+| [`catalog/host_adapter_contract.json`](../catalog/host_adapter_contract.json) | Protocol constants, bounded display-only PackageView schema and SDK vocabulary | Contract, not trust |
 | [reference package fixtures](../catalog/host_packages), [compiled RADIO manifest](../catalog/builtin_packages/rust_radio.json) | Four inert reference designs vs. an explicitly compiled read-only catalogue | Neither grants capabilities |
 | [`catalog/sources.json`](../catalog/sources.json), [`catalog/literature.json`](../catalog/literature.json) | Provenance, licensing and research limitations | References, not implementation |
 

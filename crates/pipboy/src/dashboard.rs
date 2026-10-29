@@ -1593,7 +1593,9 @@ mod tests {
 
         fn handle(&mut self, _request: AdapterEnvelope) -> Result<AdapterReply, AdapterError> {
             Ok(AdapterReply::View {
-                state: json!({"screen": "test adapter"}),
+                state: json!({"version": 1, "title": "Test adapter", "blocks": [
+                    {"kind": "text", "text": "Ready"}
+                ]}),
             })
         }
     }
@@ -2820,7 +2822,7 @@ mod tests {
         assert_eq!(response.status, 200);
         let selected: Value = serde_json::from_slice(&response.body).unwrap();
         assert_eq!(selected["selected_package_id"], "org.rustboy.radio");
-        assert_eq!(selected["foreground_view"]["screen"], "test adapter");
+        assert_eq!(selected["foreground_view"]["title"], "Test adapter");
 
         host.open_settings();
         let settings = host_packages_value(&host);
