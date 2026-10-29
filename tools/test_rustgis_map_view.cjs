@@ -102,6 +102,19 @@ async function main() {
   assert.match(packageView.status.textContent,/SOURCE UNVERIFIED/);
   assert.equal(packageView.shapes[0].style.stroke,"#b5db90");
   const packageShapes=packageView.shapes,packageLayers=packageView.layers,packageCenter={...packageView.center};
+  const packageZoom=packageView.zoom,packageFormat=packageView.mapFormat;
+  const nullOnly=JSON.stringify({type:"FeatureCollection",features:[
+    {type:"Feature",properties:{name:"No geometry"},geometry:null}
+  ]});
+  packageView.packageFile.files=[makeFile("manifest.json",JSON.stringify(manifest)),makeFile("roads.geojson",nullOnly)];
+  await packageView.packageFile.listeners.change[0]();
+  assert.equal(packageView.shapes,packageShapes,"null-only replacement preserves last-good geometry");
+  assert.equal(packageView.layers,packageLayers,"null-only replacement preserves source metadata");
+  assert.deepEqual(packageView.center,packageCenter,"null-only replacement preserves the viewport center");
+  assert.equal(packageView.zoom,packageZoom,"null-only replacement preserves the viewport zoom");
+  assert.equal(packageView.mapFormat,packageFormat,"null-only replacement preserves the active map format");
+  assert.match(packageView.status.textContent,/MAP ERROR/);
+  assert.equal(packageView.packageFile.value,"");
   packageView.packageFile.files=[makeFile("manifest.json",JSON.stringify({...manifest,schema:"rb-gis-package/v2"})),makeFile("roads.geojson",geo)];
   await packageView.packageFile.listeners.change[0]();
   assert.equal(packageView.shapes,packageShapes,"invalid replacement leaves last-good geometry untouched");
