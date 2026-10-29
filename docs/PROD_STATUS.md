@@ -20,6 +20,14 @@ Updated: 2026-10-29
 - The main workflow still contains third-party Action imports. The PR branch replaces these with repository-owned exact-SHA checkout and official toolchain bootstrap, preserving the stable/1.90, SDR and native platform gates. Main's badge will reflect the repaired workflow after the change is merged.
 - PR #71 remains draft because RB-CX-05's independent `rb_gis` renderer parity and operator/field acceptance remain open. Do not treat the green PR CI matrix as acceptance of those gates.
 
+## RB-CX-05 host package interoperability — local candidate
+
+- Added explicit local directory import for the documented `rb-gis-package/v1` flat GeoJSON format in the Rust-Boy MAP host. Parsing enforces one directory, no path traversal, up to 12 layers, 64 KiB manifest, 2 MiB per layer, 2,000 features/30,000 vertices per layer and existing aggregate map limits. Layer styling comes from a closed role map; source, vintage and attribution remain declared strings.
+- A visible warning says package provenance is unauthenticated. Import is user-triggered, stays local, performs no automatic device or network access, and commits geometry only after the full package validates. Malformed replacements preserve last-good geometry, source metadata and camera.
+- The new parser negatives and map-view last-good regression passed. All six indexed RB-CX-05 checks passed on the development worktree; Chromium passed 480×320, 800×480 and 320×568. Offline validators and `git diff --check` passed. The first sandboxed loopback test attempt returned `EPERM`; the unchanged localhost suites passed with explicit test-loopback access.
+- `bash scripts/test-map-macos.command --verify --require-chromium` also passed on the candidate worktree: native Mac build, nine county-cache Rust tests, real loopback micro smoke, offline map logic, six cache replay tests and three Chromium viewports. No production devices, external providers, or independent `rb_gis` renderer were used.
+- Exact commit SHA and hosted CI evidence are pending this local candidate's commit. RB-CX-05 remains unaccepted: no independent `rb_gis` renderer parity, Census SHP/DBF/ZIP/service migration, Mac operator acceptance or field report is claimed. The default `main` badge remains red until the CI repair is eligible to merge; PR #71 stays draft.
+
 ## Gate state
 
 - **Latest completed exact-head validation:** PR checkpoint `68722d765c1df9bfd0f7c4ac9b8cb4c84b717023`; push-triggered [run 40840007336](https://github.com/pskeffington/pip_boy/actions/runs/40840007336) passed all seven jobs, including stable/Rust 1.90, both SDR features, source/catalog policy, desktop/handheld Chromium, native macOS MAP and Windows ConPTY. CI policy continues to require zero external GitHub Action `uses:` dependencies.

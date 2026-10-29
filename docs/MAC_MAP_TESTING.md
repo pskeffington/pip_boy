@@ -17,7 +17,7 @@ bash scripts/test-map-macos.command --verify
 bash scripts/test-map-macos.command --launch
 ```
 
-The **verify** step builds the actual macOS Rust `pipboy` binary, runs county-cache Rust tests, starts a temporary Rust loopback server for the micro HTTP integration test, and executes the offline JavaScript map, GPS permission, county-ingestion, boundary, landmark, layer and RustGIS import tests. It does **not** contact Census, OSM or your GPS provider. It doesn't alter your normal workbench. When Chrome/Chromium is installed it also runs the headless 480×320 / 800×480 / 320×568 viewport fixture. Require that check rather than silently skipping it with `--verify --require-chromium`.
+The **verify** step builds the actual macOS Rust `pipboy` binary, runs county-cache Rust tests, starts a temporary Rust loopback server for the micro HTTP integration test, and executes the offline JavaScript map, GPS permission, county-ingestion, boundary, landmark, layer and RustGIS import tests. It does **not** contact Census, OSM or your GPS provider. It doesn't alter your normal workbench. When Chrome/Chromium is installed it also runs the headless 480×320 / 800×480 / 320×568 viewport fixture. The RustGIS import fixture covers native maps and explicit `rb-gis-package/v1` directory packages, including malformed replacement preserving the last-good map. Require the viewport check rather than silently skipping it with `--verify --require-chromium`.
 
 ### Audit the real saved county without a network connection
 

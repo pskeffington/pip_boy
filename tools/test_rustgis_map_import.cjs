@@ -102,6 +102,33 @@ async function check() {
   ] }), "empty.rgismap"), /No embedded vector map data/);
   assert.equal(api.parseRustGIS(JSON.stringify({ ...sample, groups: [{ id: 55, visible: false, children: [2] }] }), "group.rgismap").shapes.length, 1);
 
+  const geo = JSON.stringify({type:"FeatureCollection",features:[
+    {type:"Feature",properties:{name:"Main road"},geometry:{type:"LineString",coordinates:[[-81,37],[-81.1,37.1]]}}
+  ]});
+  const manifest = {schema:"rb-gis-package/v1",description:"County sample",layers:[{
+    file:"roads.geojson",name:"Road network",role:"roads",source:"County GIS",vintage:"2025",
+    attribution:"County GIS office"
+  }]};
+  const pkg=(m=manifest, contents=geo, extra=[])=>[
+    {name:"manifest.json",webkitRelativePath:"fixture/manifest.json",size:Buffer.byteLength(JSON.stringify(m)),text:async()=>JSON.stringify(m)},
+    {name:"roads.geojson",webkitRelativePath:"fixture/roads.geojson",size:Buffer.byteLength(contents),text:async()=>contents},
+    ...extra
+  ];
+  const importedPackage=await api.readDirectoryPackage(pkg());
+  assert.equal(importedPackage.format,"rb-gis-package/v1");
+  assert.equal(importedPackage.layers[0].role,"roads");
+  assert.equal(importedPackage.shapes[0].style.stroke,"#b5db90");
+  assert.ok(importedPackage.warnings.some((w)=>w.includes("not authenticated")));
+  await assert.rejects(api.readDirectoryPackage(pkg({...manifest,schema:"rb-gis-package/v2"})),/Unsupported/);
+  await assert.rejects(api.readDirectoryPackage(pkg({...manifest,layers:[{...manifest.layers[0],file:"../roads.geojson"}]})),/simple/);
+  await assert.rejects(api.readDirectoryPackage(pkg({...manifest,layers:[{...manifest.layers[0],role:"executable"}]})),/role/);
+  await assert.rejects(api.readDirectoryPackage(pkg({...manifest,layers:[{...manifest.layers[0],source:""}]})),/metadata/);
+  await assert.rejects(api.readDirectoryPackage(pkg(manifest,JSON.stringify({type:"Point",coordinates:[200,0]}))),/WGS84/);
+  await assert.rejects(api.readDirectoryPackage(pkg(manifest,geo,[{name:"extra.txt",webkitRelativePath:"fixture/extra.txt",size:1,text:async()=>"x"}])),/unlisted/);
+  await assert.rejects(api.readDirectoryPackage(pkg(manifest,geo,[{name:"other.geojson",webkitRelativePath:"other/other.geojson",size:1,text:async()=>"x"}])),/one flat/);
+  const oversized={name:"roads.geojson",webkitRelativePath:"fixture/roads.geojson",size:2*1024*1024+1,text:async()=>geo};
+  await assert.rejects(api.readDirectoryPackage([pkg()[0],oversized]),/exceeds 2 MiB/);
+
   for (const deflated of [false, true]) {
     const contents = zip("Scout.rgismap", raw, deflated);
     const inner = await api.readPackage(buffer(contents));
