@@ -23,8 +23,8 @@ Updated: 2026-10-29
 ## Current exact-head and independent GIS source check — 2026-10-29
 
 - PR #71 head `0fc2d9376d045c67071594fdc7363570561cba37` passed all seven jobs in [run 40865570902](https://github.com/pskeffington/pip_boy/actions/runs/40865570902). The PR's green status does not change `main`'s separate failing badge.
-- Read-only GitHub inspection of `pskeffington/rb_gis` found `main` at `bcb3b3a57024559826755df95bcf31911c4bc445`; its complete non-truncated tree contains only `LICENSE` and `README.md`. The README describes it as a future independent Rust-Boy MAP implementation. There is no renderer source, executable, or conformance fixture to compare with the Rust-Boy host.
-- This verifies why renderer parity cannot currently be accepted. Keep RB-CX-05 open and keep `rb_gis` independent; resume renderer comparison when upstream implementation evidence is available. Do not treat the current host-side GeoJSON interchange as equivalent evidence.
+- Read-only GitHub inspection found `rb_gis` default `main` at `bcb3b3a57024559826755df95bcf31911c4bc445` (only `LICENSE` and `README.md`) and an independent native GUI/painter on draft PR #1 head `9ec2b6d287aff1e52a1ccdab907374e737f6f8f4`. Its exact-head [run 40667742475](https://github.com/pskeffington/rb_gis/actions/runs/40667742475) ended `startup_failure` with zero jobs, so no Rust compile/tests ran. The source explicitly defers filled polygons, hole handling and robust clipping; its migration docs say the Census SHP/DBF/ZIP loader, cache and ZIP/county service remain unimplemented.
+- The renderer exists as an independent implementation candidate, but parity is not verified. A local clone attempt could not resolve `github.com`; the host repository and `rb_gis` remain untouched by this review. Keep RB-CX-05 open until independent CI starts, renderer/loader acceptance fixtures run, and results match the legacy offline behaviors. Do not treat the current host-side GeoJSON interchange as equivalent evidence.
 
 ## RB-CX-05 host package interoperability — local candidate
 

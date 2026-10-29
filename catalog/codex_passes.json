@@ -271,7 +271,7 @@
         "Verify rollback before legacy map removal."
       ],
       "blockers": [
-        "The independent rb_gis main at bcb3b3a57024559826755df95bcf31911c4bc445 contains only LICENSE and README.md; no renderer source or parity fixtures are available. Renderer parity must remain open until independent implementation evidence exists."
+        "The independent renderer is present on draft rb_gis PR #1 at 9ec2b6d287aff1e52a1ccdab907374e737f6f8f4, but its exact-head run 40667742475 ended startup_failure with zero jobs and its renderer defers filled polygons, holes, and robust clipping; the Census loader/cache/ZIP service is also still pending. Do not accept parity until the independent implementation is validated and matched against legacy fixtures."
       ],
       "external_repositories": [
         "pskeffington/rb_gis"
