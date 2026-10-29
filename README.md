@@ -18,6 +18,8 @@ Roles use short operator titles: **Overseer, Maintenance, Security, Doctor, Scie
 
 **Socket registry precursor:** Four independent designs (MAP / TV / RADIO / COMMS) can be inspected and validated without loading packages. `pipboy packages list --json` shows checked-in reference designs; `pipboy packages check PATH` validates an explicit file; `pipboy packages scan DIR --json` discovers JSON manifests in an operator-chosen local directory. All results are **reference/discovered metadata only**, not installed or runnable packages. See [socket contract](docs/PACKAGE_SOCKET.md).
 
+**Terminal-to-module integration (planned):** [Shared command catalog and gated TUI dispatcher](docs/TERMINAL_MODULE_COMMANDS.md) defines how selected Workbench tools will dispatch to approved native handlers. Today's terminal can browse pinned tool commands but does not yet mount or execute separate MAP/TV/COMMS packages.
+
 ## Project navigation
 
 [Documentation index](docs/README.md) · [Repository structure](docs/REPO_STRUCTURE.md) · [Architecture](docs/ARCHITECTURE.md) · [Organizational research](docs/ORGANIZATIONAL_OPTIMIZATION.md) · [Validation](docs/VALIDATION.md) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md).
