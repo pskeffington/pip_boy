@@ -202,3 +202,8 @@ The [machine pass queue](../catalog/codex_passes.json) records RB-CX-00/01/02/04
 ## Release risks
 
 No external package loader or OS process isolation exists. Manifest metadata and the typed codec confer no trust or capability. Physical hardware acceptance, interactive package intents, package provenance/signatures, IPC security, rollback, SBOM and deployment packaging remain open.
+
+
+## Top-level status reconciliation — 2026-10-29
+
+The latest PR #71 head is `b3a9ed40f429c5c5a1b6584f9ed9c2927bba95e7`. The landing-page README now distinguishes that pending exact-head check from the successful default-branch run. The local MAP verification and source validators pass; hosted validation for this exact SHA remains outstanding because the branch-ref API update did not admit a workflow run. Do not report the candidate as failing or accepted until exact-head CI provides a conclusion.
