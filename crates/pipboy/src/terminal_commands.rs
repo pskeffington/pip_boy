@@ -43,7 +43,7 @@ fn dispatch(id: &str, tokens: &[&str]) -> Result<(), Box<dyn Error>> {
         ("diag", ["host"]) => crate::diagnostics::run(vec!["host".into()]),
         ("library", ["sources", query @ ..]) if query.len() <= 8 => {
             let query = query.join(" ");
-            for item in sources().into_iter().filter(|item| item.matches(&query)) {
+            for item in sources()?.into_iter().filter(|item| item.matches(&query)) {
                 println!("{} [{}]: {}", item.project, item.license, item.summary);
             }
             Ok(())
