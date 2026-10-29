@@ -84,10 +84,9 @@ fn route<'a>(board: &'a Workbench, selected: &mut Option<&'a str>, input: &str) 
             Ok(true)
         }
         ["select", id] => {
-            if !supported(id) || !board.slots.iter().any(|slot| slot.tool == *id) {
-                return Err("tool is not pinned or has no validated offline terminal handler".into());
-            }
-            *selected = Some(id);
+            let pinned = board.slots.iter().find(|slot| slot.tool == *id && supported(id))
+                .ok_or("tool is not pinned or has no validated offline terminal handler")?;
+            *selected = Some(pinned.tool.as_str());
             println!("SELECTED {id}; no action started");
             Ok(true)
         }
