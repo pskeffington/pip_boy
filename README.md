@@ -20,6 +20,8 @@ Roles use short operator titles: **Overseer, Maintenance, Security, Doctor, Scie
 
 **Terminal command bridge (operator-confirmed initial tests; direct-command update pending validation):** `pipboy terminal` opens a separate command prompt that selects a **pinned Workbench tool** and executes allowlisted offline native Rust handlers (host status, diagnostics, source library, bytes, offline network calculations). [Shared command catalog and full TUI/GUI roadmap](docs/TERMINAL_MODULE_COMMANDS.md) remains open. The existing full-screen `tui` is unchanged; standalone MAP/TV/RADIO/COMMS sockets are not mounted by this command prompt.
 
+**GitHub-first Codex development:** [AGENTS.md](AGENTS.md) defines repository-wide agent rules and CI evidence; [terminal integration agent execution plan](docs/TERMINAL_AGENT_EXECUTION.md) and [machine-readable task queue](catalog/terminal_agent_tasks.json) assign CORE, TERMINAL, ADAPTER, SECURITY/QA, GUI and RELEASE passes. Start with [TC-A01](https://github.com/pskeffington/pip_boy/issues/73) and independent [TC-A04](https://github.com/pskeffington/pip_boy/issues/74). Operator-side parallel/local testing is not required to advance software implementation; physical device gates remain open.
+
 ## Project navigation
 
 [Documentation index](docs/README.md) · [Repository structure](docs/REPO_STRUCTURE.md) · [Architecture](docs/ARCHITECTURE.md) · [Organizational research](docs/ORGANIZATIONAL_OPTIMIZATION.md) · [Validation](docs/VALIDATION.md) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md).
