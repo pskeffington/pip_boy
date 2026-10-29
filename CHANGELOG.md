@@ -3,7 +3,8 @@
 ## 2026-10-29 — First-party CI and user build verification
 
 - Verify the PR branch's seven-job, zero-external-Action workflow on exact source `520b3bf2801d8a0a261ff16e96c40c3a2a02e5fb` ([run 40836201769](https://github.com/pskeffington/pip_boy/actions/runs/40836201769)).
-- Clean-build the remote `main` source snapshot `629f34f0ce21e37c6d2bc6567919ccc5c862c80d` with `cargo +stable build --workspace --locked`; run the resulting CLI help successfully on macOS ARM64.
+- Verify documentation head `bfe8570fc62fcac7ab570d405241ab7835834a76` on all seven exact-head checks ([run 40837409917](https://github.com/pskeffington/pip_boy/actions/runs/40837409917)).
+- Clean-build the remote `main` source snapshot `629f34f0ce21e37c6d2bc6567919ccc5c862c80d` with `cargo +stable build --workspace --locked`; run the CLI help and real loopback micro-dashboard smoke successfully on macOS ARM64.
 - Document Debian/Ubuntu ALSA build prerequisites and the locked workspace build/CLI smoke commands. Hardware, Mac operator and field acceptance remain separate.
 
 

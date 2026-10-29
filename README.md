@@ -1,6 +1,6 @@
 # Rust-Boy
 
-**First-party CI:** the [Rust workflow](.github/workflows/rust.yml) uses zero external GitHub Action `uses:` dependencies, checks out the exact triggering SHA, and validates stable Rust, the 1.90 MSRV, both optional SDR features, and native macOS/Windows builds. PR #71's source head `520b3bf2801d8a0a261ff16e96c40c3a2a02e5fb` passed all seven jobs in [run 40836201769](https://github.com/pskeffington/pip_boy/actions/runs/40836201769). This is not a fully offline build: Rustup, system packages and pinned Cargo dependencies still require their respective sources.
+**First-party CI:** the [Rust workflow](.github/workflows/rust.yml) uses zero external GitHub Action `uses:` dependencies, checks out the exact triggering SHA, and validates stable Rust, the 1.90 MSRV, both optional SDR features, and native macOS/Windows builds. PR #71's source head `520b3bf2801d8a0a261ff16e96c40c3a2a02e5fb` passed all seven jobs in [run 40836201769](https://github.com/pskeffington/pip_boy/actions/runs/40836201769); the subsequent documentation head `bfe8570fc62fcac7ab570d405241ab7835834a76` also passed all seven in [run 40837409917](https://github.com/pskeffington/pip_boy/actions/runs/40837409917). This is not a fully offline build: Rustup, system packages and pinned Cargo dependencies still require their respective sources.
 
 
 [![Rust-Boy quality gates](https://github.com/pskeffington/pip_boy/actions/workflows/rust.yml/badge.svg?branch=main)](https://github.com/pskeffington/pip_boy/actions/workflows/rust.yml)
@@ -50,7 +50,7 @@ cargo +stable build --workspace --locked
 cargo +stable run --locked -p pipboy -- --help
 ```
 
-The remote `main` branch at `629f34f0ce21e37c6d2bc6567919ccc5c862c80d` was extracted into a clean directory and both commands passed on macOS ARM64. This verifies that source snapshot's build; it does not certify hardware or field acceptance.
+The remote `main` branch at `629f34f0ce21e37c6d2bc6567919ccc5c862c80d` was extracted into a clean directory and both commands passed on macOS ARM64. The resulting binary also passed `python3 tools/smoke_micro.py`, which exercises the real loopback UI/API with temporary state and no WAN/device access. This verifies that source snapshot's build and local startup path; it does not certify hardware or field acceptance.
 
 ```bash
 git clone https://github.com/pskeffington/pip_boy.git

@@ -15,7 +15,7 @@ Updated: 2026-10-29
 
 ## Gate state
 
-- **Latest completed source validation:** `520b3bf2801d8a0a261ff16e96c40c3a2a02e5fb`; [run 40836201769](https://github.com/pskeffington/pip_boy/actions/runs/40836201769) passed all seven jobs, including the repaired county activation fixtures, both Rust toolchains, both SDR features, desktop/handheld Chromium, macOS MAP and Windows ConPTY. The following documentation checkpoint `a36d1ae3d7c937d72df12f3ab738d9d6a126711b` passed the same seven-job workflow in [run 40836904039](https://github.com/pskeffington/pip_boy/actions/runs/40836904039). CI policy continues to require zero external GitHub Action `uses:` dependencies.
+- **Latest completed exact-head validation:** documentation commit `bfe8570fc62fcac7ab570d405241ab7835834a76`; [run 40837409917](https://github.com/pskeffington/pip_boy/actions/runs/40837409917) passed all seven jobs. The host source commit `520b3bf2801d8a0a261ff16e96c40c3a2a02e5fb` also passed all seven in [run 40836201769](https://github.com/pskeffington/pip_boy/actions/runs/40836201769), including the repaired county activation fixtures, both Rust toolchains, both SDR features, desktop/handheld Chromium, macOS MAP and Windows ConPTY. CI policy continues to require zero external GitHub Action `uses:` dependencies.
 - **Acceptance/index checkpoint:** `7e0a19b440e9a8531390e00fb165b2b8df06f3d9`; [run 40831001927](https://github.com/pskeffington/pip_boy/actions/runs/40831001927) passed all seven jobs, including stable MAP browser regressions, Rust 1.90, SDR features, native Mac MAP and Windows ConPTY.
 - **Current gate:** RB-CX-05 is next, limited to host-owned GIS integration/parity work. `rb_gis` remains an independent repository and will not be modified from this checkout. RB-CX-04 is accepted software-only; its remaining blocker is external package launch because no approved launcher or binary identity is bound to a package.
 - **Last accepted Codex pass:** RB-CX-04. **Last completed PROD roadmap gate:** PROD-0 remains **not accepted**; these software pass acceptances do not certify the broader production baseline or release.
@@ -25,7 +25,7 @@ Updated: 2026-10-29
 ## Clean `main` user build — 2026-10-29
 
 - Fetched remote `main` at `629f34f0ce21e37c6d2bc6567919ccc5c862c80d`, exported that exact tree to a clean temporary source directory, and successfully ran `cargo +stable build --workspace --locked` on macOS ARM64.
-- `cargo +stable run --locked -p pipboy -- --help` also succeeded from the clean build, confirming the documented executable entry point.
+- `cargo +stable run --locked -p pipboy -- --help` succeeded, then `python3 tools/smoke_micro.py` passed against the clean main binary. The smoke exercises the real local micro UI/API, CSP and offline startup with temporary test state; it makes no WAN or device requests.
 - The README now lists Rust 1.90+, the Debian/Ubuntu C toolchain, `pkg-config` and ALSA header prerequisites, and locked workspace build/CLI commands. This build result is source-compilation evidence; it does not replace native Windows/Pi operator, hardware or field acceptance.
 
 ## RB-CX-02 accepted — backend approvals and media ownership

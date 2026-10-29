@@ -6,7 +6,9 @@ Removed `dtolnay/rust-toolchain@stable`, `actions/checkout@v4` and `actions/setu
 
 ## Clean `main` user build — 2026-10-29
 
-Fetched the actual remote `main` branch at `629f34f0ce21e37c6d2bc6567919ccc5c862c80d` and exported it to a clean temporary directory, without using the PR branch's source files. On macOS ARM64, `cargo +stable build --workspace --locked` compiled every workspace package successfully; `cargo +stable run --locked -p pipboy -- --help` launched the resulting binary and printed the CLI usage. The README documents the matching commands and the ALSA development headers/pkg-config prerequisite for Debian/Ubuntu. This verifies a clean source build and CLI startup on one host; it is not a cross-platform or field-acceptance claim.
+Fetched the actual remote `main` branch at `629f34f0ce21e37c6d2bc6567919ccc5c862c80d` and exported it to a clean temporary directory, without using the PR branch's source files. On macOS ARM64, `cargo +stable build --workspace --locked` compiled every workspace package successfully; `cargo +stable run --locked -p pipboy -- --help` launched the binary, and `python3 tools/smoke_micro.py` passed against that binary. The smoke covers the real local micro UI/API, CSP, offline defaults and absence of implicit network/device activity using temporary state. The README documents the build commands and ALSA development headers/pkg-config prerequisite for Debian/Ubuntu. This verifies a clean source build and local startup path on one host; it is not a cross-platform or field-acceptance claim.
+
+PR documentation head `bfe8570fc62fcac7ab570d405241ab7835834a76` passed the complete seven-job first-party workflow in [run 40837409917](https://github.com/pskeffington/pip_boy/actions/runs/40837409917), including native macOS and Windows, Rust stable/1.90, both SDR feature suites and all offline/browser gates.
 
 
 ## Admitted CI and local validation — 2026-10-29
