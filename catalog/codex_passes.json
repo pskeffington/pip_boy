@@ -271,7 +271,7 @@
         "Verify rollback before legacy map removal."
       ],
       "blockers": [
-        "The independent renderer is present on draft rb_gis PR #1 at 9ec2b6d287aff1e52a1ccdab907374e737f6f8f4, but its exact-head run 40667742475 ended startup_failure with zero jobs and its renderer defers filled polygons, holes, and robust clipping; the Census loader/cache/ZIP service is also still pending. Do not accept parity until the independent implementation is validated and matched against legacy fixtures."
+        "Independent draft rb_gis PR #1 at aaa7b26e46eaa9e57f0901026bda41da0ec08249 passed hosted run 40869798576: exact-SHA checkout, stable rustup, offline CI policy, formatting, Clippy, and tests. On code source fc27c82, locked stable and Rust 1.90 fmt/check/clippy/test also pass. Polygon fill/holes/clipping and Census loader/cache/ZIP remain pending. Keep parity open until legacy fixtures and field gates pass."
       ],
       "external_repositories": [
         "pskeffington/rb_gis"
