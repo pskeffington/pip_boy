@@ -18,7 +18,7 @@ Roles use short operator titles: **Overseer, Maintenance, Security, Doctor, Scie
 
 **Socket registry precursor:** Four independent designs (MAP / TV / RADIO / COMMS) can be inspected and validated without loading packages. `pipboy packages list --json` shows checked-in reference designs; `pipboy packages check PATH` validates an explicit file; `pipboy packages scan DIR --json` discovers JSON manifests in an operator-chosen local directory. All results are **reference/discovered metadata only**, not installed or runnable packages. See [socket contract](docs/PACKAGE_SOCKET.md).
 
-**Terminal command bridge (initial implementation, unverified build):** `pipboy terminal` opens a separate command prompt that selects a **pinned Workbench tool** and executes allowlisted offline native Rust handlers (host status, diagnostics, source library, bytes, offline network calculations). [Shared command catalog and full TUI/GUI roadmap](docs/TERMINAL_MODULE_COMMANDS.md) remains open. The existing full-screen `tui` is unchanged; standalone MAP/TV/RADIO/COMMS sockets are not mounted by this command prompt.
+**Terminal command bridge (operator-confirmed initial tests; direct-command update pending validation):** `pipboy terminal` opens a separate command prompt that selects a **pinned Workbench tool** and executes allowlisted offline native Rust handlers (host status, diagnostics, source library, bytes, offline network calculations). [Shared command catalog and full TUI/GUI roadmap](docs/TERMINAL_MODULE_COMMANDS.md) remains open. The existing full-screen `tui` is unchanged; standalone MAP/TV/RADIO/COMMS sockets are not mounted by this command prompt.
 
 ## Project navigation
 
