@@ -55,6 +55,13 @@ The next indexing gate adds `python3 tools/codex_next.py --json`, a read-only, v
 
 The [machine pass queue](../catalog/codex_passes.json) names **RB-CX-00** as the only `next` pass: inspect exact HEAD, run the passive RADIO bootstrap and host UI regressions, and obtain actual compiler/CI evidence. See [Codex instructions](../AGENTS.md), [pass plan](CODEX_PASSES.md) and [index hierarchy](INDEXING.md). This indexing update registers new offline checks but does **not** claim they ran or passed. [Actions run 40821379695](https://github.com/pskeffington/pip_boy/actions/runs/40821379695) on indexing commit `5b4a66e` concluded `startup_failure` with **zero jobs**; it provides no Python, Rust or browser test result. Subsequent exact-head CI remains to be established.
 
+### RB-CX-00 required verification before advancement
+
+- Record exact branch/head and `main` divergence, successful indexed Python checks, Rust stable/1.90 workspace checks, and desktop/micro/Radio browser regressions.
+- Verify the passive RADIO adapter does not start audio, reach the network, open hardware or grant scopes during bootstrap or foreground switching.
+- Inspect the latest workflow admission and jobs; a zero-job `startup_failure` is a CI infrastructure blocker, not test acceptance.
+- Only advance to RB-CX-01 following a successful exact-head CI run and review. The current index status remains `next`; no production gate is accepted.
+
 ## Next three implementation actions
 
 1. Compile and test the new reviewed read-only RADIO catalogue bootstrap and desktop/micro selection on real Rust 1.90/stable and Chromium; preserve legacy playback.

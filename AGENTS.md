@@ -14,6 +14,18 @@ Start with `python3 tools/codex_next.py` or `python3 tools/codex_next.py --json`
 5. Run the applicable offline, Rust, Node/Chromium and hardware gates. Record exact commit SHA, commands, outcomes and unrun limitations in `docs/PROD_STATUS.md` and, for substantive findings, `docs/VALIDATION.md`. Source-only tests and empty CI status are not passing evidence.
 6. Update machine indexes and documentation together. Commit a coherent checkpoint to the active authorized development branch and synchronize the PR description. Merge only after verified CI/review gates; do not bypass failed checks to save context.
 
+## RB-CX-00 execution order and stop conditions
+
+For the currently indexed `RB-CX-00`, perform a read-only baseline first: `git status --short --branch`, `git rev-parse HEAD`, `git fetch origin` (only if network access is explicitly available), and `git log --oneline --max-count=5`. Before changing tracked files, compare the current branch against `origin/main`, inspect PR #71, and preserve independent open PR changes.
+
+Run `python3 tools/codex_next.py --json`, then `python3 tools/validate_codex_passes.py`, `python3 tools/test_validate_codex_passes.py`, `python3 tools/validate_component_index.py`, `python3 tools/test_component_index.py`, `python3 tools/validate_repo.py`, `python3 tools/test_validate_repo.py`, `python3 tools/validate_host_packages.py` and `python3 tools/test_validate_host_packages.py`. Record each result independently; a source inspection is not test execution.
+
+Then run locked Rust format/check/test/Clippy with stable and Rust 1.90.0, plus desktop/micro browser fixtures. Check that the compile-time RADIO catalogue stays dormant until manually selected, remains read-only and capability-free, and that navigating through Settings restores the single foreground. Existing native Radio playback must remain explicit.
+
+**Stop and report instead of advancing** on any failed required check, zero-job GitHub Actions `startup_failure`, stale remote branch, unresolved merge conflict, missing dependencies, or missing hardware evidence. Do not bypass checks, grant devices, launch an external package, force-push or mark `RB-CX-00` accepted to unlock `RB-CX-01`.
+
+After a passing exact-head CI run and independent review of the relevant platform evidence, update the pass record, checkpoint, and PR. Only then advance `RB-CX-01` as the next eligible work. Refer to [pass-specific checklist](docs/CODEX_PASSES.md).
+
 ## Rust-Boy non-negotiables
 
 - Exactly **one foreground package** occupies desktop/handheld workspace. Host owns slim navigation, ever-present Settings, role/policy boundary and capability arbitration. No root-level scrolling or package takeover of Settings.

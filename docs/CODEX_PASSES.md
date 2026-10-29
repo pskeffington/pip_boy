@@ -55,6 +55,19 @@ node tools/test_micro_viewport.cjs
 
 The existing [quality workflow](../.github/workflows/rust.yml) retains its Rust stable/1.90, native Mac/Windows and UI gates. Run all checks referenced in the selected JSON pass in addition to these common ones. See [validation history](VALIDATION.md), [index ownership map](INDEXING.md), [adapter guide](UNIVERSAL_ADAPTER.md) and [fleet-sync security gates](RB_SYNC_ROADMAP.md).
 
+## RB-CX-00 acceptance checklist and Codex handoff
+
+**Scope:** repair/verify the passive, explicitly compiled RADIO catalog and host-owned navigation before implementing any generic external package loader. No changes to independent radio/GIS/TV/COMMS repositories are implied.
+
+1. **Baseline:** print current branch, exact 40-character SHA, working-tree status and divergence against `origin/main`; inspect the PR head and existing workflow runs. Do not reset or overwrite local work. If GitHub Actions did not start any job, record `runner_admission_blocked` as a blocker rather than a source test failure.
+2. **Offline index tests:** run `python3 tools/codex_next.py --json`, `python3 tools/validate_codex_passes.py`, `python3 tools/test_validate_codex_passes.py`, `python3 tools/validate_component_index.py`, `python3 tools/test_component_index.py`, `python3 tools/validate_repo.py`, `python3 tools/test_validate_repo.py`, `python3 tools/validate_host_packages.py`, `python3 tools/test_validate_host_packages.py`, `python3 tools/validate_security.py` and `python3 tools/test_validate_security.py`. Keep the output and return code for each step.
+3. **Rust and static analysis:** run `cargo +stable fmt --all -- --check`, `cargo +stable check --workspace --all-targets --locked`, `cargo +stable test --workspace --locked`, `cargo +stable clippy --workspace --all-targets --locked -- -D warnings`; repeat `check` and `test` under Rust `+1.90.0` where installed. Missing compilers are `not_run`, not a pass.
+4. **UI and safety:** run `node tools/test_desktop_focus_ui.cjs`, `node tools/test_micro_ui.cjs`, `node tools/test_desktop_viewport.cjs`, `node tools/test_micro_viewport.cjs`, `node tools/test_radio_ui.cjs` and `node tools/test_radio_viewport.cjs`. Confirm one foreground, persistent Settings, no root scrollbar, no raw HTML injection, and no implicit playback/network/device access from catalog selection.
+5. **Evidence ledger:** for every command record `command`, `result` (`pass`, `fail`, `not_run` or `blocked`), exact commit SHA, platform, and reason or URL in `docs/PROD_STATUS.md` or `docs/VALIDATION.md`. CI requires an actual successful workflow run for that exact source revision; a zero-job run proves nothing about code quality.
+6. **Promotion:** keep status `next` until all RB-CX-00 acceptance requirements pass. After positive exact-head CI evidence and review, change RB-CX-00 to `accepted` with its commit and CI URL, set RB-CX-01 to `next` in the **same** index change, run the validators again, and checkpoint. Document any still-unmet Mac/Pi acceptance separately.
+
+**RB-CX-01 design boundary (do not implement before RB-CX-00 is accepted):** a generic, schema-validated view model with safe text and input events, no raw package HTML/scripts, one responsive canvas, and host-owned Settings. Before enabling media controls or other privileged intents, require independent host capability policy and explicit operator action.
+
 ## Exact next-pass instructions
 
 > Continue **RB-CX-00** on `codex/package-adapter-protocol`. Verify current HEAD and mainline divergence; build and test the passive RADIO catalogue with real Rust 1.90/stable; check that desktop/micro Settings and package selection do not start streams or devices; run relevant Chromium and offline index tests; investigate current-head Actions status rather than assuming old startup failures still occur; update the production checkpoint and pass-index evidence; checkpoint the existing draft PR without merging.

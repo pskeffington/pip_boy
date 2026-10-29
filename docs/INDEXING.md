@@ -16,6 +16,12 @@ Rust-Boy keeps **separate indexes for separate kinds of evidence**. They are sou
 | [reference package fixtures](../catalog/host_packages), [compiled RADIO manifest](../catalog/builtin_packages/rust_radio.json) | Four inert reference designs vs. an explicitly compiled read-only catalogue | Neither grants capabilities |
 | [`catalog/sources.json`](../catalog/sources.json), [`catalog/literature.json`](../catalog/literature.json) | Provenance, licensing and research limitations | References, not implementation |
 
+## Pass-state transition rules
+
+Codex must keep a single `next` pass and preserve immutable `RB-CX-xx` IDs. Edits to dependencies require the same change to include a review of affected component ownership and declared tests. `blocked` is not an automatic error state; it documents unsatisfied capability, CI or hardware conditions. `accepted` requires checked evidence from the exact code revision and must not be inferred from a command line appearing in a README. Promote one pass and nominate its successor atomically; validate again before committing.
+
+For repeatable context recovery, first run `python3 tools/codex_next.py --json`, then read its exact `entrypoints`, `docs` and `checks`. Never derive code ownership from a pass entry alone: `catalog/component_index.json` owns that mapping.
+
 ## Deterministic pass handoff
 
 `tools/codex_next.py` reads and validates the authoritative `catalog/codex_passes.json` and prints the next pass with declared entrypoints, checks, acceptance and blockers. Add `--json` for tool-consumable output. It does not query Git, schedule Codex, execute tests or change pass status. The offline test `tools/test_codex_next.py` covers deterministic output, malformed manifests and unmet prerequisites.
