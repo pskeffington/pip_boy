@@ -6,6 +6,12 @@ The read-only `pipboy_core::package_socket` source implements a schema-1 manifes
 
 **Verification boundary:** An [Actions run after the socket-registry CI change](https://github.com/pskeffington/pip_boy/actions/runs/40661432096) returned `startup_failure` before jobs ran; it does **not** establish a code regression or successful tests. Independent inspection of the four checked-in JSON manifests found the expected IDs, versions, declared capabilities and source paths. Rust compilation, formatter, Clippy, Python CI execution, native UI acceptance and hardware interoperability are **not yet verified**. This gate cannot be marked accepted until a working runner executes the complete checks.
 
+## Unix adapter transport precursor — 2026-10-29 (local validation)
+
+Added `pipboy_core::package_transport::UnixAdapterSession` for an already-accepted Unix stream. The session checks the adapter's hello claim against an expected package ID, negotiates the version, and conducts serial bounded/correlated exchanges. One monotonic deadline covers the complete hello read or request/response exchange; nonblocking I/O prevents slow partial frames from resetting that deadline. Six tests cover successful exchange, package/version/sequence rejection, identity mismatch, missing or slowly trickled hello, and truncated response.
+
+`cargo fmt --all -- --check`, workspace check and warning-denied Clippy passed. The focused transport tests passed (6), as did the full workspace suite (74 `pipboy`, 281 `pipboy-core`, 12 broker; 367 total) after granting loopback permission to existing endpoint/UDP fixtures. This only validates a connected stream session: no socket listener or path ownership, peer authentication, process launch, capability broker, dispatch or isolation exists. GitHub Actions startup failure and physical-device validation remain outstanding.
+
 
 ## Desktop copy and focus optimization — 2026-10-26 (CI pending)
 

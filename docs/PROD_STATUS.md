@@ -1,23 +1,25 @@
 # Rust Boy production checkpoint
 
-Updated: 2026-10-28
+Updated: 2026-10-29
 
 ## Gate state
 
-- **Current gate:** PROD-2 / host UI integration — **in progress**; PROD-1 protocol precursor remains software validated.
+- **Current gate:** PROD-1 / local adapter transport — **in progress**; PROD-2 shell integration remains open.
 - **Last completed gate:** PROD-0 baseline repair — **not accepted**. Mainline working tree and local validation are understood; GitHub Actions evidence is currently unavailable for the inspected commit, and CI startup failure has not been diagnosed.
-- **Branch:** `codex/package-adapter-protocol`; latest implementation commit `4800d3a` (single-view workspace and persistent Settings), checkpoint commit `918265b`. Protocol commits: `5749054` (request codec), `28fa747` (negotiation/correlation), `c15fbe3` (bounded stream framing), and `fac8a85` (checkpoint).
+- **Branch:** `codex/package-adapter-protocol`; latest committed checkpoint before current transport work is `84fda60`. UI implementation is `4800d3a`; protocol commits include `5749054`, `28fa747`, `c15fbe3`, and checkpoint `fac8a85`.
 - **Relevant pinned module revision:** `rust_radio` dependency revision `3d77d11da3a31fbc3144635da6d391a3febf38b7` from the workspace lock/config. The local `rust_radio/` directory is a separate untracked nested repository and was preserved untouched.
 
 ## Implementation and evidence
 
 - **Implemented, software validated:** `pipboy-core::package_socket` provides bounded JSON request, hello-claim and response codecs; highest-common-version negotiation; strictly increasing request IDs; and a 64-entry request correlator that validates package and ID matches. Identity in a hello remains an unauthenticated claim.
 - **Implemented, software validated:** generic stream frame helpers use a 4-byte big-endian length, accept clean EOF, reject empty/truncated/oversized frames, and cap reads before allocation at 64 KiB.
-- **Still unimplemented:** connected IPC, handshake deadlines, timeouts/cancellation, cryptographic authentication, dispatch, capability brokerage, trusted installation state and process isolation.
+- **Implemented, focused software validated:** `pipboy-core::package_transport::UnixAdapterSession` adds an absolute-deadline Unix stream handshake and serial request/response exchange; a peer's hello identity must match the expected package ID, and request IDs/package IDs are correlated. This accepts an already-open socket only; hello identity is not authentication and the transport does not authorize, dispatch, spawn, or isolate packages.
+- **Still unimplemented:** secure listener/socket-path ownership, peer authentication, timeout cancellation, domain dispatch, capability brokerage, trusted installation state, process launch and isolation.
 - `cargo fmt --all -- --check` — passed on the current UI branch.
 - `cargo check --workspace --all-targets --locked` — passed on the current UI branch.
 - `cargo clippy --workspace --all-targets --locked -- -D warnings` — passed on the current UI branch.
-- `cargo test --workspace --locked -- --test-threads=8` — passed on the current UI branch: 74 `pipboy`, 275 `pipboy-core` and 12 broker tests (361 total); doc tests passed (0 present). The first sandboxed attempt had three loopback permission failures; the same suite passed after granting local bind permission. The `pipboy` suite also passed five consecutive 8-thread runs at the prior checkpoint.
+- `cargo test -p pipboy-core package_transport --locked` — passed: 6 transport tests.
+- `cargo test --workspace --locked -- --test-threads=8` — passed on current working changes: 74 `pipboy`, 281 `pipboy-core` and 12 broker tests (367 total); doc tests passed (0 present). The first sandboxed attempt had three loopback permission failures; the same suite passed after granting local bind permission. The `pipboy` suite also passed five consecutive 8-thread runs at the prior checkpoint.
 - `python3 tools/validate_host_packages.py` — passed.
 - `python3 tools/test_validate_host_packages.py` — passed (8 tests).
 - `python3 tools/validate_component_index.py` — passed.
@@ -31,7 +33,7 @@ Updated: 2026-10-28
 
 - **Planned:** host foreground UI binding, external package transport and all remaining production gates.
 - **Implemented but unverified:** none recorded here.
-- **Software validated:** manifest registry precursor and this request codec.
+- **Software validated:** manifest registry, request codec/framing and deadline-bounded Unix stream session precursor.
 - **Hardware validated:** none for adapter integration.
 - **Release candidate / production accepted:** neither. **Accepted roadmap gates: 0/12**; the HOST-UI-1 shell candidate has not passed controller-binding acceptance.
 
@@ -44,8 +46,8 @@ Updated: 2026-10-28
 
 ## Next three implementation actions
 
-1. Connect the generic framing helpers to an explicit local transport with handshake deadlines, cancellation and malformed/truncated-frame fault tests; do not add package execution yet.
-2. Bind host-owned foreground selection and approved installed-package enumeration to the real desktop and micro renderers, retaining authorization and viewport regression checks.
+1. Bind host-owned foreground selection and approved installed-package enumeration to the real desktop and micro renderers, retaining authorization and viewport regression checks.
+2. Add secure Unix socket creation/ownership and peer provenance checks; do not launch untrusted processes or imply capability grants.
 3. Retrieve an actual failed GitHub Actions run and classify startup failure before modifying workflow configuration; preserve checks as written.
 
 ## Release risks

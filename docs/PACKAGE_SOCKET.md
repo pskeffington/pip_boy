@@ -1,6 +1,6 @@
 # Rust-Boy package socket contract (draft v1)
 
-Status (2026-10-28): **schema-1 registry parsing, read-only local discovery, and a bounded typed protocol codec are implemented; integration remains open**. No external executable loader, runtime sandbox, package installation, foreground socket renderer, or rb_gis adapter is claimed.
+Status (2026-10-29): **schema-1 registry parsing, read-only local discovery, bounded typed protocol codecs, and a deadline-bounded Unix stream session are implemented; package integration remains open**. No external executable loader, runtime sandbox, package installation, foreground socket renderer, peer authentication, or rb_gis adapter is claimed.
 
 ## Implemented registry precursor
 
@@ -11,9 +11,11 @@ Status (2026-10-28): **schema-1 registry parsing, read-only local discovery, and
 
 A pure `ForegroundSelection` controller has also been added in core. It maintains at most one selected package and a host-owned Settings surface; selection refuses IDs not present in a separate, host-approved installed roster. Its tests use a synthetic approval set. **It is not yet connected to desktop/micro rendering or runtime execution.**
 
-`pipboy_core::package_socket` provides version-1 JSON codecs for lifecycle requests, bounded version-negotiation hello claims, and correlated completion/rejection responses. Its generic stream framing helper uses a 4-byte big-endian length, rejects empty, truncated and over-64-KiB frames, and recognizes clean EOF. Request IDs must increase within a session, in-flight work is capped at 64, and a response must match both the pending request ID and package ID. Version lists, IDs, resize bounds and rejection codes are bounded and validated. These are protocol models only: a hello package ID is an unauthenticated claim. **No connected transport, cryptographic identity, timeout, dispatch, capability broker or process isolation is implemented.**
+`pipboy_core::package_socket` provides version-1 JSON codecs for lifecycle requests, bounded version-negotiation hello claims, and correlated completion/rejection responses. Its generic stream framing helper uses a 4-byte big-endian length, rejects empty, truncated and over-64-KiB frames, and recognizes clean EOF. Request IDs must increase within a session, in-flight work is capped at 64, and a response must match both the pending request ID and package ID. Version lists, IDs, resize bounds and rejection codes are bounded and validated.
 
-This is a **metadata socket**, not an execution socket. Local scanning is operator-initiated and for trusted local files only; it is not a hardened OS-level package-store mechanism. No manifest grants hardware, filesystem, location, radio, network, background, or user permissions. The next implementation gate must introduce host-owned installed/trust state separately from document metadata.
+On Unix targets, `pipboy_core::package_transport::UnixAdapterSession` accepts an already-open Unix stream, bounds handshake and request/response exchanges with monotonic absolute deadlines, negotiates the hello claim against an expected package ID, and validates each correlated exchange. It uses nonblocking stream I/O and a bounded wait loop so a peer cannot keep a frame open by slowly sending bytes. Six deterministic tests cover normal exchange, identity mismatch, absent and slowly trickled hello, wrong package/version, duplicate request ID, and truncated response. **A hello package ID remains an unauthenticated claim.** The module does not create or secure a socket path, launch a process, authenticate peer provenance, dispatch domain operations, grant capabilities, or isolate code.
+
+This remains a **metadata and transport precursor**, not an executable package host. Local scanning is operator-initiated and for trusted local files only; it is not a hardened OS-level package-store mechanism. No manifest grants hardware, filesystem, location, radio, network, background, or user permissions. The next implementation gate must introduce host-owned installed/trust state and secure socket ownership separately from document metadata.
 
 **Quick validation (after compiling Rust):**
 

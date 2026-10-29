@@ -31,6 +31,8 @@ pub mod organization_authority;
 pub mod organization_identity;
 pub mod organization_policy;
 pub mod package_socket;
+#[cfg(unix)]
+pub mod package_transport;
 pub mod peers;
 pub mod permissions;
 pub mod process_safety;
