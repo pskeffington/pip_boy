@@ -1076,7 +1076,8 @@
     return true;
   }
 
-  async function loadCountyPackages(view, geoid, cacheOnly=false, targetBoundary=null) {
+  async function loadCountyPackages(view, geoid, cacheOnly=false,
+      targetBoundary=null, targetLocation=null) {
     if (active !== view || view.sitesVisible || view.siteCentered ||
         !window.RustBoyCounty?.validGeoid(geoid)) return;
     // Stage each new county separately. No request or parse failure may
@@ -1129,6 +1130,11 @@
         ...(staged.layers["tiger-pointlm"]?.shapes||[])
       ];
       if(targetBoundary?.id===geoid)view.county=targetBoundary;
+      if(targetLocation) {
+        view.center={lat:targetLocation.lat,lon:targetLocation.lon};
+        view.follow=false;
+        view.zoom=Math.max(view.zoom,10);
+      }
       if(cacheOnly && !view.fix && !view.centerSelected &&
           !view.shapes.length && !view.onlineShapes.length)
         fitCountyPackage(view);
@@ -1389,9 +1395,6 @@
     try {
       const county=await window.RustBoyOnline.countyAt(location.lon,location.lat,controller.signal);
       if(active!==view || !view.countyEnabled || version!==view.countyRequest) return;
-      view.center={lat:location.lat,lon:location.lon};
-      view.follow=false;
-      view.zoom=Math.max(view.zoom,10);
       if(window.RustBoyCounty) {
         // The host independently fetches the exact GEOID boundary and caches
         // it; no GPS coordinate is sent to the loopback boundary endpoint.
@@ -1419,18 +1422,25 @@
         }
         if(active===view && view.countyEnabled && version===view.countyRequest &&
             !controller.signal.aborted) {
-          const loaded=await loadCountyPackages(view,county.id,false,targetBoundary);
+          const loaded=await loadCountyPackages(
+            view,county.id,false,targetBoundary,location);
           if(active!==view || !view.countyEnabled || version!==view.countyRequest ||
               controller.signal.aborted)return;
           if(loaded)view.countyLastLookup={...location};
         }
       } else if(view.webEnabled) {
+        view.center={lat:location.lat,lon:location.lon};
+        view.follow=false;
+        view.zoom=Math.max(view.zoom,10);
         view.county=county;
         view.countyLastLookup={...location};
         view.countyStatus=county.name.toUpperCase()+" COUNTY / VERIFIED BOUNDARY";
         refresh(view);
         void webFetch(view);
       } else {
+        view.center={lat:location.lat,lon:location.lon};
+        view.follow=false;
+        view.zoom=Math.max(view.zoom,10);
         view.county=county;
         view.countyLastLookup={...location};
         view.countyStatus += " / NO CENSUS PACKAGE CLIENT / WEB OPTIONAL";

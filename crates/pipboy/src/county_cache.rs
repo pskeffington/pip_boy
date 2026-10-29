@@ -333,10 +333,6 @@ impl CountyCache {
         match Self::boundary_raw(&path) {
             Ok(raw) => {
                 let boundary = Self::parse_boundary(geoid, &raw, true)?;
-                if allow_network {
-                    self.ensure_root()?;
-                    self.remember(geoid)?;
-                }
                 return Ok(boundary);
             }
             Err(error) if error.kind() == io::ErrorKind::NotFound => {}
@@ -359,7 +355,6 @@ impl CountyCache {
         match Self::boundary_raw(&path) {
             Ok(raw) => {
                 let boundary = Self::parse_boundary(geoid, &raw, true)?;
-                self.remember(geoid)?;
                 return Ok(boundary);
             }
             Err(error) if error.kind() == io::ErrorKind::NotFound => {}
@@ -406,7 +401,6 @@ impl CountyCache {
         let boundary = Self::parse_boundary(geoid, &raw, false)?;
         tmp.as_file().sync_all()?;
         tmp.persist(&path).map_err(|error| error.error)?;
-        self.remember(geoid)?;
         Ok(boundary)
     }
 
@@ -423,13 +417,7 @@ impl CountyCache {
         // Previously even offline reads could fail WouldBlock when unrelated
         // county jobs/tests were running in parallel (notably on Windows).
         match Self::read_zip(&path) {
-            Ok(bytes) => {
-                if allow_network {
-                    self.ensure_root()?;
-                    self.remember(geoid)?;
-                }
-                return Ok(bytes);
-            }
+            Ok(bytes) => return Ok(bytes),
             Err(error) if error.kind() == io::ErrorKind::NotFound => {}
             Err(error) => return Err(error),
         }
@@ -449,10 +437,7 @@ impl CountyCache {
         // Recheck after acquiring the exclusive download gate: another
         // caller may have completed this archive between the two reads.
         match Self::read_zip(&path) {
-            Ok(bytes) => {
-                self.remember(geoid)?;
-                return Ok(bytes);
-            }
+            Ok(bytes) => return Ok(bytes),
             Err(error) if error.kind() == io::ErrorKind::NotFound => {}
             Err(error) => return Err(error),
         }
@@ -500,8 +485,35 @@ impl CountyCache {
         let bytes = Self::read_zip(tmp.path())?;
         tmp.as_file().sync_all()?;
         tmp.persist(&path).map_err(|error| error.error)?;
-        self.remember(geoid)?;
         Ok(bytes)
+    }
+
+    /// Make a county the cold-start selection only after the map client has
+    /// parsed at least one cached base-layer archive successfully.
+    pub fn activate(&self, geoid: &str) -> io::Result<Value> {
+        if !geoid_valid(geoid) {
+            return Err(invalid(
+                "GEOID must be a valid five-digit county identifier",
+            ));
+        }
+        let mut cached_sources = Vec::new();
+        for (source_id, _, layer) in SOURCE_LIST {
+            if source_id == "tiger-pointlm" {
+                continue;
+            }
+            if Self::read_zip(&self.path(geoid, layer)).is_ok() {
+                cached_sources.push(source_id);
+            }
+        }
+        if cached_sources.is_empty() {
+            return Err(io::Error::new(
+                io::ErrorKind::NotFound,
+                "No cached base layer is available for activation",
+            ));
+        }
+        self.ensure_root()?;
+        self.remember(geoid)?;
+        self.active()
     }
 }
 
@@ -617,6 +629,24 @@ mod tests {
         assert_eq!(active["active_geoid"], "25025");
         assert_eq!(active["cached_sources"], json!(["tiger-roads"]));
         assert_eq!(active["network_used"], false);
+    }
+
+    #[test]
+    fn cache_fetch_does_not_activate_until_a_base_layer_is_committed() {
+        let tmp = tempfile::tempdir().unwrap();
+        let cache = CountyCache::new(tmp.path().to_path_buf());
+        fs::write(cache.boundary_path("25025"), county_fixture("25025")).unwrap();
+        fs::write(cache.path("25025", "roads"), b"PK\x03\x04cached-roads").unwrap();
+
+        cache.boundary("25025", true).unwrap();
+        cache.fetch("25025", "tiger-roads", true).unwrap();
+        assert_eq!(cache.active().unwrap()["active_geoid"], Value::Null);
+
+        let active = cache.activate("25025").unwrap();
+        assert_eq!(active["active_geoid"], "25025");
+        assert_eq!(active["cached_sources"], json!(["tiger-roads"]));
+        assert_eq!(active["boundary_cached"], true);
+        assert!(cache.activate("25023").is_err());
     }
 
     #[test]

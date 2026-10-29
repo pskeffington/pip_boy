@@ -31,7 +31,7 @@ const document={createElement:tag=>new Node(tag)};
 const navigator={onLine:false,geolocation:{
   watchPosition(){throw Error("Map layer controls requested GPS");},clearWatch(){}
 }};
-let queries=0,ingestions=0,failReplacement=false;
+let queries=0,ingestions=0,failReplacement=false,activeCounty="25025";
 const roads=[];
 for(let i=0;i<20000;i++){
   const col=i%200,row=Math.floor(i/200);
@@ -67,7 +67,7 @@ const sources={
 };
 win.RustBoyCounty={
   validGeoid:x=>/^\d{5}$/.test(x),
-  active:async()=>({active_geoid:"25025",boundary_cached:true,
+  active:async()=>({active_geoid:activeCounty,boundary_cached:true,
     cached_sources:Object.keys(sources)}),
   boundary:async(geoid)=>({id:geoid,name:geoid==="25023"?"Replacement County":"Source County",paths:[
     [[-80,35],[-70,35],[-70,45],[-80,45],[-80,35]]],
@@ -87,6 +87,7 @@ win.RustBoyCounty={
       if(geoid==="25023" && failReplacement)
         throw Error("fixture failure after first source");
     }
+    activeCounty=geoid;
     return {features,errors:[],warnings:[]};
   }
 };
@@ -117,21 +118,33 @@ async function main(){
   const lastGoodPackage=view.countyPackage,lastGoodCountyShapes=view.countyShapes;
   view.county={id:"25025",name:"Source County",shape:{paths:[water.paths[0]]}};
   view.countyLastLookup={lat:39.5,lon:-75.5};
+  view.fix={lat:40,lon:-75};
+  view.center={lat:39.5,lon:-75.5};
+  view.centerSelected=false;
+  view.zoom=8;view.follow=true;
+  const lastGoodCenter={...view.center},lastGoodZoom=view.zoom,lastGoodFollow=view.follow;
   navigator.onLine=true;
   failReplacement=true;
-  view.latitude.value="40";view.longitude.value="-75";
-  view.manual.listeners.submit[0]({preventDefault(){}});
-  // Enter a manual center, then activate COUNTY through its public control.
+  // Activate COUNTY using the current fix through its public control.
   click(view.countyButton);
   await until(()=>view.countyStatus.includes("fixture failure after first source"));
   assert.equal(view.countyPackage,lastGoodPackage,"failed replacement keeps package object");
   assert.equal(view.countyShapes,lastGoodCountyShapes,"failed replacement keeps all prior shapes");
   assert.equal(view.county.id,"25025","failed replacement keeps boundary");
+  assert.deepEqual(view.center,lastGoodCenter,"failed replacement keeps the prior viewport center");
+  assert.equal(view.zoom,lastGoodZoom,"failed replacement keeps the prior zoom");
+  assert.equal(view.follow,lastGoodFollow,"failed replacement keeps follow state");
   assert.deepEqual(view.countyLastLookup,{lat:39.5,lon:-75.5},
     "failed replacement does not suppress a retry at the same location");
+  assert.equal(activeCounty,"25025","failed source parsing preserves cold-start county selection");
   failReplacement=false;
-  view.manual.listeners.submit[0]({preventDefault(){}});
+  view.countyEnabled=false;
+  click(view.countyButton);
   await until(()=>view.countyPackage?.geoid==="25023");
+  assert.deepEqual(view.center,{lat:40,lon:-75},
+    "successful replacement commits its requested viewport center");
+  assert.equal(view.follow,false,"successful location replacement disables follow");
+  assert.equal(activeCounty,"25023","successful GIS replacement commits cold-start selection");
   assert.deepEqual(view.countyLastLookup,{lat:40,lon:-75},
     "the same location can be looked up and committed after source recovery");
   view.countyEnabled=false; // leave the valid package mounted for layer checks
@@ -149,7 +162,7 @@ async function main(){
   assert.equal(view.countyShapes,lastGoodShapes,
     "failed RustGIS import preserves the last-good map geometry");
   assert.equal(view.countyShapes.length,20004);
-  assert.match(view.status.textContent,/MAP ERROR: fixture corrupt RustGIS map/);
+  assert.match(view.gpsState,/MAP ERROR: fixture corrupt RustGIS map/);
   assert.equal(view.file.value,"");
 
   // At field zoom, a 20k-feature dataset must not be scanned in full.

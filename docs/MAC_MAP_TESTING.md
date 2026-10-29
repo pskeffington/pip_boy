@@ -58,7 +58,7 @@ The first connected lookup downloads a bounded national Census relationship file
 | M4 — rendering | Use FIT, +/- zoom, pan with trackpad/pointer; expand LAYERS | ROADS, WATER, LANDMARKS, BORDER independently toggle without redownloading or erasing data; named landmarks are legible |
 | M5 — source inspection | Expand DATA SOURCES | County GEOID/vintage, source counts, partial-source labels, canvas draw timings and source load duration are available |
 | M6 — offline restart | After successful M3, stop Rust, disconnect internet, restart with the **same** test home | Previously verified county boundary, roads, water and clipped landmarks reappear without an outbound request |
-| M7 — failure recovery | With internet unavailable, select a different uncached county or reopen existing cached data | Current valid map remains available; failure never substitutes unrelated county geometry |
+| M7 — failure recovery | With internet unavailable, select a different uncached county or reopen existing cached data; also simulate a source failure after the first replacement layer | Current valid map, center, zoom, follow state, retry point and cold-start county remain selected; a successful retry commits them together |
 | M8 — GPS permissions | Deliberately select GPS ON; allow or deny browser/OS location permission | Actual browser-provided fix only when available; denial explains recovery and CENTER remains usable |
 | M9 — viewport | Chrome devtools device emulation, or `--verify --require-chromium` | 480×320 controls remain readable and reachable; browser emulation is **not** evidence of physical touch behavior |
 

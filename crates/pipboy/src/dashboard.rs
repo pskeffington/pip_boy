@@ -697,6 +697,27 @@ fn county_boundary(req: &Request, store: &WorkbenchStore) -> Result<Response, Re
     Ok(Response::json(200, &boundary))
 }
 
+fn county_activate(req: &Request, store: &WorkbenchStore) -> Result<Response, Response> {
+    let body = parse_json_body(req, &["geoid", "confirm"])?;
+    if body.get("confirm").and_then(Value::as_bool) != Some(true) {
+        return Err(Response::error(
+            403,
+            "Confirm selection of the validated cached county",
+        ));
+    }
+    let geoid = str_field(&body, "geoid")?;
+    let active = county_cache(store)
+        .activate(geoid)
+        .map_err(|error| match error.kind() {
+            io::ErrorKind::InvalidInput => Response::error(422, "Invalid county GEOID"),
+            io::ErrorKind::NotFound => {
+                Response::error(409, "No validated county base layer to activate")
+            }
+            _ => Response::error(409, "Cannot commit county cache selection"),
+        })?;
+    Ok(Response::json(200, &active))
+}
+
 fn zip_index(store: &WorkbenchStore) -> ZipIndex {
     ZipIndex::new(
         store
@@ -1349,6 +1370,7 @@ fn dispatch(req: &Request, store: &WorkbenchStore, port: u16) -> Response {
             .unwrap_or_else(|_| Response::error(409, "County cache unavailable")),
         ("POST", "/api/map/package") => county_package(req, store).unwrap_or_else(|error| error),
         ("POST", "/api/map/boundary") => county_boundary(req, store).unwrap_or_else(|error| error),
+        ("POST", "/api/map/activate") => county_activate(req, store).unwrap_or_else(|error| error),
         ("POST", "/api/map/zip") => zip_lookup(req, store).unwrap_or_else(|error| error),
         ("POST", "/api/map/county-zips") => county_zips(req, store).unwrap_or_else(|error| error),
         ("GET", "/api/state") => state(store).unwrap_or_else(|error| error),
@@ -2558,6 +2580,45 @@ mod tests {
         assert_eq!(response.status, 200);
         assert_eq!(response.content_type, "application/zip");
         assert_eq!(response.body, b"PK\x03\x04local-cached-test");
+        let before_activation =
+            dispatch(&request("GET", "/api/map/cache", Value::Null), &store, 8765);
+        let before_activation: Value = serde_json::from_slice(&before_activation.body).unwrap();
+        assert_eq!(before_activation["active_geoid"], Value::Null);
+        assert_eq!(
+            dispatch(
+                &request("POST", "/api/map/activate", json!({"geoid":"25025"})),
+                &store,
+                8765,
+            )
+            .status,
+            403
+        );
+        let mut hostile_activation = request(
+            "POST",
+            "/api/map/activate",
+            json!({"geoid":"25025","confirm":true}),
+        );
+        hostile_activation
+            .headers
+            .insert("origin".into(), "https://untrusted.invalid".into());
+        assert_eq!(dispatch(&hostile_activation, &store, 8765).status, 403);
+        assert_eq!(
+            dispatch(
+                &request(
+                    "POST",
+                    "/api/map/activate",
+                    json!({"geoid":"25025","confirm":true}),
+                ),
+                &store,
+                8765,
+            )
+            .status,
+            200
+        );
+        let after_activation =
+            dispatch(&request("GET", "/api/map/cache", Value::Null), &store, 8765);
+        let after_activation: Value = serde_json::from_slice(&after_activation.body).unwrap();
+        assert_eq!(after_activation["active_geoid"], "25025");
     }
 
     #[test]

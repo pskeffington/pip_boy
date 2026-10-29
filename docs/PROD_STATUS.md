@@ -53,6 +53,13 @@ Updated: 2026-10-29
 - Local `node tools/test_map_layers.cjs`, `node tools/test_map_zip.cjs`, and `node tools/test_rustgis_map_import.cjs` passed. Source commit `a148bfdd112917bc8de9ae66784a8e2c1c31ba87` is pushed to PR #71; exact-head run [40833358785](https://github.com/pskeffington/pip_boy/actions/runs/40833358785) passed all seven jobs after failed-job reruns. No pass acceptance is inferred.
 - The read-only pass index remains RB-CX-00/01/02/04 accepted and RB-CX-05 next. `rb_gis/` remains unmodified. Independent renderer parity, operator and field evidence remain open.
 
+### Cache selection and viewport rollback — 2026-10-29 (local candidate)
+
+- Cached boundaries and downloaded package archives are artifacts; retrieving either no longer changes the cold-start `active_geoid`. A same-origin, explicit-confirmation `/api/map/activate` call persists the selection only after the client has parsed at least one valid non-landmark base layer. The host rejects missing confirmation, cross-origin requests, invalid GEOIDs and counties without a cached base archive.
+- The county replacement transaction now also stages the requested location. Failed boundary/package validation leaves the prior viewport center, zoom, follow state, county boundary, geometry, lookup retry point and persisted county selection intact. A successful retry commits them together after base-layer validation.
+- Focused cache/API, county-source, map-layer, ZIP and RustGIS import regressions pass. Stable and Rust 1.90 locked workspace checks/tests and warnings-denied Clippy pass (403 tests/toolchain); Soapy-SDR and SDRconnect each pass locked check, Clippy and tests under both toolchains. Desktop Chromium passed 1440×900, 1280×800, 1024×768 and 800×600; MAP Chromium passed 480×320, 800×480 and 320×568. Desktop focus, micro UI, MAP boot/GPS permission and offline validators pass.
+- This is a local candidate pending exact-head hosted CI. RB-CX-05 remains `next`; independent `rb_gis` renderer parity and Mac operator/field acceptance are open. No changes were made inside the independent `rust_radio/` repository.
+
 ## Implementation and evidence
 
 - **Implemented, software validated:** `pipboy-core::package_socket` provides bounded JSON request, hello-claim and response codecs; highest-common-version negotiation; strictly increasing request IDs; and a 64-entry request correlator that validates package and ID matches. Identity in a hello remains an unauthenticated claim.
