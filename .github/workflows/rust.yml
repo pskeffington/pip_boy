@@ -18,7 +18,16 @@ jobs:
     name: Validate source and module manifests
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout exact triggering commit (first-party)
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REPOSITORY" = "pskeffington/pip_boy"
+          git init -q
+          git remote add origin "https://github.com/$GITHUB_REPOSITORY.git"
+          git -c protocol.version=2 fetch --no-tags --depth=1 origin "$GITHUB_SHA"
+          git checkout --detach --force FETCH_HEAD
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
       - name: Offline manifest validation
         run: |
           python3 tools/validate_catalog.py
@@ -32,6 +41,8 @@ jobs:
           python3 tools/test_validate_repo.py
           python3 tools/validate_component_index.py
           python3 tools/test_component_index.py
+          python3 tools/validate_ci_policy.py
+          python3 tools/test_validate_ci_policy.py
           python3 tools/validate_security.py
           python3 tools/test_validate_security.py
           python3 tools/run_smokes.py --check
@@ -49,13 +60,18 @@ jobs:
       matrix:
         toolchain: ["stable", "1.90.0"]
     steps:
-      - uses: actions/checkout@v4
-      - name: Install matrix Rust toolchain
+      - name: Checkout exact triggering commit (first-party)
+        shell: bash
         run: |
-          rustup toolchain install "${{ matrix.toolchain }}" --profile minimal --component rustfmt --component clippy
-          rustup default "${{ matrix.toolchain }}"
-          rustc --version
-          cargo --version
+          set -euo pipefail
+          test "$GITHUB_REPOSITORY" = "pskeffington/pip_boy"
+          git init -q
+          git remote add origin "https://github.com/$GITHUB_REPOSITORY.git"
+          git -c protocol.version=2 fetch --no-tags --depth=1 origin "$GITHUB_SHA"
+          git checkout --detach --force FETCH_HEAD
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+      - name: Install matrix Rust toolchain
+        run: bash scripts/ci_bootstrap.sh rust "${{ matrix.toolchain }}"
       - name: Assert active matrix compiler
         run: |
           current="$(rustup show active-toolchain)"
@@ -69,11 +85,9 @@ jobs:
       - name: Formatting
         if: matrix.toolchain == 'stable'
         run: cargo fmt --all -- --check
-      - name: Install JavaScript test runtime
+      - name: Bootstrap pinned official Node 22 runtime
         if: matrix.toolchain == 'stable'
-        uses: actions/setup-node@v4
-        with:
-          node-version: "22"
+        run: bash scripts/ci_bootstrap.sh node
       - name: Dashboard JavaScript and native RustGIS map tests
         if: matrix.toolchain == 'stable'
         run: |
@@ -140,7 +154,6 @@ jobs:
       - name: Unit tests
         run: cargo test --workspace --locked
       - name: Clippy
-        if: matrix.toolchain == 'stable'
         run: cargo clippy --workspace --all-targets --locked -- -D warnings
       - name: Runtime CLI and terminal smoke checks
         if: matrix.toolchain == 'stable'
@@ -155,10 +168,19 @@ jobs:
       matrix:
         feature: [soapy-sdr, sdrconnect]
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          components: clippy
+      - name: Checkout exact triggering commit (first-party)
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REPOSITORY" = "pskeffington/pip_boy"
+          git init -q
+          git remote add origin "https://github.com/$GITHUB_REPOSITORY.git"
+          git -c protocol.version=2 fetch --no-tags --depth=1 origin "$GITHUB_SHA"
+          git checkout --detach --force FETCH_HEAD
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+      - name: Install Rust stable from official rustup (first-party)
+        shell: bash
+        run: bash scripts/ci_bootstrap.sh rust stable
       - name: Install audio headers
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libasound2-dev pkg-config
       - name: Install optional USB SDK headers
@@ -183,14 +205,19 @@ jobs:
           - os: windows-latest
             python: python
     steps:
-      - uses: actions/checkout@v4
-      - name: Install native Rust toolchain
+      - name: Checkout exact triggering commit (first-party)
         shell: bash
         run: |
-          rustup toolchain install stable --profile minimal
-          rustup default stable
-          rustc --version
-          cargo --version
+          set -euo pipefail
+          test "$GITHUB_REPOSITORY" = "pskeffington/pip_boy"
+          git init -q
+          git remote add origin "https://github.com/$GITHUB_REPOSITORY.git"
+          git -c protocol.version=2 fetch --no-tags --depth=1 origin "$GITHUB_SHA"
+          git checkout --detach --force FETCH_HEAD
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+      - name: Bootstrap official native Rust stable
+        shell: bash
+        run: bash scripts/ci_bootstrap.sh rust stable
       - name: Compile, unit test and build
         shell: bash
         run: |
@@ -205,11 +232,10 @@ jobs:
         if: matrix.os == 'macos-latest'
         shell: bash
         run: python3 tools/smoke_runtime.py
-      - name: Install macOS MAP JavaScript test runtime
+      - name: Bootstrap pinned official Node 22 runtime
         if: matrix.os == 'macos-latest'
-        uses: actions/setup-node@v4
-        with:
-          node-version: "22"
+        shell: bash
+        run: bash scripts/ci_bootstrap.sh node
       - name: Mac-first local MAP acceptance
         if: matrix.os == 'macos-latest'
         shell: bash

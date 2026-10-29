@@ -147,7 +147,9 @@ impl UniversalAdapterHost {
         let encoded = serde_json::to_vec(&reply)
             .map_err(|_| AdapterError::Fault("invalid package reply".into()))?;
         if encoded.len() > MAX_WIRE_BYTES {
-            return Err(AdapterError::Fault("package reply exceeds wire limit".into()));
+            return Err(AdapterError::Fault(
+                "package reply exceeds wire limit".into(),
+            ));
         }
         if let AdapterReply::View { state } = reply {
             entry.last_view = Some(state);
@@ -336,10 +338,15 @@ impl UniversalAdapterHost {
                 .get(&active)
                 .expect("selected package is mounted")
                 .manifest;
-            if !manifest.capabilities.iter().any(|declared| declared == scope)
+            if !manifest
+                .capabilities
+                .iter()
+                .any(|declared| declared == scope)
                 || !policy.is_granted(&active, scope)
             {
-                return Err(AdapterError::Denied("scope is not authorized by host policy"));
+                return Err(AdapterError::Denied(
+                    "scope is not authorized by host policy",
+                ));
             }
         } else if !action.starts_with("ui.") {
             return Err(AdapterError::Denied(
@@ -504,11 +511,13 @@ mod tests {
     fn design_fixtures_and_untrusted_process_launchers_are_never_mounted() {
         let mut host = UniversalAdapterHost::new(Viewport::new(480, 320).unwrap());
         let calls = Arc::new(Mutex::new(Vec::new()));
-        let runner = || Box::new(Fixture {
-            id: "org.rustboy.gis".into(),
-            calls: calls.clone(),
-            fail: None,
-        });
+        let runner = || {
+            Box::new(Fixture {
+                id: "org.rustboy.gis".into(),
+                calls: calls.clone(),
+                fail: None,
+            })
+        };
         let design = serde_json::to_string(
             crate::package_socket::reference_catalog()
                 .unwrap()
@@ -547,7 +556,10 @@ mod tests {
         host.select("org.rustboy.gis").unwrap();
         assert!(host.select("org.rustboy.tv").is_err());
         assert_eq!(host.surface(), HostSurface::Package("org.rustboy.gis"));
-        assert_eq!(host.state("org.rustboy.gis"), Some(AdapterState::Foreground));
+        assert_eq!(
+            host.state("org.rustboy.gis"),
+            Some(AdapterState::Foreground)
+        );
         assert_eq!(host.state("org.rustboy.tv"), Some(AdapterState::Faulted));
         assert_eq!(previous.lock().unwrap().len(), 3);
         assert_eq!(failing.lock().unwrap().len(), 1);
@@ -576,8 +588,13 @@ mod tests {
         assert_eq!(log.lock().unwrap().len(), 1);
         host.intent("ui.select", None, json!({"index": 2}), &DenyAllScopes)
             .unwrap();
-        host.intent("play", Some("media.audio"), json!({"station": "demo"}), &Approved)
-            .unwrap();
+        host.intent(
+            "play",
+            Some("media.audio"),
+            json!({"station": "demo"}),
+            &Approved,
+        )
+        .unwrap();
         assert_eq!(log.lock().unwrap().len(), 3);
         host.open_settings();
         assert!(host
@@ -696,10 +713,7 @@ mod tests {
                 "org.rustboy.gis"
             }
 
-            fn handle(
-                &mut self,
-                _request: AdapterEnvelope,
-            ) -> Result<AdapterReply, AdapterError> {
+            fn handle(&mut self, _request: AdapterEnvelope) -> Result<AdapterReply, AdapterError> {
                 Ok(AdapterReply::View {
                     state: json!({"payload": "x".repeat(MAX_WIRE_BYTES)}),
                 })

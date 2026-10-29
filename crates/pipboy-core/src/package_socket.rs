@@ -145,9 +145,9 @@ fn valid_version(value: &str) -> bool {
                 && part.bytes().all(|byte| byte.is_ascii_digit())
                 && (part.len() == 1 || !part.starts_with('0'))
         })
-        && value.bytes().all(|byte| {
-            byte.is_ascii_alphanumeric() || matches!(byte, b'.' | b'-' | b'+')
-        })
+        && value
+            .bytes()
+            .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'.' | b'-' | b'+'))
         && !value.ends_with('-')
         && !value.ends_with('+')
         && !value.ends_with('.')
@@ -180,7 +180,9 @@ impl PackageManifest {
             return Err(Invalid("incompatible host_api"));
         }
         if !valid_id(&self.package_id) {
-            return Err(Invalid("package_id must be a bounded reverse-DNS identifier"));
+            return Err(Invalid(
+                "package_id must be a bounded reverse-DNS identifier",
+            ));
         }
         if !valid_label(&self.name, 48)
             || !valid_label(&self.publisher, 96)
@@ -424,11 +426,19 @@ mod tests {
             .collect();
         assert_eq!(
             ids,
-            ["org.rustboy.comms", "org.rustboy.gis", "org.rustboy.radio", "org.rustboy.tv"]
+            [
+                "org.rustboy.comms",
+                "org.rustboy.gis",
+                "org.rustboy.radio",
+                "org.rustboy.tv"
+            ]
         );
         assert_eq!(catalog.len(), 4);
         for entry in catalog.entries() {
-            assert_eq!(entry.status.as_deref(), Some("design_fixture_not_installed"));
+            assert_eq!(
+                entry.status.as_deref(),
+                Some("design_fixture_not_installed")
+            );
             assert_eq!(entry.host_api, SOCKET_API_VERSION);
         }
     }
@@ -446,19 +456,37 @@ mod tests {
             ("source_repository", json!("http://example.invalid/map")),
             ("status", json!("installed")),
         ] {
-            assert!(PackageManifest::parse(&altered(field, value)).is_err(), "{field}");
+            assert!(
+                PackageManifest::parse(&altered(field, value)).is_err(),
+                "{field}"
+            );
         }
     }
 
     #[test]
     fn no_commands_unknown_fields_or_unreviewed_capabilities() {
         for document in [
-            altered("entrypoint", json!({"type":"external_process","command":"/bin/sh"})),
-            altered("entrypoint", json!({"type":"external_process","args":["--run"]})),
-            altered("capabilities", json!(["network.fetch.explicit", "secrets.read"])),
+            altered(
+                "entrypoint",
+                json!({"type":"external_process","command":"/bin/sh"}),
+            ),
+            altered(
+                "entrypoint",
+                json!({"type":"external_process","args":["--run"]}),
+            ),
+            altered(
+                "capabilities",
+                json!(["network.fetch.explicit", "secrets.read"]),
+            ),
             altered("capabilities", json!(["location.read", "location.read"])),
-            altered("ui", json!({"mode":"host_view","min_width":1,"min_height":240})),
-            altered("ui", json!({"mode":"browser_window","min_width":320,"min_height":240})),
+            altered(
+                "ui",
+                json!({"mode":"host_view","min_width":1,"min_height":240}),
+            ),
+            altered(
+                "ui",
+                json!({"mode":"browser_window","min_width":320,"min_height":240}),
+            ),
         ] {
             assert!(PackageManifest::parse(&document).is_err());
         }
@@ -480,7 +508,9 @@ mod tests {
     fn corrupt_and_oversized_documents_are_rejected_without_execution() {
         let mut registry = PackageRegistry::default();
         assert!(registry.insert_json("{").is_err());
-        assert!(registry.insert_json(&" ".repeat(MAX_MANIFEST_BYTES + 1)).is_err());
+        assert!(registry
+            .insert_json(&" ".repeat(MAX_MANIFEST_BYTES + 1))
+            .is_err());
         assert!(registry.is_empty());
     }
 
