@@ -1,9 +1,10 @@
 # Changelog
 
-## 2026-10-29 — Host Settings controller binding and local transport candidate
+## 2026-10-29 — Host lifecycle binding and SDK-aligned transport
 
 - Bind desktop and handheld Settings transitions to `UniversalAdapterHost`, invoking its host-owned suspend/resume lifecycle while keeping package selection disabled without a trusted installed roster.
-- Add a deadline-bounded Unix stream session candidate for validating a package hello claim and exchanging correlated requests; this uses the existing package protocol predecessor and requires alignment with the current portable SDK before use.
+- Align the deadline-bounded Unix session with the portable SDK hello, command and correlated-reply envelopes; enforce the SDK's 16 KiB frame bound before payload allocation.
+- Keep transport trust explicit: hello identity is only a claim, and listener ownership, authenticated provenance, dispatch, capability grants and process isolation remain open gates.
 - Add backend, browser and viewport regressions for same-origin Settings updates and preserve existing module independence and authorization.
 
 ## 2026-10-28 — Bounded package adapter request codec

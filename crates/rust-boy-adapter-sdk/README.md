@@ -2,7 +2,7 @@
 
 Small, host-agnostic Rust package contract for independent Rust-Boy modules.
 
-**Development preview:** Protocol version 1, not yet a stable published crate or signed-package release. This crate provides typed versioned `AdapterEnvelope` requests, `AdapterReply` results, the `UniversalPackageAdapter` trait, bounded serialization, and deny-all scope policy primitives. It does **not** load modules, grant device/network permissions, open sockets, render HTML, or sandbox package code.
+**Development preview:** Protocol version 1, not yet a stable published crate or signed-package release. This crate provides a versioned hello, typed `AdapterEnvelope` requests, correlated `AdapterReplyEnvelope` results, the `UniversalPackageAdapter` trait, bounded serialization, and deny-all scope policy primitives. A hello package ID is only a peer claim. The crate does **not** load modules, grant device/network permissions, open sockets, render HTML, or sandbox package code.
 
 ```bash
 cargo test --locked -p rust-boy-adapter-sdk

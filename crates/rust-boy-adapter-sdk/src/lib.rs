@@ -14,6 +14,66 @@ use std::fmt;
 pub const ADAPTER_PROTOCOL: u32 = 1;
 pub const MAX_WIRE_BYTES: usize = 16 * 1024;
 pub const MAX_INTENT_BYTES: usize = 4 * 1024;
+pub const MAX_PROTOCOL_VERSIONS: usize = 8;
+
+/// Negotiation metadata from a local peer. A claimed package ID does not
+/// authenticate the process or prove installation.
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub struct AdapterHello {
+    pub package_id: String,
+    pub supported_protocols: Vec<u32>,
+}
+
+impl AdapterHello {
+    pub fn encode(&self) -> Result<Vec<u8>, AdapterError> {
+        self.validate()?;
+        encode_bounded(self)
+    }
+
+    pub fn decode(bytes: &[u8]) -> Result<Self, AdapterError> {
+        let hello: Self = decode_bounded(bytes)?;
+        hello.validate()?;
+        Ok(hello)
+    }
+
+    pub fn negotiate(
+        &self,
+        expected_package_id: &str,
+        host_protocols: &[u32],
+    ) -> Result<u32, AdapterError> {
+        self.validate()?;
+        if self.package_id != expected_package_id {
+            return Err(AdapterError::Denied("adapter package ID mismatch"));
+        }
+        if host_protocols.is_empty() || host_protocols.len() > MAX_PROTOCOL_VERSIONS {
+            return Err(AdapterError::Invalid("invalid host protocol list"));
+        }
+        host_protocols
+            .iter()
+            .find(|version| self.supported_protocols.contains(version))
+            .copied()
+            .ok_or(AdapterError::Invalid("no compatible adapter protocol"))
+    }
+
+    fn validate(&self) -> Result<(), AdapterError> {
+        if !valid_package_id(&self.package_id) {
+            return Err(AdapterError::Invalid("invalid adapter package ID"));
+        }
+        if self.supported_protocols.is_empty()
+            || self.supported_protocols.len() > MAX_PROTOCOL_VERSIONS
+            || self.supported_protocols.contains(&0)
+        {
+            return Err(AdapterError::Invalid("invalid adapter protocol list"));
+        }
+        for (index, version) in self.supported_protocols.iter().enumerate() {
+            if self.supported_protocols[..index].contains(version) {
+                return Err(AdapterError::Invalid("duplicate adapter protocol version"));
+            }
+        }
+        Ok(())
+    }
+}
 
 #[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(deny_unknown_fields)]
@@ -61,6 +121,75 @@ pub struct AdapterEnvelope {
     pub package_id: String,
     pub request_id: u64,
     pub body: AdapterCommand,
+}
+
+/// Reply envelope adds the request correlation fields omitted from the
+/// in-process trait's `AdapterReply` value.
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
+#[serde(deny_unknown_fields)]
+pub struct AdapterReplyEnvelope {
+    pub protocol: u32,
+    pub package_id: String,
+    pub request_id: u64,
+    pub body: AdapterReply,
+}
+
+impl AdapterReplyEnvelope {
+    pub fn encode(&self) -> Result<Vec<u8>, AdapterError> {
+        self.validate()?;
+        encode_bounded(self)
+    }
+
+    pub fn decode(bytes: &[u8]) -> Result<Self, AdapterError> {
+        let reply: Self = decode_bounded(bytes)?;
+        reply.validate()?;
+        Ok(reply)
+    }
+
+    fn validate(&self) -> Result<(), AdapterError> {
+        if self.protocol != ADAPTER_PROTOCOL
+            || !valid_package_id(&self.package_id)
+            || self.request_id == 0
+        {
+            return Err(AdapterError::Invalid("invalid adapter reply envelope"));
+        }
+        Ok(())
+    }
+}
+
+fn encode_bounded<T: Serialize>(value: &T) -> Result<Vec<u8>, AdapterError> {
+    let bytes = serde_json::to_vec(value)
+        .map_err(|_| AdapterError::Invalid("cannot encode adapter message"))?;
+    if bytes.len() > MAX_WIRE_BYTES {
+        return Err(AdapterError::Invalid("adapter message exceeds wire limit"));
+    }
+    Ok(bytes)
+}
+
+fn decode_bounded<T: for<'de> Deserialize<'de>>(bytes: &[u8]) -> Result<T, AdapterError> {
+    if bytes.len() > MAX_WIRE_BYTES {
+        return Err(AdapterError::Invalid("adapter message exceeds wire limit"));
+    }
+    serde_json::from_slice(bytes).map_err(|_| AdapterError::Invalid("invalid adapter message"))
+}
+
+fn valid_package_id(value: &str) -> bool {
+    if value.len() > 96 {
+        return false;
+    }
+    let segments: Vec<_> = value.split('.').collect();
+    segments.len() >= 3
+        && segments.iter().all(|segment| {
+            segment.len() <= 32
+                && segment
+                    .as_bytes()
+                    .first()
+                    .is_some_and(u8::is_ascii_lowercase)
+                && !segment.ends_with('-')
+                && segment
+                    .bytes()
+                    .all(|byte| byte.is_ascii_lowercase() || byte.is_ascii_digit() || byte == b'-')
+        })
 }
 
 impl AdapterEnvelope {
@@ -212,6 +341,33 @@ mod tests {
         assert_eq!(json["body"]["command"], "activate");
         assert_eq!(json["body"]["viewport"]["width"], 480);
         assert_eq!(AdapterEnvelope::decode(&bytes).unwrap(), frame);
+    }
+
+    #[test]
+    fn hello_negotiation_and_correlated_reply_are_bounded() {
+        let hello = AdapterHello {
+            package_id: "org.rustboy.radio".into(),
+            supported_protocols: vec![ADAPTER_PROTOCOL],
+        };
+        let encoded = hello.encode().unwrap();
+        assert_eq!(AdapterHello::decode(&encoded).unwrap(), hello);
+        assert_eq!(hello.negotiate("org.rustboy.radio", &[1]).unwrap(), 1);
+        assert!(hello.negotiate("org.other.radio", &[1]).is_err());
+        assert!(hello.negotiate("org.rustboy.radio", &[2]).is_err());
+
+        let reply = AdapterReplyEnvelope {
+            protocol: ADAPTER_PROTOCOL,
+            package_id: "org.rustboy.radio".into(),
+            request_id: 11,
+            body: AdapterReply::Ack,
+        };
+        assert_eq!(
+            AdapterReplyEnvelope::decode(&reply.encode().unwrap()).unwrap(),
+            reply
+        );
+        let mut invalid = reply;
+        invalid.request_id = 0;
+        assert!(invalid.encode().is_err());
     }
 
     #[test]
