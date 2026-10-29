@@ -2,7 +2,7 @@
 
 ## Codex instruction checkpoint — 2026-10-29
 
-**RB-CX-00 and RB-CX-01 remain accepted. RB-CX-02 is the active, unaccepted pass.** The acceptance-index checkpoint `b4387cd2913c07355b5bc5d4d70ea2a18e6d94fe` passed all seven exact-head jobs in [workflow run 40827207962](https://github.com/pskeffington/pip_boy/actions/runs/40827207962). The current uncommitted RB-CX-02 candidate adds role-bound in-memory adapter approvals, revocation checks at each intent, and exclusive audio ownership. Stable and Rust 1.90 workspace tests (398 each), both SDR feature test matrices on both toolchains, formatting, checks and warnings-denied Clippy passed locally; exact-head CI for this candidate is pending. PR #71 remains draft. The physical-device broker remains deny-only; no OS-backed grant, persistent approval, or production release is claimed.
+**RB-CX-00 and RB-CX-01 remain accepted. RB-CX-02 is the active, unaccepted pass.** The acceptance-index checkpoint `b4387cd2913c07355b5bc5d4d70ea2a18e6d94fe` passed all seven exact-head jobs in [workflow run 40827207962](https://github.com/pskeffington/pip_boy/actions/runs/40827207962). The RB-CX-02 source candidate is committed at `10f979c9237fe6a063cde69add449db37f5a19b2`; it adds role-bound in-memory adapter approvals, revocation checks at each intent, and exclusive audio ownership. Stable and Rust 1.90 workspace tests (398 each), both SDR feature test matrices on both toolchains, formatting, checks and warnings-denied Clippy passed locally; exact-head CI for this candidate is pending. PR #71 remains draft. The physical-device broker remains deny-only; no OS-backed grant, persistent approval, or production release is claimed.
 
 ## Workflow independence candidate
 
@@ -16,7 +16,7 @@ Updated: 2026-10-29
 ## Gate state
 
 - **Latest pushed validation head:** `b4387cd2913c07355b5bc5d4d70ea2a18e6d94fe`; [run 40827207962](https://github.com/pskeffington/pip_boy/actions/runs/40827207962) completed successfully with all seven checks green, including source/index, Rust stable, Rust 1.90, both SDR features, native macOS and native Windows.
-- **Current gate:** RB-CX-02 remains the sole `next` pass and is being implemented; it is not accepted. RB-CX-00 and RB-CX-01 retain their exact evidence in `catalog/codex_passes.json`. The new source candidate is not yet committed or validated by exact-head CI.
+- **Current gate:** RB-CX-02 remains the sole `next` pass and is under validation; it is not accepted. RB-CX-00 and RB-CX-01 retain their exact evidence in `catalog/codex_passes.json`. Source commit `10f979c9237fe6a063cde69add449db37f5a19b2` is committed locally; its exact-head CI is pending.
 - **Last accepted Codex pass:** RB-CX-00. **Last completed PROD roadmap gate:** PROD-0 remains **not accepted**; accepting this software validation pass does not certify the broader production baseline or release.
 - **Branch:** draft [PR #71](https://github.com/pskeffington/pip_boy/pull/71), `codex/package-adapter-protocol`. First-party CI repair is included. `rust_radio/` remains an independent untracked nested repository and is untouched.
 - **Relevant pinned module revision:** `rust_radio` dependency revision `3d77d11da3a31fbc3144635da6d391a3febf38b7` from the workspace lock/config. The local `rust_radio/` directory is a separate untracked nested repository and was preserved untouched.

@@ -17,7 +17,7 @@ Source commit `91753624bd39dfd9e7efccd85d5d1e33fe327891` pins Node v22.23.4 and 
 
 ## RB-CX-02 backend authorization candidate — validation in progress (2026-10-29)
 
-This is a source/docs candidate on top of accepted RB-CX-00/01; it is not yet committed and has no exact-head CI. `AdapterAuthorization` holds ephemeral grants keyed by canonical active role, package and declared scope. Host intent dispatch checks declaration and approval before adapter invocation; revocation and mismatched roles deny before the fixture adapter records a call. Media play/resume reserves a single package owner; pause/stop is restricted to that owner, successful stop releases it, and role changes are refused while media ownership is active. No UI or manifest state grants approval, and the OS broker still denies physical operations.
+Source commit `10f979c9237fe6a063cde69add449db37f5a19b2` adds this candidate on top of accepted RB-CX-00/01; exact-head CI is pending. `AdapterAuthorization` holds ephemeral grants keyed by canonical active role, package and declared scope. Host intent dispatch checks declaration and approval before adapter invocation; revocation and mismatched roles deny before the fixture adapter records a call. Media play/resume reserves a single package owner; pause/stop is restricted to that owner, successful stop releases it, and role changes are refused while media ownership is active. No UI or manifest state grants approval, and the OS broker still denies physical operations.
 
 Local validation performed on the candidate:
 
