@@ -1076,7 +1076,7 @@
     return true;
   }
 
-  async function loadCountyPackages(view, geoid, cacheOnly=false) {
+  async function loadCountyPackages(view, geoid, cacheOnly=false, targetBoundary=null) {
     if (active !== view || view.sitesVisible || view.siteCentered ||
         !window.RustBoyCounty?.validGeoid(geoid)) return;
     // Stage each new county separately. No request or parse failure may
@@ -1092,7 +1092,8 @@
     try {
       const report = await window.RustBoyCounty.load(geoid,{
         cacheOnly,signal:controller.signal,
-        clipRings: view.county?.id === geoid ? view.county.shape.paths : null,
+        clipRings: targetBoundary?.id === geoid ? targetBoundary.shape.paths :
+          view.county?.id === geoid ? view.county.shape.paths : null,
         onStatus: message => {
           if(active===view && view.countyPackageVersion===version) {
             view.countyStatus=message+" / OLD MAP KEPT";refresh(view);
@@ -1102,30 +1103,35 @@
           if(active!==view || view.countyPackageVersion!==version ||
               controller.signal.aborted)return;
           // Index built once on validated ingest, not on every pan/zoom.
-          if(!Object.keys(staged.layers).length)view.paintSamples=[];
           data.renderIndex=buildCountyIndex(data.shapes);
           if(id==="tiger-roads")
             data.majorRenderIndex=buildCountyIndex(
               data.shapes.filter(shape=>shape.countyMajor));
           staged.layers[id]=data;
-          // Hand over after the first validated source; subsequent layers
-          // belong to this same GEOID, never a mixture of two counties.
-          view.countyPackage=staged;
-          view.countyShapes=[
-            ...(staged.layers["tiger-areawater"]?.shapes||[]),
-            ...(staged.layers["tiger-linearwater"]?.shapes||[]),
-            ...(staged.layers["tiger-roads"]?.shapes||[]),
-            ...(staged.layers["tiger-pointlm"]?.shapes||[])
-          ];
-          if(cacheOnly && !view.fix && !view.centerSelected &&
-              !view.shapes.length && !view.onlineShapes.length)
-            fitCountyPackage(view);
-          refresh(view);
         }
       });
       if(active!==view || view.countyPackageVersion!==version)return;
       staged.errors=report.errors;
       staged.warnings=report.warnings || [];
+      if(!Object.keys(staged.layers).length) {
+        view.countyStatus="COUNTY "+geoid+" / NO VALID SOURCES / PREVIOUS MAP KEPT";
+        refresh(view);
+        return false;
+      }
+      // Publish the county boundary and all validated package layers in one
+      // handoff. Until this point the last-good map remains untouched.
+      view.paintSamples=[];
+      view.countyPackage=staged;
+      view.countyShapes=[
+        ...(staged.layers["tiger-areawater"]?.shapes||[]),
+        ...(staged.layers["tiger-linearwater"]?.shapes||[]),
+        ...(staged.layers["tiger-roads"]?.shapes||[]),
+        ...(staged.layers["tiger-pointlm"]?.shapes||[])
+      ];
+      if(targetBoundary?.id===geoid)view.county=targetBoundary;
+      if(cacheOnly && !view.fix && !view.centerSelected &&
+          !view.shapes.length && !view.onlineShapes.length)
+        fitCountyPackage(view);
       view.countyLoadTiming={
         ms:Math.max(0,monotonicNow()-ingestStarted),
         features:report.features,cacheOnly
@@ -1383,18 +1389,15 @@
     try {
       const county=await window.RustBoyOnline.countyAt(location.lon,location.lat,controller.signal);
       if(active!==view || !view.countyEnabled || version!==view.countyRequest) return;
-      view.county=county;
-      view.countyLastLookup={...location};
-      view.countyStatus=county.name.toUpperCase()+" COUNTY / VERIFIED BOUNDARY";
       view.center={lat:location.lat,lon:location.lon};
       view.follow=false;
       view.zoom=Math.max(view.zoom,10);
-      refresh(view);
       if(window.RustBoyCounty) {
         // The host independently fetches the exact GEOID boundary and caches
         // it; no GPS coordinate is sent to the loopback boundary endpoint.
         // It is safe to fall back to the live Census polygon for this session
         // if boundary storage or the second Census request is unavailable.
+        let targetBoundary=county;
         if(typeof window.RustBoyCounty.boundary==="function") {
           try {
             const saved=await window.RustBoyCounty.boundary(county.id,{
@@ -1402,7 +1405,7 @@
             });
             if(active!==view || !view.countyEnabled ||
                 version!==view.countyRequest || controller.signal.aborted)return;
-            view.county=saved;
+            targetBoundary=saved;
             view.countyStatus=county.name.toUpperCase()+
               (saved.cacheHit?" / BOUNDARY CACHE REUSED":" / BOUNDARY CACHED");
             refresh(view);
@@ -1414,11 +1417,22 @@
             refresh(view);
           }
         }
-        if(active===view && view.countyEnabled && version===view.countyRequest)
-          void loadCountyPackages(view,county.id,false);
+        if(active===view && view.countyEnabled && version===view.countyRequest &&
+            !controller.signal.aborted) {
+          const loaded=await loadCountyPackages(view,county.id,false,targetBoundary);
+          if(active!==view || !view.countyEnabled || version!==view.countyRequest ||
+              controller.signal.aborted)return;
+          if(loaded)view.countyLastLookup={...location};
+        }
       } else if(view.webEnabled) {
+        view.county=county;
+        view.countyLastLookup={...location};
+        view.countyStatus=county.name.toUpperCase()+" COUNTY / VERIFIED BOUNDARY";
+        refresh(view);
         void webFetch(view);
       } else {
+        view.county=county;
+        view.countyLastLookup={...location};
         view.countyStatus += " / NO CENSUS PACKAGE CLIENT / WEB OPTIONAL";
         refresh(view);
       }

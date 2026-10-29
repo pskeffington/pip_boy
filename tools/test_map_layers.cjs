@@ -31,7 +31,7 @@ const document={createElement:tag=>new Node(tag)};
 const navigator={onLine:false,geolocation:{
   watchPosition(){throw Error("Map layer controls requested GPS");},clearWatch(){}
 }};
-let queries=0,ingestions=0;
+let queries=0,ingestions=0,failReplacement=false;
 const roads=[];
 for(let i=0;i<20000;i++){
   const col=i%200,row=Math.floor(i/200);
@@ -69,11 +69,11 @@ win.RustBoyCounty={
   validGeoid:x=>/^\d{5}$/.test(x),
   active:async()=>({active_geoid:"25025",boundary_cached:true,
     cached_sources:Object.keys(sources)}),
-  boundary:async()=>({id:"25025",name:"Source County",paths:[
+  boundary:async(geoid)=>({id:geoid,name:geoid==="25023"?"Replacement County":"Source County",paths:[
     [[-80,35],[-70,35],[-70,45],[-80,45],[-80,35]]],
     shape:{kind:"line",paths:[[[-80,35],[-70,35],[-70,45],[-80,45],[-80,35]]],
       style:{stroke:"#e8dca8"}}}),
-  load:async(_geoid,{onLayer,onStatus})=>{
+  load:async(geoid,{onLayer,onStatus})=>{
     ingestions++;
     let features=0;
     for(const [id,shapes] of Object.entries(sources)){
@@ -84,10 +84,14 @@ win.RustBoyCounty={
       features+=shapes.length;
       onLayer?.(id,{shapes,bounds,features:shapes.length,
         vertices:shapes.length*2});
+      if(geoid==="25023" && failReplacement)
+        throw Error("fixture failure after first source");
     }
     return {features,errors:[],warnings:[]};
   }
 };
+win.RustBoyOnline={countyAt:async()=>({id:"25023",name:"Replacement County",
+  shape:{kind:"line",paths:[[[-80,35],[-70,45]]],style:{stroke:"#e8dca8"}}})};
 new Function("window","document","navigator","TextEncoder","fetch",text)(
   win,document,navigator,TextEncoder,async()=>{queries++;throw Error("Unexpected network");});
 const click=button=>{assert.equal(button.tag,"button");button.listeners.click[0]();};
@@ -107,6 +111,32 @@ async function main(){
   assert.equal(view.countyShapes.length,20004);
   assert.equal(queries,0);
   assert.equal(ingestions,1);
+
+  // A failed location-driven replacement must keep the whole prior county,
+  // and must not mark the failed location as successfully looked up.
+  const lastGoodPackage=view.countyPackage,lastGoodCountyShapes=view.countyShapes;
+  view.county={id:"25025",name:"Source County",shape:{paths:[water.paths[0]]}};
+  view.countyLastLookup={lat:39.5,lon:-75.5};
+  navigator.onLine=true;
+  failReplacement=true;
+  view.latitude.value="40";view.longitude.value="-75";
+  view.manual.listeners.submit[0]({preventDefault(){}});
+  // Enter a manual center, then activate COUNTY through its public control.
+  click(view.countyButton);
+  await until(()=>view.countyStatus.includes("fixture failure after first source"));
+  assert.equal(view.countyPackage,lastGoodPackage,"failed replacement keeps package object");
+  assert.equal(view.countyShapes,lastGoodCountyShapes,"failed replacement keeps all prior shapes");
+  assert.equal(view.county.id,"25025","failed replacement keeps boundary");
+  assert.deepEqual(view.countyLastLookup,{lat:39.5,lon:-75.5},
+    "failed replacement does not suppress a retry at the same location");
+  failReplacement=false;
+  view.manual.listeners.submit[0]({preventDefault(){}});
+  await until(()=>view.countyPackage?.geoid==="25023");
+  assert.deepEqual(view.countyLastLookup,{lat:40,lon:-75},
+    "the same location can be looked up and committed after source recovery");
+  view.countyEnabled=false; // leave the valid package mounted for layer checks
+  navigator.onLine=false;
+  const ingestionsBeforeLayerControls=ingestions;
 
   // A malformed imported module must not replace the last-good county map.
   const lastGoodShapes=view.countyShapes;
@@ -137,7 +167,8 @@ async function main(){
     view.renderStats.drawSamples<=60,"Render sample history must be bounded");
   assert.ok(view.countyLoadTiming &&
     Number.isFinite(view.countyLoadTiming.ms),"County ingestion duration recorded");
-  assert.ok(view.countyLoadTiming.cacheOnly,"Offline source load identified");
+  assert.equal(view.countyLoadTiming.cacheOnly,false,
+    "recovered location replacement is identified as an online source load");
   assert.ok(view.renderStats.candidates<500,
     "Viewport index must limit 20k roads to a few local candidates");
   assert.ok(view.renderStats.byLayer.roads>0);
@@ -156,7 +187,7 @@ async function main(){
   click(view.layerButtons.landmarks);
   assert.equal(view.renderStats.byLayer.landmarks,0);
   assert.match(view.status.textContent,/ALL COUNTY LAYERS HIDDEN/);
-  assert.equal(ingestions,1,"Layer switches do not re-ingest data");
+  assert.equal(ingestions,ingestionsBeforeLayerControls,"Layer switches do not re-ingest data");
   assert.equal(queries,0,"Layer switches never initiate network calls");
 
   click(view.layerButtons.roads);

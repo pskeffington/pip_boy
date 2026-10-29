@@ -46,6 +46,13 @@ Updated: 2026-10-29
 - `node tools/test_rustgis_map_import.cjs`, `node tools/test_map_layers.cjs`, `node tools/test_map_zip.cjs` and `node tools/test_map_viewport.cjs` passed locally. Viewports passed at 480×320, 800×480 and 320×568 with no network. The local viewport server required loopback permission after the sandbox returned `EPERM`.
 - `rb_gis/` remains independent and untouched. Full GIS rendering parity, Mac operator acceptance, cached regional data recovery and physical Pi acceptance remain open.
 
+### Location-driven county replacement rollback — 2026-10-29 (local candidate)
+
+- `map.js` now stages each validated county source without publishing it. It atomically replaces the displayed package and boundary only after at least one source has loaded; failure retains the last-good package, shapes, county boundary and prior successful lookup point.
+- `tools/test_map_layers.cjs` exercises the manual-location → Census county → host boundary/package path with a failure after the first incoming layer. It verifies that the last-good objects remain identical and the failed location does not become the retry-suppression point.
+- Local `node tools/test_map_layers.cjs`, `node tools/test_map_zip.cjs`, and `node tools/test_rustgis_map_import.cjs` passed. This working-tree candidate has not yet been committed or run in exact-head CI; no pass acceptance is inferred.
+- The read-only pass index remains RB-CX-00/01/02/04 accepted and RB-CX-05 next. `rb_gis/` remains unmodified. Independent renderer parity, operator and field evidence remain open.
+
 ## Implementation and evidence
 
 - **Implemented, software validated:** `pipboy-core::package_socket` provides bounded JSON request, hello-claim and response codecs; highest-common-version negotiation; strictly increasing request IDs; and a 64-entry request correlator that validates package and ID matches. Identity in a hello remains an unauthenticated claim.
