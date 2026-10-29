@@ -1,6 +1,6 @@
 # Terminal-to-module command surface (implementation contract)
 
-Status: **planned; NOT connected to live package execution**. This document describes the required engineering pass. Do not advertise module command execution as available until the acceptance gates below pass.
+Status: **initial executable bridge committed but not compile/field-verified**. `pipboy terminal` loads saved Workbench pins and supports `tools`, `select TOOL`, `help`, `run COMMAND`, and `quit`. Supported offline handler tool IDs are `host`, `diag`, `library`, `byte-lab`, and `net-lab`; other pinned tools are not runnable through this command prompt. It is separate from the full-screen `tui`, and does **not** mount MAP/TV/RADIO/COMMS sockets. Complete the gated common dispatcher and UI integration below before calling this production-ready.
 
 ## Goal
 
