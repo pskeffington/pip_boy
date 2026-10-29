@@ -470,3 +470,8 @@ volume and temporary preferences. `--live-ip` explicitly adds Skylab playback;
 `--standalone /path/to/rust-radio-cli` also checks the standalone native player.
 It never claims synthetic samples are received RF and is excluded from CI
 profiles that lack audio hardware.
+
+
+## Fresh stable/MSRV and SDR matrix — 2026-10-29
+
+Validated source candidate `c36786b8153871fabcb8f360a903d8225441b803` in the preserved Rust-Boy working tree. `cargo +stable fmt --all -- --check`, `cargo +stable check --workspace --all-targets --locked`, `cargo +stable clippy --workspace --all-targets --locked -- -D warnings`, and the default parallel `cargo +stable test --workspace --locked` passed on the final attempt (408 tests). Its first parallel test attempt had one dashboard task status operation return 422; the same test passed isolated, all tests passed in the full serial run, the package test target passed three parallel retries, and the full stable workspace passed on retry. No cause for the initial result was established. Rust 1.90.0 format/check/test/Clippy passed (408 tests). For both stable and 1.90.0, `sdrconnect` and `soapy-sdr` each passed locked workspace check, test and warnings-denied Clippy. The local Mac verification `bash scripts/test-map-macos.command --verify --require-chromium` and offline validator suites are documented above and passed. These local checks do not replace exact-head hosted Actions: PR #71's current head is still pending a run.

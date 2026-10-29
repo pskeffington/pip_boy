@@ -207,3 +207,8 @@ No external package loader or OS process isolation exists. Manifest metadata and
 ## Top-level status reconciliation — 2026-10-29
 
 The latest PR #71 head is `b3a9ed40f429c5c5a1b6584f9ed9c2927bba95e7`. The landing-page README now distinguishes that pending exact-head check from the successful default-branch run. The local MAP verification and source validators pass; hosted validation for this exact SHA remains outstanding because the branch-ref API update did not admit a workflow run. Do not report the candidate as failing or accepted until exact-head CI provides a conclusion.
+
+
+## Fresh Rust validation — 2026-10-29
+
+The current source candidate was revalidated locally from the preserved working tree. On stable and Rust 1.90.0, locked workspace format, check, all-target check, 408 workspace tests and warnings-denied Clippy passed; the sdrconnect and soapy-sdr feature check/test/Clippy matrices also passed on both toolchains. One initial parallel stable workspace run returned 422 from the task status route; the full workspace passed on retry and in serial, and the task-route crate passed three additional parallel repetitions. The isolated cause of that first failure remains unknown and is retained as a flake in the evidence. These are local results for source candidate `c36786b8153871fabcb8f360a903d8225441b803`; the subsequent PR commits update only README/status documentation. Hosted exact-head CI is still required.
