@@ -10,6 +10,8 @@ Fetched the actual remote `main` branch at `629f34f0ce21e37c6d2bc6567919ccc5c862
 
 PR documentation head `bfe8570fc62fcac7ab570d405241ab7835834a76` passed the complete seven-job first-party workflow in [run 40837409917](https://github.com/pskeffington/pip_boy/actions/runs/40837409917), including native macOS and Windows, Rust stable/1.90, both SDR feature suites and all offline/browser gates.
 
+Final PR head `ea30d048fb0f58ae6c2f997beb289eb61408e0c6` then passed all seven jobs in the manual exact-head [run 40838125904](https://github.com/pskeffington/pip_boy/actions/runs/40838125904) and push-triggered [run 40838127662](https://github.com/pskeffington/pip_boy/actions/runs/40838127662). The PR-triggered run is the status-check evidence for the open pull request.
+
 
 ## Admitted CI and local validation — 2026-10-29
 
