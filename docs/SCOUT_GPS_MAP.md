@@ -42,7 +42,7 @@ See [County source catalog and acquisition contract](COUNTY_SOURCES.md) for exac
 
 ## RustGIS local interchange
 
-Open **TOOLS / MAP SOURCES → RUSTGIS** and select `.rgismap`, `.rgis`, `.rgislyr`, `.rgismpk`, `.rgispkg`, or GeoJSON. RustGIS map/project formats preserve supported embedded WGS84 vector layers, project camera, layer visibility, basic symbology, source labels and warnings. RustGIS external data links, raster tiles and PostGIS/GeoPackage dependencies are not magically downloaded; export embedded vector geometry for portable operation.
+Open **TOOLS / MAP SOURCES → RUSTGIS** and select `.rgismap`, `.rgis`, `.rgislyr`, `.rgismpk`, `.rgispkg`, or GeoJSON. RustGIS map/project formats preserve supported embedded WGS84 vector layers, project camera, layer visibility, basic symbology, source labels and warnings. An explicit dataset CRS must identify WGS84/EPSG:4326; projected or unknown CRSs are rejected rather than silently treated as longitude/latitude. Reproject before import. RustGIS external data links, raster tiles and PostGIS/GeoPackage dependencies are not magically downloaded; export embedded vector geometry for portable operation.
 
 The displayed **DATA SOURCES** view exposes dataset names, source origin, feature counts, datum, vintage, partial-source restrictions and OSM attribution. The source's agency is the authority for the data; RustGIS itself is a GIS authoring tool, not a data provenance authority. Import failures leave last-good geometry on screen.
 

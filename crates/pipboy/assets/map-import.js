@@ -38,6 +38,15 @@
       : value && typeof value.Text === "string" ? value.Text.slice(0, 36) : "";
   }
 
+  function requireWgs84(crs) {
+    if (crs == null || crs === "") return;
+    if (typeof crs !== "string") bad("RustGIS vector CRS must be WGS84 (EPSG:4326)");
+    const normalized = crs.trim().toUpperCase().replace(/[\s_-]/g, "");
+    if (!["EPSG:4326", "4326", "WGS84", "GCSWGS1984"].includes(normalized)) {
+      bad("RustGIS vector CRS must be WGS84 (EPSG:4326); reproject before import");
+    }
+  }
+
   function parseRustGIS(text, filename) {
     if (!text || new TextEncoder().encode(text).byteLength > MAX_JSON) bad("RustGIS map JSON exceeds 12 MiB");
     const root = JSON.parse(text);
@@ -105,6 +114,7 @@
       if (layer.source) {omittedStream++;continue;}
       const ds = layer.dataset;
       if (ds.crs_incomplete) bad("RustGIS reports incomplete CRS; repair the source before import");
+      requireWgs84(ds.crs);
       if (!Array.isArray(ds.fields) || !Array.isArray(ds.features)) bad("Missing RustGIS feature table");
       const name = short(layer.name, short(ds.name, "Layer"));
       const style = layerStyle(layer,group);

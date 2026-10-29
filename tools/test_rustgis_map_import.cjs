@@ -15,7 +15,7 @@ const sample = {
   layers: [
     { id: 1, name: "Authorized wells", visible: true, transparency: 0,
       renderer: { Single: { fill: [5, 240, 90, 255], stroke: [0, 10, 0, 255], stroke_width: 1 } },
-      dataset: { name: "Wells", source: "County GIS / wells.geojson", fields: [{ name: "name", ty: "Text" }],
+      dataset: { name: "Wells", source: "County GIS / wells.geojson", crs: "EPSG:4326", fields: [{ name: "name", ty: "Text" }],
         features: [{ id: 1, geometry: { Point: { x: -81.63, y: 37.44 } },
           attrs: [{ Text: "A1" }] }] } },
     { id: 2, name: "County roads", visible: true, transparency: 0,
@@ -87,6 +87,13 @@ async function check() {
   const project = { name: "Survey", format: 1, maps: [{ ...sample, name: "empty", layers: [] }, sample], active_map: 1 };
   assert.equal(api.parseRustGIS(JSON.stringify(project), "field.rgis").mapName, "Scout terrain");
   assert.throws(() => api.parseRustGIS(JSON.stringify({ ...sample, body: "mars" }), "mars.rgismap"), /Earth maps/);
+  assert.throws(() => api.parseRustGIS(JSON.stringify({ ...sample, layers: [
+    { ...sample.layers[0], dataset: { ...sample.layers[0].dataset, crs: "EPSG:3857" } }
+  ] }), "projected.rgismap"), /CRS must be WGS84/,
+  "projected coordinates must not be silently interpreted as longitude/latitude");
+  assert.throws(() => api.parseRustGIS(JSON.stringify({ ...sample, layers: [
+    { ...sample.layers[0], dataset: { ...sample.layers[0].dataset, crs: { code: 4326 } } }
+  ] }), "invalid-crs.rgismap"), /CRS must be WGS84/);
   assert.throws(() => api.parseRustGIS(JSON.stringify({ ...sample, layers: [
     { ...sample.layers[0], dataset: { ...sample.layers[0].dataset, crs_incomplete: true } }
   ] }), "bad.rgismap"), /incomplete CRS/);
