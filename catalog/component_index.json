@@ -312,12 +312,15 @@
     },
     {
       "id": "universal-package-adapter",
-      "boundary": "Portable versioned socket SDK and host-owned one-package lifecycle; trusted in-process tests only, with no executable loader, broker grants, or real peripheral access.",
+      "boundary": "Portable typed adapter SDK, host-owned lifecycle, and one compile-time read-only rust_radio catalogue; no manifest-driven execution, playback, external sandbox or capability grants.",
       "code": [
         "crates/rust-boy-adapter-sdk/Cargo.toml",
         "crates/rust-boy-adapter-sdk/src/lib.rs",
         "crates/pipboy-core/src/universal_adapter.rs",
-        "catalog/host_adapter_contract.json"
+        "catalog/host_adapter_contract.json",
+        "crates/pipboy-core/src/builtin_packages.rs",
+        "crates/pipboy/src/dashboard.rs",
+        "catalog/builtin_packages/rust_radio.json"
       ],
       "docs": [
         "docs/UNIVERSAL_ADAPTER.md",

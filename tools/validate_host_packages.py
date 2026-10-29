@@ -173,6 +173,37 @@ def check_adapter_contract(root=ROOT):
 
 
 
+def check_builtin_radio_manifest(m):
+    """A compile-time catalogue must remain capability-free and non-executable."""
+    identifier = check_manifest(m)
+    require("status" not in m, "built-in manifest must omit installation claims")
+    require(identifier == "org.rustboy.radio" and m["name"] == "RADIO CATALOG",
+            "unreviewed built-in identity")
+    require(m["version"] == "0.1.0", "unreviewed built-in adapter version")
+    require(m["source_repository"] == "https://github.com/pskeffington/rust_radio",
+            "unreviewed radio source")
+    require(m["entrypoint"] == {"type": "builtin_adapter"},
+            "built-in radio cannot start external processes")
+    require(m["capabilities"] == [] and m["background"] == {"allowed": False},
+            "built-in catalogue cannot request capabilities or background work")
+    return identifier
+
+
+def check_builtin_radio(root=ROOT):
+    path = root / "catalog/builtin_packages/rust_radio.json"
+    require(path.is_file() and not path.is_symlink(), "invalid built-in radio manifest")
+    require(path.stat().st_size <= MAX_BYTES, "built-in manifest too large")
+    check_builtin_radio_manifest(json.loads(path.read_text(encoding="utf-8")))
+    core = (root / "crates/pipboy-core/src/builtin_packages.rs").read_text(encoding="utf-8")
+    require('include_str!("../../../catalog/builtin_packages/rust_radio.json")' in core
+            and "pub fn mount_approved_builtins(" in core
+            and "Box::new(RadioCatalogAdapter::default())" in core,
+            "compile-time roster mismatch")
+    shell = (root / "crates/pipboy/src/dashboard.rs").read_text(encoding="utf-8")
+    require("builtin_packages::mount_approved_builtins(&mut host)" in shell,
+            "dashboard does not mount the compile-time roster")
+
+
 def validate(root=ROOT):
     folder = root / "catalog/host_packages"
     require(folder.is_dir() and not folder.is_symlink(), "missing or linked fixtures directory")
@@ -198,7 +229,8 @@ def validate(root=ROOT):
             "Rust reference registry and checked-in fixtures drift")
     check_adapter_sdk(root)
     check_adapter_contract(root)
-    print(f"PASS: {len(seen)} inert manifests and portable SDK boundary; no executable package installed")
+    check_builtin_radio(root)
+    print(f"PASS: {len(seen)} inert manifests, a read-only compile-time radio catalogue and SDK boundary")
     return len(seen)
 
 

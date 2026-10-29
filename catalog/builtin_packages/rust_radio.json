@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "package_id": "org.rustboy.radio",
+  "name": "RADIO CATALOG",
+  "version": "0.1.0",
+  "publisher": "Rust-Boy contributors",
+  "license": "MIT",
+  "source_repository": "https://github.com/pskeffington/rust_radio",
+  "host_api": 1,
+  "entrypoint": {
+    "type": "builtin_adapter"
+  },
+  "ui": {
+    "mode": "host_view",
+    "min_width": 320,
+    "min_height": 240
+  },
+  "capabilities": [],
+  "background": {
+    "allowed": false
+  }
+}

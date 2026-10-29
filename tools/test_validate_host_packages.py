@@ -6,7 +6,7 @@ import json
 import unittest
 from pathlib import Path
 
-from validate_host_packages import ROOT, check_manifest, validate
+from validate_host_packages import ROOT, check_manifest, check_builtin_radio_manifest, validate
 
 
 class SocketCatalogTests(unittest.TestCase):
@@ -21,6 +21,22 @@ class SocketCatalogTests(unittest.TestCase):
 
     def test_four_reference_fixtures_validate(self):
         self.assertEqual(validate(), 4)
+
+    def test_builtin_radio_denies_all_capabilities(self):
+        m = json.loads(
+            (ROOT / "catalog/builtin_packages/rust_radio.json").read_text(encoding="utf-8")
+        )
+        self.assertEqual(check_builtin_radio_manifest(m), "org.rustboy.radio")
+        for field in ("capabilities", "background", "status"):
+            changed = copy.deepcopy(m)
+            if field == "capabilities":
+                changed[field] = ["media.audio"]
+            elif field == "background":
+                changed[field] = {"allowed": True}
+            else:
+                changed[field] = "installed"
+            with self.assertRaises(ValueError):
+                check_builtin_radio_manifest(changed)
 
     def test_api_drift_is_rejected(self):
         m = self.fixture()

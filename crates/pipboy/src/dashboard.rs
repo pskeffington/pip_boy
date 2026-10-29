@@ -67,7 +67,11 @@ static RADIO_SDRCONNECT: LazyLock<Mutex<String>> =
 static RADIO_OUTPUT: LazyLock<Mutex<String>> = LazyLock::new(|| Mutex::new("system".into()));
 static UNIVERSAL_ADAPTER_HOST: LazyLock<Mutex<UniversalAdapterHost>> = LazyLock::new(|| {
     let viewport = Viewport::new(1280, 720).expect("valid dashboard viewport");
-    Mutex::new(UniversalAdapterHost::new(viewport))
+    let mut host = UniversalAdapterHost::new(viewport);
+    // Registration is passive: no media, network, hardware or process launch.
+    pipboy_core::builtin_packages::mount_approved_builtins(&mut host)
+        .expect("compile-time approved radio manifest must be valid");
+    Mutex::new(host)
 });
 
 struct Request {
@@ -2709,7 +2713,7 @@ mod tests {
         let state = dispatch(&request("GET", "/api/state", Value::Null), &store, 8765);
         let state: Value = serde_json::from_slice(&state.body).unwrap();
         assert_eq!(state["foreground"]["surface"], "settings");
-        assert_eq!(state["host_packages"]["mounted_package_count"], 0);
+        assert_eq!(state["host_packages"]["mounted_package_count"], 1);
 
         let close = dispatch(
             &request("POST", "/api/host/settings", json!({"settings_open":false})),
@@ -2753,7 +2757,7 @@ mod tests {
     }
 
     #[test]
-    fn host_package_api_reports_only_mounted_roster_and_rejects_reference_selection() {
+    fn host_package_api_reports_only_compiled_roster_and_rejects_reference_selection() {
         let temp = tempfile::tempdir().unwrap();
         let store = WorkbenchStore::new(temp.path().join("private/workbench.json"));
         let listed = dispatch(
@@ -2763,15 +2767,14 @@ mod tests {
         );
         assert_eq!(listed.status, 200);
         let body: Value = serde_json::from_slice(&listed.body).unwrap();
-        assert_eq!(body["mounted_package_count"], 0);
-        assert_eq!(body["packages"], json!([]));
-        assert_eq!(body["selected_package_id"], Value::Null);
+        assert_eq!(body["mounted_package_count"], 1);
+        assert_eq!(body["packages"][0]["package_id"], "org.rustboy.radio");
 
         let reference_selection = dispatch(
             &request(
                 "POST",
                 "/api/host/foreground",
-                json!({"package_id":"org.rustboy.radio"}),
+                json!({"package_id":"org.rustboy.tv"}),
             ),
             &store,
             8765,
