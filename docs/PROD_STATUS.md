@@ -15,14 +15,14 @@ Updated: 2026-10-29
 
 ## Current PR and default-branch CI status — 2026-10-29
 
-- PR #71 head `da8e3cefa805fa1bb741ab815c371f6cbbce3720` passed all seven checks in [PR run 40839242430](https://github.com/pskeffington/pip_boy/actions/runs/40839242430). The branch-specific workflow badge reports **passing**.
+- PR #71 head `68722d765c1df9bfd0f7c4ac9b8cb4c84b717023` passed all seven checks in [PR run 40840007336](https://github.com/pskeffington/pip_boy/actions/runs/40840007336). The branch-specific workflow badge reports **passing**.
 - The default `main` branch remains at `629f34f0ce21e37c6d2bc6567919ccc5c862c80d`; its latest listed run [40669977589](https://github.com/pskeffington/pip_boy/actions/runs/40669977589) concluded `startup_failure` with zero jobs. The failing badge visible on the default-branch README reflects this separate main run; it is not the status of PR #71.
 - The main workflow still contains third-party Action imports. The PR branch replaces these with repository-owned exact-SHA checkout and official toolchain bootstrap, preserving the stable/1.90, SDR and native platform gates. Main's badge will reflect the repaired workflow after the change is merged.
 - PR #71 remains draft because RB-CX-05's independent `rb_gis` renderer parity and operator/field acceptance remain open. Do not treat the green PR CI matrix as acceptance of those gates.
 
 ## Gate state
 
-- **Latest completed exact-head validation:** PR documentation head `da8e3cefa805fa1bb741ab815c371f6cbbce3720`; push-triggered [run 40839242430](https://github.com/pskeffington/pip_boy/actions/runs/40839242430) passed all seven jobs, including stable/Rust 1.90, both SDR features, source/catalog policy, desktop/handheld Chromium, native macOS MAP and Windows ConPTY. CI policy continues to require zero external GitHub Action `uses:` dependencies.
+- **Latest completed exact-head validation:** PR checkpoint `68722d765c1df9bfd0f7c4ac9b8cb4c84b717023`; push-triggered [run 40840007336](https://github.com/pskeffington/pip_boy/actions/runs/40840007336) passed all seven jobs, including stable/Rust 1.90, both SDR features, source/catalog policy, desktop/handheld Chromium, native macOS MAP and Windows ConPTY. CI policy continues to require zero external GitHub Action `uses:` dependencies.
 - **Acceptance/index checkpoint:** `7e0a19b440e9a8531390e00fb165b2b8df06f3d9`; [run 40831001927](https://github.com/pskeffington/pip_boy/actions/runs/40831001927) passed all seven jobs, including stable MAP browser regressions, Rust 1.90, SDR features, native Mac MAP and Windows ConPTY.
 - **Current gate:** RB-CX-05 is next, limited to host-owned GIS integration/parity work. `rb_gis` remains an independent repository and will not be modified from this checkout. RB-CX-04 is accepted software-only; its remaining blocker is external package launch because no approved launcher or binary identity is bound to a package.
 - **Last accepted Codex pass:** RB-CX-04. **Last completed PROD roadmap gate:** PROD-0 remains **not accepted**; these software pass acceptances do not certify the broader production baseline or release.
@@ -58,6 +58,7 @@ Updated: 2026-10-29
 - Added an integration regression in `tools/test_map_layers.cjs`: a corrupt RustGIS import must retain the existing last-good county geometry, show the import error and clear the file input for retry. The test exercises the live host MAP event path; it does not claim independent renderer parity.
 - `node tools/test_rustgis_map_import.cjs`, `node tools/test_map_layers.cjs`, `node tools/test_map_zip.cjs` and `node tools/test_map_viewport.cjs` passed locally. Viewports passed at 480×320, 800×480 and 320×568 with no network. The local viewport server required loopback permission after the sandbox returned `EPERM`.
 - `rb_gis/` remains independent and untouched. Full GIS rendering parity, Mac operator acceptance, cached regional data recovery and physical Pi acceptance remain open.
+- On this PR head, `bash scripts/test-map-macos.command --verify --require-chromium` passed all five stages: native Rust build, nine county-cache tests, real loopback micro API smoke, offline MAP/GPS/county/ZIP/RustGIS logic, six synthetic native cache replay tests, and Chromium viewports at 480×320, 800×480 and 320×568. The initial sandboxed run could not bind loopback (`EPERM`); the unchanged command passed with local loopback access authorized.
 
 ### Location-driven county replacement rollback — 2026-10-29 (local candidate)
 
