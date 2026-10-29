@@ -22,6 +22,7 @@ Updated: 2026-10-29
 
 ## RB-CX-05 host package interoperability — local candidate
 
+- Candidate source checkpoint: `0d648f20a96796a30beef443bfe0439439e57ff7` (same source tree on which the local commands below passed). Hosted exact-head CI has not run yet.
 - Added explicit local directory import for the documented `rb-gis-package/v1` flat GeoJSON format in the Rust-Boy MAP host. Parsing enforces one directory, no path traversal, up to 12 layers, 64 KiB manifest, 2 MiB per layer, 2,000 features/30,000 vertices per layer and existing aggregate map limits. Layer styling comes from a closed role map; source, vintage and attribution remain declared strings.
 - A visible warning says package provenance is unauthenticated. Import is user-triggered, stays local, performs no automatic device or network access, and commits geometry only after the full package validates. Malformed replacements preserve last-good geometry, source metadata and camera.
 - The new parser negatives and map-view last-good regression passed. All six indexed RB-CX-05 checks passed on the development worktree; Chromium passed 480×320, 800×480 and 320×568. Offline validators and `git diff --check` passed. The first sandboxed loopback test attempt returned `EPERM`; the unchanged localhost suites passed with explicit test-loopback access.
