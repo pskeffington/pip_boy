@@ -89,7 +89,7 @@ The [eight-role workbench plan](ROLE_ROADMAP.md) and [machine-readable role matr
 
 ## Reclamation Scout: GIS + Raspberry Pi + TAK
 
-[Scout architecture and acceptance gates](SCOUT_GIS_TAK.md) define the current independent RFC 7946 Point geometry tools and the future separately gated ARM64 RustGIS adapter and OpenTAKServer/CoT connector. **ATAK itself remains Android-only, and no Pi-native ATAK app or TAK connection is shipped.** Rust-Boy now requires Rust 1.90+, matching RustGIS's compiler minimum; direct RustGIS integration remains deferred for API, licensing, ARM64 and performance verification. This work does not alter the external RustGIS repository.
+[Scout architecture and acceptance gates](SCOUT_GIS_TAK.md) define the current independent RFC 7946 GeoJSON inspector and the future separately gated ARM64 RustGIS adapter and OpenTAKServer/CoT connector. **ATAK itself remains Android-only, and no Pi-native ATAK app or TAK connection is shipped.** Rust-Boy now requires Rust 1.90+, matching RustGIS's compiler minimum; direct RustGIS integration remains deferred for API, licensing, ARM64 and performance verification. This work does not alter the external RustGIS repository.
 
 ## Navigate the build
 

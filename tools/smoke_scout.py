@@ -60,6 +60,19 @@ with tempfile.TemporaryDirectory() as temporary:
     assert report["coordinate_order"] == "longitude,latitude"
     assert report["bbox"] == [-71.5, 41, -70.75, 42]
     assert report["network_used"] is False
+    assert report["geometry"] == "Point"
+
+    for geometry, label in [
+        ({"type": "LineString", "coordinates": [[0, 0], [1, 1]]}, "LineString"),
+        ({"type": "Polygon", "coordinates": [[[0, 0], [1, 0], [1, 1], [0, 0]]]}, "Polygon"),
+        ({"type": "GeometryCollection", "geometries": [
+            {"type": "Point", "coordinates": [0, 0]},
+            {"type": "LineString", "coordinates": [[0, 0], [1, 1]]}
+        ]}, "Mixed"),
+    ]:
+        file.write_text(json.dumps(geometry), encoding="utf-8")
+        report = json.loads(call(env, "scout", "geo", "inspect", str(file)).stdout)
+        assert report["geometry"] == label and report["bbox"] == [0, 0, 1, 1], report
 
     invalids = [
         ("geo", "waypoint", "Bad", "91", "0"),
@@ -75,7 +88,13 @@ with tempfile.TemporaryDirectory() as temporary:
     ]
     for case in invalids:
         call(env, "scout", *case, ok=False)
-    file.write_text('{"type":"LineString","coordinates":[[0,0],[1,1]]}',
+    file.write_text('{"type":"Point","coordinates":[181,0]}',
+                    encoding="utf-8")
+    call(env, "scout", "geo", "inspect", str(file), ok=False)
+    file.write_text('{"type":"Point","coordinates":[0,0],"crs":{"name":"EPSG:3857"}}',
+                    encoding="utf-8")
+    call(env, "scout", "geo", "inspect", str(file), ok=False)
+    file.write_text(json.dumps({"type":"LineString", "coordinates":[[0,0]]*30001}),
                     encoding="utf-8")
     call(env, "scout", "geo", "inspect", str(file), ok=False)
     file.write_text(" " * (1024 * 1024 + 1), encoding="utf-8")
@@ -91,4 +110,4 @@ with tempfile.TemporaryDirectory() as temporary:
     assert not (home / "notes.json").exists()
     assert not (home / "permissions.json").exists()
 
-print("PASS: Scout GeoJSON WGS84 order, finite coordinates, bounded Point import, dateline distance, offline behavior and ready-made role")
+print("PASS: Scout GeoJSON geometry families, WGS84 bounds, finite coordinates, size limits, dateline distance, offline behavior and ready-made role")

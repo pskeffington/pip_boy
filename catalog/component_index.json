@@ -112,15 +112,17 @@
       "code": [
         "crates/pipboy-core/src/scout_gis.rs",
         "crates/pipboy/src/county_cache.rs",
-        "crates/pipboy/assets/map.js"
+        "crates/pipboy/assets/map.js",
+        "crates/pipboy/src/scout.rs"
       ],
       "docs": [
         "docs/SCOUT_GPS_MAP.md",
-        "docs/COUNTY_SOURCES.md"
+        "docs/COUNTY_SOURCES.md",
+        "docs/SCOUT_GIS_TAK.md"
       ],
       "checks": [
         "tools/smoke_scout.py",
-    "tools/test_map_boot.cjs",
+        "tools/test_map_boot.cjs",
         "tools/test_county_sources.cjs",
         "tools/test_county_boundary_cache.cjs"
       ]

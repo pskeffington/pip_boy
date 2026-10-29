@@ -99,7 +99,7 @@
     {
       "id": "STD-07",
       "type": "upstream_software",
-      "title": "OpenGeos RustGIS \u2014 architecture, licensing, ARM64 builds",
+      "title": "OpenGeos RustGIS — architecture, licensing, ARM64 builds",
       "url": "https://github.com/opengeos/RustGIS",
       "supports": "RustGIS L0 geometry and L1 data are useful interoperability references; Apache-2.0, available Linux ARM64 distribution; workspace minimum Rust 1.90.",
       "limit": "Rust-Boy now declares Rust 1.90, removing the compiler-version mismatch. RustGIS crates are not linked yet; integration still requires API/license and ARM64 GUI/CLI verification."
@@ -107,7 +107,7 @@
     {
       "id": "STD-08",
       "type": "official_product",
-      "title": "TAK Product Center \u2014 ATAK, TAKX, PiTAK, TAK Server",
+      "title": "TAK Product Center — ATAK, TAKX, PiTAK, TAK Server",
       "url": "https://tak.gov/products",
       "supports": "ATAK-CIV is Android software, TAKX includes a Linux variant, and PiTAK is a transport-specific TAK ecosystem product.",
       "limit": "PiTAK does not imply an entire ATAK mobile client on Raspberry Pi OS; Linux TAKX ARM64 support has not been established."
@@ -115,7 +115,7 @@
     {
       "id": "STD-09",
       "type": "upstream_software",
-      "title": "OpenTAKServer \u2014 Raspberry Pi OS installation",
+      "title": "OpenTAKServer — Raspberry Pi OS installation",
       "url": "https://docs.opentakserver.io/installation/installation.html",
       "supports": "OpenTAKServer supports Raspberry Pi OS Bookworm-or-newer with a documented Pi installer; this is a TAK-compatible server for client data exchange.",
       "limit": "Separate software, not embedded in Rust-Boy; operator must review installer, certificates, access policy and live ARM64 hardware behavior."
@@ -123,10 +123,10 @@
     {
       "id": "STD-10",
       "type": "technical_standard",
-      "title": "IETF RFC 7946 \u2014 GeoJSON",
+      "title": "IETF RFC 7946 — GeoJSON",
       "url": "https://www.rfc-editor.org/rfc/rfc7946",
       "supports": "Positions use geographic longitude, latitude WGS84 axis order; GeoJSON Feature and FeatureCollection are suitable portable interchange artifacts.",
-      "limit": "Raw bounding boxes may be broad across antimeridian; this first Scout reader supports Point geometries only."
+      "limit": "Raw bounding boxes may be broad across antimeridian; the bounded Scout CLI inspector supports Point through Polygon geometry and GeometryCollections but does not render maps."
     }
   ],
   "roles": [
@@ -437,13 +437,13 @@
           "gate": "R1",
           "title": "Four-feed UI with deterministic camera fixtures",
           "deliverables": [
-            "2\u00d72 thumbnail wall and four separate feed state machines",
-            "1\u20134 choose, Enter expands, Esc returns, loading/error/stale labels",
+            "2×2 thumbnail wall and four separate feed state machines",
+            "1–4 choose, Enter expands, Esc returns, loading/error/stale labels",
             "4-inch readable layout and input focus"
           ],
           "acceptance": [
             "All four synthetic feeds animate independently",
-            "Focus/back and missing/stale feeds tested at 800\u00d7480 and compact fallback",
+            "Focus/back and missing/stale feeds tested at 800×480 and compact fallback",
             "No external endpoints contacted"
           ],
           "dependencies": [
@@ -747,7 +747,7 @@
         {
           "id": "N1",
           "priority": "must",
-          "need": "Local WGS84 waypoints, approximate great-circle distances and bounded GeoJSON Point inspection",
+          "need": "Local WGS84 waypoints, approximate great-circle distances and bounded GeoJSON geometry inspection",
           "status": "partially_available"
         },
         {
@@ -871,7 +871,7 @@
         {
           "id": "N1",
           "priority": "must",
-          "need": "Local WGS84 waypoints, approximate great-circle distances and bounded GeoJSON Point inspection",
+          "need": "Local WGS84 waypoints, approximate great-circle distances and bounded GeoJSON geometry inspection",
           "status": "partially_available"
         },
         {

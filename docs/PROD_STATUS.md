@@ -15,7 +15,7 @@ Updated: 2026-10-29
 
 ## Current PR and default-branch CI status — 2026-10-29
 
-- PR #71 head `68722d765c1df9bfd0f7c4ac9b8cb4c84b717023` passed all seven checks in [PR run 40840007336](https://github.com/pskeffington/pip_boy/actions/runs/40840007336). The branch-specific workflow badge reports **passing**.
+- PR #71 head `dabc18719a6d86dae7076a63732971679fefd2c9` passed all seven checks in [PR run 40859193586](https://github.com/pskeffington/pip_boy/actions/runs/40859193586). The README badge is scoped to this development branch.
 - The default `main` branch remains at `629f34f0ce21e37c6d2bc6567919ccc5c862c80d`; its latest listed run [40669977589](https://github.com/pskeffington/pip_boy/actions/runs/40669977589) concluded `startup_failure` with zero jobs. The failing badge visible on the default-branch README reflects this separate main run; it is not the status of PR #71.
 - The main workflow still contains third-party Action imports. The PR branch replaces these with repository-owned exact-SHA checkout and official toolchain bootstrap, preserving the stable/1.90, SDR and native platform gates. Main's badge will reflect the repaired workflow after the change is merged.
 - PR #71 remains draft because RB-CX-05's independent `rb_gis` renderer parity and operator/field acceptance remain open. Do not treat the green PR CI matrix as acceptance of those gates.
@@ -31,6 +31,12 @@ Updated: 2026-10-29
 - The new parser negatives and map-view last-good regression passed. All six indexed RB-CX-05 checks passed on the development worktree; Chromium passed 480×320, 800×480 and 320×568. Offline validators and `git diff --check` passed. The first sandboxed loopback test attempt returned `EPERM`; the unchanged localhost suites passed with explicit test-loopback access.
 - `bash scripts/test-map-macos.command --verify --require-chromium` also passed on the candidate worktree: native Mac build, nine county-cache Rust tests, real loopback micro smoke, offline map logic, six cache replay tests and three Chromium viewports. No production devices, external providers, or independent `rb_gis` renderer were used.
 - Exact commit SHA and hosted CI evidence are pending this local candidate's commit. RB-CX-05 remains unaccepted: no independent `rb_gis` renderer parity, Census SHP/DBF/ZIP/service migration, Mac operator acceptance or field report is claimed. The default `main` badge remains red until the CI repair is eligible to merge; PR #71 stays draft.
+
+## RB-CX-05 Rust GIS geometry inspection — local candidate
+
+- Expanded the Rust-owned Scout GIS core and `pipboy scout geo inspect` from Point-only inspection to Point/MultiPoint/LineString/MultiLineString/Polygon/MultiPolygon and nested GeometryCollection. Its stable summary reports geometry type, Feature count and raw WGS84 bounds; the validator also enforces 1 MiB files, 1,000 features, GeometryCollection nesting to six and 30,000 positions, and rejects legacy CRS declarations, malformed coordinates and unsupported geometry.
+- Stable and Rust 1.90 full workspace `check`, `test`, and warnings-denied `clippy` passed locally. The unchanged stable full test command initially showed two dashboard test failures; both passed in isolation, and the unchanged full suite passed on retry. Rust 1.90's full suite passed. The Scout CLI smoke and all six indexed RB-CX-05 MAP checks passed.
+- This is local read-only validation/summarization; it does not render, import native GIS data into MAP, or close independent renderer parity. Exact source SHA and hosted matrix for this candidate are pending commit. The `rb_gis` repository remains unmodified; PR #71 remains draft.
 
 ## Gate state
 

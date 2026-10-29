@@ -174,7 +174,7 @@ The [graphical dashboard implementation](DASHBOARD_UI.md) provides a shared UI f
 
 **Operational needs**
 
-- **must — Local WGS84 waypoints, approximate great-circle distances and bounded GeoJSON Point inspection** (`partially_available`).
+- **must — Local WGS84 waypoints, approximate great-circle distances and bounded GeoJSON geometry inspection** (`partially_available`).
 - **must — Offline trip notes, saved landmarks and position uncertainty labels** (`partially_available`): bounded manual-position site register, statuses, GeoJSON export; live GNSS still absent.
 - **should — Opt-in GNSS, multi-geometry GeoJSON/GPX exchange and permitted TAK CoT interoperability** (`planned`).
 - **later — Portable RustGIS-style map rendering, offline tile caching and Raspberry Pi display performance** (`planned`).
