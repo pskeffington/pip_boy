@@ -1,6 +1,6 @@
 # Rust-Boy universal package adapter (v1 development contract)
 
-**Status (2026-10-29): RB-CX-00 accepted; RB-CX-01 implementation in progress.** Exact-head first-party CI passed RB-CX-00 on `c425994eb8a172c357c6920e29d2b4d38cdc5050` (run [40824698037](https://github.com/pskeffington/pip_boy/actions/runs/40824698037)). The bounded host-rendered view contract below is being added in RB-CX-01. This remains distinct from an external plug-in loader, OS sandbox, or production release. A read-only first-party RADIO catalogue is mounted by explicit compile-time bootstrap; MAP, TV and COMMS remain unmounted.
+**Status (2026-10-29): RB-CX-00 and RB-CX-01 accepted; RB-CX-02 implementation candidate.** Exact-head first-party CI passed RB-CX-00 on `c425994eb8a172c357c6920e29d2b4d38cdc5050` (run [40824698037](https://github.com/pskeffington/pip_boy/actions/runs/40824698037)) and RB-CX-01 on `b039fbe6886920a071d836841d9cffe8fd75be99` (run [40826559481](https://github.com/pskeffington/pip_boy/actions/runs/40826559481)). The acceptance-index follow-up `b4387cd2913c07355b5bc5d4d70ea2a18e6d94fe` also passed all seven jobs (run [40827207962](https://github.com/pskeffington/pip_boy/actions/runs/40827207962)). This remains distinct from an external plug-in loader, OS sandbox, or production release. A read-only first-party RADIO catalogue is mounted by explicit compile-time bootstrap; MAP, TV and COMMS remain unmounted.
 
 ## Goal
 
@@ -91,7 +91,7 @@ An example activation envelope:
 
 Once mounted, `select(id)` delivers activation/resume, suspending the previous foreground adapter first. Failed switches try to restore the old view. `open_settings()` suppresses package presentation, while `close_settings()` can restore the prior package. `unmount(id)` calls shutdown then removes metadata. Failures retain Settings and must never let one module overwrite another module's viewport. The manager attempts best-effort cleanup on drop; OS kill/revocation is still a future gate.
 
-`intent(...)` accepts only `ui.*` actions without a scope; other actions require a capability declared in the manifest and approved by a separate `ScopeAuthority`. `DenyAllScopes` is the default. No capability declarations or background flags produce privileges; in-process trusted adapters are **not** isolated from OS I/O, so trust is a construction-time condition, not a secure execution proof.
+`intent(...)` accepts only `ui.*` actions without a scope; other actions require a capability declared by the foreground manifest and approved by the host's current `AdapterIntentAuthority`. The `AdapterAuthorization` candidate binds ephemeral approvals to active role, package ID and scope, rechecks them before every adapter call, and supports revocation. `DenyAllScopes` denies by default. Audio has a separate single-owner policy: one approved package may play/resume; only that owner may pause/stop; a successful stop releases ownership. Role changes are refused while an owner remains active. Preferences and manifest declarations never create grants. This application-level policy does not isolate trusted in-process adapters from OS I/O; the separate device broker remains deny-only.
 
 ## Four initial packages
 

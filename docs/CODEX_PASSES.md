@@ -96,3 +96,7 @@ Codex must inspect [run 40823597748](https://github.com/pskeffington/pip_boy/act
 ## Exact next-pass instructions
 
 > Continue **RB-CX-02** on `codex/package-adapter-protocol`. Enforce backend capability intent and media ownership in `universal_adapter.rs`, `permissions.rs` and the deny-only broker. Deny undeclared/unapproved network, media, device and message intents before side effects; test revocation and role mismatch; never infer grants from UI or manifest state. Run the indexed security/smoke checks and full exact-head CI, update production evidence, and keep PR #71 draft. Do not open physical devices or claim OS-enforced grants until their dedicated requirements are implemented and tested.
+
+### RB-CX-02 implementation checkpoint — not accepted
+
+The current source candidate adds ephemeral role/package/scope approvals with checks at each backend intent, revocation and role-mismatch regressions, and host-level exclusive `media.audio` ownership with successful-stop release. The permissions preference file remains a request/denial store and does not mint these approvals. The standalone device broker remains deny-all. The consent UI, durable approval policy and OS-enforced device permission boundary are still open; do not treat the candidate as production authorization or mark the pass accepted before its full validation and exact-head CI are complete.

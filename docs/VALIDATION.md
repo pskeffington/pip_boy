@@ -15,6 +15,18 @@ On the current local repair working tree, stable and Rust 1.90 each passed `carg
 
 Source commit `91753624bd39dfd9e7efccd85d5d1e33fe327891` pins Node v22.23.4 and its published architecture-specific digests, routes Rust bootstrap through the repository script, and adds a regression guard against external Action imports or dropped required matrices. Acceptance evidence is recorded below and in the pass index.
 
+## RB-CX-02 backend authorization candidate — validation in progress (2026-10-29)
+
+This is a source/docs candidate on top of accepted RB-CX-00/01; it is not yet committed and has no exact-head CI. `AdapterAuthorization` holds ephemeral grants keyed by canonical active role, package and declared scope. Host intent dispatch checks declaration and approval before adapter invocation; revocation and mismatched roles deny before the fixture adapter records a call. Media play/resume reserves a single package owner; pause/stop is restricted to that owner, successful stop releases it, and role changes are refused while media ownership is active. No UI or manifest state grants approval, and the OS broker still denies physical operations.
+
+Local validation performed on the candidate:
+
+- `cargo +stable test --workspace --locked`: passed, 398 tests; `cargo +1.90.0 test --workspace --locked`: passed, 398 tests. The first sandboxed stable attempt hit `EPERM` in three existing loopback-only fixtures; the unchanged tests passed when loopback binding was authorized.
+- Stable and Rust 1.90 each passed formatting, locked all-target workspace check, and warning-denied Clippy. Both `pipboy/soapy-sdr` and `pipboy/sdrconnect` passed locked all-target check, warning-denied Clippy and workspace tests on both toolchains; these feature tests perform no receiver discovery/capture.
+- Focused `pipboy-core` permission tests passed (7), including backend role mismatch, revocation, media exclusivity and successful stop release. Core warning-denied Clippy passed.
+- `node tools/test_desktop_focus_ui.cjs` and `node tools/test_micro_ui.cjs` passed. Desktop Chromium viewports passed at 1440×900, 1280×800, 1024×768 and 800×600. The local handheld viewport command could not run because this Mac has no discoverable Chromium executable; the latest pushed exact-head run [40827207962](https://github.com/pskeffington/pip_boy/actions/runs/40827207962) passed its handheld viewport jobs before this source candidate. Candidate exact-head CI must rerun them.
+- The offline catalog, role, Vault, security, pass-index, CI-policy, component-index, host-package, repository and smoke-roster validators/tests passed. Permission and broker binary smokes passed after the locked workspace build. Final diff validation and exact-head CI remain pending; the handheld Chromium fixture is not available locally because no Chromium binary is installed.
+
 ## Accepted universal-host validation gate — 2026-10-29
 
 RB-CX-00 is accepted on exact source head `c425994eb8a172c357c6920e29d2b4d38cdc5050`; [run 40824698037](https://github.com/pskeffington/pip_boy/actions/runs/40824698037) completed successfully with all seven required jobs: catalog/source, Rust stable, Rust 1.90, Soapy SDR, SDRconnect, native macOS and native Windows. The exact-head diagnostics reported the same seven successful checks.

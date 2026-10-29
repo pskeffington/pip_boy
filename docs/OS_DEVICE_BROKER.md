@@ -2,6 +2,8 @@
 
 **Status:** an isolated, **deny-all** one-shot stdio process with a bounded protocol is [cross-platform CI-verified](https://github.com/pskeffington/pip_boy/actions/runs/40164717116) (see [BROKER_PROTOCOL.md](BROKER_PROTOCOL.md)); there is still **no authenticated OS-enforced broker**, live device driver, trusted consent service, privileged helper or hardware probe. The in-process simulator and separate deny-only process do not supply real authorization.
 
+The RB-CX-02 host-policy candidate adds ephemeral role/package/scope checks and exclusive logical audio ownership for trusted in-process adapters. It does not change the broker protocol or permit physical access. Network, device, location, radio and peripheral operations remain unavailable through the deny-only broker until OS-enforced authorization is independently implemented and accepted.
+
 ## Principle: saved preference is never an active grant
 
 The existing `permissions.json` can contain `requested` or `denied` intent.

@@ -27,7 +27,7 @@
     },
     {
       "id": "runtime-policy",
-      "boundary": "Canonical runtime, module registry and capabilities; browser UI cannot grant permissions.",
+      "boundary": "Canonical runtime, module registry and role/package/scope-bound ephemeral adapter approvals; browser UI cannot grant permissions and preferences are not grants.",
       "hardware_gate": "software_only",
       "code": [
         "crates/pipboy-core/src/runtime.rs",
@@ -316,7 +316,7 @@
     },
     {
       "id": "universal-package-adapter",
-      "boundary": "Portable typed adapter SDK with a bounded v1 display-only PackageView rendered by host-created DOM, host-owned lifecycle, and one compile-time read-only rust_radio catalogue; no manifest-driven execution, playback, external sandbox or capability grants.",
+      "boundary": "Portable typed adapter SDK with a bounded v1 display-only PackageView rendered by host-created DOM, host-owned lifecycle and single-owner audio intent arbitration; manifest declarations are not grants and physical access remains deny-only.",
       "code": [
         "crates/rust-boy-adapter-sdk/Cargo.toml",
         "crates/rust-boy-adapter-sdk/src/lib.rs",

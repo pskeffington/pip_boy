@@ -2,7 +2,7 @@
 
 ## Codex instruction checkpoint — 2026-10-29
 
-**RB-CX-00 and RB-CX-01 are accepted** with exact source/run evidence in the machine index. RB-CX-01 passed on `b039fbe6886920a071d836841d9cffe8fd75be99` in [workflow run 40826559481](https://github.com/pskeffington/pip_boy/actions/runs/40826559481), all seven jobs green; **RB-CX-02 is now next**. PR #71 remains draft. These are software pass acceptances; hardware and broader production release gates remain open.
+**RB-CX-00 and RB-CX-01 remain accepted. RB-CX-02 is the active, unaccepted pass.** The acceptance-index checkpoint `b4387cd2913c07355b5bc5d4d70ea2a18e6d94fe` passed all seven exact-head jobs in [workflow run 40827207962](https://github.com/pskeffington/pip_boy/actions/runs/40827207962). The current uncommitted RB-CX-02 candidate adds role-bound in-memory adapter approvals, revocation checks at each intent, and exclusive audio ownership. Stable and Rust 1.90 workspace tests (398 each), both SDR feature test matrices on both toolchains, formatting, checks and warnings-denied Clippy passed locally; exact-head CI for this candidate is pending. PR #71 remains draft. The physical-device broker remains deny-only; no OS-backed grant, persistent approval, or production release is claimed.
 
 ## Workflow independence candidate
 
@@ -15,11 +15,19 @@ Updated: 2026-10-29
 
 ## Gate state
 
-- **Latest code-validation head:** `b039fbe6886920a071d836841d9cffe8fd75be99`; [run 40826559481](https://github.com/pskeffington/pip_boy/actions/runs/40826559481) completed successfully with all seven checks green.
-- **Current gate:** RB-CX-02 is `next`; RB-CX-00 and RB-CX-01 are accepted with exact commit/run evidence in `catalog/codex_passes.json`. Both accepted passes are software-only and do not waive future platform or hardware validation.
+- **Latest pushed validation head:** `b4387cd2913c07355b5bc5d4d70ea2a18e6d94fe`; [run 40827207962](https://github.com/pskeffington/pip_boy/actions/runs/40827207962) completed successfully with all seven checks green, including source/index, Rust stable, Rust 1.90, both SDR features, native macOS and native Windows.
+- **Current gate:** RB-CX-02 remains the sole `next` pass and is being implemented; it is not accepted. RB-CX-00 and RB-CX-01 retain their exact evidence in `catalog/codex_passes.json`. The new source candidate is not yet committed or validated by exact-head CI.
 - **Last accepted Codex pass:** RB-CX-00. **Last completed PROD roadmap gate:** PROD-0 remains **not accepted**; accepting this software validation pass does not certify the broader production baseline or release.
 - **Branch:** draft [PR #71](https://github.com/pskeffington/pip_boy/pull/71), `codex/package-adapter-protocol`. First-party CI repair is included. `rust_radio/` remains an independent untracked nested repository and is untouched.
 - **Relevant pinned module revision:** `rust_radio` dependency revision `3d77d11da3a31fbc3144635da6d391a3febf38b7` from the workspace lock/config. The local `rust_radio/` directory is a separate untracked nested repository and was preserved untouched.
+
+## RB-CX-02 candidate — backend approvals and media ownership
+
+- Added `AdapterAuthorization`, an in-memory approval authority keyed by active Rust role, package ID and manifest scope. Every scoped intent checks the host-supplied manifest declaration and the current authority before adapter invocation; approval revocation and role mismatch therefore stop at the backend boundary.
+- Audio requests use a separate owner check: only the current owner may play/resume/pause/stop, a second package cannot take ownership, and a successful stop releases the owner. Role changes are rejected while an audio owner remains active.
+- These approvals are neither loaded from `permissions.json` nor inferred from package manifests, UI state or role tool pins. They are not OS-enforced permissions. `rust-boy-broker` remains a separate deny-all process with no device/network handles.
+- Local stable and Rust 1.90 workspace tests passed (398 each) after granting the existing loopback-only fixtures access. Both SDR feature test/check/Clippy matrices passed under both toolchains. Targeted permission and network/device/message denial tests passed; see [validation](VALIDATION.md) for the exact commands and local Chromium limitation.
+- Remaining acceptance boundary: no consent UI integration, durable approval workflow, OS authorization, real media backend or external package execution is accepted. The index still leaves RB-CX-02 unaccepted until all of its code and CI evidence is reviewed.
 
 ## Implementation and evidence
 
@@ -81,12 +89,12 @@ Updated: 2026-10-29
 
 ## Codex development handoff
 
-`python3 tools/codex_next.py --json` is a read-only, validated handoff of RB-CX-02. The `validate_ci_policy.py` / `test_validate_ci_policy.py` guard the zero-`uses:` rule, exact-SHA checkout, stable/1.90, SDR/native matrices and pinned Node bootstrap. RB-CX-00 acceptance is supported by run 40824698037; the RB-CX-00 index checkpoint passed all seven checks on run 40825620885; RB-CX-01 acceptance is supported by run 40826559481.
+`python3 tools/codex_next.py --json` is a read-only, validated handoff of RB-CX-02. The `validate_ci_policy.py` / `test_validate_ci_policy.py` guard the zero-`uses:` rule, exact-SHA checkout, stable/1.90, SDR/native matrices and pinned Node bootstrap. RB-CX-00 acceptance is supported by run 40824698037; the RB-CX-00 index checkpoint passed all seven checks on run 40825620885; RB-CX-01 acceptance is supported by run 40826559481; the subsequent accepted-index head b4387 passed all seven checks on run 40827207962.
 
 
-The [machine pass queue](../catalog/codex_passes.json) records RB-CX-00 and RB-CX-01 as accepted with exact source SHAs and successful workflow URLs; RB-CX-02 is the only `next` pass. The RB-CX-01 source head passed all seven CI jobs in run 40826559481. Historical startup failures, cancellation, the repaired macOS Node mismatch, and a stale handoff-test fixture are documented below; see [Codex instructions](../AGENTS.md), [pass plan](CODEX_PASSES.md) and [index hierarchy](INDEXING.md).
+The [machine pass queue](../catalog/codex_passes.json) records RB-CX-00 and RB-CX-01 as accepted with exact source SHAs and successful workflow URLs; RB-CX-02 remains the only `next` pass while its candidate is validated. The latest pushed index head b4387 passed all seven CI jobs in run 40827207962. Historical startup failures, cancellation, the repaired macOS Node mismatch, and stale handoff-test fixtures are documented below; see [Codex instructions](../AGENTS.md), [pass plan](CODEX_PASSES.md) and [index hierarchy](INDEXING.md).
 
-### RB-CX-02 handoff requirements
+### RB-CX-02 current acceptance requirements
 
 - Deny unapproved network/media/device/message intents in the backend before side effects; preserve deny-first behavior and deny-only broker.
 - Test revocation and role mismatch; never infer grants from UI or manifest declarations. Package display views remain inert.
@@ -94,9 +102,9 @@ The [machine pass queue](../catalog/codex_passes.json) records RB-CX-00 and RB-C
 
 ## Next three implementation actions
 
-1. Inspect RB-CX-02's declared security, permissions and broker entrypoints and current grants/role checks.
-2. Implement the minimum backend denial and revocation behavior with focused negative tests, preserving zero implicit device I/O.
-3. Run offline/security, stable/1.90 and exact-head checks; record evidence without merging or weakening gates.
+1. Finish the stable/1.90 workspace and Soapy-SDR/SDRconnect feature test matrices for the current source candidate.
+2. Re-run the complete pass validators and desktop/micro/Chromium regressions; preserve the deny-only physical broker and zero external Action imports.
+3. Commit and push the coherent source/docs checkpoint to PR #71, inspect all seven exact-head checks, and accept RB-CX-02 only if its backend-denial, revocation, role-mismatch and media-owner requirements all pass. Keep the PR draft and record OS-backed permissions as a later blocker.
 
 ## Release risks
 

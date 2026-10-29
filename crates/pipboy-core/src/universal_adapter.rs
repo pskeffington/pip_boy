@@ -15,6 +15,24 @@ pub use rust_boy_adapter_sdk::{
 use serde_json::Value;
 use std::collections::{BTreeMap, BTreeSet};
 
+/// Host authorization for package intents. Audio requests use explicit
+/// arbitration hooks; authorities that do not implement them deny media.
+pub trait AdapterIntentAuthority {
+    fn is_granted(&self, package_id: &str, scope: &str) -> bool;
+
+    fn authorize_media_action(&self, _package_id: &str, _action: &str) -> bool {
+        false
+    }
+
+    fn complete_media_action(&self, _package_id: &str, _action: &str, _succeeded: bool) {}
+}
+
+impl AdapterIntentAuthority for DenyAllScopes {
+    fn is_granted(&self, _package_id: &str, _scope: &str) -> bool {
+        false
+    }
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum AdapterState {
     Registered,
@@ -353,7 +371,7 @@ impl UniversalAdapterHost {
         action: &str,
         requested_scope: Option<&str>,
         payload: Value,
-        policy: &dyn ScopeAuthority,
+        policy: &dyn AdapterIntentAuthority,
     ) -> Result<(), AdapterError> {
         if !valid_action(action) {
             return Err(AdapterError::Invalid("invalid package intent action"));
@@ -374,8 +392,17 @@ impl UniversalAdapterHost {
                 .capabilities
                 .iter()
                 .any(|declared| declared == scope)
-                || !policy.is_granted(&active, scope)
             {
+                return Err(AdapterError::Denied(
+                    "scope is not authorized by host policy",
+                ));
+            }
+            let authorized = if scope == "media.audio" {
+                policy.authorize_media_action(&active, action)
+            } else {
+                policy.is_granted(&active, scope)
+            };
+            if !authorized {
                 return Err(AdapterError::Denied(
                     "scope is not authorized by host policy",
                 ));
@@ -385,14 +412,18 @@ impl UniversalAdapterHost {
                 "non-UI actions require an explicit capability scope",
             ));
         }
-        if let Err(error) = self.invoke(
+        let result = self.invoke(
             &active,
             AdapterCommand::Intent {
                 action: action.to_owned(),
                 required_scope: requested_scope.map(str::to_owned),
                 payload,
             },
-        ) {
+        );
+        if requested_scope == Some("media.audio") {
+            policy.complete_media_action(&active, action, result.is_ok());
+        }
+        if let Err(error) = result {
             // Malformed input should not take a healthy adapter offline;
             // a real adapter fault or bad reply must fail closed.
             if matches!(error, AdapterError::Fault(_) | AdapterError::Registry(_)) {
@@ -637,9 +668,12 @@ mod tests {
     #[test]
     fn intent_scopes_are_host_owned_and_denied_by_default() {
         struct Approved;
-        impl ScopeAuthority for Approved {
+        impl AdapterIntentAuthority for Approved {
             fn is_granted(&self, id: &str, scope: &str) -> bool {
                 id == "org.rustboy.radio" && scope == "media.audio"
+            }
+            fn authorize_media_action(&self, id: &str, action: &str) -> bool {
+                id == "org.rustboy.radio" && action == "play"
             }
         }
         let mut host = UniversalAdapterHost::new(Viewport::new(480, 320).unwrap());
@@ -667,6 +701,31 @@ mod tests {
         assert!(host
             .intent("play", Some("media.audio"), json!({}), &Approved)
             .is_err());
+    }
+
+    #[test]
+    fn unapproved_network_device_and_message_scopes_are_denied_before_adapter_calls() {
+        let cases = [
+            ("org.rustboy.radio", "fetch", "network.fetch.explicit"),
+            ("org.rustboy.radio", "read", "radio.device"),
+            ("org.rustboy.comms", "send", "messages.local.write"),
+            ("org.rustboy.comms", "connect", "network.connect.explicit"),
+        ];
+        for (package_id, action, scope) in cases {
+            let mut host = UniversalAdapterHost::new(Viewport::new(480, 320).unwrap());
+            let calls = mount(&mut host, package_id, None);
+            host.select(package_id).unwrap();
+            assert!(
+                host.intent(action, Some(scope), json!({}), &DenyAllScopes)
+                    .is_err(),
+                "{package_id} unexpectedly authorized {scope}"
+            );
+            assert_eq!(
+                calls.lock().unwrap().len(),
+                1,
+                "denied {scope} reached the adapter"
+            );
+        }
     }
 
     #[test]
