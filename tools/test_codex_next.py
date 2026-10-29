@@ -29,11 +29,20 @@ class HandoffTests(unittest.TestCase):
         self.assertEqual(json.dumps(a, sort_keys=True),
                          json.dumps(b, sort_keys=True))
         self.assertIn("not tested or accepted", a["warning"])
-        self.assertEqual(a["accepted"], [])
-        self.assertEqual(len(a["remaining"]), len(self.data["passes"]) - 1)
+        accepted = [row["id"] for row in self.data["passes"]
+                    if row["status"] == "accepted"]
+        self.assertEqual(a["accepted"], accepted)
+        self.assertEqual(len(a["remaining"]),
+                         len(self.data["passes"]) - len(accepted) - 1)
 
     def test_unaccepted_dependency_remains_visible(self):
-        result = build_handoff(copy.deepcopy(self.data))
+        data = copy.deepcopy(self.data)
+        first = data["passes"][0]
+        first["status"] = "next"
+        first["evidence"] = None
+        second = data["passes"][1]
+        second["status"] = "queued"
+        result = build_handoff(data)
         second = next(item for item in result["remaining"]
                       if item["id"] == "RB-CX-01")
         self.assertEqual(second["waiting_for"], ["RB-CX-00"])
@@ -41,6 +50,8 @@ class HandoffTests(unittest.TestCase):
     def test_malformed_index_rejected_not_silently_repaired(self):
         bad = copy.deepcopy(self.data)
         bad["passes"][0]["status"] = "queued"
+        bad["passes"][0]["evidence"] = None
+        bad["passes"][1]["status"] = "queued"
         with self.assertRaisesRegex(ValueError, "exactly one next"):
             build_handoff(bad)
 
