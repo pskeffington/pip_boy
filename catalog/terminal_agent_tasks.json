@@ -33,7 +33,8 @@
         "No command execution on selection, unknown tool denied",
         "Unit tests for parser, paths and injection controls"
       ],
-      "gate": "TC-1"
+      "gate": "TC-1",
+      "issue": 73
     },
     {
       "id": "TC-A02",
@@ -56,7 +57,8 @@
         "Slash invokes scoped palette, Esc closes without execution, Settings accessible",
         "Keyboard navigation and bounded output regression"
       ],
-      "gate": "TC-2"
+      "gate": "TC-2",
+      "issue": 75
     },
     {
       "id": "TC-A03",
@@ -78,7 +80,8 @@
         "Reference or scanned manifests never mount; TV and COMMS unavailable until approved",
         "Adapter failure, suspend/resume and loss of connectivity tested"
       ],
-      "gate": "TC-3/TC-4"
+      "gate": "TC-3/TC-4",
+      "issue": 75
     },
     {
       "id": "TC-A04",
@@ -98,7 +101,8 @@
         "No secrets/location/message bodies leak via command history or errors",
         "Fail closed; startup_failure with no jobs recorded blocked"
       ],
-      "gate": "TC-1/TC-6"
+      "gate": "TC-1/TC-6",
+      "issue": 74
     },
     {
       "id": "TC-A05",
@@ -120,7 +124,8 @@
         "480x320 and desktop automated keyboard/touch tests",
         "No viewport regression or fake readiness indicator"
       ],
-      "gate": "TC-5"
+      "gate": "TC-5",
+      "issue": 75
     },
     {
       "id": "TC-A06",
