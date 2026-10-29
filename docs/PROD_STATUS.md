@@ -6,7 +6,7 @@ Updated: 2026-10-29
 
 - **Current gate:** PROD-2 / host UI integration — **implementation candidate; software validated**. Desktop and micro shells now select only mounted packages via host APIs, show inert package view data, and clear foreground on shell navigation. The roster is empty, so real package acceptance remains open.
 - **Last completed gate:** PROD-0 baseline repair — **not accepted**. Mainline working tree and local validation are understood; GitHub Actions evidence is currently unavailable for the inspected commit, and CI startup failure has not been diagnosed.
-- **Branch:** `codex/package-adapter-protocol`; shell integration commit `c653048`. Earlier controller and transport commits: `8197ffc`, `c020483`, checkpoint `0598d8d`.
+- **Branch:** `codex/package-adapter-protocol`; latest integration commit `d340e8b` (compact Settings layout and viewport fixture). Shell integration: `c653048`; earlier controller and transport commits: `8197ffc`, `c020483`, checkpoint `0598d8d`.
 - **Relevant pinned module revision:** `rust_radio` dependency revision `3d77d11da3a31fbc3144635da6d391a3febf38b7` from the workspace lock/config. The local `rust_radio/` directory is a separate untracked nested repository and was preserved untouched.
 
 ## Implementation and evidence
