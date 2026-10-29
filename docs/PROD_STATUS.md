@@ -50,7 +50,7 @@ Updated: 2026-10-29
 
 - `map.js` now stages each validated county source without publishing it. It atomically replaces the displayed package and boundary only after at least one source has loaded; failure retains the last-good package, shapes, county boundary and prior successful lookup point.
 - `tools/test_map_layers.cjs` exercises the manual-location → Census county → host boundary/package path with a failure after the first incoming layer. It verifies that the last-good objects remain identical and the failed location does not become the retry-suppression point.
-- Local `node tools/test_map_layers.cjs`, `node tools/test_map_zip.cjs`, and `node tools/test_rustgis_map_import.cjs` passed. This working-tree candidate has not yet been committed or run in exact-head CI; no pass acceptance is inferred.
+- Local `node tools/test_map_layers.cjs`, `node tools/test_map_zip.cjs`, and `node tools/test_rustgis_map_import.cjs` passed. Source commit `a148bfdd112917bc8de9ae66784a8e2c1c31ba87` is pushed to PR #71; exact-head run [40833358785](https://github.com/pskeffington/pip_boy/actions/runs/40833358785) is in progress. No pass acceptance is inferred.
 - The read-only pass index remains RB-CX-00/01/02/04 accepted and RB-CX-05 next. `rb_gis/` remains unmodified. Independent renderer parity, operator and field evidence remain open.
 
 ## Implementation and evidence
