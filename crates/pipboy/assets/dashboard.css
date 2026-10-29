@@ -449,7 +449,7 @@ html, body { height:100%; overflow:hidden; }
   .settings-profile-summary { display:none; }
   .settings-profile-summary .tiny-label { display:none; }
   .settings-profile-summary strong { font-size:10px; }
-  .settings-choice { padding:2px 0; min-height:33px; }
+  .settings-choice { padding:0; min-height:31px; }
   .settings-choice > span { font-size:9px; }
   .settings-choice .primary-button { padding:5px 7px; min-height:31px; font-size:10px; }
   .settings-surface .deck-pager { min-height:32px; }
@@ -537,6 +537,7 @@ html, body { height:100%; overflow:hidden; }
    Settings summary is hidden to preserve 44px station targets. */
 .settings-choice #open-palette { flex:none; min-width:0; min-height:36px; }
 @media(max-height:480px) {
+  .settings-surface { gap:0; }
   .settings-choice { gap:5px; }
   .settings-choice > span { flex:1 1 0; min-width:0; }
   .settings-choice #open-palette {

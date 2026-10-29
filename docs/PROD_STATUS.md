@@ -26,11 +26,11 @@ Updated: 2026-10-29
 - `python3 tools/test_validate_host_packages.py` — passed (8 tests).
 - `python3 tools/validate_component_index.py` — passed.
 - `python3 tools/validate_repo.py` — passed.
-- `CHROME_BIN='/Applications/Google Chrome.app/Contents/MacOS/Google Chrome' node tools/test_dashboard_viewport.cjs` — passed at 480x320, 800x480, 1280x720 and 1920x1080; checks full-width tool details on demand, return navigation, no document scrolling, and Settings restoration.
+- `CHROME_BIN='/Applications/Google Chrome.app/Contents/MacOS/Google Chrome' node tools/test_dashboard_viewport.cjs` — passed at 480×320, 800×480, 1280×720 and 1920×1080, including default, custom, scout and security profiles. Short-screen Settings spacing now fits the role controls.
 - `CHROME_BIN='/Applications/Google Chrome.app/Contents/MacOS/Google Chrome' node tools/test_desktop_viewport.cjs` — passed at 1440x900, 1280x800, 1024x768 and 800x600; checks single-view workspace, persistent Settings and restoring Radio after Settings.
-- Chromium viewport runs after the controller binding passed at handheld 480x320, 800x480 and desktop 1280x720, 1920x1080, 1440x900, 1280x800, 1024x768 and 800x600. The desktop probe verifies Settings open/close API transitions and Radio restoration.
+- `CHROME_BIN='/Applications/Google Chrome.app/Contents/MacOS/Google Chrome' node tools/test_micro_viewport.cjs` — passed at 480×320, 800×480, 320×568 and 480×320 custom, plus desktop map coverage at 800×600, 1280×800 and 1920×1080. The fixture permits only reads and host Settings lifecycle writes.
+- Combined desktop and handheld viewport evidence covers 480×320, 800×480, 320×568, 800×600, 1024×768, 1280×720, 1280×800, 1440×900, 1920×1080; no document scroll, settings restoration, or package canvas clipping assertions failed.
 - `node tools/test_desktop_focus_ui.cjs`, `node tools/test_micro_ui.cjs`, JavaScript syntax checks, `tools/test_validate_host_packages.py`, `tools/validate_component_index.py`, and `tools/validate_repo.py` — passed.
-- `CHROME_BIN='/Applications/Google Chrome.app/Contents/MacOS/Google Chrome' node tools/test_dashboard_viewport.cjs` — failed at 480×320 on the existing Settings role-selector clipping assertion. The earlier viewport and Settings restoration assertions at that size passed; other required viewport sizes were not reached. Needs layout investigation.
 - GitHub combined status and commit workflow-run queries for `2c13594` returned no status entries/runs. The repository workflow file defines CI, but the actual startup-failure cause is not established by this result.
 
 ## Release acceptance
@@ -46,13 +46,13 @@ Updated: 2026-10-29
 - Diagnose the historical GitHub Actions `startup_failure` using an actual affected run and its job/runner diagnostics; no run is currently exposed for the inspected main commit.
 - One earlier full parallel run returned HTTP 422 in `manager_can_create_assign_dispatch_and_track_but_other_roles_cannot_reassign`; the failure did not reproduce in isolation, serial execution, five consecutive parallel suite runs or the latest full workspace run. The test now includes task-state context if it recurs.
 - There is no approved installed-package roster, so no package can yet be selected and package content is only exercised through synthetic API tests.
-- Local Mac/Pi hardware, media output and independently maintained package integration have not been accepted. The 480×320 dashboard Settings role selector clipping failure is a live UI regression gate.
+- Local Mac/Pi hardware, media output and independently maintained package integration have not been accepted.
 
 ## Next three implementation actions
 
-1. Investigate and fix the 480×320 Settings role-selector clipping, then run the full desktop and handheld viewport matrices.
-2. Implement trusted first-party installed-state bootstrap and mount a real reviewed package without enabling manifest-driven code execution.
-3. Add secure Unix socket creation/ownership and peer provenance checks, then retrieve an actual failed GitHub Actions run and classify startup failure.
+1. Implement trusted first-party installed-state bootstrap and mount a real reviewed package without enabling manifest-driven code execution.
+2. Add secure Unix socket creation/ownership and peer provenance checks before enabling independent processes.
+3. Retrieve an actual failed GitHub Actions run and classify startup failure; preserve the workflow checks as written.
 
 ## Release risks
 

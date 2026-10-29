@@ -5,6 +5,7 @@
 - Add a compact mounted-package selector and inert full-canvas view to desktop and micro shells; both remain disabled with an empty roster.
 - Route selector changes, Settings transitions and returns to shell navigation through the host foreground APIs, keeping shell state synchronized with lifecycle responses.
 - Add desktop focus and micro interaction regressions for empty/mounted rosters, switching, safe text rendering and foreground clearing.
+- Tighten short-screen Settings spacing so the 44px role targets fit at 480×320; update the handheld viewport fixture to permit only the host-owned Settings lifecycle POST.
 - Bind desktop and handheld Settings transitions to `UniversalAdapterHost`, invoking its host-owned suspend/resume lifecycle while keeping package selection disabled without a trusted installed roster.
 - Add same-origin host APIs for the actual mounted roster, inert foreground view and foreground selection; reference designs cannot be selected through these endpoints. Test a synthetic mounted adapter through the dashboard boundary.
 - Add a lifecycle-aware foreground clear operation so returning to the host shell suspends, but does not uninstall, the selected adapter; Settings remains available if already open.
