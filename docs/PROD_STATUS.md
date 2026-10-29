@@ -15,7 +15,7 @@ Updated: 2026-10-29
 
 ## Gate state
 
-- **Latest completed source validation:** `0b760598f26814a8cbeb87a81a003cb90826f6d7`; [run 40831595041](https://github.com/pskeffington/pip_boy/actions/runs/40831595041) passed all seven exact-head jobs, including both SDR feature matrices and native macOS/Windows. Stable ran the native RustGIS import and desktop/mobile UI regressions. CI policy validation confirmed zero external GitHub Action `uses:` dependencies.
+- **Latest completed source validation:** `a148bfdd112917bc8de9ae66784a8e2c1c31ba87`; [run 40833358785](https://github.com/pskeffington/pip_boy/actions/runs/40833358785) passed all seven jobs after rerunning the initial stable and Soapy failures. Stable rerun included the full GIS and desktop/mobile UI suites; Rust 1.90, both SDR feature jobs, native macOS and Windows passed. CI policy validation continues to require zero external GitHub Action `uses:` dependencies.
 - **Acceptance/index checkpoint:** `7e0a19b440e9a8531390e00fb165b2b8df06f3d9`; [run 40831001927](https://github.com/pskeffington/pip_boy/actions/runs/40831001927) passed all seven jobs, including stable MAP browser regressions, Rust 1.90, SDR features, native Mac MAP and Windows ConPTY.
 - **Current gate:** RB-CX-05 is next, limited to host-owned GIS integration/parity work. `rb_gis` remains an independent repository and will not be modified from this checkout. RB-CX-04 is accepted software-only; its remaining blocker is external package launch because no approved launcher or binary identity is bound to a package.
 - **Last accepted Codex pass:** RB-CX-04. **Last completed PROD roadmap gate:** PROD-0 remains **not accepted**; these software pass acceptances do not certify the broader production baseline or release.
@@ -50,7 +50,7 @@ Updated: 2026-10-29
 
 - `map.js` now stages each validated county source without publishing it. It atomically replaces the displayed package and boundary only after at least one source has loaded; failure retains the last-good package, shapes, county boundary and prior successful lookup point.
 - `tools/test_map_layers.cjs` exercises the manual-location → Census county → host boundary/package path with a failure after the first incoming layer. It verifies that the last-good objects remain identical and the failed location does not become the retry-suppression point.
-- Local `node tools/test_map_layers.cjs`, `node tools/test_map_zip.cjs`, and `node tools/test_rustgis_map_import.cjs` passed. Source commit `a148bfdd112917bc8de9ae66784a8e2c1c31ba87` is pushed to PR #71; exact-head run [40833358785](https://github.com/pskeffington/pip_boy/actions/runs/40833358785) is in progress. No pass acceptance is inferred.
+- Local `node tools/test_map_layers.cjs`, `node tools/test_map_zip.cjs`, and `node tools/test_rustgis_map_import.cjs` passed. Source commit `a148bfdd112917bc8de9ae66784a8e2c1c31ba87` is pushed to PR #71; exact-head run [40833358785](https://github.com/pskeffington/pip_boy/actions/runs/40833358785) passed all seven jobs after failed-job reruns. No pass acceptance is inferred.
 - The read-only pass index remains RB-CX-00/01/02/04 accepted and RB-CX-05 next. `rb_gis/` remains unmodified. Independent renderer parity, operator and field evidence remain open.
 
 ## Implementation and evidence
