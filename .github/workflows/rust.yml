@@ -43,6 +43,8 @@ jobs:
           python3 tools/test_component_index.py
           python3 tools/validate_codex_passes.py
           python3 tools/test_validate_codex_passes.py
+          python3 tools/validate_ci_policy.py
+          python3 tools/test_validate_ci_policy.py
           python3 tools/codex_next.py --json
           python3 tools/test_codex_next.py
           python3 tools/validate_security.py
@@ -73,11 +75,7 @@ jobs:
           git checkout --detach --force FETCH_HEAD
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
       - name: Install matrix Rust toolchain
-        run: |
-          rustup toolchain install "${{ matrix.toolchain }}" --profile minimal --component rustfmt --component clippy
-          rustup default "${{ matrix.toolchain }}"
-          rustc --version
-          cargo --version
+        run: bash scripts/ci_bootstrap.sh rust "${{ matrix.toolchain }}"
       - name: Assert active matrix compiler
         run: |
           current="$(rustup show active-toolchain)"
@@ -91,7 +89,7 @@ jobs:
       - name: Formatting
         if: matrix.toolchain == 'stable'
         run: cargo fmt --all -- --check
-      - name: Verify runner Node 22 runtime
+      - name: Bootstrap pinned official Node 22 runtime
         if: matrix.toolchain == 'stable'
         run: bash scripts/ci_bootstrap.sh node
       - name: Dashboard JavaScript and native RustGIS map tests
@@ -222,13 +220,9 @@ jobs:
           git -c protocol.version=2 fetch --no-tags --depth=1 origin "$GITHUB_SHA"
           git checkout --detach --force FETCH_HEAD
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
-      - name: Install native Rust toolchain
+      - name: Bootstrap official native Rust stable
         shell: bash
-        run: |
-          rustup toolchain install stable --profile minimal
-          rustup default stable
-          rustc --version
-          cargo --version
+        run: bash scripts/ci_bootstrap.sh rust stable
       - name: Compile, unit test and build
         shell: bash
         run: |
@@ -243,7 +237,7 @@ jobs:
         if: matrix.os == 'macos-latest'
         shell: bash
         run: python3 tools/smoke_runtime.py
-      - name: Verify macOS runner Node 22 runtime
+      - name: Bootstrap pinned official Node 22 runtime
         if: matrix.os == 'macos-latest'
         shell: bash
         run: bash scripts/ci_bootstrap.sh node

@@ -18,7 +18,7 @@ Start with `python3 tools/codex_next.py` or `python3 tools/codex_next.py --json`
 
 The draft `.github/workflows/rust.yml` now uses **zero external GitHub Action `uses:` imports**. Preserve the repository-owned exact-SHA checkout and `scripts/ci_bootstrap.sh` for official `rustup` installation and Node 22 verification. Do not add `dtolnay/rust-toolchain`, `actions/checkout`, `actions/setup-node`, or any other externally fetched action without explicit supply-chain approval.
 
-**Scope:** This removes third-party GitHub Action repositories, not external downloads. Rust toolchains, locked Cargo dependencies, system packages, and runner-provided Node still need documented provenance. Do not claim offline or hermetic builds.
+**Scope:** This removes third-party GitHub Action repositories, not external downloads. Rust toolchains, locked Cargo dependencies, system packages and the pinned official Node distribution still need documented provenance. The Node bootstrap pins v22.23.4 and checks the official release SHA-256 per supported runner architecture. Do not claim offline or hermetic builds.
 
 For RB-CX-00, inspect [workflow run 40823597748](https://github.com/pskeffington/pip_boy/actions/runs/40823597748) for actual job admission, conclusions and logs. A run marked `queued` or `in_progress` is **pending**, not accepted. If jobs fail, fix root causes without removing tests, weakening permissions or bypassing the stable/1.90, SDR, or native matrices. Keep PR #71 draft until all required evidence passes.
 
@@ -48,6 +48,8 @@ After a passing exact-head CI run and independent review of the relevant platfor
 ```bash
 python3 tools/validate_codex_passes.py
 python3 tools/test_validate_codex_passes.py
+python3 tools/validate_ci_policy.py
+python3 tools/test_validate_ci_policy.py
 python3 tools/validate_component_index.py
 python3 tools/test_component_index.py
 python3 tools/validate_repo.py

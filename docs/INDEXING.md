@@ -30,6 +30,7 @@ For repeatable context recovery, first run `python3 tools/codex_next.py --json`,
 
 | Change | Update | Offline checks |
 | --- | --- | --- |
+| Change CI bootstrap, action policy or required workflow matrices | [quality-gates component](../catalog/component_index.json), [pass queue](../catalog/codex_passes.json), [CI triage](CI_TRIAGE.md) | `validate_ci_policy.py`, `test_validate_ci_policy.py` |
 | Add/reprioritize a Codex pass or blocker | `catalog/codex_passes.json`, [pass guide](CODEX_PASSES.md), [checkpoint](PROD_STATUS.md) | `validate_codex_passes.py`, `test_validate_codex_passes.py` |
 | Move an entrypoint, ownership or acceptance check | `catalog/component_index.json` and relevant authored guide | `validate_component_index.py`, `test_component_index.py` |
 | Change SDK protocol or module fixture | `catalog/host_adapter_contract.json` or fixture, adapter guide | `validate_host_packages.py`, `test_validate_host_packages.py` |

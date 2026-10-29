@@ -32,6 +32,8 @@
         "docs/CI_TRIAGE.md"
       ],
       "checks": [
+        "tools/validate_ci_policy.py",
+        "tools/test_validate_ci_policy.py",
         "tools/validate_host_packages.py",
         "tools/test_validate_host_packages.py",
         "tools/validate_component_index.py",
@@ -43,7 +45,7 @@
         "Prove host Settings restoration and one-foreground behavior on desktop and micro."
       ],
       "blockers": [
-        "Current passive RADIO integration has no exact-head CI or physical acceptance."
+        "Exact-head CI for the repaired first-party toolchain bootstrap has not passed yet."
       ],
       "external_repositories": [],
       "hardware_gate": "software_only",

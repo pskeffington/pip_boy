@@ -40,9 +40,10 @@ Run `python3 tools/codex_next.py` for the next pass, source entrypoints, checks 
 ```bash
 python3 tools/validate_codex_passes.py && python3 tools/test_validate_codex_passes.py
 python3 tools/validate_component_index.py && python3 tools/test_component_index.py
+python3 tools/validate_ci_policy.py && python3 tools/test_validate_ci_policy.py
 python3 tools/validate_repo.py && python3 tools/test_validate_repo.py
 python3 tools/validate_host_packages.py && python3 tools/test_validate_host_packages.py
-python3 tools/validate_security.py
+python3 tools/validate_security.py && python3 tools/test_validate_security.py
 cargo fmt --all -- --check
 cargo check --workspace --all-targets --locked
 cargo test --workspace --locked
@@ -57,7 +58,7 @@ The existing [quality workflow](../.github/workflows/rust.yml) retains its Rust 
 
 ## CI dependency elimination checkpoint
 
-Commit `63093badc2046a59689693f68896fa502dd95234` removes external GitHub Action `uses:` calls from the draft workflow, replacing them with direct exact-SHA Git checkout, runner-native `rustup`, and a Node 22 runtime check in `scripts/ci_bootstrap.sh`. This is **first-party action orchestration, not a fully self-hosted or offline build**.
+Commit `63093badc2046a59689693f68896fa502dd95234` removed external GitHub Action `uses:` calls from the draft workflow. Follow-up `5ad4327d34751cb723eae0ae7de7ef653e3702cf` admitted the full job matrix but exposed that the macOS runner provides Node 24.22.0. The current repair candidate routes Rust through `scripts/ci_bootstrap.sh`, pins official Node 22.23.4 with SHA-256 checks, and adds an offline policy regression gate. This is **first-party action orchestration, not a fully self-hosted or offline build**. Its hosted behavior remains unverified.
 
 Codex must inspect [run 40823597748](https://github.com/pskeffington/pip_boy/actions/runs/40823597748) and subsequent exact-head runs, confirm whether jobs actually start, evaluate the full stable/1.90/SDR/native matrix, and record failed commands and platform-specific defects. Do not reintroduce remote GitHub actions or mark a gate accepted based only on a running workflow. If checkout/toolchain provisioning fails, repair the first-party bootstrap while retaining all original validations.
 
@@ -66,7 +67,7 @@ Codex must inspect [run 40823597748](https://github.com/pskeffington/pip_boy/act
 **Scope:** repair/verify the passive, explicitly compiled RADIO catalog and host-owned navigation before implementing any generic external package loader. No changes to independent radio/GIS/TV/COMMS repositories are implied.
 
 1. **Baseline:** print current branch, exact 40-character SHA, working-tree status and divergence against `origin/main`; inspect the PR head and existing workflow runs. Do not reset or overwrite local work. If GitHub Actions did not start any job, record `runner_admission_blocked` as a blocker rather than a source test failure.
-2. **Offline index tests:** run `python3 tools/codex_next.py --json`, `python3 tools/validate_codex_passes.py`, `python3 tools/test_validate_codex_passes.py`, `python3 tools/validate_component_index.py`, `python3 tools/test_component_index.py`, `python3 tools/validate_repo.py`, `python3 tools/test_validate_repo.py`, `python3 tools/validate_host_packages.py`, `python3 tools/test_validate_host_packages.py`, `python3 tools/validate_security.py` and `python3 tools/test_validate_security.py`. Keep the output and return code for each step.
+2. **Offline index and CI-policy tests:** run `python3 tools/codex_next.py --json`, `python3 tools/validate_codex_passes.py`, `python3 tools/test_validate_codex_passes.py`, `python3 tools/validate_component_index.py`, `python3 tools/test_component_index.py`, `python3 tools/validate_ci_policy.py`, `python3 tools/test_validate_ci_policy.py`, `python3 tools/validate_repo.py`, `python3 tools/test_validate_repo.py`, `python3 tools/validate_host_packages.py`, `python3 tools/test_validate_host_packages.py`, `python3 tools/validate_security.py` and `python3 tools/test_validate_security.py`. Keep the output and return code for each step.
 3. **Rust and static analysis:** run `cargo +stable fmt --all -- --check`, `cargo +stable check --workspace --all-targets --locked`, `cargo +stable test --workspace --locked`, `cargo +stable clippy --workspace --all-targets --locked -- -D warnings`; repeat `check` and `test` under Rust `+1.90.0` where installed. Missing compilers are `not_run`, not a pass.
 4. **UI and safety:** run `node tools/test_desktop_focus_ui.cjs`, `node tools/test_micro_ui.cjs`, `node tools/test_desktop_viewport.cjs`, `node tools/test_micro_viewport.cjs`, `node tools/test_radio_ui.cjs` and `node tools/test_radio_viewport.cjs`. Confirm one foreground, persistent Settings, no root scrollbar, no raw HTML injection, and no implicit playback/network/device access from catalog selection.
 5. **Evidence ledger:** for every command record `command`, `result` (`pass`, `fail`, `not_run` or `blocked`), exact commit SHA, platform, and reason or URL in `docs/PROD_STATUS.md` or `docs/VALIDATION.md`. CI requires an actual successful workflow run for that exact source revision; a zero-job run proves nothing about code quality.

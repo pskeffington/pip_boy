@@ -1,10 +1,16 @@
 # Rust-Boy | CI troubleshooting history
 
-## First-party GitHub Actions bootstrap candidate — 2026-10-29
+## First-party CI diagnosis and Node bootstrap repair — 2026-10-29
 
-All `uses:` references have been removed from the workflow in this draft. Exact SHA checkout uses GitHub's own repository via `git fetch`; the approved stable/1.90 Rust setup uses runner-native `rustup`, and Node 22 is checked on the runner rather than installed by `actions/setup-node`. `scripts/ci_bootstrap.sh` contains repository-owned Rust and Node checks. The shell checkout must remain inline because no repository script exists before the initial fetch.
+All `uses:` references have been removed from the workflow in this draft. Exact SHA checkout uses GitHub's own repository via `git fetch`; stable/1.90 Rust use runner-native `rustup`. `scripts/ci_bootstrap.sh` pins Node.js v22.23.4 from the official Node distribution, verifies its published SHA-256 for each supported runner architecture, and adds the verified binary to the job PATH. The shell checkout must remain inline because no repository script exists before the initial fetch.
 
-This removes third-party **GitHub Action repositories**, not upstream toolchain distributions or Cargo dependencies. `rustup`, apt packages, and locked Rust dependencies still require external network sources or a future mirrored/offline supply chain. Node 22 availability on both Ubuntu/macOS GitHub runners must be verified; the job fails closed if absent. The workflow still may fail before jobs are admitted, so this is **not** a proven fix to `startup_failure`. Test with exact-head Actions evidence before closing RB-CX-00.
+This removes third-party **GitHub Action repositories**, not upstream toolchain distributions or Cargo dependencies. `rustup`, apt packages, locked Rust dependencies and the pinned Node distribution still require external network sources or a future mirrored/offline supply chain. The prior exact-head run exposed Node 24 on macOS despite the Node 22 requirement; the repository bootstrap now obtains a pinned, digest-checked Node 22 instead of depending on runner image contents. Test with exact-head Actions evidence before closing RB-CX-00.
+
+### Exact admitted runs
+
+- [Run 40823597748](https://github.com/pskeffington/pip_boy/actions/runs/40823597748), head `63093badc2046a59689693f68896fa502dd95234`: manifest validation passed. Stable, Rust 1.90, SDR and native jobs were cancelled when the newer PR run started under the workflow's `cancel-in-progress` concurrency policy. There were no failed steps; cancellation is not a source failure.
+- [Run 40823687340](https://github.com/pskeffington/pip_boy/actions/runs/40823687340), exact head `5ad4327d34751cb723eae0ae7de7ef653e3702cf`: all seven jobs were admitted. Catalog validation, stable and Rust 1.90, both SDR feature jobs, and native Windows passed. Stable Linux UI/Chromium regressions and runtime smokes passed. macOS compile, 393-test suite, native smoke roster and PTY passed, then the job failed at Node verification (`v24.22.0` supplied; Node 22 required); the subsequent Mac-first MAP step was skipped. This is the specific failure repaired by the pinned bootstrap.
+- RB-CX-00 remains open until the repair passes on a new exact PR head. Do not accept this partial green run or treat job admission alone as acceptance.
 
 
 ## Codex queue/ownership offline gates — 2026-10-29

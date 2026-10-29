@@ -266,6 +266,7 @@
       "hardware_gate": "software_only",
       "code": [
         ".github/workflows/rust.yml",
+        "scripts/ci_bootstrap.sh",
         "tools/run_smokes.py"
       ],
       "docs": [
@@ -273,6 +274,8 @@
         "docs/CI_TRIAGE.md"
       ],
       "checks": [
+        "tools/validate_ci_policy.py",
+        "tools/test_validate_ci_policy.py",
         "tools/test_run_smokes.py",
         "tools/validate_repo.py"
       ]

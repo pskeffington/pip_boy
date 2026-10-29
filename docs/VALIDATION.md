@@ -1,11 +1,21 @@
 # Rust-Boy | Validation evidence
 
-## First-party action removal — 2026-10-29 (source candidate; CI not validated)
+## First-party CI and Node bootstrap repair — 2026-10-29 (hosted rerun pending)
 
-Removed `dtolnay/rust-toolchain@stable`, `actions/checkout@v4` and `actions/setup-node@v4` from the draft workflow and replaced them with repository-owned shell commands. This is source-only evidence; the exact triggering SHA, Node 22 availability, Rust 1.90/stable, optional SDR feature builds and macOS/Windows platform behavior must be verified in a successfully admitted workflow. It does not make Cargo dependency resolution, apt dependencies or Rust toolchain download offline.
+Removed `dtolnay/rust-toolchain@stable`, `actions/checkout@v4` and `actions/setup-node@v4` from the draft workflow and replaced them with first-party checkout/bootstrap commands. The repository bootstrap now pins official Node.js v22.23.4 and verifies architecture-specific SHA-256 values published in the [official Node.js release record](https://github.com/nodejs/nodejs.org/blob/main/apps/site/pages/en/blog/release/v22.23.4.md). The exact-head Actions run exposed macOS runner Node 24.22.0 and failed the strict Node 22 check; the pinned install is a repair candidate, not acceptance. Rust, SDR, UI and Windows results from that run are recorded once the run concludes below. This does not make Cargo dependencies, apt packages or Rust toolchain downloads offline.
 
 
-## Current exact-head rerun — 2026-10-29
+## Admitted CI and local validation — 2026-10-29
+
+Run [40823687340](https://github.com/pskeffington/pip_boy/actions/runs/40823687340) tested exact head `5ad4327d34751cb723eae0ae7de7ef653e3702cf`. Stable and Rust 1.90 each passed format/check/test (77 `pipboy`, 301 core, 3 SDK and 12 broker tests; 393 total); stable Clippy passed. Both optional SDR jobs passed locked workspace check, warnings-denied Clippy and all 393 tests without hardware discovery/capture. Catalog/source/security gates, all Linux JavaScript/Chromium desktop, micro, MAP and RADIO viewport suites, and the native Windows build/tests/smokes/ConPTY passed. macOS build/tests (393), offline smokes and PTY passed; the job then failed because the runner provided Node `v24.22.0`, and the required Node 22 check failed before the Mac-first MAP step.
+
+Run [40823597748](https://github.com/pskeffington/pip_boy/actions/runs/40823597748) at `63093badc2046a59689693f68896fa502dd95234` was cancelled after a newer PR run started: manifest validation passed, and in-flight Rust/SDR/native work was cancelled with no failed step. This is not source failure evidence.
+
+On the current local repair working tree, stable and Rust 1.90 each passed `cargo fmt --all -- --check`, locked all-target workspace check, `cargo test --workspace --locked` (393 tests), and Clippy with `-D warnings`. The first sandboxed stable test attempt had three loopback `EPERM`s; the unchanged suite passed with local loopback permission. Both `pipboy/soapy-sdr` and `pipboy/sdrconnect` passed stable locked check, Clippy and workspace test suites. Offline pass-index, CI-policy, component-index, host-package, repository, catalog, roles, Vault, security and smoke-roster validators/tests passed. `bash -n scripts/ci_bootstrap.sh` and `git diff --check` passed. The local Node v22.23.4 bootstrap is not network-validated: this environment cannot resolve `nodejs.org`.
+
+The working-tree repair pins Node v22.23.4 and its published architecture-specific digests, routes Rust bootstrap through the repository script, and adds a regression guard against external Action imports or dropped required matrices. It is not accepted until exact-head hosted CI passes, including the Mac Node bootstrap and Mac-first MAP step.
+
+## Earlier exact-head rerun — 2026-10-29
 
 At PR head `6f1e8d276595e62930b506d5f878e0b952832777`, stable and Rust 1.90 both passed format, locked workspace check, locked workspace tests (77 `pipboy`, 301 core, 3 SDK, 12 broker; 393 total) and Clippy. The test runs used local socket access. The Actions run for this head, [40822764662](https://github.com/pskeffington/pip_boy/actions/runs/40822764662), failed at startup and exposed zero jobs/checks/statuses. GitHub Status showed Actions operational with no Oct 29 incident, which does not explain this run. RB-CX-00 remains pending CI execution and physical acceptance.
 

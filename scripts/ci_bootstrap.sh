@@ -25,12 +25,61 @@ case "$1" in
     [[ "$toolchain" == "stable" || "$toolchain" == "1.90.0" ]] || { echo "Unapproved Rust toolchain" >&2; exit 2; }
     command -v rustup >/dev/null || { echo "rustup missing on runner" >&2; exit 1; }
     rustup toolchain install "$toolchain" --profile minimal --component rustfmt --component clippy
-    RUSTUP_TOOLCHAIN="$toolchain" rustc --version
-    RUSTUP_TOOLCHAIN="$toolchain" cargo --version
+    if [[ -n "${RUSTUP_TOOLCHAIN:-}" && "$RUSTUP_TOOLCHAIN" != "$toolchain" ]]; then
+      echo "Requested Rust $toolchain conflicts with RUSTUP_TOOLCHAIN=$RUSTUP_TOOLCHAIN" >&2
+      exit 1
+    fi
+    rustc --version
+    cargo --version
     ;;
   node)
-    command -v node >/dev/null || { echo "Node runtime missing on runner" >&2; exit 1; }
-    node -e 'const v = process.versions.node.split(".").map(Number); if (v[0] !== 22) { process.stderr.write("Node 22 required; got "+process.version+"\n"); process.exit(1); }'
+    # Pin the official Node.js binary, rather than trusting whichever major
+    # version a hosted runner image happens to put first on PATH.
+    version="22.23.4"
+    case "$(uname -s)/$(uname -m)" in
+      Linux/x86_64)
+        archive="node-v${version}-linux-x64.tar.xz"
+        digest="1805bcd35e6815559bd2eb97db438d3fdb0eb3a5e6a977b7c1badca76337e9ce"
+        compression="xz"
+        ;;
+      Darwin/arm64)
+        archive="node-v${version}-darwin-arm64.tar.gz"
+        digest="c9e1dbc748b33ed2d14f42445191ecaf14c56259c7a9a26d0042c49ec2b66428"
+        compression="gz"
+        ;;
+      Darwin/x86_64)
+        archive="node-v${version}-darwin-x64.tar.gz"
+        digest="efcc2b0db6f94bf53eddb038fe2b370277a042bd29e4f19b8f8e23598795b819"
+        compression="gz"
+        ;;
+      *) echo "No pinned Node.js ${version} binary for $(uname -s)/$(uname -m)" >&2; exit 1 ;;
+    esac
+    root="${RUNNER_TEMP:-${TMPDIR:-/tmp}}/rust-boy-node-v${version}"
+    install_dir="$root/node-v${version}"
+    if [[ ! -x "$install_dir/bin/node" ]]; then
+      mkdir -p "$root"
+      archive_path="$root/$archive"
+      curl --fail --location --proto '=https' --tlsv1.2 \
+        "https://nodejs.org/dist/v${version}/${archive}" --output "$archive_path"
+      printf '%s  %s\n' "$digest" "$archive_path" | shasum -a 256 --check --status - || {
+        echo "Node.js ${version} archive checksum mismatch" >&2
+        exit 1
+      }
+      mkdir -p "$install_dir"
+      if [[ "$compression" == "xz" ]]; then
+        tar -xJf "$archive_path" --strip-components=1 -C "$install_dir"
+      else
+        tar -xzf "$archive_path" --strip-components=1 -C "$install_dir"
+      fi
+    fi
+    export PATH="$install_dir/bin:$PATH"
+    if [[ -n "${GITHUB_PATH:-}" ]]; then
+      printf '%s\n' "$install_dir/bin" >> "$GITHUB_PATH"
+    fi
+    [[ "$(node --version)" == "v${version}" ]] || {
+      echo "Node.js ${version} required; got $(node --version)" >&2
+      exit 1
+    }
     node --version
     ;;
 esac
