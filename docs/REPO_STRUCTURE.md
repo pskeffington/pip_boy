@@ -1,5 +1,10 @@
 # Rust-Boy repository structure and maintenance
 
+## First-party CI bootstrapping
+
+The workflow intentionally avoids `uses:` imports. Before repository files exist on the runner, an inline shell bootstrap fetches the exact `GITHUB_SHA` from this repository; the checked-in [CI bootstrap script](../scripts/ci_bootstrap.sh) handles Rust stable/1.90 and Node 22 assertions. Do not reintroduce a remote GitHub Action without a separate supply-chain review. This policy does not imply an offline build, as Rust toolchains, Cargo crates and Linux development headers may still require downloads.
+
+
 Rust-Boy keeps a deliberately small top level. **Do not relocate operational data paths or rename crates to improve appearance**: the `pipboy` CLI, `pip_boy` repository, and `PIPBOY_HOME` environment variable are compatibility contracts.
 
 ## Canonical ownership

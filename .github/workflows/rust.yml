@@ -18,7 +18,16 @@ jobs:
     name: Validate source and module manifests
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout exact triggering commit (first-party)
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REPOSITORY" = "pskeffington/pip_boy"
+          git init -q
+          git remote add origin "https://github.com/$GITHUB_REPOSITORY.git"
+          git -c protocol.version=2 fetch --no-tags --depth=1 origin "$GITHUB_SHA"
+          git checkout --detach --force FETCH_HEAD
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
       - name: Offline manifest validation
         run: |
           python3 tools/validate_catalog.py
@@ -53,7 +62,16 @@ jobs:
       matrix:
         toolchain: ["stable", "1.90.0"]
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout exact triggering commit (first-party)
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REPOSITORY" = "pskeffington/pip_boy"
+          git init -q
+          git remote add origin "https://github.com/$GITHUB_REPOSITORY.git"
+          git -c protocol.version=2 fetch --no-tags --depth=1 origin "$GITHUB_SHA"
+          git checkout --detach --force FETCH_HEAD
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
       - name: Install matrix Rust toolchain
         run: |
           rustup toolchain install "${{ matrix.toolchain }}" --profile minimal --component rustfmt --component clippy
@@ -73,11 +91,9 @@ jobs:
       - name: Formatting
         if: matrix.toolchain == 'stable'
         run: cargo fmt --all -- --check
-      - name: Install JavaScript test runtime
+      - name: Verify runner Node 22 runtime
         if: matrix.toolchain == 'stable'
-        uses: actions/setup-node@v4
-        with:
-          node-version: "22"
+        run: bash scripts/ci_bootstrap.sh node
       - name: Dashboard JavaScript and native RustGIS map tests
         if: matrix.toolchain == 'stable'
         run: |
@@ -159,10 +175,19 @@ jobs:
       matrix:
         feature: [soapy-sdr, sdrconnect]
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          components: clippy
+      - name: Checkout exact triggering commit (first-party)
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REPOSITORY" = "pskeffington/pip_boy"
+          git init -q
+          git remote add origin "https://github.com/$GITHUB_REPOSITORY.git"
+          git -c protocol.version=2 fetch --no-tags --depth=1 origin "$GITHUB_SHA"
+          git checkout --detach --force FETCH_HEAD
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+      - name: Install Rust stable from official rustup (first-party)
+        shell: bash
+        run: bash scripts/ci_bootstrap.sh rust stable
       - name: Install audio headers
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libasound2-dev pkg-config
       - name: Install optional USB SDK headers
@@ -187,7 +212,16 @@ jobs:
           - os: windows-latest
             python: python
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout exact triggering commit (first-party)
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REPOSITORY" = "pskeffington/pip_boy"
+          git init -q
+          git remote add origin "https://github.com/$GITHUB_REPOSITORY.git"
+          git -c protocol.version=2 fetch --no-tags --depth=1 origin "$GITHUB_SHA"
+          git checkout --detach --force FETCH_HEAD
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
       - name: Install native Rust toolchain
         shell: bash
         run: |
@@ -209,11 +243,10 @@ jobs:
         if: matrix.os == 'macos-latest'
         shell: bash
         run: python3 tools/smoke_runtime.py
-      - name: Install macOS MAP JavaScript test runtime
+      - name: Verify macOS runner Node 22 runtime
         if: matrix.os == 'macos-latest'
-        uses: actions/setup-node@v4
-        with:
-          node-version: "22"
+        shell: bash
+        run: bash scripts/ci_bootstrap.sh node
       - name: Mac-first local MAP acceptance
         if: matrix.os == 'macos-latest'
         shell: bash

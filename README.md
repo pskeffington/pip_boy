@@ -1,5 +1,8 @@
 # Rust-Boy
 
+**CI supply-chain boundary:** the draft [Rust workflow](.github/workflows/rust.yml) replaces third-party GitHub Action imports with first-party checkout/toolchain verification commands. This is not a fully offline build: Rustup, system packages and pinned Cargo dependencies still require their respective sources. CI admission remains unverified.
+
+
 [![Rust-Boy quality gates](https://github.com/pskeffington/pip_boy/actions/workflows/rust.yml/badge.svg?branch=main)](https://github.com/pskeffington/pip_boy/actions/workflows/rust.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-informational)](LICENSE)
 [![Rust: 1.90+](https://img.shields.io/badge/Rust-1.90%2B-informational)](Cargo.toml)

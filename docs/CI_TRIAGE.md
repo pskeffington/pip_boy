@@ -1,5 +1,12 @@
 # Rust-Boy | CI troubleshooting history
 
+## First-party GitHub Actions bootstrap candidate — 2026-10-29
+
+All `uses:` references have been removed from the workflow in this draft. Exact SHA checkout uses GitHub's own repository via `git fetch`; the approved stable/1.90 Rust setup uses runner-native `rustup`, and Node 22 is checked on the runner rather than installed by `actions/setup-node`. `scripts/ci_bootstrap.sh` contains repository-owned Rust and Node checks. The shell checkout must remain inline because no repository script exists before the initial fetch.
+
+This removes third-party **GitHub Action repositories**, not upstream toolchain distributions or Cargo dependencies. `rustup`, apt packages, and locked Rust dependencies still require external network sources or a future mirrored/offline supply chain. Node 22 availability on both Ubuntu/macOS GitHub runners must be verified; the job fails closed if absent. The workflow still may fail before jobs are admitted, so this is **not** a proven fix to `startup_failure`. Test with exact-head Actions evidence before closing RB-CX-00.
+
+
 ## Codex queue/ownership offline gates — 2026-10-29
 
 The catalog job additionally registers `python3 tools/validate_codex_passes.py` and `python3 tools/test_validate_codex_passes.py`. These are filesystem-only schema, dependency, component-ID and path checks; they do not build Rust or certify a release. [Actions run 40821379695](https://github.com/pskeffington/pip_boy/actions/runs/40821379695) at `5b4a66e` ended in `startup_failure` with zero jobs, so the new pass checks did not execute. Investigate run-level annotations and runner admission without asserting a compiler failure. Inspect exact-head workflow evidence before marking a pass accepted. The existing component owner index must remain single-owner even when a module is used by multiple integration layers.

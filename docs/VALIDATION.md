@@ -1,5 +1,10 @@
 # Rust-Boy | Validation evidence
 
+## First-party action removal — 2026-10-29 (source candidate; CI not validated)
+
+Removed `dtolnay/rust-toolchain@stable`, `actions/checkout@v4` and `actions/setup-node@v4` from the draft workflow and replaced them with repository-owned shell commands. This is source-only evidence; the exact triggering SHA, Node 22 availability, Rust 1.90/stable, optional SDR feature builds and macOS/Windows platform behavior must be verified in a successfully admitted workflow. It does not make Cargo dependency resolution, apt dependencies or Rust toolchain download offline.
+
+
 ## Current exact-head rerun — 2026-10-29
 
 At PR head `6f1e8d276595e62930b506d5f878e0b952832777`, stable and Rust 1.90 both passed format, locked workspace check, locked workspace tests (77 `pipboy`, 301 core, 3 SDK, 12 broker; 393 total) and Clippy. The test runs used local socket access. The Actions run for this head, [40822764662](https://github.com/pskeffington/pip_boy/actions/runs/40822764662), failed at startup and exposed zero jobs/checks/statuses. GitHub Status showed Actions operational with no Oct 29 incident, which does not explain this run. RB-CX-00 remains pending CI execution and physical acceptance.
