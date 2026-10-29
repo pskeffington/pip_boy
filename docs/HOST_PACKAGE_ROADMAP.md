@@ -1,5 +1,7 @@
 # Rust-Boy host and single-package viewport roadmap
 
+[Codex-sized development passes](CODEX_PASSES.md) and [machine pass dependencies](../catalog/codex_passes.json) implement this design incrementally. This roadmap remains the security/release gate authority; a pass listing does not mark a gate accepted.
+
 Status (2026-10-29): **architecture accepted; read-only registry, SDK lifecycle host and SDK-aligned transport committed; UI lifecycle integration is an implementation candidate; installation, trust and production adapter gates open**. Desktop and micro shells expose a package selector driven only by the mounted host roster, render package view data as inert text, route foreground selection and clearing through `UniversalAdapterHost`, and preserve package state across Settings. The roster now includes a passive compile-time RADIO catalogue whose selection does not connect or play audio; other packages stay unmounted. This does not establish production installation, authenticated external adapters, or OS isolation.
 
 ### Current gate evidence

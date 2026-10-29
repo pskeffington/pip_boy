@@ -1,5 +1,10 @@
 # Rust-Boy | CI troubleshooting history
 
+## Codex queue/ownership offline gates — 2026-10-29
+
+The catalog job additionally registers `python3 tools/validate_codex_passes.py` and `python3 tools/test_validate_codex_passes.py`. These are filesystem-only schema, dependency, component-ID and path checks; they do not build Rust or certify a release. Inspect exact-head workflow evidence before marking a pass accepted. The existing component owner index must remain single-owner even when a module is used by multiple integration layers.
+
+
 ## Current smoke-test inventory (2026-10-26)
 
 The CI workflow now uses one explicit [Python smoke-test roster](../tools/run_smokes.py). It replaces duplicated per-platform command lists; it does **not** add hardware operations or reduce test coverage. Child scripts run in their prior order, with the currently selected Python interpreter, and the first failure stops the suite.

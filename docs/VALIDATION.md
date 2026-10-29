@@ -1,5 +1,10 @@
 # Rust-Boy | Validation evidence
 
+## Codex pass indexing — 2026-10-29 (committed source; exact-head execution pending)
+
+Added root `AGENTS.md`, `catalog/codex_passes.json`, `docs/CODEX_PASSES.md` and `docs/INDEXING.md`, with standard-library-only validation and negative tests. The validator checks stable pass IDs, declared paths, known component IDs, backward dependencies, exactly one eligible `next` pass, and structurally complete commit/CI evidence for any `accepted` state. It does **not** independently confirm that a referenced CI run passed. The CI catalog job now lists the new offline commands. **No execution evidence for these new checks or the passive RADIO bootstrap on the latest branch head has yet been recorded.** Earlier results below apply only to their documented earlier revisions.
+
+
 ## Universal adapter SDK and host manager — 2026-10-28 (source committed; CI startup failure)
 
 The new `crates/rust-boy-adapter-sdk` crate defines `AdapterEnvelope`, `AdapterCommand`, `AdapterReply`, `UniversalPackageAdapter` and a deny-all `ScopeAuthority` interface. `pipboy-core::universal_adapter` manages trusted in-process registrations, bounded requests/replies, one foreground package, separate Settings, scoped intents and explicit unmount/replacement. Unit test sources exercise four synthetic package IDs, lifecycle, protocol bounds, rollback, Settings persistence and oversized replies. The portable hello adapter example contains no network or device requests.

@@ -319,7 +319,6 @@
         "crates/pipboy-core/src/universal_adapter.rs",
         "catalog/host_adapter_contract.json",
         "crates/pipboy-core/src/builtin_packages.rs",
-        "crates/pipboy/src/dashboard.rs",
         "catalog/builtin_packages/rust_radio.json"
       ],
       "docs": [
@@ -333,6 +332,26 @@
         "tools/test_validate_host_packages.py"
       ],
       "hardware_gate": "software_only"
+    },
+    {
+      "id": "codex-development-index",
+      "boundary": "Branch-scoped Codex pass navigation, dependency and evidence records with offline deterministic validation. No executable manifest, hardware grant, scheduler or release authority.",
+      "hardware_gate": "software_only",
+      "code": [
+        "AGENTS.md",
+        "catalog/codex_passes.json",
+        "tools/validate_codex_passes.py",
+        "tools/test_validate_codex_passes.py"
+      ],
+      "docs": [
+        "docs/CODEX_PASSES.md",
+        "docs/INDEXING.md"
+      ],
+      "checks": [
+        "tools/validate_codex_passes.py",
+        "tools/test_validate_codex_passes.py"
+      ],
+      "acceptance": "Current-head source, CI and documentation gate execution is still pending; pass structure is not production acceptance."
     }
   ]
 }

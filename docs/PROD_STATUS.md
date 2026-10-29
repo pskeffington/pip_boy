@@ -4,9 +4,9 @@ Updated: 2026-10-29
 
 ## Gate state
 
-- **Current gate:** PROD-2 / host UI integration — **implementation candidate; software validated**. Desktop and micro shells now select only mounted packages via host APIs, show inert package view data, and clear foreground on shell navigation. A passive, compiled-in RADIO catalogue now populates one roster entry; interactive playback and device acceptance remain open.
+- **Current gate:** PROD-3 / passive RADIO bootstrap — **source candidate; latest exact-head compiler, CI and browser evidence still pending**. Desktop and micro shells now select only mounted packages via host APIs, show inert package view data, and clear foreground on shell navigation. A passive, compiled-in RADIO catalogue now populates one roster entry; interactive playback and device acceptance remain open.
 - **Last completed gate:** PROD-0 baseline repair — **not accepted**. Mainline working tree and local validation are understood; GitHub Actions evidence is currently unavailable for the inspected commit, and CI startup failure has not been diagnosed.
-- **Branch:** `codex/package-adapter-protocol`; latest integration commit `d340e8b` (compact Settings layout and viewport fixture). Shell integration: `c653048`; earlier controller and transport commits: `8197ffc`, `c020483`, checkpoint `0598d8d`.
+- **Branch:** draft [PR #71](https://github.com/pskeffington/pip_boy/pull/71), `codex/package-adapter-protocol`. Previous UI/transport integration checkpoints are documented below; inspect the live PR HEAD before claiming a build or CI result. The passive RADIO pilot and new Codex indexing changes are still validation candidates.
 - **Relevant pinned module revision:** `rust_radio` dependency revision `3d77d11da3a31fbc3144635da6d391a3febf38b7` from the workspace lock/config. The local `rust_radio/` directory is a separate untracked nested repository and was preserved untouched.
 
 ## Implementation and evidence
@@ -14,8 +14,8 @@ Updated: 2026-10-29
 - **Implemented, software validated:** `pipboy-core::package_socket` provides bounded JSON request, hello-claim and response codecs; highest-common-version negotiation; strictly increasing request IDs; and a 64-entry request correlator that validates package and ID matches. Identity in a hello remains an unauthenticated claim.
 - **Implemented, software validated:** generic stream frame helpers use a 4-byte big-endian length, accept clean EOF, reject empty/truncated/oversized frames, and cap reads before allocation at 64 KiB.
 - **Implemented, focused software validated:** `pipboy-core::package_transport::UnixAdapterSession` adds an absolute-deadline Unix stream handshake and serial request/response exchange; a peer's hello identity must match the expected package ID, and request IDs/package IDs are correlated. This accepts an already-open socket only; hello identity is not authentication and the transport does not authorize, dispatch, spawn, or isolate packages.
-- **Implemented, software validated:** desktop and micro package selectors consume the mounted roster in `/api/state`; selection, Settings and foreground clearing update `UniversalAdapterHost` through same-origin endpoints. Both shells display only host-provided views as inert text and preserve the selected package over Settings/reload. Selection remains impossible with an empty mounted roster.
-- **Still unimplemented:** secure listener/socket-path ownership, peer authentication, timeout cancellation, domain dispatch, capability brokerage, signed/persistent installation state, process launch and isolation. The newly committed first-party RADIO catalogue requires Rust, CI and browser verification.
+- **Implemented, software validated:** desktop and micro package selectors consume the mounted roster in `/api/state`; selection, Settings and foreground clearing update `UniversalAdapterHost` through same-origin endpoints. Both shells display host-provided views as inert text and preserve package selection across Settings/reload. The current candidate bootstrap mounts one passive RADIO catalogue, but it does not auto-select, start playback or grant hardware access.
+- **Still unimplemented:** secure listener/socket-path ownership, peer authentication, timeout cancellation, domain dispatch, capability brokerage, signed/persistent installation state, process launch and isolation. Newly committed passive RADIO and Codex-index source requires exact-head Rust, CI and browser verification.
 - `cargo fmt --all -- --check` — passed.
 - `cargo check --workspace` — passed.
 - `cargo clippy --workspace --all-targets -- -D warnings` — passed.
@@ -39,7 +39,7 @@ Updated: 2026-10-29
 - **Implemented but unverified:** compiled-in passive RADIO station-catalogue bootstrap and shell selection. Interactive native adapter playback, signed installation and hardware UI acceptance are open.
 - **Software validated:** manifest registry, request codec/framing, deadline-bounded Unix stream session precursor, and desktop/micro shell lifecycle linkage.
 - **Hardware validated:** none for adapter integration.
-- **Release candidate / production accepted:** neither. **Accepted roadmap gates: 0/12**; PROD-2 remains an implementation candidate pending a real mounted module and viewport/hardware acceptance.
+- **Release candidate / production accepted:** neither. **Accepted roadmap gates: 0/12**; PROD-3 is a source candidate, not a hardware-accepted interactive package.
 
 ## Open defects and blockers
 
@@ -47,6 +47,10 @@ Updated: 2026-10-29
 - One earlier full parallel run returned HTTP 422 in `manager_can_create_assign_dispatch_and_track_but_other_roles_cannot_reassign`; the failure did not reproduce in isolation, serial execution, five consecutive parallel suite runs or the latest full workspace run. The test now includes task-state context if it recurs.
 - One explicitly compiled, capability-free RADIO catalogue adapter is mounted by default, but not selected automatically. MAP, TV and COMMS remain inert references; signed installation and real audio-adapter integration remain open.
 - Local Mac/Pi hardware, media output and independently maintained package integration have not been accepted.
+
+## Codex development handoff
+
+The [machine pass queue](../catalog/codex_passes.json) names **RB-CX-00** as the only `next` pass: inspect exact HEAD, run the passive RADIO bootstrap and host UI regressions, and obtain actual compiler/CI evidence. See [Codex instructions](../AGENTS.md), [pass plan](CODEX_PASSES.md) and [index hierarchy](INDEXING.md). This indexing update registers new offline checks but does **not** claim they ran or passed on the current head.
 
 ## Next three implementation actions
 

@@ -20,6 +20,9 @@ Roles use short operator titles: **Overseer, Maintenance, Security, Doctor, Scie
 
 ## Project navigation
 
+**Codex development:** [Root instructions](AGENTS.md) · [phased passes](docs/CODEX_PASSES.md) · [machine-readable queue](catalog/codex_passes.json) · [index ownership](docs/INDEXING.md). These development-branch sources do not certify production acceptance.
+
+
 [Documentation index](docs/README.md) · [Repository structure](docs/REPO_STRUCTURE.md) · [Architecture](docs/ARCHITECTURE.md) · [Organizational research](docs/ORGANIZATIONAL_OPTIMIZATION.md) · [Validation](docs/VALIDATION.md) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md).
 
 **Desktop focus:** The Vault Command Center separates **COMMAND / MODULES / VIEWPORT / MESSAGES / SETTINGS**, plus RADIO. Command manages mission/task assignment and explicit paired-device dispatch; the handheld `/micro` remains the field terminal. [Desktop guide](docs/DASHBOARD_UI.md).

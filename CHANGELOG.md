@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-10-29 — Codex development-pass indexing (draft; run evidence pending)
+
+- Add root Codex development instructions, a typed 11-pass dependency/index queue and source-of-truth navigation guide.
+- Repair duplicate dashboard HTTP entrypoint ownership in the component index; cross-module integration remains documented without a second code owner.
+- Add offline pass-index validator/negative tests to the existing catalog CI job; update production checkpoint to distinguish the passive RADIO source candidate from earlier executed UI/transport checks.
+
+
 ## 2026-10-29 — Compile-time first-party RADIO catalogue (draft)
 
 - Register one reviewed passive RADIO adapter using the pinned `rust_radio` station directory, with zero requested capabilities and no automatic playback/network I/O.
