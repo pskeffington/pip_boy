@@ -18,7 +18,7 @@ use pipboy_core::radio_directory::curated_stations;
 use pipboy_core::radio_presets::{MoveDirection, RadioPresetStore, RadioPresets};
 use pipboy_core::reclamation::{NewSite, SiteStatus, SiteStore};
 use pipboy_core::scout_gis::{distance_meters, waypoint, Point};
-use pipboy_core::universal_adapter::{UniversalAdapterHost, Viewport};
+use pipboy_core::universal_adapter::{AdapterState, UniversalAdapterHost, Viewport};
 use pipboy_core::workbench::{inspect_hex, tool, WorkbenchStore, PALETTE, PRESETS};
 use serde_json::{json, Value};
 use std::collections::BTreeMap;
@@ -371,6 +371,51 @@ fn host_foreground_value(surface: HostSurface<'_>) -> Value {
             json!({"surface": "package", "active_package_id": package_id})
         }
     }
+}
+
+fn host_packages_snapshot() -> Result<Value, Response> {
+    let host = UNIVERSAL_ADAPTER_HOST
+        .lock()
+        .map_err(|_| Response::error(500, "Host package state unavailable"))?;
+    let packages: Vec<Value> = host
+        .package_ids()
+        .map(|package_id| {
+            let state = match host.state(package_id) {
+                Some(AdapterState::Registered) => "registered",
+                Some(AdapterState::Foreground) => "foreground",
+                Some(AdapterState::Suspended) => "suspended",
+                Some(AdapterState::Stopped) => "stopped",
+                Some(AdapterState::Faulted) => "faulted",
+                None => "unavailable",
+            };
+            json!({"package_id": package_id, "state": state})
+        })
+        .collect();
+    Ok(json!({
+        "packages": packages,
+        "mounted_package_count": host.len(),
+        "selected_package_id": host.selected_package_id(),
+        "foreground": host_foreground_value(host.surface()),
+        "settings_open": host.settings_open()
+    }))
+}
+
+fn host_select_package(req: &Request) -> Result<Response, Response> {
+    let body = parse_json_body(req, &["package_id"])?;
+    let package_id = str_field(&body, "package_id")?;
+    let mut host = UNIVERSAL_ADAPTER_HOST
+        .lock()
+        .map_err(|_| Response::error(500, "Host package state unavailable"))?;
+    host.select(package_id)
+        .map_err(|_| Response::error(409, "Package is not mounted or cannot be activated"))?;
+    Ok(Response::json(
+        200,
+        &json!({
+            "selected_package_id": host.selected_package_id(),
+            "foreground": host_foreground_value(host.surface()),
+            "settings_open": host.settings_open()
+        }),
+    ))
 }
 
 fn set_host_settings(req: &Request) -> Result<Response, Response> {
@@ -1250,6 +1295,10 @@ fn dispatch(req: &Request, store: &WorkbenchStore, port: u16) -> Response {
         ("POST", "/api/map/county-zips") => county_zips(req, store).unwrap_or_else(|error| error),
         ("GET", "/api/state") => state(store).unwrap_or_else(|error| error),
         ("GET", "/api/packages") => package_references(),
+        ("GET", "/api/host/packages") => host_packages_snapshot()
+            .map(|body| Response::json(200, &body))
+            .unwrap_or_else(|error| error),
+        ("POST", "/api/host/foreground") => host_select_package(req).unwrap_or_else(|error| error),
         ("POST", "/api/host/settings") => set_host_settings(req).unwrap_or_else(|error| error),
         ("GET", "/api/radio") => radio_state(store),
         ("POST", "/api/radio") => radio_command(req, store).unwrap_or_else(|error| error),
@@ -2623,6 +2672,43 @@ mod tests {
             400
         );
         let mut cross_origin = request("POST", "/api/host/settings", json!({"settings_open":true}));
+        cross_origin
+            .headers
+            .insert("origin".into(), "https://untrusted.invalid".into());
+        assert_eq!(dispatch(&cross_origin, &store, 8765).status, 403);
+    }
+
+    #[test]
+    fn host_package_api_reports_only_mounted_roster_and_rejects_reference_selection() {
+        let temp = tempfile::tempdir().unwrap();
+        let store = WorkbenchStore::new(temp.path().join("private/workbench.json"));
+        let listed = dispatch(
+            &request("GET", "/api/host/packages", Value::Null),
+            &store,
+            8765,
+        );
+        assert_eq!(listed.status, 200);
+        let body: Value = serde_json::from_slice(&listed.body).unwrap();
+        assert_eq!(body["mounted_package_count"], 0);
+        assert_eq!(body["packages"], json!([]));
+        assert_eq!(body["selected_package_id"], Value::Null);
+
+        let reference_selection = dispatch(
+            &request(
+                "POST",
+                "/api/host/foreground",
+                json!({"package_id":"org.rustboy.radio"}),
+            ),
+            &store,
+            8765,
+        );
+        assert_eq!(reference_selection.status, 409);
+
+        let mut cross_origin = request(
+            "POST",
+            "/api/host/foreground",
+            json!({"package_id":"org.rustboy.radio"}),
+        );
         cross_origin
             .headers
             .insert("origin".into(), "https://untrusted.invalid".into());

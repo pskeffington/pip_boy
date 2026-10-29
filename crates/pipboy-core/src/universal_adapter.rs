@@ -101,6 +101,15 @@ impl UniversalAdapterHost {
         self.foreground.surface()
     }
 
+    /// The selected package remains known while host Settings is open.
+    pub fn selected_package_id(&self) -> Option<&str> {
+        self.foreground.active_package_id()
+    }
+
+    pub fn settings_open(&self) -> bool {
+        self.foreground.settings_open()
+    }
+
     pub fn state(&self, package_id: &str) -> Option<AdapterState> {
         self.mounted.get(package_id).map(|entry| entry.state)
     }

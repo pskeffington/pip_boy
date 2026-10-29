@@ -106,9 +106,9 @@ Once mounted, `select(id)` delivers activation/resume, suspending the previous f
 
 | Gate | Required result | Current |
 | --- | --- | --- |
-| ADAPTER-SDK-1 | SDK crate, stable typed envelope, bounded JSON, example | Source committed; build not verified |
-| ADAPTER-HOST-1 | One trait, four synthetic adapters, lifecycle/error/Settings tests, unmount | Source committed; build not verified |
-| HOST-UI-1 | Bind shared foreground to micro and desktop, keep permanent Settings, no split panes | Open |
+| ADAPTER-SDK-1 | SDK crate, stable typed envelope, bounded JSON, example | Workspace tests and build pass; protocol preview, not a published compatibility promise |
+| ADAPTER-HOST-1 | One trait, four synthetic adapters, lifecycle/error/Settings tests, unmount | Workspace tests pass for trusted in-process fixtures |
+| HOST-UI-1 | Bind shared foreground to micro and desktop, keep permanent Settings, no split panes | Settings lifecycle is bound; mounted-roster and selection APIs exist; shell switcher remains unconnected |
 | ADAPTER-MAP-1 | Real rb_gis adapter and offline ZIP/county parity | Open |
 | ADAPTER-TV-1 | Native rust_tv display/audio contract | Open |
 | ADAPTER-RADIO-1 | rust_radio interface and audio ownership | Open |
@@ -116,4 +116,4 @@ Once mounted, `select(id)` delivers activation/resume, suspending the previous f
 | ADAPTER-IPC-1 | Sandboxed process runner, validated wire transport, signed installation, OS-enforced grants | Open |
 | ADAPTER-REL-1 | Mac/Pi viewport, fault, disconnect, replay, security and resource-budget field acceptance | Open |
 
-**Verification limitation:** There is no available Rust toolchain in the current execution environment; recent repository GitHub Actions returned `startup_failure` before jobs started. These are implemented source changes and regression-test sources, not executed Rust test evidence. See [validation](VALIDATION.md) and [host roadmap](HOST_PACKAGE_ROADMAP.md).
+**Verification limitation:** Local workspace tests, Clippy and repository validators pass. The current PR head has no GitHub check/status entries, and Mac/Pi field acceptance remains open. See [validation](VALIDATION.md) and [host roadmap](HOST_PACKAGE_ROADMAP.md).

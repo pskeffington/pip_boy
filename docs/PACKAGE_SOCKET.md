@@ -1,10 +1,10 @@
 # Rust-Boy package socket contract (draft v1)
 
-Status (2026-10-29): **schema-1 registry parsing, read-only local discovery, bounded typed protocol codecs, and a deadline-bounded Unix stream session are implemented; package integration remains open**. No external executable loader, runtime sandbox, package installation, foreground socket renderer, peer authentication, or rb_gis adapter is claimed.
+Status (2026-10-29): **schema-1 registry parsing, read-only local discovery, the SDK wire protocol, a bounded Unix stream session, and partial host UI/controller integration are implemented; trusted installation and package integration remain open**. No external executable loader, runtime sandbox, package installation, peer authentication, or rb_gis adapter is claimed.
 
 ## Shared universal adapter source (2026-10-28)
 
-A portable [`rust-boy-adapter-sdk`](../crates/rust-boy-adapter-sdk/src/lib.rs) now defines the versioned `AdapterEnvelope`, common `UniversalPackageAdapter` trait, bounded messages and inert `AdapterReply` view state. [`pipboy-core::universal_adapter`](../crates/pipboy-core/src/universal_adapter.rs) implements trusted in-process mounting, one-foreground lifecycle, Settings preservation and explicit unmount. The standalone [adapter guide](UNIVERSAL_ADAPTER.md) maps MAP, TV, RADIO and COMMS to this one contract. **No external loader, OS sandbox, signed install path, physical permission grants or live shell adapter are claimed.**
+A portable [`rust-boy-adapter-sdk`](../crates/rust-boy-adapter-sdk/src/lib.rs) defines versioned hello, request and correlated-reply envelopes, the common `UniversalPackageAdapter` trait, bounded messages and inert view state. [`pipboy-core::universal_adapter`](../crates/pipboy-core/src/universal_adapter.rs) implements trusted in-process mounting, one-foreground lifecycle, Settings preservation and explicit unmount. The deadline-bounded Unix session uses these SDK messages. The dashboard Settings route and mounted-roster/foreground-selection APIs use the same host controller, while the shell switcher is not yet connected. **No external loader, OS sandbox, signed install path, physical permission grants, or live package is claimed.**
 
 ## Implemented registry precursor
 
