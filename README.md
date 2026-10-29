@@ -14,6 +14,8 @@ Roles use short operator titles: **Overseer, Maintenance, Security, Doctor, Scie
 
 **Planned host redesign:** [Single-package viewport and phased package gates](docs/HOST_PACKAGE_ROADMAP.md). The target shell displays one package at a time with permanent Settings; the existing desktop/micro interface remains in place until the acceptance gates pass.
 
+**Universal adapter precursor:** `crates/rust-boy-adapter-sdk` defines a minimal shared module protocol; `pipboy-core::universal_adapter` hosts trusted built-in adapters, manages one foreground package and keeps Settings host-owned. Four synthetic module integrations are covered by Rust test sources; live modules, GUI mounting and external execution are not yet connected. [Universal adapter guide](docs/UNIVERSAL_ADAPTER.md).
+
 **Socket registry precursor:** Four independent designs (MAP / TV / RADIO / COMMS) can be inspected and validated without loading packages. `pipboy packages list --json` shows checked-in reference designs; `pipboy packages check PATH` validates an explicit file; `pipboy packages scan DIR --json` discovers JSON manifests in an operator-chosen local directory. All results are **reference/discovered metadata only**, not installed or runnable packages. See [socket contract](docs/PACKAGE_SOCKET.md).
 
 ## Project navigation

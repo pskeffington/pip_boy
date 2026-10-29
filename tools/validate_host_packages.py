@@ -88,6 +88,91 @@ def check_manifest(m):
     return identifier
 
 
+
+def check_adapter_sdk(root=ROOT):
+    """Keep the portable SDK dependency-light and execution-free by contract."""
+    workspace = (root / "Cargo.toml").read_text(encoding="utf-8")
+    require('"crates/rust-boy-adapter-sdk"' in workspace,
+            "universal adapter SDK missing from workspace")
+    sdk_manifest = (
+        root / "crates/rust-boy-adapter-sdk/Cargo.toml"
+    ).read_text(encoding="utf-8")
+    require('name = "rust-boy-adapter-sdk"' in sdk_manifest,
+            "SDK package identity drift")
+    require("[dependencies]" in sdk_manifest,
+            "SDK dependency section missing")
+    deps = sdk_manifest.split("[dependencies]", 1)[1]
+    declared = set(re.findall(r"(?m)^([A-Za-z0-9_-]+)\s*=", deps))
+    require(declared == {"serde", "serde_json"},
+            f"unreviewed SDK dependency: {declared}")
+    core_manifest = (
+        root / "crates/pipboy-core/Cargo.toml"
+    ).read_text(encoding="utf-8")
+    require('rust-boy-adapter-sdk = { path = "../rust-boy-adapter-sdk" }'
+            in core_manifest, "core must depend on portable SDK via local path")
+    source = (
+        root / "crates/rust-boy-adapter-sdk/src/lib.rs"
+    ).read_text(encoding="utf-8")
+    required = (
+        "pub trait UniversalPackageAdapter",
+        "pub struct AdapterEnvelope",
+        "pub enum AdapterCommand",
+        "pub enum AdapterReply",
+        "pub struct DenyAllScopes",
+        "#![forbid(unsafe_code)]",
+    )
+    require(all(key in source for key in required),
+            "missing portable socket API or unsafe-code boundary")
+    forbidden = (
+        "std::net::", "std::process::", "std::fs::",
+        "tokio::net::", "unsafe {", "libc::", "btleplug::",
+    )
+    require(not any(key in source for key in forbidden),
+            "portable SDK must not contain direct hardware/network/process I/O")
+    host = (
+        root / "crates/pipboy-core/src/universal_adapter.rs"
+    ).read_text(encoding="utf-8")
+    require("pub fn mount_trusted(" in host
+            and "pub fn unmount(" in host
+            and "pub fn open_settings(" in host,
+            "missing trusted host lifecycle contract")
+
+
+
+
+def check_adapter_contract(root=ROOT):
+    """Keep the machine-readable contract aligned with the actual SDK."""
+    contract = json.loads(
+        (root / "catalog/host_adapter_contract.json").read_text(encoding="utf-8")
+    )
+    require(contract.get("schema_version") == 1
+            and contract.get("adapter_protocol") == 1
+            and contract.get("manifest_host_api") == 1,
+            "adapter protocol index version mismatch")
+    require(contract.get("max_wire_bytes") == 16384
+            and contract.get("max_intent_bytes") == 4096,
+            "adapter protocol size limit drift")
+    require(contract.get("commands") ==
+            ["activate", "suspend", "resume", "resize", "intent", "shutdown"],
+            "adapter command index drift")
+    require(contract.get("replies") == ["ack", "view"],
+            "adapter reply index drift")
+    require(contract.get("host_surfaces") == ["empty", "settings", "package"],
+            "adapter host surface index drift")
+    require(contract.get("package_ids") == sorted(v[0] for v in EXPECTED.values()),
+            "adapter target list differs from manifest fixtures")
+    sdk = (
+        root / "crates/rust-boy-adapter-sdk/src/lib.rs"
+    ).read_text(encoding="utf-8")
+    require("pub const ADAPTER_PROTOCOL: u32 = 1;" in sdk
+            and "pub const MAX_WIRE_BYTES: usize = 16 * 1024;" in sdk
+            and "pub const MAX_INTENT_BYTES: usize = 4 * 1024;" in sdk,
+            "adapter machine index and Rust constants disagree")
+    require(contract.get("third_party_execution") == "not_implemented",
+            "adapter contract must not claim unreviewed external execution")
+
+
+
 def validate(root=ROOT):
     folder = root / "catalog/host_packages"
     require(folder.is_dir() and not folder.is_symlink(), "missing or linked fixtures directory")
@@ -111,7 +196,9 @@ def validate(root=ROOT):
     referenced = re.findall(r'include_str!\("\.\./\.\./\.\./catalog/host_packages/([^"]+)"\)', rust)
     require(set(referenced) == set(EXPECTED) and len(referenced) == len(EXPECTED),
             "Rust reference registry and checked-in fixtures drift")
-    print(f"PASS: {len(seen)} inert package socket manifests; no executable package installed")
+    check_adapter_sdk(root)
+    check_adapter_contract(root)
+    print(f"PASS: {len(seen)} inert manifests and portable SDK boundary; no executable package installed")
     return len(seen)
 
 

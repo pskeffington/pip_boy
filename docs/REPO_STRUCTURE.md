@@ -9,6 +9,7 @@ Rust-Boy keeps a deliberately small top level. **Do not relocate operational dat
 | [`../crates/pipboy-core`](../crates/pipboy-core) | Shared Rust model, policy, persistence and capability definitions | Keep business logic out of browser JavaScript; add unit tests with changes |
 | [`../crates/pipboy`](../crates/pipboy) | Native CLI/TUI, loopback HTTP server, embedded dashboard/micro assets | Keep endpoints bounded and operator gated; share one core backend |
 | [`../crates/rust-boy-broker`](../crates/rust-boy-broker) | Deny-only peripheral broker prototype | Do not enable physical I/O without separate threat review |
+| [`../crates/rust-boy-adapter-sdk`](../crates/rust-boy-adapter-sdk) | Portable versioned module socket SDK | Keep lean and host-agnostic; no device, networking or UI renderer dependencies |
 | [`../catalog`](../catalog) | Machine-readable evidence, sources, modules and role roadmaps | Stable IDs and source provenance; run catalog and role validators |
 | [`README.md`](README.md) | Operator, architecture and acceptance contracts | Add a link to this index for new operator-facing guides |
 | [`../tools`](../tools) | Offline validation, smoke tests and fixture helpers | Prefer Python standard library for manifest checks; no network activity in validators |
@@ -17,6 +18,8 @@ Rust-Boy keeps a deliberately small top level. **Do not relocate operational dat
 | [`../.github/workflows/rust.yml`](../.github/workflows/rust.yml) | CI build, Rust/toolchain and navigation gates | New quality checks must execute on pull requests |
 
 Operator state belongs under **`PIPBOY_HOME`**, not in source control. This includes notes, task boards, peer configuration, messaging queues, geospatial caches, diagnostics and other local records. See [storage](STORAGE.md) and [security](../SECURITY.md). Do not add example files taken from real users or field devices.
+
+The [universal adapter contract index](../catalog/host_adapter_contract.json) is the machine-readable socket vocabulary; the [implementation guide](UNIVERSAL_ADAPTER.md) owns the phase and security explanation. `tools/validate_host_packages.py` checks both the manifests and SDK boundary without executing a module.
 
 ## Documentation entrypoints
 

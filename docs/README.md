@@ -4,6 +4,10 @@ Technical contracts, architecture decisions, research provenance and validation 
 
 **Current scope:** Rust 1.90+ desktop CLI/TUI, a separate micro-handheld shell and a loopback-only graphical dashboard, bundled reference library, notes and synthetic-only device workflows. NET ENGINEER performs an explicitly authorized, bounded LAN scan; OS-enforced peripheral permissions and physical device permissions remain separate; a TLS-only, explicitly configured UniFi connected-client reader is implemented. Physical controller acceptance remains open.
 
+## Universal adapter SDK
+
+[Universal adapter implementation and four-module integration](UNIVERSAL_ADAPTER.md) documents the portable SDK, trusted host lifecycle manager, one-package viewport contract and open acceptance gates.
+
 ## Package socket and GIS extraction
 
 [Pop-in package socket and GIS extraction](PACKAGE_SOCKET.md) defines the host-owned viewport boundary, package manifest, and independent rb_gis migration gates.

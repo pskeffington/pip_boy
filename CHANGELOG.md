@@ -1,11 +1,24 @@
 # Changelog
 
+## 2026-10-29 — Host Settings controller binding and local transport candidate
+
+- Bind desktop and handheld Settings transitions to `UniversalAdapterHost`, invoking its host-owned suspend/resume lifecycle while keeping package selection disabled without a trusted installed roster.
+- Add a deadline-bounded Unix stream session candidate for validating a package hello claim and exchanging correlated requests; this uses the existing package protocol predecessor and requires alignment with the current portable SDK before use.
+- Add backend, browser and viewport regressions for same-origin Settings updates and preserve existing module independence and authorization.
+
 ## 2026-10-28 — Bounded package adapter request codec
 
 - Add typed version-1 request, hello-claim and response codecs with monotonic request sequencing, request correlation, a 64-request in-flight cap, package ID validation, viewport bounds and a 64 KiB frame limit.
 - Add generic 4-byte length-prefixed stream framing with clean EOF, truncation and oversized-frame handling.
 - Exercise version negotiation, valid round trips, duplicate/out-of-order IDs, mismatched responses and invalid or oversized frames.
 - Keep the codec inert: transport, cryptographic authentication, dispatch, capabilities and process isolation remain open gates.
+## 2026-10-28 — Universal package adapter SDK (implementation candidate)
+
+- Add lightweight `rust-boy-adapter-sdk` with a bounded versioned JSON command/reply contract and synthetic hello adapter example for independent module authors.
+- Add `pipboy_core::universal_adapter` for trusted in-process mounting, exactly one foreground package, host-owned Settings, lifecycle switching, explicit unmount, view bounds and deny-by-default scoped intents.
+- Test four synthetic MAP / TV / RADIO / COMMS module identities using the same adapter trait, including faults, resume, sizing, replacement and protocol regressions; preserve the existing live desktop/micro interfaces.
+- Index code ownership and expand read-only `GET /api/packages` with adapter protocol metadata. No real external packages are yet loaded or authorized.
+- Build/MSRV/Clippy acceptance remains open because GitHub Actions is failing at startup and this execution environment has no Rust compiler. See [universal adapter contract](docs/UNIVERSAL_ADAPTER.md).
 
 ## 2026-10-26 — Operator titles and public camera fallback
 

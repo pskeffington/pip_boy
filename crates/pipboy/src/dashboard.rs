@@ -13,11 +13,12 @@ use crate::radio_playback::NativeRadioEngine;
 use crate::zip_index::ZipIndex;
 use pipboy_core::network_health;
 use pipboy_core::network_suite;
-use pipboy_core::package_socket::{ForegroundSelection, HostSurface};
+use pipboy_core::package_socket::HostSurface;
 use pipboy_core::radio_directory::curated_stations;
 use pipboy_core::radio_presets::{MoveDirection, RadioPresetStore, RadioPresets};
 use pipboy_core::reclamation::{NewSite, SiteStatus, SiteStore};
 use pipboy_core::scout_gis::{distance_meters, waypoint, Point};
+use pipboy_core::universal_adapter::{UniversalAdapterHost, Viewport};
 use pipboy_core::workbench::{inspect_hex, tool, WorkbenchStore, PALETTE, PRESETS};
 use serde_json::{json, Value};
 use std::collections::BTreeMap;
@@ -64,8 +65,10 @@ static RADIO_ENGINE: LazyLock<Mutex<Option<NativeRadioEngine>>> =
 static RADIO_SDRCONNECT: LazyLock<Mutex<String>> =
     LazyLock::new(|| Mutex::new("127.0.0.1:5454".into()));
 static RADIO_OUTPUT: LazyLock<Mutex<String>> = LazyLock::new(|| Mutex::new("system".into()));
-static HOST_FOREGROUND: LazyLock<Mutex<ForegroundSelection>> =
-    LazyLock::new(|| Mutex::new(ForegroundSelection::default()));
+static UNIVERSAL_ADAPTER_HOST: LazyLock<Mutex<UniversalAdapterHost>> = LazyLock::new(|| {
+    let viewport = Viewport::new(1280, 720).expect("valid dashboard viewport");
+    Mutex::new(UniversalAdapterHost::new(viewport))
+});
 
 struct Request {
     method: String,
@@ -310,8 +313,13 @@ fn package_references() -> Response {
         200,
         &json!({
             "socket_api": pipboy_core::package_socket::SOCKET_API_VERSION,
+            "adapter_protocol": pipboy_core::universal_adapter::ADAPTER_PROTOCOL,
             "catalog_state": "reference_designs_only",
             "active_socket_package_id": Value::Null,
+            "mounted_package_count": 0,
+            "adapter_mounting_available": false,
+            "foreground_mode": "single_package",
+            "settings_owner": "host",
             "packages": packages
         }),
     )
@@ -349,14 +357,14 @@ fn state(store: &WorkbenchStore) -> Result<Response, Response> {
 }
 
 fn host_foreground_snapshot() -> Value {
-    let Ok(selection) = HOST_FOREGROUND.lock() else {
+    let Ok(host) = UNIVERSAL_ADAPTER_HOST.lock() else {
         return json!({"surface": "unavailable", "active_package_id": null});
     };
-    host_foreground_value(&selection)
+    host_foreground_value(host.surface())
 }
 
-fn host_foreground_value(selection: &ForegroundSelection) -> Value {
-    match selection.surface() {
+fn host_foreground_value(surface: HostSurface<'_>) -> Value {
+    match surface {
         HostSurface::Empty => json!({"surface": "empty", "active_package_id": null}),
         HostSurface::Settings => json!({"surface": "settings", "active_package_id": null}),
         HostSurface::Package(package_id) => {
@@ -370,15 +378,16 @@ fn set_host_settings(req: &Request) -> Result<Response, Response> {
     let settings_open = body["settings_open"]
         .as_bool()
         .ok_or_else(|| Response::error(422, "settings_open must be a boolean"))?;
-    let mut selection = HOST_FOREGROUND
+    let mut host = UNIVERSAL_ADAPTER_HOST
         .lock()
         .map_err(|_| Response::error(500, "Host foreground state unavailable"))?;
     if settings_open {
-        selection.open_settings();
+        host.open_settings();
     } else {
-        selection.close_settings();
+        host.close_settings()
+            .map_err(|_| Response::error(409, "Unable to resume the foreground package"))?;
     }
-    Ok(Response::json(200, &host_foreground_value(&selection)))
+    Ok(Response::json(200, &host_foreground_value(host.surface())))
 }
 
 fn native_result(value: io::Result<String>) -> Response {
@@ -2534,6 +2543,11 @@ mod tests {
         assert_eq!(response.status, 200);
         let body: Value = serde_json::from_slice(&response.body).unwrap();
         assert_eq!(body["catalog_state"], "reference_designs_only");
+        assert_eq!(body["adapter_protocol"], 1);
+        assert_eq!(body["adapter_mounting_available"], false);
+        assert_eq!(body["mounted_package_count"], 0);
+        assert_eq!(body["foreground_mode"], "single_package");
+        assert_eq!(body["settings_owner"], "host");
         assert_eq!(body["active_socket_package_id"], Value::Null);
         let packages = body["packages"].as_array().unwrap();
         assert_eq!(packages.len(), 4);

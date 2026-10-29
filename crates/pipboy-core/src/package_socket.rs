@@ -703,6 +703,12 @@ impl PackageRegistry {
         Ok(registry)
     }
 
+    /// Host-owned registry removal for an explicitly unmounted adapter.
+    /// Does not remove packages from disk or revoke OS permissions.
+    pub fn remove(&mut self, package_id: &str) -> Option<PackageManifest> {
+        self.entries.remove(package_id)
+    }
+
     pub fn get(&self, package_id: &str) -> Option<&PackageManifest> {
         self.entries.get(package_id)
     }
@@ -773,6 +779,15 @@ impl ForegroundSelection {
 
     pub fn clear_package(&mut self) {
         self.active_package_id = None;
+    }
+
+    /// Selected package remains known while host Settings is open.
+    pub fn active_package_id(&self) -> Option<&str> {
+        self.active_package_id.as_deref()
+    }
+
+    pub fn settings_open(&self) -> bool {
+        self.settings_open
     }
 
     pub fn surface(&self) -> HostSurface<'_> {

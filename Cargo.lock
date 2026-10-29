@@ -2338,6 +2338,7 @@ dependencies = [
  "fs2",
  "keyring",
  "ring",
+ "rust-boy-adapter-sdk",
  "rust-radio",
  "serde",
  "serde_json",
@@ -2722,6 +2723,14 @@ dependencies = [
  "crossbeam-utils",
  "portable-atomic",
  "portable-atomic-util",
+]
+
+[[package]]
+name = "rust-boy-adapter-sdk"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
