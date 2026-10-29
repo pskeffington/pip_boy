@@ -4,6 +4,10 @@ Technical contracts, architecture decisions, research provenance and validation 
 
 **Current scope:** Rust 1.90+ desktop CLI/TUI, a separate micro-handheld shell and a loopback-only graphical dashboard, bundled reference library, notes and synthetic-only device workflows. NET ENGINEER performs an explicitly authorized, bounded LAN scan; OS-enforced peripheral permissions and physical device permissions remain separate; a TLS-only, explicitly configured UniFi connected-client reader is implemented. Physical controller acceptance remains open.
 
+## GitHub-first agents and task queue
+
+[Agent instructions](../AGENTS.md) · [Execution work packets and release gates](TERMINAL_AGENT_EXECUTION.md) · [Machine-readable task queue](../catalog/terminal_agent_tasks.json) · [Core dispatcher issue](https://github.com/pskeffington/pip_boy/issues/73) · [Security/CI issue](https://github.com/pskeffington/pip_boy/issues/74). Software implementation is developed and validated through GitHub; operator-local side-by-side testing is not a prerequisite.
+
 ## Terminal module command integration
 
 [Terminal-to-module command surface](TERMINAL_MODULE_COMMANDS.md) documents the initial `pipboy terminal` offline-only Workbench command bridge, plus the still-open shared dispatcher, TUI/GUI integration and module acceptance gates.
