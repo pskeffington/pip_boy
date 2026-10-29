@@ -181,10 +181,15 @@ async function main() {
       assert.equal(r.settings?.roleButtonsVisible,true,"Settings role selector clipped");
       assert.equal(r.settings?.rolePagerVisible,true,"Settings role pager clipped");
       assert.equal(r.settings?.previewIsolated,true,"Role preview changed active module workspace");
+      assert.equal(r.settingsButtonAvailable,true,"Permanent host Settings control missing");
+      assert.equal(r.settingsGearWorks,true,"Host Settings button did not open Settings");
+      assert.equal(r.settingsRestoresPriorPage,true,"Closing Settings did not restore the prior page");
       assert.equal(r.viewport,true,"Viewport panel clipped");
       assert.equal(r.messages,true,"Messages panel clipped");
       if(scenario!=="custom"){
-        assert.equal(r.inspector,true,"No inspector after module selection");
+        assert.equal(r.toolDetailsFullView,true,"Tool details must replace the workspace view");
+        assert.equal(r.toolDetailsFillWorkspace,true,"Tool details must use the full workspace");
+        assert.equal(r.toolDetailsReturnWorks,true,"Tool details must return to the prior workspace");
         assert.ok(r.nextModules?.count>0,"Module next page missing");
         assert.equal(r.nextModules?.fit,true,"Paged modules clipped");
       }

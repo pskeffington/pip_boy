@@ -1,14 +1,14 @@
 # Rust-Boy host and single-package viewport roadmap
 
-Status (2026-10-28): **architecture accepted; read-only manifest registry source committed; activation/UI gates open**. This document describes target behavior, not a claim that dynamic package activation, approved installation, or isolated containers exist.
+Status (2026-10-28): **architecture accepted; read-only manifest registry source committed; activation/UI gates open**. Desktop and micro shells now have a validated single-view workspace and persistent Settings entry point, but host foreground selection is not yet wired into their legacy stage/pane models. This document describes target behavior, not a claim that dynamic package activation, approved installation, or isolated containers exist.
 
 ### Current gate evidence
 
 - **HOST-REG-1 / SOCKET-0, implementation candidate:** strict manifest parser in `crates/pipboy-core/src/package_socket.rs`; read-only CLI `pipboy packages list|check|scan`; loopback-only `GET /api/packages`; four indexed design fixtures, Rust unit tests, and offline Python validation.
-- **Not yet accepted:** A GitHub Actions validation run returned `startup_failure` before any jobs ran; Rust compilation, `cargo fmt`, Clippy, tests, and Mac/Pi integration remain unverified. The read-only registry is intentionally not the executable package loader.
-- **HOST-UI-1, pure-state precursor only:** `ForegroundSelection` models exactly one selected package, host Settings, and rejection of packages absent from a separately approved installed roster; Rust tests use synthetic approval only. The desktop/micro shell is not yet bound to this controller.
+- **Not yet accepted:** A GitHub Actions validation run returned `startup_failure` before any jobs ran; the historical failure remains undiagnosed. Local Rust compilation, `cargo fmt`, Clippy and tests passed at the recorded checkpoint; Mac/Pi integration remains unverified. The read-only registry is intentionally not the executable package loader.
+- **HOST-UI-1, integration candidate:** Desktop and micro shells expose persistent Settings, and the desktop workspace now presents one full-width view with on-demand tool details. Chromium viewport regressions cover 480x320 through 1920x1080. These shells still use legacy stage/pane state and are not bound to the Rust `ForegroundSelection` controller or an approved package roster; this gate remains open.
 - **SOCKET-PROTO-0, codec precursor:** core has bounded typed JSON lifecycle requests, version-negotiation hello claims, correlated responses, monotonic request sequencing, a bounded in-flight tracker and length-prefixed stream frame helpers. It has no connected transport, cryptographic authentication, dispatch, timeout or isolation.
-- **Next priority:** connect the framing helpers to a local transport with explicit handshake deadlines and fault cases, then bind host-owned foreground selection and always-available Settings to desktop/micro rendering. Trusted adapter mounting for MAP / TV / RADIO / COMMS follows lifecycle and authorization work. No module is activated merely because it appears in the reference registry.
+- **Next priority:** connect the framing helpers to a local transport with explicit handshake deadlines and fault cases, then bind host-owned foreground selection to the desktop/micro shell models. Trusted adapter mounting for MAP / TV / RADIO / COMMS follows lifecycle and authorization work. No module is activated merely because it appears in the reference registry.
 
 
 ## Non-negotiable host contract

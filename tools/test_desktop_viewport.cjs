@@ -156,6 +156,11 @@ function fixturePage() {
     'report.radioOpened=!radio.hidden&&radio.children.length>0&&',
     'document.getElementById("extension-content").hidden;',
     'report.radioHasPlay=!!radio.querySelector(".rb-radio-play");',
+    'document.getElementById("desktop-settings-open").click();',
+    'report.settingsOpenedFromRadio=!document.querySelector(\'[data-stage="settings"]\').hidden;',
+    'document.getElementById("settings-return").click();',
+    'report.radioRestoredAfterSettings=!radio.hidden&&radio.children.length>0&&',
+    'document.getElementById("extension-content").hidden;',
     'report.radioRequests=[...window.__fixtureRequests];',
     'const mainRect=main.getBoundingClientRect();',
     'const radioRect=radio.getBoundingClientRect();',
@@ -238,7 +243,7 @@ function check(data,width,height) {
   assert.equal(data.height,height);
   assert.ok(data.scrollWidth<=width+2,"Unexpected document horizontal overflow");
   assert.ok(data.scrollHeight<=height+2,"One-screen desktop must not scroll the document");
-  assert.equal(data.paneTabs,2,"WORKSPACE/INSPECTOR pane controls missing");
+  assert.equal(data.paneTabs,2,"WORKSPACE/TOOL DETAILS controls missing");
   assert.equal(data.stageTabs,5,"COMMAND/MODULES/VIEW/MESSAGES/SETTINGS pages missing");
   assert.equal(data.roles,6,"First of eight fixture roles must show six entries");
   assert.match(data.rolePager,/1\s*\/\s*2/,"Settings role pager unavailable");
@@ -255,6 +260,8 @@ function check(data,width,height) {
     "Native radio must not mount or take up viewport space at dashboard startup");
   assert.ok(data.radioClosedBeforeClick && data.radioOpened && data.radioHasPlay,
     "VIEWPORT → RADIO must open the native radio control surface explicitly");
+  assert.ok(data.settingsOpenedFromRadio && data.radioRestoredAfterSettings,
+    "Settings must return to the previously selected RADIO viewport");
   assert.ok(data.radioRequests.some(x=>x.url==="/api/radio"&&x.method==="GET"),
     "Opening native radio must read local status");
   assert.ok(data.radioRequests.every(x=>x.method==="GET"),
@@ -290,18 +297,9 @@ function check(data,width,height) {
     "Workspace pages must remain within one-screen viewport");
   assert.ok(data.toolHeights.every(h=>h>=44),
     "Normal desktop tool choices must remain >=44px");
-  if(width>1100) {
-    assert.ok(data.detailVisible,"Wide desktop needs an inspector");
-    for(const pane of [data.main,data.detail]) {
-      assert.ok(pane.w>135 && pane.x>=-2 && pane.right<=width+2,
-        "Pane clipped horizontally: "+JSON.stringify(pane));
-    }
-    assert.ok(data.main.right<=data.detail.x+2,"Desktop inspector overlaps workspace");
-  }else{
-    assert.ok(!data.detailVisible,"Narrow desktop should focus workspace pane");
-    assert.ok(data.main.w>width*.75 && data.main.right<=width+2,
-      "Narrow workspace must fill available window");
-  }
+  assert.ok(!data.detailVisible,"Tool details must not occupy permanent workspace space");
+  assert.ok(data.main.w>width*.90 && data.main.right<=width+2,
+    "Single desktop workspace must fill available window: "+JSON.stringify(data.main));
 }
 
 async function main(){

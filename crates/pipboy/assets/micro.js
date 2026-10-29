@@ -45,6 +45,7 @@ function openDuties() {
 
 let snapshot = null;
 let tab = "stat";
+let settingsReturnTab = "stat";
 let openedTool = null;
 let geoMode = "distance";
 const labDrafts = new Map();
@@ -163,6 +164,7 @@ function renderHeading() {
 
 function setTab(next) {
   if ((!pages.includes(next) && next !== "conf") || !snapshot) return;
+  if (next === "conf" && tab !== "conf") settingsReturnTab = tab;
   tab = next;
   openedTool = null;
   activeTaskUI = null;
@@ -738,6 +740,8 @@ function back() {
   } else if (tab === "conf" && paletteOpen) {
     paletteOpen = false;
     render();
+  } else if (tab === "conf") {
+    setTab(settingsReturnTab);
   } else if (tab !== "stat") {
     setTab("stat");
   }
@@ -768,7 +772,8 @@ function init() {
     ensureVisible();
   });
   ui.tabs.forEach((item) => item.addEventListener("click", () => setTab(item.dataset.tab)));
-  $("micro-settings").addEventListener("click", () => setTab("conf"));
+  $("micro-settings").addEventListener("click", () =>
+    setTab(tab === "conf" ? settingsReturnTab : "conf"));
   ui.back.addEventListener("click", back);
   ui.closeRoles.addEventListener("click", () => ui.rolesDialog.close());
   ui.cancelRoles.addEventListener("click", () => ui.rolesDialog.close());

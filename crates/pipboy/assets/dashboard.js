@@ -53,6 +53,10 @@ let lastOutput = "";
 let rolePage = 0, modulePage = 0, palettePage = 0;
 let activeStage = "modules";
 let activePane = "workspace";
+let settingsReturnStage = "modules";
+let settingsReturnPane = "workspace";
+let settingsReturnRadioPaneOpen = false;
+let settingsReturnExtensionMode = "map";
 let desktopMessenger = null;
 let desktopCommandUI = null;
 let initialWorkspaceLoaded = false;
@@ -82,6 +86,13 @@ function activateStage(stage) {
   if (stage === "palette" && snapshot?.active.profile !== "custom") stage = "settings";
   if (!["command", "modules", "viewport", "messages", "settings", "palette"].includes(stage)) return;
   const previous = activeStage;
+  if (stage === "settings" && previous !== "settings" && previous !== "palette") {
+    settingsReturnStage = previous;
+    settingsReturnPane = activePane;
+    settingsReturnRadioPaneOpen = radioPaneOpen;
+    settingsReturnExtensionMode = extensionMode;
+  }
+  if (stage === "settings") activatePane("workspace");
   // Radio is a subview, not a sticky override of later VIEWPORT visits.
   if (stage !== "viewport") radioPaneOpen = false;
   if (stage !== "viewport" && cameraWallUI) { cameraWallUI.destroy(); cameraWallUI = null; }
@@ -102,6 +113,20 @@ function activateStage(stage) {
   if (stage === "messages" && !desktopMessenger && window.RustBoyMessenger) {
     desktopMessenger = window.RustBoyMessenger.mount(byId("messenger-dock"));
   }
+}
+function returnFromSettings() {
+  const stage = ["command", "modules", "viewport", "messages"].includes(settingsReturnStage)
+    ? settingsReturnStage
+    : "modules";
+  const pane = settingsReturnPane === "inspector" && stage === "modules"
+    ? "inspector"
+    : "workspace";
+  if (stage === "viewport") {
+    radioPaneOpen = settingsReturnRadioPaneOpen;
+    extensionMode = settingsReturnExtensionMode;
+  }
+  activateStage(stage);
+  activatePane(pane);
 }
 // Desktop is the vault command station. Role authority comes from Rust's
 // persisted mission-board slot, never from a browser toggle or inferred title.
@@ -334,7 +359,7 @@ function renderModules() {
       ui.detailInfo.open = false;
       renderModules();
       renderDetail();
-      if (window.matchMedia("(max-width: 1100px)").matches) activatePane("inspector");
+      activatePane("inspector");
     });
     ui.modules.append(card);
   }
@@ -791,6 +816,11 @@ document.querySelectorAll("[data-stage-target]").forEach(button => button.addEve
 }));
 byId("open-palette").addEventListener("click", () => activateStage("palette"));
 byId("palette-back").addEventListener("click", () => activateStage("settings"));
+byId("settings-return").addEventListener("click", returnFromSettings);
+byId("desktop-settings-open").addEventListener("click", () => {
+  if (activeStage === "settings") returnFromSettings();
+  else activateStage("settings");
+});
 byId("radio-view-toggle").addEventListener("click", toggleRadioSubview);
 byId("command-open-messages").addEventListener("click", () => activateStage("messages"));
 byId("command-open-viewport").addEventListener("click", () => activateStage("viewport"));

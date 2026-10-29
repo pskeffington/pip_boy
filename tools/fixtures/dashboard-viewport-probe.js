@@ -53,9 +53,14 @@
       }
       if($(".module-card")){
         $(".module-card").click();
-        result.inspector=innerWidth>1100 ||
-          (shown($(".detail-panel")) && shown($("#inspector-return")));
-        if(innerWidth<=1100)$("#inspector-return").click();
+        result.toolDetailsFullView=shown($(".detail-panel")) && !shown($(".main-panel")) &&
+          shown($("#inspector-return"));
+        const detailRect=$(".detail-panel").getBoundingClientRect();
+        const dashboardRect=$(".dashboard").getBoundingClientRect();
+        result.toolDetailsFillWorkspace=detailRect.width>=dashboardRect.width*.95 &&
+          detailRect.left>=dashboardRect.left-1 && detailRect.right<=dashboardRect.right+1;
+        $("#inspector-return").click();
+        result.toolDetailsReturnWorks=shown($(".main-panel")) && !shown($(".detail-panel"));
       }
       $('[data-stage-target="viewport"]').click();
       result.viewport=shown($('[data-stage="viewport"]')) &&
@@ -77,6 +82,11 @@
         inside($('[data-stage="messages"]'),$("#workspace-stage"));
       const beforeRole=$("#status-role").textContent;
       const beforeCards=all(".module-card").map(e=>e.getAttribute("aria-label"));
+      result.settingsButtonAvailable=shown($("#desktop-settings-open"));
+      $("#desktop-settings-open").click();
+      result.settingsGearWorks=shown($('[data-stage="settings"]'));
+      $("#settings-return").click();
+      result.settingsRestoresPriorPage=shown($('[data-stage="messages"]'));
       $('[data-stage-target="settings"]').click();
       result.settings={
         visible:shown($('[data-stage="settings"]')),

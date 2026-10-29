@@ -349,10 +349,7 @@ html, body { height:100%; overflow:hidden; }
 .extension-content > .camera-wall.focused .camera-grid { display:block; }
 .extension-content > .camera-wall-heading { flex:none; }
 .extension-content > .job-command-panel, .extension-content > .job-station-summary { flex:1 1 0; min-height:0; overflow:auto; }
-.inspector-return { display:none; color:var(--lime); background:#15251a; border:1px solid var(--border-lit); border-radius:5px; padding:7px 10px; font:700 11px var(--mono); cursor:pointer; min-height:36px; margin-bottom:9px; }
-@media(max-width:1100px) {
-  .inspector-return { display:block; align-self:flex-start; }
-}
+.inspector-return { display:block; align-self:flex-start; color:var(--lime); background:#15251a; border:1px solid var(--border-lit); border-radius:5px; padding:7px 10px; font:700 11px var(--mono); cursor:pointer; min-height:36px; margin-bottom:9px; }
 @media(max-height:480px) {
   .app-shell { gap:4px; padding:4px; }
   .main-panel { gap:4px; padding:6px; }
@@ -394,10 +391,12 @@ html, body { height:100%; overflow:hidden; }
 }
 
 
-/* Unified role-independent shell: profile choice lives only in Settings. */
-.dashboard { grid-template-columns:minmax(0,2.35fr) minmax(270px,1fr); }
+/* One desktop surface at a time: tool controls never reserve package canvas. */
+.dashboard { grid-template-columns:minmax(0,1fr); }
 .dashboard > .main-panel { grid-column:1; }
-.dashboard > .detail-panel { grid-column:2; }
+.dashboard > .detail-panel { display:none; grid-column:1; }
+.dashboard[data-pane="inspector"] > .main-panel { display:none; }
+.dashboard[data-pane="inspector"] > .detail-panel { display:flex; }
 .settings-surface { gap:7px; }
 .settings-surface .role-panel {
   flex:1 1 0; display:flex; flex-direction:column;

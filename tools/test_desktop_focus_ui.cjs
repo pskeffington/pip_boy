@@ -18,7 +18,8 @@ for(const id of [
   "command-board","command-open-messages","command-open-viewport","command-open-modules",
   "extension-content","messenger-dock","inspector-return",
   "details-heading","detail-info","detail-description","detail-status",
-  "testbench","network-workspace","lab-form","lab-output","refresh-state"
+  "testbench","network-workspace","lab-form","lab-output","refresh-state",
+  "desktop-settings-open","settings-return"
 ]) assert.ok(ids.includes(id),"Missing desktop contract "+id);
 for(const stage of ["command","modules","viewport","messages","settings"])
   assert.ok(html.includes('data-stage-target="'+stage+'"'),"Missing workspace stage "+stage);
@@ -62,6 +63,10 @@ assert.ok(!js.includes('el("span", "role-desc"'),
   "Permanent role descriptions reintroduced in Settings");
 assert.match(js,/function renderSettingsSelection\(/,
   "Current/selected station state must remain in Settings");
+assert.match(js,/function returnFromSettings\(/,
+  "Closing Settings must restore its prior workspace view");
+assert.match(js,/settingsReturnStage = previous/,
+  "Settings must remember the previously active workspace");
 assert.match(js,/function extensionTabs\(/,
   "Scout MAP/camera focused tabs must remain");
 assert.match(js,/rolesPerPage\(\)/,

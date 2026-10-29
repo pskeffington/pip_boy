@@ -83,6 +83,8 @@
       "hardware_gate": "software_only",
       "code": [
         "crates/pipboy/src/dashboard.rs",
+        "crates/pipboy/assets/dashboard.html",
+        "crates/pipboy/assets/dashboard.css",
         "crates/pipboy/assets/dashboard.js",
         "crates/pipboy/assets/micro.js"
       ],
@@ -92,7 +94,11 @@
       ],
       "checks": [
         "tools/smoke_dashboard.py",
-        "tools/smoke_micro.py"
+        "tools/smoke_micro.py",
+        "tools/test_dashboard_viewport.cjs",
+        "tools/test_desktop_viewport.cjs",
+        "tools/test_desktop_focus_ui.cjs",
+        "tools/test_micro_ui.cjs"
       ]
     },
     {
