@@ -50,7 +50,7 @@ Updated: 2026-10-29
 
 ## Codex development handoff
 
-The [machine pass queue](../catalog/codex_passes.json) names **RB-CX-00** as the only `next` pass: inspect exact HEAD, run the passive RADIO bootstrap and host UI regressions, and obtain actual compiler/CI evidence. See [Codex instructions](../AGENTS.md), [pass plan](CODEX_PASSES.md) and [index hierarchy](INDEXING.md). This indexing update registers new offline checks but does **not** claim they ran or passed on the current head.
+The [machine pass queue](../catalog/codex_passes.json) names **RB-CX-00** as the only `next` pass: inspect exact HEAD, run the passive RADIO bootstrap and host UI regressions, and obtain actual compiler/CI evidence. See [Codex instructions](../AGENTS.md), [pass plan](CODEX_PASSES.md) and [index hierarchy](INDEXING.md). This indexing update registers new offline checks but does **not** claim they ran or passed. [Actions run 40821379695](https://github.com/pskeffington/pip_boy/actions/runs/40821379695) on indexing commit `5b4a66e` concluded `startup_failure` with **zero jobs**; it provides no Python, Rust or browser test result. Subsequent exact-head CI remains to be established.
 
 ## Next three implementation actions
 

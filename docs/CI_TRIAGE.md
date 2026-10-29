@@ -2,7 +2,7 @@
 
 ## Codex queue/ownership offline gates — 2026-10-29
 
-The catalog job additionally registers `python3 tools/validate_codex_passes.py` and `python3 tools/test_validate_codex_passes.py`. These are filesystem-only schema, dependency, component-ID and path checks; they do not build Rust or certify a release. Inspect exact-head workflow evidence before marking a pass accepted. The existing component owner index must remain single-owner even when a module is used by multiple integration layers.
+The catalog job additionally registers `python3 tools/validate_codex_passes.py` and `python3 tools/test_validate_codex_passes.py`. These are filesystem-only schema, dependency, component-ID and path checks; they do not build Rust or certify a release. [Actions run 40821379695](https://github.com/pskeffington/pip_boy/actions/runs/40821379695) at `5b4a66e` ended in `startup_failure` with zero jobs, so the new pass checks did not execute. Investigate run-level annotations and runner admission without asserting a compiler failure. Inspect exact-head workflow evidence before marking a pass accepted. The existing component owner index must remain single-owner even when a module is used by multiple integration layers.
 
 
 ## Current smoke-test inventory (2026-10-26)
