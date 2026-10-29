@@ -41,7 +41,7 @@ Source checkpoint `3012162d2a6cdaf5b7bfab55e146398ce11c08b9` adds local MAP impo
 
 ### Null-only package rollback in the MAP view — 2026-10-29
 
-Source/test checkpoint `bb558418b711ab7635a582d04d78bc54c32c5016` adds an end-to-end UI regression. Starting from a valid package, an explicit directory selection containing a null-only FeatureCollection leaves the last-good geometry, layer metadata and viewport center/zoom unchanged, reports the map error and clears the file input. `node tools/test_rustgis_map_import.cjs`, `node tools/test_rustgis_map_view.cjs`, component-index validation and tests, and `git diff --check` passed. Exact-head run `40863655212` passed all seven jobs on the immediately preceding checkpoint `74a473d42967c19ef7aa0f226bb2ad278187e508`; hosted CI for the regression checkpoint remains pending. This is a rollback assertion for the importer, not independent renderer or field acceptance.
+Source/test checkpoint `bb558418b711ab7635a582d04d78bc54c32c5016` adds an end-to-end UI regression. Starting from a valid package, an explicit directory selection containing a null-only FeatureCollection leaves the last-good geometry, layer metadata and viewport center/zoom unchanged, reports the map error and clears the file input. `node tools/test_rustgis_map_import.cjs`, `node tools/test_rustgis_map_view.cjs`, component-index validation and tests, and `git diff --check` passed. Exact-head run [40864776851](https://github.com/pskeffington/pip_boy/actions/runs/40864776851) passed all seven jobs on checkpoint `3a42bb24a751e2c2a3acbd88a9e682118998c9c5`, which includes this regression. This is a rollback assertion for the importer, not independent renderer or field acceptance.
 
 ### GIS replacement rollback exact-head validation — 2026-10-29
 

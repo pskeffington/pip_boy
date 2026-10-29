@@ -15,7 +15,7 @@ Updated: 2026-10-29
 
 ## Current PR and default-branch CI status — 2026-10-29
 
-- PR #71 head `74a473d42967c19ef7aa0f226bb2ad278187e508` passed all seven checks in [PR run 40863655212](https://github.com/pskeffington/pip_boy/actions/runs/40863655212). This is the latest green exact head before the null-only rollback regression commit.
+- PR #71 head `3a42bb24a751e2c2a3acbd88a9e682118998c9c5` passed all seven checks in [PR run 40864776851](https://github.com/pskeffington/pip_boy/actions/runs/40864776851). This exact-head run includes the null-only package rollback regression and updated gate checklist.
 - The default `main` branch remains at `629f34f0ce21e37c6d2bc6567919ccc5c862c80d`; its latest listed run [40669977589](https://github.com/pskeffington/pip_boy/actions/runs/40669977589) concluded `startup_failure` with zero jobs. The failing badge visible on the default-branch README reflects this separate main run; it is not the status of PR #71.
 - The main workflow still contains third-party Action imports. The PR branch replaces these with repository-owned exact-SHA checkout and official toolchain bootstrap, preserving the stable/1.90, SDR and native platform gates. Main's badge will reflect the repaired workflow after the change is merged.
 - PR #71 remains draft because RB-CX-05's independent `rb_gis` renderer parity and operator/field acceptance remain open. Do not treat the green PR CI matrix as acceptance of those gates.
@@ -48,11 +48,11 @@ Updated: 2026-10-29
 
 - Source/test checkpoint `bb558418b711ab7635a582d04d78bc54c32c5016` adds an end-to-end MAP view fixture: after loading a valid package, a null-only FeatureCollection is rejected while geometry, source metadata, center, zoom and format stay intact; the error is visible and the directory input is cleared.
 - `node tools/test_rustgis_map_import.cjs`, `node tools/test_rustgis_map_view.cjs`, `python3 tools/validate_component_index.py`, `python3 tools/test_component_index.py`, and `git diff --check` passed locally. Exact-head hosted CI for this regression commit is pending.
-- The pass checklist and component ownership now include `map-import.js`, the import/view fixtures and the UI rollback check. This verifies one replacement-failure path; it does not satisfy independent renderer parity, full Census archive/service parity or operator/field acceptance.
+- The exact-head hosted run [40864776851](https://github.com/pskeffington/pip_boy/actions/runs/40864776851) passed all seven jobs on checkpoint `3a42bb24a751e2c2a3acbd88a9e682118998c9c5`, which includes this source/test commit. The pass checklist and component ownership now include `map-import.js`, the import/view fixtures and the UI rollback check. This verifies one replacement-failure path; it does not satisfy independent renderer parity, full Census archive/service parity or operator/field acceptance.
 
 ## Gate state
 
-- **Latest completed exact-head validation before the current candidate:** PR checkpoint `74a473d42967c19ef7aa0f226bb2ad278187e508`; push-triggered [run 40863655212](https://github.com/pskeffington/pip_boy/actions/runs/40863655212) passed all seven jobs, including stable/Rust 1.90, both SDR features, source/catalog policy, desktop/handheld Chromium, native macOS and Windows ConPTY. The current rollback regression commit is still awaiting exact-head CI. CI policy continues to require zero external GitHub Action `uses:` dependencies.
+- **Latest completed exact-head validation:** PR checkpoint `3a42bb24a751e2c2a3acbd88a9e682118998c9c5`; push-triggered [run 40864776851](https://github.com/pskeffington/pip_boy/actions/runs/40864776851) passed all seven jobs, including stable/Rust 1.90, both SDR features, source/catalog policy, desktop/handheld Chromium, native macOS and Windows ConPTY. CI policy continues to require zero external GitHub Action `uses:` dependencies.
 - **Acceptance/index checkpoint:** `7e0a19b440e9a8531390e00fb165b2b8df06f3d9`; [run 40831001927](https://github.com/pskeffington/pip_boy/actions/runs/40831001927) passed all seven jobs, including stable MAP browser regressions, Rust 1.90, SDR features, native Mac MAP and Windows ConPTY.
 - **Current gate:** RB-CX-05 is next, limited to host-owned GIS integration/parity work. `rb_gis` remains an independent repository and will not be modified from this checkout. RB-CX-04 is accepted software-only; its remaining blocker is external package launch because no approved launcher or binary identity is bound to a package.
 - **Last accepted Codex pass:** RB-CX-04. **Last completed PROD roadmap gate:** PROD-0 remains **not accepted**; these software pass acceptances do not certify the broader production baseline or release.
@@ -177,9 +177,9 @@ The [machine pass queue](../catalog/codex_passes.json) records RB-CX-00/01/02/04
 
 ## Next three implementation actions
 
-1. Commit and push the null-only package rollback regression, pass-index addition and evidence record to PR #71.
-2. Inspect the exact-head seven-job CI run and fix any failures without weakening the matrix.
-3. Continue RB-CX-05 offline behavior parity and Mac operator acceptance while preserving `rb_gis/` as an independent repository; do not accept the pass until renderer parity and field evidence are reviewed.
+1. Review and extend host-owned offline tests for roads, county/ZIP lookup, cache restoration and location-follow edge cases.
+2. Continue local Mac MAP operator checks and record any coverage gaps without treating CI as field evidence.
+3. Keep RB-CX-05 open until independent renderer parity and field evidence are reviewed; preserve `rb_gis/` as an independent repository.
 
 ## Release risks
 
