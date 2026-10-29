@@ -4,6 +4,9 @@ This is the root entrypoint for Codex on the Rust-Boy repository. Before editing
 
 ## Each requested development pass
 
+Start with `python3 tools/codex_next.py` or `python3 tools/codex_next.py --json` for a validated, read-only pass handoff. The output never runs work or proves acceptance.
+
+
 1. Inspect `git status --short --branch`, HEAD, remote branch and open PR before changing anything. Do not discard, reset, stash or overwrite somebody else's edits, and never force-push.
 2. Distinguish `main` from the draft `codex/package-adapter-protocol` branch. Other independent PRs for the server, organization, avatars, radio, cameras, emergency tools or GIS are not automatically merged or tested.
 3. Select the sole `status: next` entry in `catalog/codex_passes.json`, verify prerequisite pass evidence, then read only its declared entrypoints, guides and checks. A blocked pass may be researched but not accepted.

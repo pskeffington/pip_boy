@@ -34,6 +34,8 @@ jobs:
           python3 tools/test_component_index.py
           python3 tools/validate_codex_passes.py
           python3 tools/test_validate_codex_passes.py
+          python3 tools/codex_next.py --json
+          python3 tools/test_codex_next.py
           python3 tools/validate_security.py
           python3 tools/test_validate_security.py
           python3 tools/run_smokes.py --check

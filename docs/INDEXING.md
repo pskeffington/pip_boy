@@ -16,6 +16,10 @@ Rust-Boy keeps **separate indexes for separate kinds of evidence**. They are sou
 | [reference package fixtures](../catalog/host_packages), [compiled RADIO manifest](../catalog/builtin_packages/rust_radio.json) | Four inert reference designs vs. an explicitly compiled read-only catalogue | Neither grants capabilities |
 | [`catalog/sources.json`](../catalog/sources.json), [`catalog/literature.json`](../catalog/literature.json) | Provenance, licensing and research limitations | References, not implementation |
 
+## Deterministic pass handoff
+
+`tools/codex_next.py` reads and validates the authoritative `catalog/codex_passes.json` and prints the next pass with declared entrypoints, checks, acceptance and blockers. Add `--json` for tool-consumable output. It does not query Git, schedule Codex, execute tests or change pass status. The offline test `tools/test_codex_next.py` covers deterministic output, malformed manifests and unmet prerequisites.
+
 ## Index update matrix
 
 | Change | Update | Offline checks |

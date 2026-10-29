@@ -1,5 +1,10 @@
 # Rust-Boy | Validation evidence
 
+## Codex handoff projection — 2026-10-29 (source candidate)
+
+Added the read-only `tools/codex_next.py` CLI with JSON/plain-text projection of the single validated `next` pass and its prerequisites, declared files and checks. The deterministic negative fixtures in `tools/test_codex_next.py` and CI catalog registration are source changes; executing the new checks on the current head remains pending. This CLI neither runs Git nor claims a passing CI or device acceptance.
+
+
 ## Codex pass indexing — 2026-10-29 (committed source; exact-head execution pending)
 
 Added root `AGENTS.md`, `catalog/codex_passes.json`, `docs/CODEX_PASSES.md` and `docs/INDEXING.md`, with standard-library-only validation and negative tests. The validator checks stable pass IDs, declared paths, known component IDs, backward dependencies, exactly one eligible `next` pass, and structurally complete commit/CI evidence for any `accepted` state. It does **not** independently confirm that a referenced CI run passed. The CI catalog job now lists the new offline commands. [Actions run 40821379695](https://github.com/pskeffington/pip_boy/actions/runs/40821379695) for source commit `5b4a66e` returned `startup_failure` with zero jobs: **none of the new Python checks or Rust/Chromium tests ran in that workflow**. Successful exact-head execution remains unverified. Earlier results below apply only to their documented earlier revisions.

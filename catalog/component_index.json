@@ -341,7 +341,9 @@
         "AGENTS.md",
         "catalog/codex_passes.json",
         "tools/validate_codex_passes.py",
-        "tools/test_validate_codex_passes.py"
+        "tools/test_validate_codex_passes.py",
+        "tools/codex_next.py",
+        "tools/test_codex_next.py"
       ],
       "docs": [
         "docs/CODEX_PASSES.md",
@@ -349,7 +351,8 @@
       ],
       "checks": [
         "tools/validate_codex_passes.py",
-        "tools/test_validate_codex_passes.py"
+        "tools/test_validate_codex_passes.py",
+        "tools/test_codex_next.py"
       ],
       "acceptance": "Current-head source, CI and documentation gate execution is still pending; pass structure is not production acceptance."
     }

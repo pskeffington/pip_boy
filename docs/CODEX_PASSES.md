@@ -22,6 +22,10 @@ Rust-Boy is a modular pop-in socket: the shell owns **one package viewport**, co
 
 Each JSON pass declares its **entrypoints, component IDs, docs, tests, acceptance conditions, blockers and independent upstream repositories**. The table is a reading aid, not a second source of truth. `next` means work can begin, not that it has passed testing. Open PRs #64–#70 contain separate work and cannot be treated as merged prerequisites.
 
+## Read-only next-pass handoff
+
+Run `python3 tools/codex_next.py` for the next pass, source entrypoints, checks and blockers, or `python3 tools/codex_next.py --json` for machine-readable output. It validates the manifest before displaying anything and performs no network, repository mutation or module execution. The `remaining` list reports unsatisfied dependencies; it does not schedule the next task.
+
 ## Pass protocol for Codex
 
 1. **Preflight.** Inspect checkout, current HEAD, branch and PR against `main`; preserve local edits. Read the one `next` pass and verify its dependencies. Do not silently import other PRs or independent repos.
