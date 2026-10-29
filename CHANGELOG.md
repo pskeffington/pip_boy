@@ -2,9 +2,9 @@
 
 ## 2026-10-28 — Bounded package adapter request codec
 
-- Add a typed version-1 request envelope for activate, suspend, resume, resize, intent and shutdown with nonzero correlation IDs, package ID validation, viewport bounds and a 64 KiB frame limit.
-- Exercise valid round trips and invalid version, ID, resize and oversized-frame inputs.
-- Keep the codec inert: transport, handshake, dispatch, authentication, capabilities and process isolation remain open gates.
+- Add typed version-1 request, hello-claim and response codecs with monotonic request sequencing, request correlation, a 64-request in-flight cap, package ID validation, viewport bounds and a 64 KiB frame limit.
+- Exercise version negotiation, valid round trips, duplicate/out-of-order IDs, mismatched responses and invalid or oversized frames.
+- Keep the codec inert: transport, cryptographic authentication, dispatch, capabilities and process isolation remain open gates.
 
 ## 2026-10-26 — Operator titles and public camera fallback
 

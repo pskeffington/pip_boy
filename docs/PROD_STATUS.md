@@ -11,12 +11,12 @@ Updated: 2026-10-28
 
 ## Implementation and evidence
 
-- **Implemented, software validated:** `pipboy-core::package_socket::AdapterMessage` provides bounded JSON request encoding/decoding for activate, suspend, resume, resize, intent and shutdown. It validates protocol version, nonzero request ID, package ID, resize range and a 64 KiB frame ceiling. Two focused Rust tests pass.
-- **Still unimplemented:** transport framing across streams, handshake, response/event messages, timeouts/cancellation, authentication, dispatch, capability brokerage, trusted installation state and process isolation.
+- **Implemented, software validated:** `pipboy-core::package_socket` provides bounded JSON request, hello-claim and response codecs; highest-common-version negotiation; strictly increasing request IDs; and a 64-entry request correlator that validates package and ID matches. Identity in a hello remains an unauthenticated claim.
+- **Still unimplemented:** transport framing across streams, handshake deadlines, timeouts/cancellation, cryptographic authentication, dispatch, capability brokerage, trusted installation state and process isolation.
 - `cargo fmt --all -- --check` — passed.
 - `cargo check --workspace --all-targets --locked` — passed.
 - `cargo clippy --workspace --all-targets --locked -- -D warnings` — passed.
-- `cargo test --workspace --locked -- --test-threads=1` — passed: 74 `pipboy`, 271 `pipboy-core` and 12 broker tests (357 total); doc tests passed (0 present). The ordinary parallel run first failed because sandbox policy blocked three synthetic loopback socket fixtures; after permission to bind localhost, one unrelated shared task-store assertion flaked under parallel execution, passed in isolation, and the serial full suite passed.
+- `cargo test --workspace --locked -- --test-threads=8` — passed: 74 `pipboy`, 274 `pipboy-core` and 12 broker tests (360 total); doc tests passed (0 present). Earlier sandbox denial of localhost binds was resolved by granting the test process local bind permission. One task-status assertion failed in an earlier parallel run, passed in isolation and in serial mode, then passed in the later full run at 8 threads; no repeatable race is currently established.
 - `python3 tools/validate_host_packages.py` — passed.
 - `python3 tools/test_validate_host_packages.py` — passed (8 tests).
 - `python3 tools/validate_component_index.py` — passed.
@@ -34,13 +34,13 @@ Updated: 2026-10-28
 ## Open defects and blockers
 
 - Diagnose the historical GitHub Actions `startup_failure` using an actual affected run and its job/runner diagnostics; no run is currently exposed for the inspected main commit.
-- Parallel `pipboy` tests have at least one apparent shared task-store race (`manager_can_create_assign_dispatch_and_track_but_other_roles_cannot_reassign`); isolated and serial execution pass. Investigate fixture isolation before treating parallel execution as stable.
+- One earlier parallel run returned HTTP 422 in `manager_can_create_assign_dispatch_and_track_but_other_roles_cannot_reassign`; it passed isolated, serial and a later parallel run. Treat as an unconfirmed intermittent failure and investigate if it recurs.
 - Actual desktop/micro rendering remains unbound to `ForegroundSelection`; one-package UI and always-available Settings release gate is open.
 - Local Mac/Pi hardware, media output and independently maintained package integration have not been accepted.
 
 ## Next three implementation actions
 
-1. Extend the protocol contract with bounded response/event messages, handshake and deterministic sequence/correlation rejection tests.
+1. Add a local stream transport with bounded framing, handshake deadlines, cancellation and malformed/truncated-frame tests; do not add package execution yet.
 2. Bind host-owned foreground selection and permanent Settings to the real desktop and micro renderers, retaining existing authorization and viewport regression checks.
 3. Retrieve an actual failed GitHub Actions run and classify startup failure before modifying workflow configuration; preserve checks as written.
 
