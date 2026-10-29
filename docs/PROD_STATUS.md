@@ -4,7 +4,7 @@ Updated: 2026-10-29
 
 ## Gate state
 
-- **Current gate:** PROD-3 / passive RADIO bootstrap — **source candidate; latest exact-head compiler, CI and browser evidence still pending**. Desktop and micro shells now select only mounted packages via host APIs, show inert package view data, and clear foreground on shell navigation. A passive, compiled-in RADIO catalogue now populates one roster entry; interactive playback and device acceptance remain open.
+- **Current gate:** PROD-3 / passive RADIO bootstrap — **local stable software and browser checks pass; pass remains open pending Rust 1.90 and exact-head CI evidence**. Desktop and micro shells now select only mounted packages via host APIs, show inert package view data, and clear foreground on shell navigation. A passive, compiled-in RADIO catalogue now populates one roster entry; interactive playback and device acceptance remain open.
 - **Last completed gate:** PROD-0 baseline repair — **not accepted**. Mainline working tree and local validation are understood; GitHub Actions evidence is currently unavailable for the inspected commit, and CI startup failure has not been diagnosed.
 - **Branch:** draft [PR #71](https://github.com/pskeffington/pip_boy/pull/71), `codex/package-adapter-protocol`. Previous UI/transport integration checkpoints are documented below; inspect the live PR HEAD before claiming a build or CI result. The passive RADIO pilot and new Codex indexing changes are still validation candidates.
 - **Relevant pinned module revision:** `rust_radio` dependency revision `3d77d11da3a31fbc3144635da6d391a3febf38b7` from the workspace lock/config. The local `rust_radio/` directory is a separate untracked nested repository and was preserved untouched.
@@ -16,13 +16,16 @@ Updated: 2026-10-29
 - **Implemented, focused software validated:** `pipboy-core::package_transport::UnixAdapterSession` adds an absolute-deadline Unix stream handshake and serial request/response exchange; a peer's hello identity must match the expected package ID, and request IDs/package IDs are correlated. This accepts an already-open socket only; hello identity is not authentication and the transport does not authorize, dispatch, spawn, or isolate packages.
 - **Implemented, software validated:** desktop and micro package selectors consume the mounted roster in `/api/state`; selection, Settings and foreground clearing update `UniversalAdapterHost` through same-origin endpoints. Both shells display host-provided views as inert text and preserve package selection across Settings/reload. The current candidate bootstrap mounts one passive RADIO catalogue, but it does not auto-select, start playback or grant hardware access.
 - **Implemented, focused software validated:** `PrivateUnixListener` binds only in an existing current-user-owned private directory, refuses occupied paths, sets socket permissions to `0600`, checks the OS-reported UID and PID against the host's expected child process, and removes only the socket inode it created. Linux uses peer credentials; macOS uses `getpeereid` and `LOCAL_PEERPID`. This establishes process/account provenance at connection time, not module identity or signature; no listener is connected to a process launcher yet.
-- **Still unimplemented:** timeout cancellation, domain dispatch, capability brokerage, signed/persistent installation state, process launch and isolation. Newly integrated passive RADIO and Codex-index source still requires exact-head validation.
+- **Still unimplemented:** timeout cancellation, domain dispatch, capability brokerage, signed/persistent installation state, process launch and isolation. The listener is not wired to a launcher, and exact-head CI remains pending.
+- Local host has only stable Rust; Rust 1.90 was not run. Linux aarch64 compilation also remains unverified because crates.io DNS failed while retrieving uncached `event-listener-strategy 0.5.4`.
 - `cargo fmt --all -- --check` — passed.
 - `cargo check --workspace` — passed.
 - `cargo clippy --workspace --all-targets -- -D warnings` — passed.
-- `cargo test --workspace --locked -- --test-threads=1` — passed before integrating the newer remote RADIO/index commits: 77 `pipboy`, 298 core, 3 SDK and 12 broker tests (390 total), doc tests passed. Exact merged-head rerun is pending.
-- `cargo test -p pipboy-core package_listener --locked -- --test-threads=1` — passed before integrating the newer remote RADIO/index commits: 4 listener security/lifecycle tests, including rejection of an unexpected peer PID.
-- `cargo check -p pipboy-core --target aarch64-unknown-linux-gnu --locked` — **not completed**. The target is installed, but a target dependency was not cached and crates.io DNS failed while downloading `event-listener-strategy 0.5.4`. Linux-specific compilation is therefore not verified.
+- `cargo test --workspace --locked -- --test-threads=1` — passed on merged candidate working tree: 77 `pipboy`, 301 core, 3 SDK and 12 broker tests (393 total), doc tests passed. Tests required local socket access; the sandboxed attempt failed three loopback fixtures with `EPERM`.
+- `cargo test -p pipboy-core package_listener --locked -- --test-threads=1` — four listener security/lifecycle tests passed before merge; merged full suite includes them.
+- `cargo fmt --all -- --check`, `cargo check --workspace --all-targets --locked`, and `cargo clippy --workspace --all-targets --locked -- -D warnings` — passed on merged candidate working tree.
+- RADIO UI and viewport tests, desktop viewport (1440×900 through 800×600) and micro viewport (480×320, 800×480 and 320×568) suites — passed. These browser fixtures check no autoplay/I/O and Settings restoration.
+- Pass-index, host-package, component-index, repository and security validators and their test suites — passed; security checked 282 tracked paths.
 - `cargo test -p pipboy-core package_transport --locked` — passed: 6 transport tests.
 - `cargo test --workspace --locked -- --test-threads=8` — passed on current controller-binding changes: 75 `pipboy`, 281 `pipboy-core` and 12 broker tests (368 total); doc tests passed (0 present). The first sandboxed attempt had three loopback permission failures; the same suite passed after granting local bind permission. The `pipboy` suite also passed five consecutive 8-thread runs at the prior checkpoint.
 - `python3 tools/validate_host_packages.py` — passed.
@@ -40,13 +43,13 @@ Updated: 2026-10-29
 
 - **Planned:** bind expected peer credentials to a real host launcher and verified binary identity, plus all remaining production gates.
 - **Implemented but unverified:** compiled-in passive RADIO station-catalogue bootstrap and shell selection. Interactive native adapter playback, signed installation and hardware UI acceptance are open.
-- **Software validated:** manifest registry, request codec/framing, deadline-bounded Unix stream session, private Unix socket path/permissions and expected-process OS peer credential checks, and desktop/micro shell lifecycle linkage.
+- **Software validated locally:** manifest registry, passive RADIO catalogue, request codec/framing, deadline-bounded Unix stream session, private Unix socket path/permissions and expected-process OS peer credential checks, and desktop/micro shell lifecycle linkage.
 - **Hardware validated:** none for adapter integration.
 - **Release candidate / production accepted:** neither. **Accepted roadmap gates: 0/12**; PROD-3 is a source candidate, not a hardware-accepted interactive package.
 
 ## Open defects and blockers
 
-- GitHub Actions `startup_failure` has zero-job evidence from earlier runs, but no diagnosis; exact-head CI remains pending.
+- GitHub Actions `startup_failure` has zero-job evidence from earlier runs, but no diagnosis; CI for this candidate remains pending.
 - One earlier full parallel run returned HTTP 422 in `manager_can_create_assign_dispatch_and_track_but_other_roles_cannot_reassign`; the failure did not reproduce in isolation, serial execution, five consecutive parallel suite runs or the latest full workspace run. The test now includes task-state context if it recurs.
 - One explicitly compiled, capability-free RADIO catalogue adapter is mounted by default, but not selected automatically. MAP, TV and COMMS remain inert references; signed installation and real audio-adapter integration remain open.
 - Local Mac/Pi hardware, media output and independently maintained package integration have not been accepted.

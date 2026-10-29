@@ -1,5 +1,11 @@
 # Rust-Boy | Validation evidence
 
+## RB-CX-00 local merged-branch validation — 2026-10-29
+
+After integrating the passive RADIO catalogue and Codex pass-index commits into `codex/package-adapter-protocol`, local stable-toolchain validation passed for the merged source plus `cargo fmt` cleanup in `builtin_packages.rs` and `lib.rs`. The Rust suite passed 77 `pipboy`, 301 `pipboy-core`, 3 SDK and 12 broker tests (393 total), plus doc tests. `cargo check --workspace --all-targets --locked`, `cargo clippy --workspace --all-targets --locked -- -D warnings`, and `cargo fmt --all -- --check` passed. Workspace tests needed local socket permissions; the first sandboxed run failed three existing loopback fixtures with `EPERM`.
+
+Pass-index, host-package, component-index, repository and security validators and their Python test suites passed. RADIO UI and compact viewport scenarios passed; desktop 1440×900 through 800×600 and micro 480×320, 800×480 and 320×568 scenarios passed. These browser fixtures verified Settings restoration and no autoplay or unintended I/O. Rust 1.90 is not installed locally. Exact-head GitHub Actions and physical Mac/Pi acceptance remain pending, so RB-CX-00 is not marked accepted. See [CI triage](CI_TRIAGE.md) and [production checkpoint](PROD_STATUS.md).
+
 ## Codex handoff projection — 2026-10-29 (source candidate)
 
 Added the read-only `tools/codex_next.py` CLI with JSON/plain-text projection of the single validated `next` pass and its prerequisites, declared files and checks. The deterministic negative fixtures in `tools/test_codex_next.py` and CI catalog registration are source changes; executing the new checks on the current head remains pending. This CLI neither runs Git nor claims a passing CI or device acceptance.

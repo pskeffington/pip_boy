@@ -32,12 +32,14 @@ impl RadioCatalogAdapter {
     fn view() -> AdapterReply {
         let stations: Vec<_> = curated_stations()
             .iter()
-            .map(|station| json!({
-                "id": station.id,
-                "name": station.name,
-                "category": station.category,
-                "genre": station.genre
-            }))
+            .map(|station| {
+                json!({
+                    "id": station.id,
+                    "name": station.name,
+                    "category": station.category,
+                    "genre": station.genre
+                })
+            })
             .collect();
         AdapterReply::View {
             state: json!({
@@ -109,9 +111,13 @@ mod tests {
         assert_eq!(view["mode"], "catalog_only");
         assert_eq!(view["player_state"], "not_started");
         assert_eq!(view["network_state"], "not_connected");
-        assert_eq!(view["stations"].as_array().unwrap().len(), curated_stations().len());
+        assert_eq!(
+            view["stations"].as_array().unwrap().len(),
+            curated_stations().len()
+        );
         assert!(view["stations"].as_array().unwrap().iter().all(|station| {
-            station["id"].is_string() && station["name"].is_string()
+            station["id"].is_string()
+                && station["name"].is_string()
                 && station.get("playlist_url").is_none()
         }));
         host.open_settings();

@@ -5,9 +5,9 @@
 //! Serial port and radio interfaces remain inactive.
 
 pub mod blueprint;
-pub mod builtin_packages;
 pub mod branding;
 pub mod buffer;
+pub mod builtin_packages;
 pub mod capability;
 pub mod catalog;
 pub mod device_simulator;
