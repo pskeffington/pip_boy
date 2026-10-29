@@ -15,8 +15,8 @@ Updated: 2026-10-29
 
 ## Gate state
 
-- **Latest completed source validation:** `ab98743b453a9c33f45b5694ac60d2e7cd8f39b1`; [run 40830133847](https://github.com/pskeffington/pip_boy/actions/runs/40830133847) passed all seven exact-head jobs, including both SDR feature matrices and native macOS/Windows. CI policy validation confirmed zero external GitHub Action `uses:` dependencies.
-- **Acceptance/index checkpoint:** `7e0a19b440e9a8531390e00fb165b2b8df06f3d9`; [run 40831001927](https://github.com/pskeffington/pip_boy/actions/runs/40831001927) passed all seven jobs, including stable MAP browser regressions, Rust 1.90, SDR features, native Mac MAP and Windows ConPTY. The current local RB-CX-05 CRS-validation increment has not yet been pushed or CI-validated.
+- **Latest completed source validation:** `0b760598f26814a8cbeb87a81a003cb90826f6d7`; [run 40831595041](https://github.com/pskeffington/pip_boy/actions/runs/40831595041) passed all seven exact-head jobs, including both SDR feature matrices and native macOS/Windows. Stable ran the native RustGIS import and desktop/mobile UI regressions. CI policy validation confirmed zero external GitHub Action `uses:` dependencies.
+- **Acceptance/index checkpoint:** `7e0a19b440e9a8531390e00fb165b2b8df06f3d9`; [run 40831001927](https://github.com/pskeffington/pip_boy/actions/runs/40831001927) passed all seven jobs, including stable MAP browser regressions, Rust 1.90, SDR features, native Mac MAP and Windows ConPTY.
 - **Current gate:** RB-CX-05 is next, limited to host-owned GIS integration/parity work. `rb_gis` remains an independent repository and will not be modified from this checkout. RB-CX-04 is accepted software-only; its remaining blocker is external package launch because no approved launcher or binary identity is bound to a package.
 - **Last accepted Codex pass:** RB-CX-04. **Last completed PROD roadmap gate:** PROD-0 remains **not accepted**; these software pass acceptances do not certify the broader production baseline or release.
 - **Branch:** draft [PR #71](https://github.com/pskeffington/pip_boy/pull/71), `codex/package-adapter-protocol`. First-party CI repair is included. `rust_radio/` remains an independent untracked nested repository and is untouched.
@@ -41,6 +41,7 @@ Updated: 2026-10-29
 ## RB-CX-05 host-owned MAP progress — implementation candidate
 
 - Native RustGIS imports now reject explicit projected/unknown dataset CRSs instead of silently treating coordinate values as WGS84 degrees. Negative tests cover EPSG:3857 and malformed CRS metadata; EPSG:4326 remains accepted.
+- Exact source head `0b760598f26814a8cbeb87a81a003cb90826f6d7` passed all seven required jobs in [run 40831595041](https://github.com/pskeffington/pip_boy/actions/runs/40831595041). RB-CX-05 remains an implementation candidate because independent renderer parity and field acceptance are still open.
 - Added an integration regression in `tools/test_map_layers.cjs`: a corrupt RustGIS import must retain the existing last-good county geometry, show the import error and clear the file input for retry. The test exercises the live host MAP event path; it does not claim independent renderer parity.
 - `node tools/test_rustgis_map_import.cjs`, `node tools/test_map_layers.cjs`, `node tools/test_map_zip.cjs` and `node tools/test_map_viewport.cjs` passed locally. Viewports passed at 480×320, 800×480 and 320×568 with no network. The local viewport server required loopback permission after the sandbox returned `EPERM`.
 - `rb_gis/` remains independent and untouched. Full GIS rendering parity, Mac operator acceptance, cached regional data recovery and physical Pi acceptance remain open.
