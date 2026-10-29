@@ -4,6 +4,7 @@ Updated: 2026-10-29
 
 ## Gate state
 
+- **Latest locally tested source revision:** `8edff4b948b24187786dcde61db74e212b26485d`; PR #71 check diagnostics for this exact revision returned no checks, statuses, or jobs. Local tests below are not CI evidence.
 - **Current gate:** PROD-3 / passive RADIO bootstrap — **local stable software and browser checks pass; pass remains open pending Rust 1.90 and exact-head CI evidence**. Desktop and micro shells now select only mounted packages via host APIs, show inert package view data, and clear foreground on shell navigation. A passive, compiled-in RADIO catalogue now populates one roster entry; interactive playback and device acceptance remain open.
 - **Last completed gate:** PROD-0 baseline repair — **not accepted**. Mainline working tree and local validation are understood; GitHub Actions evidence is currently unavailable for the inspected commit, and CI startup failure has not been diagnosed.
 - **Branch:** draft [PR #71](https://github.com/pskeffington/pip_boy/pull/71), `codex/package-adapter-protocol`. Previous UI/transport integration checkpoints are documented below; inspect the live PR HEAD before claiming a build or CI result. The passive RADIO pilot and new Codex indexing changes are still validation candidates.
