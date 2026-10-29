@@ -12,8 +12,8 @@ Rust-Boy is a modular pop-in socket: the shell owns **one package viewport**, co
 | RB-CX-01 | P0 | **Accepted** | Safe universal data-driven viewport, Settings and fault handling | 00 |
 | RB-CX-02 | P0 | **Accepted** | Backend capability intent, audio/device/transport arbitration | 00, 01 |
 | RB-CX-03 | P1 | Blocked | Real interactive `rust_radio` package, explicit Play/Stop | 01, 02 |
-| RB-CX-04 | P0 | **Next** | Unix socket ownership, authenticated peer provenance, bounded IPC | 00, 02 |
-| RB-CX-05 | P1 | Queued | `rb_gis` migration with roads, county/ZIP parity and rollback | 01, 02 |
+| RB-CX-04 | P0 | **Accepted** | Unix socket ownership, authenticated peer provenance, bounded IPC | 00, 02 |
+| RB-CX-05 | P1 | **Next** | `rb_gis` migration with roads, county/ZIP parity and rollback | 01, 02 |
 | RB-CX-06 | P1 | Blocked | `rust_tv` native display and exclusive audio handoff | 01, 02 |
 | RB-CX-07 | P1 | Blocked | `rusti_rc` session, explicit COMMS consent and offline recovery | 01, 02, 04 |
 | RB-CX-08 | P1 | Blocked | Signed package installation, revocation, OS isolation | 02, 04 |
