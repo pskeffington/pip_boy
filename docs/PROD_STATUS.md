@@ -2,23 +2,23 @@
 
 ## Codex instruction checkpoint — 2026-10-29
 
-The active goal is to establish first-party CI and complete the software-only **RB-CX-00** universal-host validation gate. PR #71 stays draft and RB-CX-00 stays `next` until a new exact-head run passes every required job. This pass does not require Pi field hardware; hardware acceptance remains a separate release requirement.
+**RB-CX-00 is accepted** on exact source head `c425994eb8a172c357c6920e29d2b4d38cdc5050` by [workflow run 40824698037](https://github.com/pskeffington/pip_boy/actions/runs/40824698037), all seven jobs successful. The first-party CI goal and universal-host validation gate are complete; **RB-CX-01 is now the next development pass**. PR #71 remains draft. RB-CX-00 is software-only; separate Pi/hardware acceptance remains a later release requirement.
 
 ## Workflow independence candidate
 
 The reviewed workflow uses zero external GitHub Action `uses:` imports and exact-SHA checkout. Run [40823597748](https://github.com/pskeffington/pip_boy/actions/runs/40823597748) on `63093badc2046a59689693f68896fa502dd95234` was **cancelled**, not source-failed: its manifest job passed and the newer PR-head run cancelled the remaining in-flight jobs. Run [40823687340](https://github.com/pskeffington/pip_boy/actions/runs/40823687340) on `5ad4327d34751cb723eae0ae7de7ef653e3702cf` admitted all seven jobs. Stable, Rust 1.90, both SDR feature suites, manifest validation and native Windows passed. Linux desktop/micro/Radio browser checks passed. macOS completed compile/tests, native smokes and PTY, then failed because the runner supplied Node 24.22.0; its later Mac-first MAP step was skipped. This identified a runner-version assumption, not a Rust or adapter compile failure.
 
-Commit `91753624bd39dfd9e7efccd85d5d1e33fe327891` pins official Node.js 22.23.4 by architecture-specific SHA-256 in `scripts/ci_bootstrap.sh`, routes stable/1.90 and native Rust setup through that repository-owned bootstrap, and adds an offline regression gate for zero Action imports, required matrices and pins. Rust, SDR, offline validator and policy-test results are recorded in `docs/VALIDATION.md`. The bootstrap download could not run locally because DNS access to `nodejs.org` is unavailable; hosted exact-head verification is required. External Rust toolchains, system packages and locked Cargo dependencies remain network dependencies.
+Commit `91753624bd39dfd9e7efccd85d5d1e33fe327891` pins official Node.js 22.23.4 by architecture-specific SHA-256 in `scripts/ci_bootstrap.sh`, routes stable/1.90 and native Rust setup through that repository-owned bootstrap, and adds an offline regression gate for zero Action imports, required matrices and pins. The exact-head hosted run verified the pinned Node binary on macOS and passed the complete matrix. External Rust toolchains, system packages and locked Cargo dependencies remain network dependencies; this is not a hermetic/offline build.
 
 
 Updated: 2026-10-29
 
 ## Gate state
 
-- **Latest completed hosted PR head:** `5ad4327d34751cb723eae0ae7de7ef653e3702cf`; run 40823687340 admitted jobs and failed only at the strict Node version check on macOS. **Current source commit:** `91753624bd39dfd9e7efccd85d5d1e33fe327891`; push and exact-head hosted verification are pending.
-- **Current gate:** RB-CX-00, still `next`/open. Stable, Rust 1.90, optional SDR, Linux browser and Windows hosted evidence passed on the prior head; native Mac Node bootstrap/MAP and a successful all-green exact-head run remain outstanding. The gate's `software_only` hardware classification does not waive any CI or desktop/mobile regression check.
-- **Last completed gate:** PROD-0 baseline repair — **not accepted**. Later Actions runs prove jobs are now admitted, but the exact current gate still fails the macOS Node check and does not have a fully green exact-head run.
-- **Branch:** draft [PR #71](https://github.com/pskeffington/pip_boy/pull/71), `codex/package-adapter-protocol`. Commit `91753624` repairs the Node 22 bootstrap and enforces CI policy; its hosted run is pending. `rust_radio/` remains an independent untracked nested repository and is untouched.
+- **Latest exact PR head:** `c425994eb8a172c357c6920e29d2b4d38cdc5050`; [run 40824698037](https://github.com/pskeffington/pip_boy/actions/runs/40824698037) completed successfully with all seven checks green.
+- **Current gate:** RB-CX-01 is `next`; RB-CX-00 is accepted with exact commit/run evidence in `catalog/codex_passes.json`. Its software-only acceptance does not waive desktop/mobile regression checks required by later passes.
+- **Last accepted Codex pass:** RB-CX-00. **Last completed PROD roadmap gate:** PROD-0 remains **not accepted**; accepting this software validation pass does not certify the broader production baseline or release.
+- **Branch:** draft [PR #71](https://github.com/pskeffington/pip_boy/pull/71), `codex/package-adapter-protocol`. First-party CI repair is included. `rust_radio/` remains an independent untracked nested repository and is untouched.
 - **Relevant pinned module revision:** `rust_radio` dependency revision `3d77d11da3a31fbc3144635da6d391a3febf38b7` from the workspace lock/config. The local `rust_radio/` directory is a separate untracked nested repository and was preserved untouched.
 
 ## Implementation and evidence
@@ -28,7 +28,7 @@ Updated: 2026-10-29
 - **Implemented, focused software validated:** `pipboy-core::package_transport::UnixAdapterSession` adds an absolute-deadline Unix stream handshake and serial request/response exchange; a peer's hello identity must match the expected package ID, and request IDs/package IDs are correlated. This accepts an already-open socket only; hello identity is not authentication and the transport does not authorize, dispatch, spawn, or isolate packages.
 - **Implemented, software validated:** desktop and micro package selectors consume the mounted roster in `/api/state`; selection, Settings and foreground clearing update `UniversalAdapterHost` through same-origin endpoints. Both shells display host-provided views as inert text and preserve package selection across Settings/reload. The current candidate bootstrap mounts one passive RADIO catalogue, but it does not auto-select, start playback or grant hardware access.
 - **Implemented, focused software validated:** `PrivateUnixListener` binds only in an existing current-user-owned private directory, refuses occupied paths, sets socket permissions to `0600`, checks the OS-reported UID and PID against the host's expected child process, and removes only the socket inode it created. Linux uses peer credentials; macOS uses `getpeereid` and `LOCAL_PEERPID`. This establishes process/account provenance at connection time, not module identity or signature; no listener is connected to a process launcher yet.
-- **Still unimplemented:** timeout cancellation, domain dispatch, capability brokerage, signed/persistent installation state, process launch and isolation. The listener is not wired to a launcher, and exact-head CI remains pending.
+- **Still unimplemented:** timeout cancellation, domain dispatch, capability brokerage, signed/persistent installation state, process launch and isolation. The listener is not wired to a launcher; these remain later package trust/security passes.
 - The listener module passed an isolated Rust 1.90 aarch64 Linux check. A full workspace Linux cross-check remains unverified because this Mac lacks `aarch64-linux-gnu-gcc` for the vendored D-Bus dependency.
 - `cargo fmt --all -- --check` — passed.
 - `cargo check --workspace` — passed.
@@ -53,6 +53,15 @@ Updated: 2026-10-29
 - `node tools/test_desktop_focus_ui.cjs`, `node tools/test_micro_ui.cjs`, JavaScript syntax checks, `tools/test_validate_host_packages.py`, `tools/validate_component_index.py`, and `tools/validate_repo.py` — passed.
 - GitHub combined status and commit workflow-run queries for `2c13594` returned no status entries/runs. The repository workflow file defines CI, but the actual startup-failure cause is not established by this result.
 
+## Accepted RB-CX-00 evidence — 2026-10-29
+
+- Exact PR head `c425994eb8a172c357c6920e29d2b4d38cdc5050`; run [40824698037](https://github.com/pskeffington/pip_boy/actions/runs/40824698037) completed `success`, with catalog, stable, Rust 1.90, Soapy SDR, SDRconnect, native macOS and native Windows all green. The PR check diagnostic endpoint reported those same seven checks as successful for that SHA.
+- Stable and Rust 1.90 each passed 393 locked workspace tests. Stable also passed formatting, warnings-denied Clippy, all desktop/micro/MAP/RADIO Chromium viewports and runtime smokes. Both SDR features passed compile, Clippy and tests without hardware capture/discovery.
+- macOS passed Rust compile/tests, native offline/PTY checks, the repository bootstrap's pinned Node v22.23.4 and Mac-first offline MAP acceptance (MAP Chromium 480×320, 800×480, 320×568; no network). Windows passed native build/tests, offline smokes and ConPTY recovery.
+- The RADIO viewport fixture permits only local `GET /api/radio`; opening/browsing does not issue Play or contact an external station. UI tests also passed the single foreground, no-autoplay and Settings restoration checks. No physical receiver or media output was used or claimed.
+- Local stable and Rust 1.90 each passed format, locked all-target check/test, and warnings-denied Clippy. Both SDR feature matrices passed locally. All offline catalog, security, role, Vault, pass/component/CI-policy, host-package, repository and smoke-roster validators/tests passed. Local Node download was blocked by DNS, while exact-head hosted Mac verified the binary.
+- Pass-index status is `RB-CX-00: accepted`, `RB-CX-01: next`. No production roadmap gate is accepted; release acceptance remains **0/12**.
+
 ## Release acceptance
 
 - **Planned:** bind expected peer credentials to a real host launcher and verified binary identity, plus all remaining production gates.
@@ -63,7 +72,7 @@ Updated: 2026-10-29
 
 ## Open defects and blockers
 
-- The latest admitted run `40823687340` failed on macOS because the runner provided Node `v24.22.0`, while the repository requires Node 22. The pinned v22.23.4 bootstrap is currently unverified in hosted CI; the runner's Node mismatch must remain a failing gate until repaired and retested.
+- The Node mismatch on run `40823687340` was repaired by the pinned official v22.23.4 bootstrap; exact-head run `40824698037` verified it and all matrix jobs passed. Earlier startup failures and cancellations remain historical CI events, not current blockers.
 - One earlier full parallel run returned HTTP 422 in `manager_can_create_assign_dispatch_and_track_but_other_roles_cannot_reassign`; the failure did not reproduce in isolation, serial execution, five consecutive parallel suite runs or the latest full workspace run. The test now includes task-state context if it recurs.
 - One explicitly compiled, capability-free RADIO catalogue adapter is mounted by default, but not selected automatically. MAP, TV and COMMS remain inert references; signed installation and real audio-adapter integration remain open.
 - Local Mac/Pi hardware, media output and independently maintained package integration have not been accepted.
@@ -71,23 +80,22 @@ Updated: 2026-10-29
 
 ## Codex development handoff
 
-`python3 tools/codex_next.py --json` is a read-only, validated handoff of RB-CX-00 with source paths, checks and outstanding dependencies. The new `validate_ci_policy.py` / `test_validate_ci_policy.py` guard the zero-`uses:` rule, exact-SHA checkout, stable/1.90, SDR/native matrices and pinned Node bootstrap. Static indexing does not advance RB-CX-00 or establish passing CI.
+`python3 tools/codex_next.py --json` is a read-only, validated handoff of the next eligible RB-CX-01 pass. The `validate_ci_policy.py` / `test_validate_ci_policy.py` guard the zero-`uses:` rule, exact-SHA checkout, stable/1.90, SDR/native matrices and pinned Node bootstrap. Index status is backed by the exact run recorded above.
 
 
-The [machine pass queue](../catalog/codex_passes.json) still names **RB-CX-00** as the only `next` pass. The current source indexes include the CI policy validator but retain `evidence: null`; acceptance requires a fully successful new exact-head run plus review of its Mac/Windows platform results. Historical zero-job startup failures remain documented below; runs 40823597748 and 40823687340 demonstrate subsequent job admission, with the latter exposing the macOS Node mismatch. See [Codex instructions](../AGENTS.md), [pass plan](CODEX_PASSES.md) and [index hierarchy](INDEXING.md).
+The [machine pass queue](../catalog/codex_passes.json) records **RB-CX-00 accepted** with exact source SHA and successful workflow URL, and names **RB-CX-01** as the only `next` pass. Historical startup failures, cancellation and the repaired macOS Node mismatch remain documented below; the latest exact run has all checks green. See [Codex instructions](../AGENTS.md), [pass plan](CODEX_PASSES.md) and [index hierarchy](INDEXING.md).
 
-### RB-CX-00 required verification before advancement
+### RB-CX-01 handoff requirements
 
-- Pass the new exact-head CI run, including checksum-verified Node 22 bootstrap and Mac-first MAP acceptance; rerun the indexed Python gates with CI policy enforcement.
-- Verify the passive RADIO adapter does not start audio, reach the network, open hardware or grant scopes during bootstrap or foreground switching.
-- Inspect the latest workflow admission and jobs; a zero-job `startup_failure` is a CI infrastructure blocker, not test acceptance.
-- Only advance to RB-CX-01 following a successful exact-head run and review. The current index status remains `next`; no production gate is accepted.
+- Implement and validate the bounded host-owned view model with safe text/input handling on desktop and micro.
+- Preserve one foreground, permanent Settings, failure recovery, accessibility and no document scrolling; package selection must never start playback, network or device activity.
+- Run negative/regression and desktop/micro/Radio viewport checks, then require a new successful exact-head matrix. Keep PR #71 draft.
 
 ## Next three implementation actions
 
-1. Finish offline checks for the pinned Node and first-party CI policy guard, commit the focused repair on this branch, and push without force.
-2. Wait for all jobs on the repaired exact PR head; diagnose and repair any remaining failure without changing acceptance coverage.
-3. Record exact run evidence; accept RB-CX-00 and advance RB-CX-01 only after required CI and review pass.
+1. Inspect RB-CX-01's declared renderer/SDK entrypoints and current package-view representation; design a bounded versioned schema.
+2. Implement desktop and micro safe rendering with host-owned lifecycle, Settings restoration and fault behavior, plus negative tests.
+3. Run offline/Rust/UI checks and exact-head CI; document evidence without merging or weakening gates.
 
 ## Release risks
 

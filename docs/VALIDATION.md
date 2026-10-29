@@ -1,8 +1,8 @@
 # Rust-Boy | Validation evidence
 
-## First-party CI and Node bootstrap repair — 2026-10-29 (hosted rerun pending)
+## First-party CI and Node bootstrap repair — 2026-10-29 (accepted)
 
-Removed `dtolnay/rust-toolchain@stable`, `actions/checkout@v4` and `actions/setup-node@v4` from the draft workflow and replaced them with first-party checkout/bootstrap commands. The repository bootstrap now pins official Node.js v22.23.4 and verifies architecture-specific SHA-256 values published in the [official Node.js release record](https://github.com/nodejs/nodejs.org/blob/main/apps/site/pages/en/blog/release/v22.23.4.md). The exact-head Actions run exposed macOS runner Node 24.22.0 and failed the strict Node 22 check; the pinned install is a repair candidate, not acceptance. Rust, SDR, UI and Windows results from that run are recorded once the run concludes below. This does not make Cargo dependencies, apt packages or Rust toolchain downloads offline.
+Removed `dtolnay/rust-toolchain@stable`, `actions/checkout@v4` and `actions/setup-node@v4` from the draft workflow and replaced them with first-party checkout/bootstrap commands. The repository bootstrap pins official Node.js v22.23.4 and verifies architecture-specific SHA-256 values published in the [official Node.js release record](https://github.com/nodejs/nodejs.org/blob/main/apps/site/pages/en/blog/release/v22.23.4.md). Exact-head run [40824698037](https://github.com/pskeffington/pip_boy/actions/runs/40824698037) verified the pinned Mac Node, Mac-first MAP and all other CI jobs on `c425994eb8a172c357c6920e29d2b4d38cdc5050`. This establishes first-party GitHub Action orchestration, not a fully offline dependency supply chain.
 
 
 ## Admitted CI and local validation — 2026-10-29
@@ -13,7 +13,13 @@ Run [40823597748](https://github.com/pskeffington/pip_boy/actions/runs/408235977
 
 On the current local repair working tree, stable and Rust 1.90 each passed `cargo fmt --all -- --check`, locked all-target workspace check, `cargo test --workspace --locked` (393 tests), and Clippy with `-D warnings`. The first sandboxed stable test attempt had three loopback `EPERM`s; the unchanged suite passed with local loopback permission. Both `pipboy/soapy-sdr` and `pipboy/sdrconnect` passed stable locked check, Clippy and workspace test suites. Offline pass-index, CI-policy, component-index, host-package, repository, catalog, roles, Vault, security and smoke-roster validators/tests passed. `bash -n scripts/ci_bootstrap.sh` and `git diff --check` passed. The local Node v22.23.4 bootstrap is not network-validated: this environment cannot resolve `nodejs.org`.
 
-Source commit `91753624bd39dfd9e7efccd85d5d1e33fe327891` pins Node v22.23.4 and its published architecture-specific digests, routes Rust bootstrap through the repository script, and adds a regression guard against external Action imports or dropped required matrices. It is not accepted until exact-head hosted CI passes, including the Mac Node bootstrap and Mac-first MAP step.
+Source commit `91753624bd39dfd9e7efccd85d5d1e33fe327891` pins Node v22.23.4 and its published architecture-specific digests, routes Rust bootstrap through the repository script, and adds a regression guard against external Action imports or dropped required matrices. Acceptance evidence is recorded below and in the pass index.
+
+## Accepted universal-host validation gate — 2026-10-29
+
+RB-CX-00 is accepted on exact source head `c425994eb8a172c357c6920e29d2b4d38cdc5050`; [run 40824698037](https://github.com/pskeffington/pip_boy/actions/runs/40824698037) completed successfully with all seven required jobs: catalog/source, Rust stable, Rust 1.90, Soapy SDR, SDRconnect, native macOS and native Windows. The exact-head diagnostics reported the same seven successful checks.
+
+The successful run confirmed macOS used official Node.js v22.23.4 and passed Mac-first MAP offline/viewport smoke, Linux Chromium desktop/micro/MAP/RADIO suites, and Windows offline smoke/ConPTY behavior. Stable and Rust 1.90 ran format, locked all-target check, 393 tests and warnings-denied Clippy; both SDR feature matrices ran locked check, Clippy and all 393 tests. Offline validators and regression suites are listed in the production checkpoint. RB-CX-00 has `hardware_gate: software_only`; this evidence does not certify the broader release roadmap or physical-hardware acceptance. RB-CX-01 is next.
 
 ## Earlier exact-head rerun — 2026-10-29
 

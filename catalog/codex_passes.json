@@ -15,7 +15,7 @@
       "id": "RB-CX-00",
       "title": "Validate baseline and passive RADIO bootstrap",
       "priority": "P0",
-      "status": "next",
+      "status": "accepted",
       "depends_on": [],
       "component_ids": [
         "quality-gates",
@@ -44,18 +44,20 @@
         "Record actual CI run and verify compiled RADIO catalogue selection causes no stream/device/background activity.",
         "Prove host Settings restoration and one-foreground behavior on desktop and micro."
       ],
-      "blockers": [
-        "Exact-head CI for the repaired first-party toolchain bootstrap has not passed yet."
-      ],
+      "blockers": [],
       "external_repositories": [],
       "hardware_gate": "software_only",
-      "evidence": null
+      "evidence": {
+        "commit_sha": "c425994eb8a172c357c6920e29d2b4d38cdc5050",
+        "ci_run_url": "https://github.com/pskeffington/pip_boy/actions/runs/40824698037",
+        "field_report": null
+      }
     },
     {
       "id": "RB-CX-01",
       "title": "Render bounded host-owned package UI safely",
       "priority": "P0",
-      "status": "queued",
+      "status": "next",
       "depends_on": [
         "RB-CX-00"
       ],

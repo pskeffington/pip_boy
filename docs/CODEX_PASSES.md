@@ -8,8 +8,8 @@ Rust-Boy is a modular pop-in socket: the shell owns **one package viewport**, co
 
 | Pass | Priority | Status | Focus | Prerequisites |
 | --- | --- | --- | --- | --- |
-| RB-CX-00 | P0 | **Next** | Exact-head build/CI baseline and passive Radio bootstrap verification | None |
-| RB-CX-01 | P0 | Queued | Safe universal data-driven viewport, Settings and fault handling | 00 |
+| RB-CX-00 | P0 | **Accepted** | Exact-head build/CI baseline and passive Radio bootstrap verification | None |
+| RB-CX-01 | P0 | **Next** | Safe universal data-driven viewport, Settings and fault handling | 00 |
 | RB-CX-02 | P0 | Queued | Backend capability intent, audio/device/transport arbitration | 00, 01 |
 | RB-CX-03 | P1 | Blocked | Real interactive `rust_radio` package, explicit Play/Stop | 01, 02 |
 | RB-CX-04 | P0 | Blocked | Unix socket ownership, authenticated peer provenance, bounded IPC | 00, 02 |
@@ -58,7 +58,7 @@ The existing [quality workflow](../.github/workflows/rust.yml) retains its Rust 
 
 ## CI dependency elimination checkpoint
 
-Commit `63093badc2046a59689693f68896fa502dd95234` removed external GitHub Action `uses:` calls from the draft workflow. Follow-up `5ad4327d34751cb723eae0ae7de7ef653e3702cf` admitted the full job matrix but exposed that the macOS runner provides Node 24.22.0. The current repair candidate routes Rust through `scripts/ci_bootstrap.sh`, pins official Node 22.23.4 with SHA-256 checks, and adds an offline policy regression gate. This is **first-party action orchestration, not a fully self-hosted or offline build**. Its hosted behavior remains unverified.
+Commit `63093badc2046a59689693f68896fa502dd95234` removed external GitHub Action `uses:` calls from the draft workflow. Run `40823687340` on `5ad4327d34751cb723eae0ae7de7ef653e3702cf` isolated a macOS Node 24.22.0 mismatch. The repair pinned official Node 22.23.4 with SHA-256 checks, routed Rust toolchain setup through `scripts/ci_bootstrap.sh`, and added an offline CI-policy regression gate. Exact-head run `40824698037` then passed all seven jobs on `c425994eb8a172c357c6920e29d2b4d38cdc5050`. This remains **first-party action orchestration, not a fully self-hosted or offline build**.
 
 Codex must inspect [run 40823597748](https://github.com/pskeffington/pip_boy/actions/runs/40823597748) and subsequent exact-head runs, confirm whether jobs actually start, evaluate the full stable/1.90/SDR/native matrix, and record failed commands and platform-specific defects. Do not reintroduce remote GitHub actions or mark a gate accepted based only on a running workflow. If checkout/toolchain provisioning fails, repair the first-party bootstrap while retaining all original validations.
 
@@ -73,8 +73,17 @@ Codex must inspect [run 40823597748](https://github.com/pskeffington/pip_boy/act
 5. **Evidence ledger:** for every command record `command`, `result` (`pass`, `fail`, `not_run` or `blocked`), exact commit SHA, platform, and reason or URL in `docs/PROD_STATUS.md` or `docs/VALIDATION.md`. CI requires an actual successful workflow run for that exact source revision; a zero-job run proves nothing about code quality.
 6. **Promotion:** keep status `next` until all RB-CX-00 acceptance requirements pass. After positive exact-head CI evidence and review, change RB-CX-00 to `accepted` with its commit and CI URL, set RB-CX-01 to `next` in the **same** index change, run the validators again, and checkpoint. Document any still-unmet Mac/Pi acceptance separately.
 
+### RB-CX-00 acceptance evidence — accepted
+
+- Exact source head: `c425994eb8a172c357c6920e29d2b4d38cdc5050`; exact pull-request workflow [40824698037](https://github.com/pskeffington/pip_boy/actions/runs/40824698037), all seven jobs successful.
+- Stable and Rust 1.90 passed locked compile/test; stable passed format, warnings-denied Clippy, CLI/runtime smokes and all Linux browser suites. Each Rust workspace suite reported 77 `pipboy`, 301 core, 3 SDK and 12 broker tests (393 total).
+- Both Soapy-SDR and SDRconnect check, Clippy and test jobs passed without receiver discovery or capture. Native macOS passed the pinned Node v22.23.4 checksum bootstrap, native test/smoke/PTy suite and Mac-first offline MAP checks. Native Windows passed build/tests, offline smokes and ConPTY restoration.
+- Desktop, micro and RADIO Chromium tests passed. Compact viewport fixtures verified no autoplay, network or device activity; Settings restoration and one foreground remained available. The Mac MAP viewport passed at 480×320, 800×480 and 320×568 without network access.
+- The seven check conclusions and relevant Mac, Linux and Windows job logs were reviewed. Offline CI-policy, pass-index, component-index, host-package, repository, catalog, role, Vault, security and smoke-roster validators passed locally; local Node download was blocked by environment DNS, but the hosted Mac job verified the pinned binary.
+- `hardware_gate` is `software_only`, so no field report is required for this pass. RB-CX-00 is accepted; RB-CX-01 is now next. The PR remains a draft; no merge or production release is claimed.
+
 **RB-CX-01 design boundary (do not implement before RB-CX-00 is accepted):** a generic, schema-validated view model with safe text and input events, no raw package HTML/scripts, one responsive canvas, and host-owned Settings. Before enabling media controls or other privileged intents, require independent host capability policy and explicit operator action.
 
 ## Exact next-pass instructions
 
-> Continue **RB-CX-00** on `codex/package-adapter-protocol`. Verify current HEAD and mainline divergence; build and test the passive RADIO catalogue with real Rust 1.90/stable; check that desktop/micro Settings and package selection do not start streams or devices; run relevant Chromium and offline index tests; investigate current-head Actions status rather than assuming old startup failures still occur; update the production checkpoint and pass-index evidence; checkpoint the existing draft PR without merging.
+> Continue **RB-CX-01** on `codex/package-adapter-protocol`. Implement the bounded, host-owned package view schema and safe desktop/micro rendering while preserving the single foreground, permanent Settings, fault isolation, input bounds and no-implicit-I/O rules. Keep adapter data as text, never executable HTML/script. Add focused negative/regression tests, run indexed viewport suites and exact-head CI, then update the production checkpoint and pass index. Keep PR #71 draft; do not merge or publish a production release.
