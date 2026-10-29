@@ -6,7 +6,7 @@ Updated: 2026-10-28
 
 - **Current gate:** PROD-2 / host UI integration — **in progress**; PROD-1 protocol precursor remains software validated.
 - **Last completed gate:** PROD-0 baseline repair — **not accepted**. Mainline working tree and local validation are understood; GitHub Actions evidence is currently unavailable for the inspected commit, and CI startup failure has not been diagnosed.
-- **Branch:** `codex/package-adapter-protocol`, based on the existing package protocol work. Protocol commits: `5749054` (request codec), `28fa747` (negotiation/correlation), `c15fbe3` (bounded stream framing), and `fac8a85` (checkpoint). Desktop/micro Settings and workspace changes are being validated on this branch.
+- **Branch:** `codex/package-adapter-protocol`; latest implementation commit `4800d3a` (single-view workspace and persistent Settings). Protocol commits: `5749054` (request codec), `28fa747` (negotiation/correlation), `c15fbe3` (bounded stream framing), and `fac8a85` (checkpoint).
 - **Relevant pinned module revision:** `rust_radio` dependency revision `3d77d11da3a31fbc3144635da6d391a3febf38b7` from the workspace lock/config. The local `rust_radio/` directory is a separate untracked nested repository and was preserved untouched.
 
 ## Implementation and evidence
@@ -33,7 +33,7 @@ Updated: 2026-10-28
 - **Implemented but unverified:** none recorded here.
 - **Software validated:** manifest registry precursor and this request codec.
 - **Hardware validated:** none for adapter integration.
-- **Release candidate / production accepted:** neither.
+- **Release candidate / production accepted:** neither. **Accepted roadmap gates: 0/12**; the HOST-UI-1 shell candidate has not passed controller-binding acceptance.
 
 ## Open defects and blockers
 
