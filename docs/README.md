@@ -6,7 +6,7 @@ Technical contracts, architecture decisions, research provenance and validation 
 
 ## Terminal module command integration
 
-[Terminal-to-module command surface](TERMINAL_MODULE_COMMANDS.md) defines the gated shared command catalog, selected-toolset TUI workflow, dispatcher authorization, and acceptance tests. This is an implementation contract, not a claim that modules can execute in the terminal.
+[Terminal-to-module command surface](TERMINAL_MODULE_COMMANDS.md) documents the initial `pipboy terminal` offline-only Workbench command bridge, plus the still-open shared dispatcher, TUI/GUI integration and module acceptance gates.
 
 ## Universal adapter SDK
 
