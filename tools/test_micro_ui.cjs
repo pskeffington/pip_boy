@@ -63,7 +63,10 @@ const fixture = {
 const context = vm.createContext({document, window, Element, console, Intl, Date,
   setTimeout:() => 1, clearTimeout() {}, setInterval() {},
   MutationObserver:class {observe() {}},
-  fetch:async url => {requests.push(url); return {ok:true, json:async () => fixture};}
+  fetch:async (url,options) => {
+    requests.push({url,method:options&&options.method||"GET",body:options&&options.body});
+    return {ok:true, json:async () => fixture};
+  }
 });
 vm.runInContext(fs.readFileSync(path.join(assets, "micro.js"), "utf8"), context);
 const run = code => vm.runInContext(code, context);
@@ -72,7 +75,7 @@ const buttons = () => content.querySelectorAll(".micro-pager button");
 const tiles = () => content.querySelectorAll(".tile");
 (async () => {
   await new Promise(setImmediate);
-  assert.deepEqual(requests, ["/api/state"], "Startup must only read local state");
+  assert.deepEqual(requests, [{url:"/api/state",method:"GET",body:undefined}], "Startup must only read local state");
   assert.equal(run("toastTimer"), null, "Startup toast should not obscure tools");
   run('setTab("role")');
   assert.equal(tiles().length, 4);
@@ -130,7 +133,15 @@ const tiles = () => content.querySelectorAll(".tile");
   const staged = run("pendingProfile");
   document.getElementById("role-next").click();
   assert.equal(run("pendingProfile"), staged, "Paging must not select a different role");
-  assert.deepEqual(requests, ["/api/state"], "Browsing must never apply profiles or run tools");
+  const settingsUpdates = requests.filter(item=>item.url==="/api/host/settings")
+    .map(item=>JSON.parse(item.body).settings_open);
+  assert.deepEqual(settingsUpdates,[true,false,true],
+    "Opening/closing host Settings must update Rust-owned foreground state");
+  assert.ok(requests.every(item=>item.url!=="/api/host/settings" || item.method==="POST"),
+    "Host surface changes must use explicit same-origin mutations");
+  assert.ok(requests.every(item=>item.url==="/api/state" ||
+    item.url==="/api/host/settings"&&item.method==="POST"),
+    "Browsing must never apply profiles or run tools");
   window.innerHeight = 480;
   events.get("resize")();
   assert.equal(roles.children.length, 4);

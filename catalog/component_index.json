@@ -92,7 +92,8 @@
       ],
       "docs": [
         "docs/DASHBOARD_UI.md",
-        "docs/MICRO_UI.md"
+        "docs/MICRO_UI.md",
+        "docs/HOST_PACKAGE_ROADMAP.md"
       ],
       "checks": [
         "tools/smoke_dashboard.py",

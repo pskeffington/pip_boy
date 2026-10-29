@@ -114,6 +114,7 @@ function chromeRun(bin,port,width,height,scenario) {
 }
 async function main() {
   const bin=findChrome();
+  let settingsOpen=false;
   const server=http.createServer((req,res)=>{
     const url=new URL(req.url,"http://127.0.0.1");
     const send=(status,body,type)=>{
@@ -121,6 +122,16 @@ async function main() {
         "Content-Security-Policy":"default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; frame-src 'self'"});
       res.end(body);
     };
+    if(req.method==="POST"&&req.url==="/api/host/settings"){
+      let body="";
+      req.on("data",chunk=>body+=chunk);
+      req.on("end",()=>{
+        try { settingsOpen=JSON.parse(body).settings_open===true; }
+        catch { return send(400,JSON.stringify({error:"Invalid fixture request"}),"application/json"); }
+        send(200,JSON.stringify({surface:settingsOpen?"settings":"empty",active_package_id:null}),"application/json");
+      });
+      return;
+    }
     if(req.method!=="GET")return send(405,"Denied","text/plain");
     if(url.pathname==="/host"){
       const w=Number(url.searchParams.get("w")),h=Number(url.searchParams.get("h"));

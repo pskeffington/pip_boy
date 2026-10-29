@@ -13,6 +13,7 @@ use crate::radio_playback::NativeRadioEngine;
 use crate::zip_index::ZipIndex;
 use pipboy_core::network_health;
 use pipboy_core::network_suite;
+use pipboy_core::package_socket::{ForegroundSelection, HostSurface};
 use pipboy_core::radio_directory::curated_stations;
 use pipboy_core::radio_presets::{MoveDirection, RadioPresetStore, RadioPresets};
 use pipboy_core::reclamation::{NewSite, SiteStatus, SiteStore};
@@ -63,6 +64,8 @@ static RADIO_ENGINE: LazyLock<Mutex<Option<NativeRadioEngine>>> =
 static RADIO_SDRCONNECT: LazyLock<Mutex<String>> =
     LazyLock::new(|| Mutex::new("127.0.0.1:5454".into()));
 static RADIO_OUTPUT: LazyLock<Mutex<String>> = LazyLock::new(|| Mutex::new("system".into()));
+static HOST_FOREGROUND: LazyLock<Mutex<ForegroundSelection>> =
+    LazyLock::new(|| Mutex::new(ForegroundSelection::default()));
 
 struct Request {
     method: String,
@@ -326,6 +329,7 @@ fn state(store: &WorkbenchStore) -> Result<Response, Response> {
         &json!({
             "app": "Rust-Boy",
             "mode": "local_dashboard",
+            "foreground": host_foreground_snapshot(),
             "active": active,
             "profiles": PRESETS,
             "camera_feeds": pipboy_core::public_cameras::PUBLIC_CAMERA_FEEDS,
@@ -342,6 +346,39 @@ fn state(store: &WorkbenchStore) -> Result<Response, Response> {
             "network": "loopback_only"
         }),
     ))
+}
+
+fn host_foreground_snapshot() -> Value {
+    let Ok(selection) = HOST_FOREGROUND.lock() else {
+        return json!({"surface": "unavailable", "active_package_id": null});
+    };
+    host_foreground_value(&selection)
+}
+
+fn host_foreground_value(selection: &ForegroundSelection) -> Value {
+    match selection.surface() {
+        HostSurface::Empty => json!({"surface": "empty", "active_package_id": null}),
+        HostSurface::Settings => json!({"surface": "settings", "active_package_id": null}),
+        HostSurface::Package(package_id) => {
+            json!({"surface": "package", "active_package_id": package_id})
+        }
+    }
+}
+
+fn set_host_settings(req: &Request) -> Result<Response, Response> {
+    let body = parse_json_body(req, &["settings_open"])?;
+    let settings_open = body["settings_open"]
+        .as_bool()
+        .ok_or_else(|| Response::error(422, "settings_open must be a boolean"))?;
+    let mut selection = HOST_FOREGROUND
+        .lock()
+        .map_err(|_| Response::error(500, "Host foreground state unavailable"))?;
+    if settings_open {
+        selection.open_settings();
+    } else {
+        selection.close_settings();
+    }
+    Ok(Response::json(200, &host_foreground_value(&selection)))
 }
 
 fn native_result(value: io::Result<String>) -> Response {
@@ -1204,6 +1241,7 @@ fn dispatch(req: &Request, store: &WorkbenchStore, port: u16) -> Response {
         ("POST", "/api/map/county-zips") => county_zips(req, store).unwrap_or_else(|error| error),
         ("GET", "/api/state") => state(store).unwrap_or_else(|error| error),
         ("GET", "/api/packages") => package_references(),
+        ("POST", "/api/host/settings") => set_host_settings(req).unwrap_or_else(|error| error),
         ("GET", "/api/radio") => radio_state(store),
         ("POST", "/api/radio") => radio_command(req, store).unwrap_or_else(|error| error),
         ("GET", "/api/reclamation") => reclamation_read(store, false).unwrap_or_else(|error| error),
@@ -2510,6 +2548,71 @@ mod tests {
             .headers
             .insert("host".into(), "external.invalid".into());
         assert_eq!(dispatch(&bad_host, &store, 8765).status, 403);
+    }
+
+    #[test]
+    fn host_settings_surface_is_owned_by_foreground_controller_and_same_origin() {
+        let temp = tempfile::tempdir().unwrap();
+        let store = WorkbenchStore::new(temp.path().join("private/workbench.json"));
+        let close = dispatch(
+            &request("POST", "/api/host/settings", json!({"settings_open":false})),
+            &store,
+            8765,
+        );
+        assert_eq!(close.status, 200);
+        let open = dispatch(
+            &request("POST", "/api/host/settings", json!({"settings_open":true})),
+            &store,
+            8765,
+        );
+        assert_eq!(open.status, 200);
+        let open: Value = serde_json::from_slice(&open.body).unwrap();
+        assert_eq!(open["surface"], "settings");
+        assert_eq!(open["active_package_id"], Value::Null);
+
+        let state = dispatch(&request("GET", "/api/state", Value::Null), &store, 8765);
+        let state: Value = serde_json::from_slice(&state.body).unwrap();
+        assert_eq!(state["foreground"]["surface"], "settings");
+
+        let close = dispatch(
+            &request("POST", "/api/host/settings", json!({"settings_open":false})),
+            &store,
+            8765,
+        );
+        let close: Value = serde_json::from_slice(&close.body).unwrap();
+        assert_eq!(close["surface"], "empty");
+
+        assert_eq!(
+            dispatch(
+                &request(
+                    "POST",
+                    "/api/host/settings",
+                    json!({"settings_open":"true"})
+                ),
+                &store,
+                8765,
+            )
+            .status,
+            422
+        );
+        assert_eq!(
+            dispatch(
+                &request(
+                    "POST",
+                    "/api/host/settings",
+                    json!({"settings_open":true,"active_package_id":"org.rustboy.radio"})
+                ),
+                &store,
+                8765,
+            )
+            .status,
+            400
+        );
+        let mut cross_origin = request("POST", "/api/host/settings", json!({"settings_open":true}));
+        cross_origin
+            .headers
+            .insert("origin".into(), "https://untrusted.invalid".into());
+        assert_eq!(dispatch(&cross_origin, &store, 8765).status, 403);
     }
 
     #[test]

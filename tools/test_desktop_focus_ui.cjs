@@ -80,8 +80,10 @@ assert.match(css,/\.copy-disclosure summary:focus-visible/,
 // Vault Command is a first-class role-independent page; authority is backend-gated.
 assert.match(html,/data-stage="command"[^>]*hidden/,
   "Command stage must be available but initially hidden in raw HTML");
-assert.match(js,/activeStage = snapshot.active.profile === "overseer" \? "command" : "modules";/,
-  "Overseer should land in the vault command center");
+assert.match(js,/activeStage = snapshot\.foreground\?\.surface === "settings"\s*\? "settings"\s*:\s*snapshot\.active\.profile === "overseer" \? "command" : "modules";/,
+  "Host Settings state must restore while Overseer still lands in the vault command center");
+assert.match(js,/api\("\/api\/host\/settings", \{ settings_open \}\)/,
+  "Desktop Settings must update the Rust-owned foreground controller");
 assert.match(js,/snapshot.active.slots.some\(slot => slot.tool === "mission-board"\)/,
   "Command authority label must reflect Rust-provided tool slots");
 assert.match(js,/window.RustBoyTasks.mount\(root, \{profiles: snapshot.profiles\}\)/,

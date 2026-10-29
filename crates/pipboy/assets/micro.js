@@ -164,6 +164,12 @@ function renderHeading() {
 
 function setTab(next) {
   if ((!pages.includes(next) && next !== "conf") || !snapshot) return;
+  const wasSettings = tab === "conf";
+  const entersSettings = next === "conf";
+  if (wasSettings !== entersSettings) {
+    void api("/api/host/settings", { settings_open: entersSettings }).catch(error =>
+      notify(`HOST SETTINGS ERROR: ${error.message}`, true));
+  }
   if (next === "conf" && tab !== "conf") settingsReturnTab = tab;
   tab = next;
   openedTool = null;
@@ -601,6 +607,10 @@ function render() {
 async function reload({silent = false} = {}) {
   try {
     snapshot = await api("/api/state");
+    if (snapshot.foreground?.surface === "settings" && tab !== "conf") {
+      settingsReturnTab = tab;
+      tab = "conf";
+    }
     if (openedTool && !["native-radio", "secure-messenger", "assigned-duties", "camera-grid", "location-settings"].includes(openedTool) && !hasTool(openedTool)) openedTool = null;
     focusedCamera = null;
     render();

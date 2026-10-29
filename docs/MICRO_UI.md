@@ -12,6 +12,8 @@ Desktop Map fills at least 95% of the workspace zone, hiding station/status bloc
 
 Every mini UI section and tool detail uses one 44px header: Back when needed, the current page title, one local indicator when space permits, Settings, time and Desktop. The separate Field Terminal branding row and duplicate Local badge are removed. This returns 28–50px of vertical content space, depending on viewport size. Back, Settings and Desktop retain 44px touch targets; long page titles truncate within the available width. Profile selection remains in Settings.
 
+Entering or leaving Settings updates the same Rust-owned foreground controller used by the desktop, and `/api/state` restores the Settings surface after reload. This integration covers the host Settings state only; the other handheld tabs are still local navigation, and package selection remains unavailable without a host-approved installed roster.
+
 The production Chromium probe checks the shared header height, title and control bounds, and verifies that content starts immediately below it on Status, role tools, Data, Map, Radio and Settings, including a tool-detail Back action. It covers 480×320, 800×480 and narrow portrait layouts.
 
 ## Universal sections

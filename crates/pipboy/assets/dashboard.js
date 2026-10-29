@@ -86,6 +86,9 @@ function activateStage(stage) {
   if (stage === "palette" && snapshot?.active.profile !== "custom") stage = "settings";
   if (!["command", "modules", "viewport", "messages", "settings", "palette"].includes(stage)) return;
   const previous = activeStage;
+  const wasSettings = previous === "settings" || previous === "palette";
+  const entersSettings = stage === "settings" || stage === "palette";
+  if (wasSettings !== entersSettings) syncHostSettings(entersSettings);
   if (stage === "settings" && previous !== "settings" && previous !== "palette") {
     settingsReturnStage = previous;
     settingsReturnPane = activePane;
@@ -113,6 +116,10 @@ function activateStage(stage) {
   if (stage === "messages" && !desktopMessenger && window.RustBoyMessenger) {
     desktopMessenger = window.RustBoyMessenger.mount(byId("messenger-dock"));
   }
+}
+function syncHostSettings(settings_open) {
+  void api("/api/host/settings", { settings_open }).catch(error =>
+    notify(`Host Settings state could not be saved: ${error.message}`, true));
 }
 function returnFromSettings() {
   const stage = ["command", "modules", "viewport", "messages"].includes(settingsReturnStage)
@@ -675,7 +682,9 @@ async function reload({silent = false} = {}) {
   try {
     snapshot = await api("/api/state");
     if (!initialWorkspaceLoaded) {
-      activeStage = snapshot.active.profile === "overseer" ? "command" : "modules";
+      activeStage = snapshot.foreground?.surface === "settings"
+        ? "settings"
+        : snapshot.active.profile === "overseer" ? "command" : "modules";
       initialWorkspaceLoaded = true;
     }
     previewId = snapshot.active.profile;

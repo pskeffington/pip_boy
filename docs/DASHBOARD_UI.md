@@ -14,7 +14,9 @@ Run `node tools/test_desktop_focus_ui.cjs`, `node tools/test_desktop_viewport.cj
 
 ## Compact desktop focus layout — 2026-10-26
 
-The shared desktop workspace retains **COMMAND / MODULES / VIEWPORT / MESSAGES / SETTINGS** navigation for every role; station/profile changes happen only in **SETTINGS**. The desktop has one workspace plus an inspector on wide screens, or a two-way WORKSPACE / INSPECTOR switch on narrower windows. Station selection, six-item pages (two on short touch screens), the Custom tool editor, Reclamation Scout MAP/SITES/DUTIES, camera views and the `/micro` UI are preserved.
+The shared desktop workspace retains **COMMAND / MODULES / VIEWPORT / MESSAGES / SETTINGS** navigation for every role; station/profile changes happen only in **SETTINGS**. The workspace is one full-width view; selecting a tool opens full-screen details with a return action. Station selection, six-item pages (two on short touch screens), the Custom tool editor, Reclamation Scout MAP/SITES/DUTIES, camera views and the `/micro` UI are preserved.
+
+Opening or closing Settings updates the Rust-owned `ForegroundSelection` through same-origin `POST /api/host/settings`; `/api/state` reports its current surface so reload restores Settings when that host surface is active. The endpoint accepts only a boolean Settings transition. It cannot select a package or make a reference manifest installed; no approved package roster exists yet. Other desktop stage/pane navigation remains local to the browser.
 
 Visible copy is now intentionally minimal: compact tool buttons with name and meaningful status, a three-value **Station / Tools / Access** band, and concise inspector and Settings labels. Full Rust-authored station/tool descriptions remain available as hover tooltips or inspector **About this tool** disclosure. **Safety & access** is also expandable. Optional guidance is closed by default; no permissions or information are removed.
 

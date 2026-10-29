@@ -82,9 +82,12 @@ function fixturePage() {
   const mock = '<script>window.__fixtureRequests=[];' +
     'window.fetch=function(url,opts){' +
     'const method=opts&&opts.method||"GET";' +
-    'window.__fixtureRequests.push({url:String(url),method});' +
+    'const payload=method==="POST"?JSON.parse(opts.body||"{}"):{};' +
+    'window.__fixtureRequests.push({url:String(url),method,settings_open:payload.settings_open});' +
     'if(url==="/api/state"&&method==="GET")return Promise.resolve({' +
     'ok:true,json:()=>Promise.resolve(' + JSON.stringify(state) + ')});' +
+    'if(url==="/api/host/settings"&&method==="POST")return Promise.resolve({' +
+    'ok:true,json:()=>Promise.resolve({surface:payload.settings_open?"settings":"empty",active_package_id:null})});' +
     'if(url==="/api/tasks"&&method==="GET")return Promise.resolve({' +
     'ok:true,json:()=>Promise.resolve({board:{tasks:[]},manager:false,role:"head-engineer"})});' +
     'if(url==="/api/radio"&&method==="GET")return Promise.resolve({' +
@@ -161,6 +164,7 @@ function fixturePage() {
     'document.getElementById("settings-return").click();',
     'report.radioRestoredAfterSettings=!radio.hidden&&radio.children.length>0&&',
     'document.getElementById("extension-content").hidden;',
+    'report.settingsSurfaceUpdates=window.__fixtureRequests.filter(x=>x.url==="/api/host/settings").map(x=>x.settings_open);',
     'report.radioRequests=[...window.__fixtureRequests];',
     'const mainRect=main.getBoundingClientRect();',
     'const radioRect=radio.getBoundingClientRect();',
@@ -262,10 +266,13 @@ function check(data,width,height) {
     "VIEWPORT → RADIO must open the native radio control surface explicitly");
   assert.ok(data.settingsOpenedFromRadio && data.radioRestoredAfterSettings,
     "Settings must return to the previously selected RADIO viewport");
+  assert.deepEqual(data.settingsSurfaceUpdates.slice(-2),[true,false],
+    "Entering and leaving Settings from Radio must update Rust's foreground controller");
   assert.ok(data.radioRequests.some(x=>x.url==="/api/radio"&&x.method==="GET"),
     "Opening native radio must read local status");
-  assert.ok(data.radioRequests.every(x=>x.method==="GET"),
-    "Radio browsing must never open audio or mutate local preferences");
+  assert.ok(data.radioRequests.every(x=>x.method==="GET" ||
+    x.url==="/api/host/settings"&&x.method==="POST"),
+    "Radio browsing only reads status and updates the host Settings surface");
   assert.ok(data.radioClosedAfterClick,
     "Exiting native radio should unmount the UI and stop status polling");
   assert.ok(data.radioWithinMain,
@@ -276,7 +283,8 @@ function check(data,width,height) {
     "Selecting Messages must mount the local Messenger component");
   assert.ok(data.afterRequests.some(x=>x.url==="/api/messages"&&x.method==="GET"),
     "Selecting Messages should read local journal state");
-  assert.ok(data.afterRequests.every(x=>x.method==="GET"),
+  assert.ok(data.afterRequests.every(x=>x.method==="GET" ||
+    x.url==="/api/host/settings"&&x.method==="POST"),
     "Switching pages must not send messages or network probes");
   assert.ok(data.settingsAfterClick,"Settings page must open manually");
   assert.ok(data.commandOpened && data.commandHasMount && data.commandHasDutyBoard,
@@ -287,7 +295,8 @@ function check(data,width,height) {
     "Task creation must remain unavailable without Task Control");
   assert.ok(data.radioRequestsAfterClose.some(x=>x.url==="/api/tasks"&&x.method==="GET"),
     "Opening Command must read the local task queue");
-  assert.ok(data.radioRequestsAfterClose.every(x=>x.method==="GET"),
+  assert.ok(data.radioRequestsAfterClose.every(x=>x.method==="GET" ||
+    x.url==="/api/host/settings"&&x.method==="POST"),
     "Opening Command and Radio must not issue assignments or send audio");
   assert.equal(data.stationHeightsInSettings.length,6,
     "Station template paging must remain available in Settings");
