@@ -200,7 +200,7 @@
       "entrypoints": [
         "crates/pipboy-core/src/package_transport.rs",
         "crates/pipboy-core/src/package_socket.rs",
-    "crates/pipboy-core/src/package_listener.rs",
+        "crates/pipboy-core/src/package_listener.rs",
         "crates/rust-boy-broker/src/main.rs"
       ],
       "docs": [
@@ -219,7 +219,7 @@
         "Do not autoload processes or trust an adapter hello claim."
       ],
       "blockers": [
-        "Unix stream precursor has no secure listener or authenticated peer."
+        "No approved launcher or binary identity is bound to a package; external package execution remains unavailable."
       ],
       "external_repositories": [],
       "hardware_gate": "software_only",

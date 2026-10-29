@@ -8,7 +8,8 @@ import unittest
 from pathlib import Path
 
 from validate_host_packages import (
-    ROOT, check_adapter_contract, check_manifest, check_builtin_radio_manifest, validate,
+    ROOT, check_adapter_contract, check_manifest, check_builtin_radio_manifest,
+    check_socket_admission, validate,
 )
 
 
@@ -24,6 +25,34 @@ class SocketCatalogTests(unittest.TestCase):
 
     def test_four_reference_fixtures_validate(self):
         self.assertEqual(validate(), 4)
+
+    def test_socket_sessions_require_verified_bounded_admission(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            listener = root / "crates/pipboy-core/src/package_listener.rs"
+            transport = root / "crates/pipboy-core/src/package_transport.rs"
+            listener.parent.mkdir(parents=True)
+            listener.write_text(
+                (ROOT / "crates/pipboy-core/src/package_listener.rs").read_text(
+                    encoding="utf-8"
+                ),
+                encoding="utf-8",
+            )
+            transport.write_text(
+                (ROOT / "crates/pipboy-core/src/package_transport.rs").read_text(
+                    encoding="utf-8"
+                ),
+                encoding="utf-8",
+            )
+            check_socket_admission(root)
+            transport.write_text(
+                transport.read_text(encoding="utf-8").replace(
+                    "    fn from_stream(", "    pub fn from_stream(", 1
+                ),
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(ValueError, "verified peer provenance"):
+                check_socket_admission(root)
 
     def test_package_view_contract_drift_is_rejected(self):
         with tempfile.TemporaryDirectory() as temporary:

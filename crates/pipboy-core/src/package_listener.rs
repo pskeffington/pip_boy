@@ -10,6 +10,7 @@ use std::io;
 use std::os::unix::fs::{FileTypeExt, MetadataExt, PermissionsExt};
 use std::os::unix::net::{UnixListener, UnixStream};
 use std::path::{Path, PathBuf};
+use std::time::{Duration, Instant};
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct AdapterPeerCredentials {
@@ -17,6 +18,24 @@ pub struct AdapterPeerCredentials {
     pub pid: u32,
     pub uid: u32,
     pub gid: u32,
+}
+
+/// A Unix stream admitted by this listener after checking OS-reported peer
+/// credentials against the host's expected process. Its fields are private so
+/// callers cannot forge admission by constructing a token from a raw stream.
+pub struct VerifiedUnixStream {
+    stream: UnixStream,
+    credentials: AdapterPeerCredentials,
+}
+
+impl VerifiedUnixStream {
+    pub(crate) fn into_stream(self) -> UnixStream {
+        self.stream
+    }
+
+    pub fn credentials(&self) -> AdapterPeerCredentials {
+        self.credentials
+    }
 }
 
 /// A socket bound inside an existing, current-user-only runtime directory.
@@ -92,28 +111,56 @@ impl PrivateUnixListener {
         &self.path
     }
 
-    /// Accept only the expected host-launched child process. The OS-reported
-    /// PID and UID bind the socket peer to that process at connection time;
-    /// callers must still verify the installed binary and its permissions.
+    /// Accept the expected host-launched child within a bounded interval. An
+    /// unrelated same-user connection is dropped and cannot preempt the
+    /// expected peer. OS-reported PID and UID bind the stream to that process
+    /// at connection time; callers must still verify its approved binary.
     pub fn accept_expected_process(
         &self,
         expected_pid: u32,
-    ) -> io::Result<(UnixStream, AdapterPeerCredentials)> {
-        if expected_pid == 0 {
+        timeout: Duration,
+    ) -> io::Result<VerifiedUnixStream> {
+        if expected_pid == 0 || timeout.is_zero() {
             return Err(io::Error::new(
                 io::ErrorKind::InvalidInput,
-                "expected adapter PID must be nonzero",
+                "expected adapter PID and timeout must be nonzero",
             ));
         }
-        let (stream, _) = self.listener.accept()?;
-        let credentials = peer_credentials(&stream)?;
-        if credentials.uid != current_uid() || credentials.pid != expected_pid {
-            return Err(io::Error::new(
-                io::ErrorKind::PermissionDenied,
-                "adapter peer does not match the expected process and operating-system user",
-            ));
+        let deadline = Instant::now().checked_add(timeout).ok_or_else(|| {
+            io::Error::new(io::ErrorKind::InvalidInput, "adapter timeout is too large")
+        })?;
+        self.listener.set_nonblocking(true)?;
+        loop {
+            match self.listener.accept() {
+                Ok((stream, _)) => {
+                    let credentials = peer_credentials(&stream)?;
+                    if credentials.uid == current_uid() && credentials.pid == expected_pid {
+                        return Ok(VerifiedUnixStream {
+                            stream,
+                            credentials,
+                        });
+                    }
+                    // Drop unrelated peers and continue waiting within the
+                    // same absolute deadline. Never trust their hello claim.
+                }
+                Err(error) if error.kind() == io::ErrorKind::WouldBlock => {}
+                Err(error) if error.kind() == io::ErrorKind::Interrupted => continue,
+                Err(error) => return Err(error),
+            }
+            let Some(remaining) = deadline.checked_duration_since(Instant::now()) else {
+                return Err(io::Error::new(
+                    io::ErrorKind::TimedOut,
+                    "adapter peer did not connect before the deadline",
+                ));
+            };
+            if remaining.is_zero() {
+                return Err(io::Error::new(
+                    io::ErrorKind::TimedOut,
+                    "adapter peer did not connect before the deadline",
+                ));
+            }
+            std::thread::sleep(remaining.min(Duration::from_millis(1)));
         }
-        Ok((stream, credentials))
     }
 }
 
@@ -226,9 +273,10 @@ mod tests {
 
         let path = listener.socket_path().to_owned();
         let peer = thread::spawn(move || UnixStream::connect(path).unwrap());
-        let (_stream, credentials) = listener
-            .accept_expected_process(std::process::id())
+        let verified = listener
+            .accept_expected_process(std::process::id(), Duration::from_secs(1))
             .unwrap();
+        let credentials = verified.credentials();
         assert_eq!(credentials.uid, current_uid());
         assert_eq!(credentials.pid, std::process::id());
         drop(peer.join().unwrap());
@@ -247,13 +295,37 @@ mod tests {
         let expected_pid = std::process::id().wrapping_add(1);
         assert_eq!(
             listener
-                .accept_expected_process(expected_pid)
+                .accept_expected_process(expected_pid, Duration::from_secs(1))
                 .err()
                 .unwrap()
                 .kind(),
-            io::ErrorKind::PermissionDenied
+            io::ErrorKind::TimedOut
         );
         drop(peer.join().unwrap());
+    }
+
+    #[test]
+    fn expected_peer_timeout_is_bounded_and_invalid_timeout_is_rejected() {
+        let dir = private_dir();
+        let listener = PrivateUnixListener::bind(dir.path(), "radio.sock").unwrap();
+        assert_eq!(
+            listener
+                .accept_expected_process(std::process::id(), Duration::ZERO)
+                .err()
+                .unwrap()
+                .kind(),
+            io::ErrorKind::InvalidInput
+        );
+        let start = Instant::now();
+        assert_eq!(
+            listener
+                .accept_expected_process(std::process::id(), Duration::from_millis(20))
+                .err()
+                .unwrap()
+                .kind(),
+            io::ErrorKind::TimedOut
+        );
+        assert!(start.elapsed() < Duration::from_secs(1));
     }
 
     #[test]

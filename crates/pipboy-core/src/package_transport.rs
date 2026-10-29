@@ -3,6 +3,7 @@
 //! The package ID remains an unauthenticated peer claim. This module provides
 //! framing and correlation only; it does not authorize, launch, or isolate code.
 
+use crate::package_listener::VerifiedUnixStream;
 use crate::package_socket::FrameError;
 use rust_boy_adapter_sdk::{
     AdapterEnvelope, AdapterError, AdapterHello, AdapterReplyEnvelope, ADAPTER_PROTOCOL,
@@ -57,9 +58,27 @@ pub struct UnixAdapterSession {
 }
 
 impl UnixAdapterSession {
+    /// Creates a session only from a peer admitted by `PrivateUnixListener`.
+    /// The package ID hello remains a claim; process provenance comes from
+    /// the operating system credentials captured during listener admission.
+    pub fn from_verified_peer(
+        stream: VerifiedUnixStream,
+        expected_package_id: &str,
+        supported_protocols: &[u32],
+        timeout: Duration,
+    ) -> Result<Self, TransportError> {
+        Self::from_stream(
+            stream.into_stream(),
+            expected_package_id,
+            supported_protocols,
+            timeout,
+        )
+    }
+
     /// Accepts an already-open stream after a bounded SDK hello. The hello's
-    /// package ID is a claim and is not cryptographic peer authentication.
-    pub fn from_stream(
+    /// package ID is a claim and is not peer authentication. This constructor
+    /// is private so production callers must use `from_verified_peer`.
+    fn from_stream(
         stream: UnixStream,
         expected_package_id: &str,
         supported_protocols: &[u32],
@@ -272,6 +291,7 @@ fn deadline_after(timeout: Duration) -> Result<Instant, TransportError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::package_listener::PrivateUnixListener;
     use rust_boy_adapter_sdk::{AdapterCommand, AdapterReply, Viewport};
     use std::os::unix::net::UnixStream;
     use std::thread;
@@ -387,6 +407,63 @@ mod tests {
     }
 
     #[test]
+    fn trickled_hello_cannot_extend_absolute_deadline() {
+        let (host, mut adapter) = UnixStream::pair().unwrap();
+        let peer = thread::spawn(move || {
+            for byte in [0_u8, 0, 0, 10] {
+                if adapter.write_all(&[byte]).is_err() {
+                    break;
+                }
+                thread::sleep(Duration::from_millis(40));
+            }
+        });
+        let start = Instant::now();
+        let result =
+            UnixAdapterSession::from_stream(host, PACKAGE, &[1], Duration::from_millis(60));
+        assert!(matches!(
+            result,
+            Err(TransportError::Frame(FrameError::Io(ref error)))
+                if matches!(error.kind(), io::ErrorKind::WouldBlock | io::ErrorKind::TimedOut)
+        ));
+        assert!(start.elapsed() < Duration::from_millis(250));
+        peer.join().unwrap();
+    }
+
+    #[test]
+    fn duplicate_and_reversed_request_ids_never_reach_peer() {
+        let (host, mut adapter) = UnixStream::pair().unwrap();
+        let peer = thread::spawn(move || {
+            send_frame(&mut adapter, &hello_frame(PACKAGE));
+            let first = read_sdk_frame(&mut adapter).unwrap().unwrap();
+            let request = AdapterEnvelope::decode(&first).unwrap();
+            assert_eq!(request.request_id, 2);
+            let reply = AdapterReplyEnvelope {
+                protocol: 1,
+                package_id: request.package_id,
+                request_id: request.request_id,
+                body: AdapterReply::Ack,
+            }
+            .encode()
+            .unwrap();
+            send_frame(&mut adapter, &reply);
+            let mut extra = [0_u8; 1];
+            assert_eq!(adapter.read(&mut extra).unwrap(), 0);
+        });
+        let mut session = UnixAdapterSession::from_stream(host, PACKAGE, &[1], TIMEOUT).unwrap();
+        session.exchange(&request(2)).unwrap();
+        assert!(matches!(
+            session.exchange(&request(2)),
+            Err(TransportError::InvalidRequestId)
+        ));
+        assert!(matches!(
+            session.exchange(&request(1)),
+            Err(TransportError::InvalidRequestId)
+        ));
+        drop(session);
+        peer.join().unwrap();
+    }
+
+    #[test]
     fn oversized_sdk_frame_is_rejected_from_header_alone() {
         let header = ((MAX_WIRE_BYTES as u32) + 1).to_be_bytes();
         let error = read_sdk_frame(&mut &header[..]).err().unwrap();
@@ -396,5 +473,40 @@ mod tests {
                 "adapter frame exceeds SDK wire limit"
             ))
         ));
+    }
+
+    #[test]
+    fn public_session_path_requires_listener_verified_peer_credentials() {
+        let directory = tempfile::tempdir().unwrap();
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::set_permissions(directory.path(), std::fs::Permissions::from_mode(0o700)).unwrap();
+        let listener = PrivateUnixListener::bind(directory.path(), "adapter.sock").unwrap();
+        let socket_path = listener.socket_path().to_owned();
+        let peer = thread::spawn(move || {
+            let mut adapter = UnixStream::connect(socket_path).unwrap();
+            send_frame(&mut adapter, &hello_frame(PACKAGE));
+            let frame = read_sdk_frame(&mut adapter).unwrap().unwrap();
+            let request = AdapterEnvelope::decode(&frame).unwrap();
+            let reply = AdapterReplyEnvelope {
+                protocol: 1,
+                package_id: request.package_id,
+                request_id: request.request_id,
+                body: AdapterReply::Ack,
+            }
+            .encode()
+            .unwrap();
+            send_frame(&mut adapter, &reply);
+        });
+        let verified = listener
+            .accept_expected_process(std::process::id(), TIMEOUT)
+            .unwrap();
+        assert_eq!(verified.credentials().pid, std::process::id());
+        let mut session =
+            UnixAdapterSession::from_verified_peer(verified, PACKAGE, &[1], TIMEOUT).unwrap();
+        assert_eq!(
+            session.exchange(&request(1)).unwrap().body,
+            AdapterReply::Ack
+        );
+        peer.join().unwrap();
     }
 }

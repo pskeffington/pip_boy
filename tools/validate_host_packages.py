@@ -218,6 +218,27 @@ def check_builtin_radio(root=ROOT):
             "dashboard does not mount the compile-time roster")
 
 
+def check_socket_admission(root=ROOT):
+    """Guard that production sessions cannot be built from unverified streams."""
+    listener = (root / "crates/pipboy-core/src/package_listener.rs").read_text(
+        encoding="utf-8"
+    )
+    transport = (root / "crates/pipboy-core/src/package_transport.rs").read_text(
+        encoding="utf-8"
+    )
+    require("pub struct VerifiedUnixStream" in listener
+            and "pub fn accept_expected_process(" in listener
+            and "timeout: Duration" in listener
+            and "credentials.uid == current_uid() && credentials.pid == expected_pid"
+            in listener,
+            "Unix listener must provide bounded OS-credential-verified admission")
+    require("pub fn from_verified_peer(" in transport
+            and "fn from_stream(" in transport
+            and "pub fn from_stream(" not in transport
+            and "VerifiedUnixStream" in transport,
+            "adapter sessions must require listener-verified peer provenance")
+
+
 def validate(root=ROOT):
     folder = root / "catalog/host_packages"
     require(folder.is_dir() and not folder.is_symlink(), "missing or linked fixtures directory")
@@ -244,6 +265,7 @@ def validate(root=ROOT):
     check_adapter_sdk(root)
     check_adapter_contract(root)
     check_builtin_radio(root)
+    check_socket_admission(root)
     print(f"PASS: {len(seen)} inert manifests, a read-only compile-time radio catalogue and SDK boundary")
     return len(seen)
 
