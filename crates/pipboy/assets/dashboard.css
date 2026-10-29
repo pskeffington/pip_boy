@@ -49,6 +49,10 @@ p { line-height: 1.5; }
 .brand-copy > span { display: block; margin-top: 4px; color: var(--lime-dark); font: 10px var(--mono); letter-spacing: .16em; }
 .version, .dim { color: var(--muted); }
 .masthead-right { display: flex; align-items: center; gap: 18px; }
+.host-package-select { min-height:38px; width:140px; max-width:18vw; color:var(--text); background:#102619; border:1px solid var(--border-lit); border-radius:7px; font:700 10px var(--mono); }
+.host-package-select:disabled { opacity:.55; cursor:not-allowed; }
+.host-adapter-surface { min-height:220px; padding:18px; border:1px solid var(--border); border-radius:var(--radius); background:var(--surface); }
+.host-adapter-surface pre { max-height:55vh; overflow:auto; padding:14px; border:1px solid var(--border); border-radius:8px; background:#080d0c; color:var(--lime); white-space:pre-wrap; overflow-wrap:anywhere; font:12px/1.5 var(--mono); }
 .status-chip, .edition, .eyebrow, .tiny-label, .active-pill, .section-counter, .role-index, .footer-shortcuts, .statusbar, .mini-button, .role-panel-bottom, .module-category {
   font-family: var(--mono);
 }
@@ -200,6 +204,7 @@ dialog::backdrop { background:#000c; backdrop-filter:blur(4px); }
   .statusbar { padding:8px; }
 }
 @media (max-width:600px) {
+  .host-package-select { width:100px; max-width:26vw; min-height:34px; font-size:9px; }
   .brand-copy strong { font-size:16px; }
   .brand-copy > span { font-size:9px; }
   .brand-mark { width:37px; height:37px; font-size:16px; }

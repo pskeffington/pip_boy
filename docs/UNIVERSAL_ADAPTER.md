@@ -108,7 +108,7 @@ Once mounted, `select(id)` delivers activation/resume, suspending the previous f
 | --- | --- | --- |
 | ADAPTER-SDK-1 | SDK crate, stable typed envelope, bounded JSON, example | Workspace tests and build pass; protocol preview, not a published compatibility promise |
 | ADAPTER-HOST-1 | One trait, four synthetic adapters, lifecycle/error/Settings tests, unmount | Workspace tests pass for trusted in-process fixtures |
-| HOST-UI-1 | Bind shared foreground to micro and desktop, keep permanent Settings, no split panes | Settings lifecycle is bound; mounted-roster and selection APIs exist; shell switcher remains unconnected |
+| HOST-UI-1 | Bind shared foreground to micro and desktop, keep permanent Settings, no split panes | Desktop and micro selectors call the mounted-roster and foreground APIs; navigation clears foreground; view data is inert text. No package is mounted yet, so real adapter and device acceptance remain open |
 | ADAPTER-MAP-1 | Real rb_gis adapter and offline ZIP/county parity | Open |
 | ADAPTER-TV-1 | Native rust_tv display/audio contract | Open |
 | ADAPTER-RADIO-1 | rust_radio interface and audio ownership | Open |

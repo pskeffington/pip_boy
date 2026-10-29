@@ -321,7 +321,9 @@
       ],
       "docs": [
         "docs/UNIVERSAL_ADAPTER.md",
-        "docs/PACKAGE_SOCKET.md"
+        "docs/PACKAGE_SOCKET.md",
+        "docs/HOST_PACKAGE_ROADMAP.md",
+        "docs/PROD_STATUS.md"
       ],
       "checks": [
         "tools/validate_host_packages.py",

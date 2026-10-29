@@ -332,12 +332,15 @@ fn state(store: &WorkbenchStore) -> Result<Response, Response> {
             "Cannot read the local workbench; original file preserved",
         )
     })?;
+    let host_packages = host_packages_snapshot()
+        .map_err(|_| Response::error(500, "Host package state unavailable"))?;
     Ok(Response::json(
         200,
         &json!({
             "app": "Rust-Boy",
             "mode": "local_dashboard",
-            "foreground": host_foreground_snapshot(),
+            "foreground": host_packages["foreground"].clone(),
+            "host_packages": host_packages,
             "active": active,
             "profiles": PRESETS,
             "camera_feeds": pipboy_core::public_cameras::PUBLIC_CAMERA_FEEDS,
@@ -354,13 +357,6 @@ fn state(store: &WorkbenchStore) -> Result<Response, Response> {
             "network": "loopback_only"
         }),
     ))
-}
-
-fn host_foreground_snapshot() -> Value {
-    let Ok(host) = UNIVERSAL_ADAPTER_HOST.lock() else {
-        return json!({"surface": "unavailable", "active_package_id": null});
-    };
-    host_foreground_value(host.surface())
 }
 
 fn host_foreground_value(surface: HostSurface<'_>) -> Value {
@@ -406,15 +402,20 @@ fn host_packages_value(host: &UniversalAdapterHost) -> Value {
 }
 
 fn host_select_package(req: &Request) -> Result<Response, Response> {
-    let body = parse_json_body(req, &["package_id"])?;
+    let body = parse_json_body(req, &["package_id", "close_settings"])?;
     let mut host = UNIVERSAL_ADAPTER_HOST
         .lock()
         .map_err(|_| Response::error(500, "Host package state unavailable"))?;
+    let close_settings = match body.get("close_settings") {
+        None => false,
+        Some(Value::Bool(value)) => *value,
+        Some(_) => return Err(Response::error(422, "close_settings must be a boolean")),
+    };
     match body.get("package_id") {
         Some(Value::String(package_id)) if !package_id.is_empty() => {
             select_host_package(&mut host, package_id)
         }
-        Some(Value::Null) => clear_host_foreground(&mut host),
+        Some(Value::Null) => clear_host_foreground(&mut host, close_settings),
         _ => Err(Response::error(
             422,
             "package_id must be a mounted ID or null",
@@ -439,9 +440,16 @@ fn select_host_package(
     ))
 }
 
-fn clear_host_foreground(host: &mut UniversalAdapterHost) -> Result<Response, Response> {
-    host.clear_foreground()
-        .map_err(|_| Response::error(409, "Unable to suspend the foreground package"))?;
+fn clear_host_foreground(
+    host: &mut UniversalAdapterHost,
+    close_settings: bool,
+) -> Result<Response, Response> {
+    let clear_result = host.clear_foreground();
+    if close_settings {
+        host.close_settings()
+            .map_err(|_| Response::error(409, "Unable to close host Settings"))?;
+    }
+    clear_result.map_err(|_| Response::error(409, "Unable to suspend the foreground package"))?;
     Ok(Response::json(
         200,
         &json!({
@@ -467,7 +475,18 @@ fn set_host_settings(req: &Request) -> Result<Response, Response> {
         host.close_settings()
             .map_err(|_| Response::error(409, "Unable to resume the foreground package"))?;
     }
-    Ok(Response::json(200, &host_foreground_value(host.surface())))
+    let foreground = host_foreground_value(host.surface());
+    Ok(Response::json(
+        200,
+        &json!({
+            "surface": foreground["surface"],
+            "active_package_id": foreground["active_package_id"],
+            "foreground": foreground,
+            "selected_package_id": host.selected_package_id(),
+            "settings_open": host.settings_open(),
+            "foreground_view": host.foreground_view()
+        }),
+    ))
 }
 
 fn native_result(value: io::Result<String>) -> Response {
@@ -2690,6 +2709,7 @@ mod tests {
         let state = dispatch(&request("GET", "/api/state", Value::Null), &store, 8765);
         let state: Value = serde_json::from_slice(&state.body).unwrap();
         assert_eq!(state["foreground"]["surface"], "settings");
+        assert_eq!(state["host_packages"]["mounted_package_count"], 0);
 
         let close = dispatch(
             &request("POST", "/api/host/settings", json!({"settings_open":false})),
@@ -2804,6 +2824,11 @@ mod tests {
         assert_eq!(settings["foreground"]["surface"], "settings");
         assert_eq!(settings["selected_package_id"], "org.rustboy.radio");
         assert_eq!(settings["foreground_view"], Value::Null);
+
+        let returned = clear_host_foreground(&mut host, true).unwrap();
+        let returned: Value = serde_json::from_slice(&returned.body).unwrap();
+        assert_eq!(returned["foreground"]["surface"], "empty");
+        assert_eq!(returned["settings_open"], false);
     }
 
     #[test]

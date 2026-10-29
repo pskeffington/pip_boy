@@ -65,6 +65,13 @@ const context = vm.createContext({document, window, Element, console, Intl, Date
   MutationObserver:class {observe() {}},
   fetch:async (url,options) => {
     requests.push({url,method:options&&options.method||"GET",body:options&&options.body});
+    if (url === "/api/host/foreground") {
+      const body = JSON.parse(options.body);
+      return {ok:true, json:async () => body.package_id
+        ? {selected_package_id:body.package_id, foreground:{surface:"package"}, settings_open:false,
+            foreground_view:{message:"<img src=x onerror=alert(1)>"}}
+        : {selected_package_id:null, foreground:{surface:"empty"}, settings_open:false, foreground_view:null}};
+    }
     return {ok:true, json:async () => fixture};
   }
 });
@@ -156,5 +163,23 @@ const tiles = () => content.querySelectorAll(".tile");
   const editor = content.children[0];
   events.get("resize")();
   assert.equal(content.children[0], editor);
+  const packageSelect = document.getElementById("micro-host-package-select");
+  assert.equal(packageSelect.disabled, true, "Package selection is disabled when no adapters are mounted");
+  run('snapshot.host_packages = {packages:[{package_id:"org.rustboy.radio",state:"registered"}],selected_package_id:null,foreground_view:null}');
+  run("updateHostPackageSelect(snapshot.host_packages)");
+  assert.equal(packageSelect.disabled, false, "Only a mounted roster enables host package selection");
+  assert.deepEqual(packageSelect.children.map(option => option.textContent), ["HOST", "RADIO"]);
+  packageSelect.value = "org.rustboy.radio";
+  packageSelect.events.get("change")({currentTarget:packageSelect});
+  await new Promise(setImmediate);
+  assert.equal(run("tab"), "adapter", "Selecting a mounted package opens the host package surface");
+  const packageView = walk(content).find(node => node.className === "adapter-view-data");
+  assert.ok(packageView?.textContent.includes("<img src=x onerror=alert(1)>"));
+  assert.equal(packageView.children.length, 0, "Adapter view data is text, never interpreted as markup");
+  run('setTab("stat")');
+  await new Promise(setImmediate);
+  assert.equal(run("tab"), "stat", "Leaving the package returns to the host workbench");
+  assert.ok(requests.some(item => item.url === "/api/host/foreground" &&
+    JSON.parse(item.body).package_id === null), "Leaving a package clears foreground through the host lifecycle API");
   console.log("PASS micro: adaptive paging, complete tool access, focus, staged roles, safe resize, Back and silent startup");
 })().catch(error => {console.error(error); process.exitCode = 1;});

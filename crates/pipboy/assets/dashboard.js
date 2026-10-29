@@ -84,11 +84,19 @@ function pager(id, total, current, setter, pageSize = PAGE_SIZE) {
 }
 function activateStage(stage) {
   if (stage === "palette" && snapshot?.active.profile !== "custom") stage = "settings";
-  if (!["command", "modules", "viewport", "messages", "settings", "palette"].includes(stage)) return;
+  if (!["command", "modules", "viewport", "messages", "settings", "palette", "adapter"].includes(stage)) return;
   const previous = activeStage;
   const wasSettings = previous === "settings" || previous === "palette";
   const entersSettings = stage === "settings" || stage === "palette";
-  if (wasSettings !== entersSettings) syncHostSettings(entersSettings);
+  const leavingAdapter = stage !== "adapter" && stage !== "settings" &&
+    (previous === "adapter" || (wasSettings && settingsReturnStage === "adapter"));
+  if (leavingAdapter) {
+    void api("/api/host/foreground", {package_id:null, close_settings:wasSettings})
+      .then(applyHostForegroundResult)
+      .catch(error => notify(`HOST PACKAGE SUSPEND ERROR: ${error.message}`, true));
+  } else if (wasSettings !== entersSettings) {
+    syncHostSettings(entersSettings);
+  }
   if (stage === "settings" && previous !== "settings" && previous !== "palette") {
     settingsReturnStage = previous;
     settingsReturnPane = activePane;
@@ -110,6 +118,7 @@ function activateStage(stage) {
   for (const section of document.querySelectorAll(".stage-surface")) section.hidden = section.dataset.stage !== stage;
   if (stage === "viewport" && snapshot && !radioPaneOpen) renderExtension();
   else if (previous === "viewport" && window.RustBoyMap) window.RustBoyMap.unmount();
+  if (stage === "adapter") renderHostAdapterSurface();
   syncRadioSubview();
   if (stage === "command" && snapshot) renderCommandCenter();
   // First local journal read occurs only after operator opens MESSAGES.
@@ -118,11 +127,78 @@ function activateStage(stage) {
   }
 }
 function syncHostSettings(settings_open) {
-  void api("/api/host/settings", { settings_open }).catch(error =>
+  void api("/api/host/settings", { settings_open }).then(applyHostForegroundResult).catch(error =>
     notify(`Host Settings state could not be saved: ${error.message}`, true));
 }
+
+function applyHostForegroundResult(result) {
+  if (!snapshot?.host_packages || !result) return;
+  snapshot.host_packages = { ...snapshot.host_packages, ...result };
+  updateHostPackageSelect(snapshot.host_packages);
+  if (activeStage === "adapter") renderHostAdapterSurface();
+}
+
+function updateHostPackageSelect(hostState) {
+  const select = byId("host-package-select");
+  if (!select) return;
+  const packages = Array.isArray(hostState?.packages) ? hostState.packages : [];
+  const selected = hostState?.selected_package_id || "";
+  select.replaceChildren();
+  const placeholder = document.createElement("option");
+  placeholder.value = "";
+  placeholder.textContent = packages.length ? "HOST WORKBENCH" : "NO PACKAGES";
+  select.append(placeholder);
+  for (const entry of packages) {
+    const id = typeof entry?.package_id === "string" ? entry.package_id : "";
+    if (id) {
+      const option = document.createElement("option");
+      option.value = id;
+      option.textContent = id.split(".").pop().toUpperCase();
+      select.append(option);
+    }
+  }
+  select.value = selected;
+  select.disabled = packages.length === 0;
+  select.title = packages.length ? "Select a mounted package foreground" : "No trusted adapter is mounted";
+}
+
+function renderHostAdapterSurface() {
+  const state = snapshot?.host_packages;
+  const packageId = state?.selected_package_id;
+  byId("host-adapter-id").textContent = packageId || "HOST";
+  byId("host-adapter-status").textContent = packageId
+    ? "Package view data is rendered as inert text by the host."
+    : "No package is mounted.";
+  const view = state?.foreground_view;
+  byId("host-adapter-view").textContent = view == null
+    ? "No foreground view data is available."
+    : JSON.stringify(view, null, 2);
+}
+
+function selectHostPackage(packageId) {
+  if (!packageId) {
+    if (activeStage === "adapter") activateStage("modules");
+    else void api("/api/host/foreground", {package_id:null}).then(applyHostForegroundResult).catch(error =>
+      notify(`HOST PACKAGE CLEAR ERROR: ${error.message}`, true));
+    return;
+  }
+  void api("/api/host/foreground", {package_id:packageId}).then(result => {
+    snapshot.host_packages = {
+      ...snapshot.host_packages,
+      selected_package_id: result.selected_package_id,
+      foreground: result.foreground,
+      settings_open: result.settings_open,
+      foreground_view: result.foreground_view
+    };
+    updateHostPackageSelect(snapshot.host_packages);
+    activateStage("adapter");
+  }).catch(error => {
+    updateHostPackageSelect(snapshot.host_packages);
+    notify(`HOST PACKAGE ERROR: ${error.message}`, true);
+  });
+}
 function returnFromSettings() {
-  const stage = ["command", "modules", "viewport", "messages"].includes(settingsReturnStage)
+  const stage = ["command", "modules", "viewport", "messages", "adapter"].includes(settingsReturnStage)
     ? settingsReturnStage
     : "modules";
   const pane = settingsReturnPane === "inspector" && stage === "modules"
@@ -681,11 +757,20 @@ function renderAll() {
 async function reload({silent = false} = {}) {
   try {
     snapshot = await api("/api/state");
+    updateHostPackageSelect(snapshot.host_packages);
     if (!initialWorkspaceLoaded) {
       activeStage = snapshot.foreground?.surface === "settings"
         ? "settings"
-        : snapshot.active.profile === "overseer" ? "command" : "modules";
+        : snapshot.foreground?.surface === "package" ? "adapter"
+          : snapshot.active.profile === "overseer" ? "command" : "modules";
       initialWorkspaceLoaded = true;
+    } else if (snapshot.foreground?.surface === "settings" && activeStage !== "settings") {
+      settingsReturnStage = snapshot.host_packages?.selected_package_id ? "adapter" : activeStage;
+      activeStage = "settings";
+    } else if (snapshot.foreground?.surface === "package") {
+      activeStage = "adapter";
+    } else if (activeStage === "adapter") {
+      activeStage = "modules";
     }
     previewId = snapshot.active.profile;
     if (!selectedTool) selectedTool = visibleModuleIds()[0] || null;
@@ -917,4 +1002,7 @@ byId("desktop-map-nav")?.addEventListener("change", (event) => {
   } else if (["command", "modules", "messages", "settings"].includes(destination)) {
     activateStage(destination);
   }
+});
+byId("host-package-select")?.addEventListener("change", (event) => {
+  selectHostPackage(event.currentTarget.value);
 });

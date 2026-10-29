@@ -14,6 +14,7 @@ const ui = {
   viewport: $("micro-viewport"),
   content: $("micro-content"),
   tabs: Array.from(document.querySelectorAll("#micro-rail [data-tab]")),
+  hostPackageSelect: $("micro-host-package-select"),
   foot: $("micro-foot-message"),
   rolesDialog: $("roles-dialog"),
   rolesList: $("roles-list"),
@@ -30,7 +31,7 @@ const ui = {
 const pages = ["stat", "role", "data", "map", "radio"];
 const pageTitles = {
   stat: "STATUS", role: "ROLE", map: "MAP",
-  data: "DATA", radio: "RADIO", conf: "SETTINGS"
+  data: "DATA", radio: "RADIO", conf: "SETTINGS", adapter: "PACKAGE"
 };
 const glyphs = {
   "mission-board": "▣", "host": "⌁", "notes": "≡", "library": "▤", "game": "▣",
@@ -163,11 +164,17 @@ function renderHeading() {
 }
 
 function setTab(next) {
-  if ((!pages.includes(next) && next !== "conf") || !snapshot) return;
+  if ((!pages.includes(next) && !["conf", "adapter"].includes(next)) || !snapshot) return;
   const wasSettings = tab === "conf";
   const entersSettings = next === "conf";
-  if (wasSettings !== entersSettings) {
-    void api("/api/host/settings", { settings_open: entersSettings }).catch(error =>
+  const leavingAdapter = next !== "adapter" && next !== "conf" &&
+    (tab === "adapter" || (wasSettings && settingsReturnTab === "adapter"));
+  if (leavingAdapter) {
+    void api("/api/host/foreground", {package_id:null, close_settings:wasSettings})
+      .then(applyHostForegroundResult)
+      .catch(error => notify(`HOST PACKAGE SUSPEND ERROR: ${error.message}`, true));
+  } else if (wasSettings !== entersSettings) {
+    void api("/api/host/settings", { settings_open: entersSettings }).then(applyHostForegroundResult).catch(error =>
       notify(`HOST SETTINGS ERROR: ${error.message}`, true));
   }
   if (next === "conf" && tab !== "conf") settingsReturnTab = tab;
@@ -588,7 +595,7 @@ function render() {
   renderHeading();
   ui.screen.dataset.depth = ["assigned-duties", "mission-board"].includes(openedTool)
     ? "tasks" : openedTool ? "detail" : "root";
-  ui.content.replaceChildren(openedTool ? showTool() :
+  ui.content.replaceChildren(openedTool ? showTool() : tab === "adapter" ? showHostAdapter() :
     tab === "stat" ? showStat() :
       tab === "role" ? showRole() :
         tab === "map" ? showMap() :
@@ -604,12 +611,81 @@ function render() {
   }
 }
 
+function updateHostPackageSelect(hostState) {
+  const select = ui.hostPackageSelect;
+  if (!select) return;
+  const packages = Array.isArray(hostState?.packages) ? hostState.packages : [];
+  const selected = hostState?.selected_package_id || "";
+  select.replaceChildren();
+  const placeholder = document.createElement("option");
+  placeholder.value = "";
+  placeholder.textContent = packages.length ? "HOST" : "NO PKG";
+  select.append(placeholder);
+  for (const entry of packages) {
+    const id = typeof entry?.package_id === "string" ? entry.package_id : "";
+    if (id) {
+      const option = document.createElement("option");
+      option.value = id;
+      option.textContent = id.split(".").pop().toUpperCase();
+      select.append(option);
+    }
+  }
+  select.value = selected;
+  select.disabled = packages.length === 0;
+  select.title = packages.length ? "Select a mounted package" : "No trusted adapter is mounted";
+}
+
+function applyHostForegroundResult(result) {
+  if (!snapshot?.host_packages || !result) return;
+  snapshot.host_packages = { ...snapshot.host_packages, ...result };
+  updateHostPackageSelect(snapshot.host_packages);
+}
+
+function showHostAdapter() {
+  const root = panel();
+  const id = snapshot?.host_packages?.selected_package_id;
+  root.append(sectionTop(id ? id.toUpperCase() : "PACKAGE", "HOST"));
+  const view = snapshot?.host_packages?.foreground_view;
+  const pre = make("pre", "adapter-view-data");
+  pre.textContent = view == null ? "No foreground view data is available." : JSON.stringify(view, null, 2);
+  root.append(make("p", "micro-copy", "Package view data is rendered as inert text by the host."), pre);
+  return root;
+}
+
+function selectHostPackage(packageId) {
+  if (!packageId) {
+    if (tab === "adapter") setTab("stat");
+    else void api("/api/host/foreground", {package_id:null}).then(applyHostForegroundResult).catch(error =>
+      notify(`HOST PACKAGE CLEAR ERROR: ${error.message}`, true));
+    return;
+  }
+  void api("/api/host/foreground", {package_id:packageId}).then(result => {
+    snapshot.host_packages = {
+      ...snapshot.host_packages,
+      selected_package_id: result.selected_package_id,
+      foreground: result.foreground,
+      settings_open: result.settings_open,
+      foreground_view: result.foreground_view
+    };
+    updateHostPackageSelect(snapshot.host_packages);
+    setTab("adapter");
+  }).catch(error => {
+    updateHostPackageSelect(snapshot.host_packages);
+    notify(`HOST PACKAGE ERROR: ${error.message}`, true);
+  });
+}
+
 async function reload({silent = false} = {}) {
   try {
     snapshot = await api("/api/state");
+    updateHostPackageSelect(snapshot.host_packages);
     if (snapshot.foreground?.surface === "settings" && tab !== "conf") {
       settingsReturnTab = tab;
       tab = "conf";
+    } else if (snapshot.foreground?.surface === "package") {
+      tab = "adapter";
+    } else if (tab === "adapter") {
+      tab = "stat";
     }
     if (openedTool && !["native-radio", "secure-messenger", "assigned-duties", "camera-grid", "location-settings"].includes(openedTool) && !hasTool(openedTool)) openedTool = null;
     focusedCamera = null;
@@ -782,6 +858,7 @@ function init() {
     ensureVisible();
   });
   ui.tabs.forEach((item) => item.addEventListener("click", () => setTab(item.dataset.tab)));
+  ui.hostPackageSelect?.addEventListener("change", (event) => selectHostPackage(event.currentTarget.value));
   $("micro-settings").addEventListener("click", () =>
     setTab(tab === "conf" ? settingsReturnTab : "conf"));
   ui.back.addEventListener("click", back);

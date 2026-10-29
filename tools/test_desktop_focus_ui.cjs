@@ -80,8 +80,16 @@ assert.match(css,/\.copy-disclosure summary:focus-visible/,
 // Vault Command is a first-class role-independent page; authority is backend-gated.
 assert.match(html,/data-stage="command"[^>]*hidden/,
   "Command stage must be available but initially hidden in raw HTML");
-assert.match(js,/activeStage = snapshot\.foreground\?\.surface === "settings"\s*\? "settings"\s*:\s*snapshot\.active\.profile === "overseer" \? "command" : "modules";/,
-  "Host Settings state must restore while Overseer still lands in the vault command center");
+assert.match(html,/id="host-package-select"[^>]*disabled/,
+  "Desktop package selection must remain disabled without a mounted host roster");
+assert.match(html,/data-stage="adapter"[^>]*hidden/,
+  "The inert host package canvas must be available without replacing legacy tools");
+assert.match(js,/function renderHostAdapterSurface\(/,
+  "Desktop must render host package view data in its dedicated surface");
+assert.match(js,/byId\("host-adapter-view"\)\.textContent/,
+  "Package view data must be rendered as text rather than executable markup");
+assert.match(js,/activeStage = snapshot\.foreground\?\.surface === "settings"\s*\? "settings"\s*:\s*snapshot\.foreground\?\.surface === "package" \? "adapter"\s*:\s*snapshot\.active\.profile === "overseer" \? "command" : "modules";/,
+  "Host Settings/package state must restore while Overseer still lands in the vault command center");
 assert.match(js,/api\("\/api\/host\/settings", \{ settings_open \}\)/,
   "Desktop Settings must update the Rust-owned foreground controller");
 assert.match(js,/snapshot.active.slots.some\(slot => slot.tool === "mission-board"\)/,

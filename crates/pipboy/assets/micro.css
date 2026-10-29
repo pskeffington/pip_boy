@@ -47,6 +47,9 @@ small { font-size:11px; }
 #role-short { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .down-chevron { color:var(--rb-alert); margin-left:2px; }
 .right-status { display:flex; gap:12px; justify-content:flex-end; align-items:center; flex:none; font-size:11px; }
+.host-package-select { width:82px; max-width:22vw; min-height:30px; padding:0 2px; border:1px solid var(--rb-line); border-radius:2px; color:var(--rb-text); background:#071209; font:9px var(--rb-mono); }
+.host-package-select:disabled { opacity:.48; }
+.adapter-view-data { max-height:55vh; overflow:auto; padding:10px; border:1px solid var(--rb-line); background:#071209; color:var(--rb-accent); white-space:pre-wrap; overflow-wrap:anywhere; font:10px/1.4 var(--rb-mono); }
 .status-local { color:var(--rb-accent); font-size:10px; white-space:nowrap; }
 .tiny-led { display:inline-block; background:var(--rb-accent); box-shadow:0 0 6px var(--rb-glow); width:6px; height:6px; border-radius:2px; vertical-align:middle; margin-right:5px; }
 #local-clock { font-size:13px; font-variant-numeric:tabular-nums; }
