@@ -2,7 +2,7 @@
 
 ## Codex instruction checkpoint — 2026-10-29
 
-**RB-CX-00, RB-CX-01 and the software-only RB-CX-02 backend authorization gate are accepted.** Exact validation head `c1df259d1e01689dcb93ed48073b250150027f56` passed all seven checks in [run 40828393462](https://github.com/pskeffington/pip_boy/actions/runs/40828393462). RB-CX-02 adds role/package/scope-bound ephemeral approvals, revocation and role-mismatch checks before adapter calls, and exclusive logical audio ownership. **RB-CX-04 is now next** to close the P0 socket provenance gap before external module work. PR #71 remains draft. Durable consent, OS-enforced physical access, and broader production acceptance remain open.
+**RB-CX-00/01/02/04 are accepted software-only gates.** RB-CX-04 exact source head `ab98743b453a9c33f45b5694ac60d2e7cd8f39b1` passed all seven required jobs in [run 40830133847](https://github.com/pskeffington/pip_boy/actions/runs/40830133847): source/catalog, stable, Rust 1.90, Soapy-SDR, SDRconnect, native macOS and native Windows. This accepts bounded Unix socket provenance and exchange only; there is still no approved launcher or binary identity for external package execution. PR #71 remains draft. Durable consent, OS-enforced physical access, and broader production acceptance remain open.
 
 ## Workflow independence candidate
 
@@ -15,9 +15,9 @@ Updated: 2026-10-29
 
 ## Gate state
 
-- **Latest pushed validation head:** `2b5af268a048bcb94f6d5625eda3ad4877344641`; [run 40829454162](https://github.com/pskeffington/pip_boy/actions/runs/40829454162) completed successfully with all seven checks green, including source/index, stable, Rust 1.90, both SDR features, native macOS and native Windows. This is the RB-CX-02 acceptance-index checkpoint; the unpushed RB-CX-04 working candidate described below requires its own exact-head CI run.
-- **Current gate:** RB-CX-04 is the sole `next` pass. RB-CX-00/01/02 retain exact evidence in `catalog/codex_passes.json`; RB-CX-02 is accepted as a software policy gate, with durable approvals and OS-enforced physical permissions still blocked.
-- **Last accepted Codex pass:** RB-CX-02. **Last completed PROD roadmap gate:** PROD-0 remains **not accepted**; these software pass acceptances do not certify the broader production baseline or release.
+- **Latest completed source validation:** `ab98743b453a9c33f45b5694ac60d2e7cd8f39b1`; [run 40830133847](https://github.com/pskeffington/pip_boy/actions/runs/40830133847) passed all seven exact-head jobs, including both SDR feature matrices and native macOS/Windows. CI policy validation confirmed zero external GitHub Action `uses:` dependencies.
+- **Current gate:** RB-CX-05 is next, limited to host-owned GIS integration/parity work. `rb_gis` remains an independent repository and will not be modified from this checkout. RB-CX-04 is accepted software-only; its remaining blocker is external package launch because no approved launcher or binary identity is bound to a package.
+- **Last accepted Codex pass:** RB-CX-04. **Last completed PROD roadmap gate:** PROD-0 remains **not accepted**; these software pass acceptances do not certify the broader production baseline or release.
 - **Branch:** draft [PR #71](https://github.com/pskeffington/pip_boy/pull/71), `codex/package-adapter-protocol`. First-party CI repair is included. `rust_radio/` remains an independent untracked nested repository and is untouched.
 - **Relevant pinned module revision:** `rust_radio` dependency revision `3d77d11da3a31fbc3144635da6d391a3febf38b7` from the workspace lock/config. The local `rust_radio/` directory is a separate untracked nested repository and was preserved untouched.
 
@@ -30,11 +30,18 @@ Updated: 2026-10-29
 - Acceptance is software-only. No consent UI integration, durable approval workflow, OS authorization, real media backend or external package execution is accepted. The deny-only broker remains unchanged and physical operations remain unavailable.
 - Exact-head evidence is validation head `c1df259d1e01689dcb93ed48073b250150027f56`, [run 40828393462](https://github.com/pskeffington/pip_boy/actions/runs/40828393462), all seven checks successful. Stable/1.90 and both SDR feature matrices passed; Chromium desktop and handheld UI regressions passed in CI.
 
-## RB-CX-04 implementation candidate — not accepted
+## RB-CX-04 accepted — Unix adapter socket provenance and exchange (software-only)
 
 - `PrivateUnixListener::accept_expected_process(expected_pid, timeout)` now performs bounded nonblocking admission, checks OS-reported UID/PID, and drops unrelated peers while continuing within one absolute deadline. Admission yields an opaque `VerifiedUnixStream`; `UnixAdapterSession` exposes only `from_verified_peer`, while raw-stream construction is private.
 - The listener remains disconnected from any process launcher. A caller must still supply the expected PID and verify the approved binary; OS peer credentials and the adapter hello claim do not authenticate package identity or authorize capabilities. Unsupported platforms remain deny-only, and `rust-boy-broker` is unchanged.
-- Focused regressions cover private socket ownership/mode, peer PID mismatch, bounded timeout, slow-trickled handshake, oversized frame rejection, request replay/order rejection, and a complete verified-peer session exchange. Exact validation of the pushed RB-CX-04 candidate remains pending; do not accept the pass from local results alone.
+- Focused regressions cover private socket ownership/mode, peer PID mismatch, bounded timeout, slow-trickled handshake, oversized frame rejection, request replay/order rejection, and a complete verified-peer session exchange. Exact-head CI run [40830133847](https://github.com/pskeffington/pip_boy/actions/runs/40830133847) passed all seven required checks on `ab98743b453a9c33f45b5694ac60d2e7cd8f39b1`.
+- This gate does not approve a package launcher or binary identity, and it does not enable external package execution. The broker remains deny-only; physical permissions, process isolation and signed distribution remain open.
+
+## RB-CX-05 host-owned MAP progress — implementation candidate
+
+- Added an integration regression in `tools/test_map_layers.cjs`: a corrupt RustGIS import must retain the existing last-good county geometry, show the import error and clear the file input for retry. The test exercises the live host MAP event path; it does not claim independent renderer parity.
+- `node tools/test_rustgis_map_import.cjs`, `node tools/test_map_layers.cjs`, `node tools/test_map_zip.cjs` and `node tools/test_map_viewport.cjs` passed locally. Viewports passed at 480×320, 800×480 and 320×568 with no network. The local viewport server required loopback permission after the sandbox returned `EPERM`.
+- `rb_gis/` remains independent and untouched. Full GIS rendering parity, Mac operator acceptance, cached regional data recovery and physical Pi acceptance remain open.
 
 ## Implementation and evidence
 
@@ -76,7 +83,7 @@ Updated: 2026-10-29
 - macOS passed Rust compile/tests, native offline/PTY checks, the repository bootstrap's pinned Node v22.23.4 and Mac-first offline MAP acceptance (MAP Chromium 480×320, 800×480, 320×568; no network). Windows passed native build/tests, offline smokes and ConPTY recovery.
 - The RADIO viewport fixture permits only local `GET /api/radio`; opening/browsing does not issue Play or contact an external station. UI tests also passed the single foreground, no-autoplay and Settings restoration checks. No physical receiver or media output was used or claimed.
 - Local stable and Rust 1.90 each passed format, locked all-target check/test, and warnings-denied Clippy. Both SDR feature matrices passed locally. All offline catalog, security, role, Vault, pass/component/CI-policy, host-package, repository and smoke-roster validators/tests passed. Local Node download was blocked by DNS, while exact-head hosted Mac verified the binary.
-- Pass-index status is `RB-CX-00: accepted`, `RB-CX-01: accepted`, `RB-CX-02: accepted`, `RB-CX-04: next`. No production roadmap gate is accepted; release acceptance remains **0/12**.
+- Pass-index status is `RB-CX-00/01/02/04: accepted`, `RB-CX-05: next`. No production roadmap gate is accepted; release acceptance remains **0/12**.
 
 ## Release acceptance
 
@@ -96,16 +103,22 @@ Updated: 2026-10-29
 
 ## Codex development handoff
 
-`python3 tools/codex_next.py --json` is a read-only, validated handoff of RB-CX-04. The `validate_ci_policy.py` / `test_validate_ci_policy.py` guard the zero-`uses:` rule, exact-SHA checkout, stable/1.90, SDR/native matrices and pinned Node bootstrap. RB-CX-00 acceptance is supported by run 40824698037; the RB-CX-00 index checkpoint passed all seven checks on run 40825620885; RB-CX-01 acceptance is supported by run 40826559481; RB-CX-02 passed all seven exact-head checks in run 40828393462.
+`python3 tools/codex_next.py --json` is a read-only, validated handoff of RB-CX-05. The `validate_ci_policy.py` / `test_validate_ci_policy.py` guard the zero-`uses:` rule, exact-SHA checkout, stable/1.90, SDR/native matrices and pinned Node bootstrap. RB-CX-00 acceptance is supported by run 40824698037; the RB-CX-00 index checkpoint passed all seven checks on run 40825620885; RB-CX-01 acceptance is supported by run 40826559481; RB-CX-02 passed all seven exact-head checks in run 40828393462; RB-CX-04 passed all seven exact-head checks in run 40830133847.
 
 
-The [machine pass queue](../catalog/codex_passes.json) records RB-CX-00/01/02 as accepted with exact source SHAs and successful workflow URLs; RB-CX-04 is the only `next` pass. Head c1df259 passed all seven CI jobs in run 40828393462. Historical startup failures, cancellation, the repaired macOS Node mismatch, and stale handoff-test fixtures are documented below; see [Codex instructions](../AGENTS.md), [pass plan](CODEX_PASSES.md) and [index hierarchy](INDEXING.md).
+The [machine pass queue](../catalog/codex_passes.json) records RB-CX-00/01/02/04 as accepted with exact source SHAs and successful workflow URLs; RB-CX-05 is the only `next` pass. Head `ab98743b453a9c33f45b5694ac60d2e7cd8f39b1` passed all seven CI jobs in run 40830133847. Historical startup failures, cancellation, the repaired macOS Node mismatch, and stale handoff-test fixtures are documented below; see [Codex instructions](../AGENTS.md), [pass plan](CODEX_PASSES.md) and [index hierarchy](INDEXING.md).
 
-### RB-CX-04 current acceptance requirements
+### RB-CX-05 current acceptance requirements
 
-- Verify socket path ownership, restrictive permissions and OS-reported peer provenance before accepting a session.
-- Reject replay, stalls, invalid request IDs and oversized frames; do not autoload packages or trust adapter hello claims.
-- Run indexed package/security regressions and stable/1.90 exact-head CI. Keep external module repositories independent and PR #71 draft.
+- Match legacy roads, counties, ZIPs, cache and location-follow behavior offline.
+- Keep location ingestion in host Settings and the map near-full-canvas; verify rollback before legacy map removal.
+- Run the indexed MAP regressions and stable/1.90 exact-head CI. Keep `rb_gis` independent and PR #71 draft.
+
+## Next three implementation actions
+
+1. Finish source/index validation for the socket acceptance checkpoint and host MAP rollback regression, then commit and push fast-forward to PR #71.
+2. Inspect exact-head CI for the documentation/test checkpoint; repair any failure without weakening the matrix.
+3. Continue RB-CX-05 host-owned parity work and Mac MAP acceptance while preserving `rb_gis/` as an independent repository.
 
 ## Next three implementation actions
 

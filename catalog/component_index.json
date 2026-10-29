@@ -46,7 +46,7 @@
     },
     {
       "id": "package-socket-contract",
-      "boundary": "Bounded manifest registry, typed message codecs, Unix stream sessions with absolute I/O deadlines, version negotiation and request correlation; no package execution, peer authentication or capability grants.",
+      "boundary": "Bounded manifest registry, typed message codecs, Unix stream sessions with absolute I/O deadlines, version negotiation, request correlation and OS UID/PID peer binding; no package binary authentication, external package execution or capability grants.",
       "hardware_gate": "software_only",
       "code": [
         "crates/pipboy-core/src/package_socket.rs",
@@ -62,7 +62,7 @@
         "tools/validate_host_packages.py",
         "tools/test_validate_host_packages.py"
       ],
-      "acceptance": "Typed protocol negotiation, sequencing, correlation, frame bounds and deadline-bounded Unix exchanges are unit-tested. Private-directory socket creation, mode 0600, OS-reported peer UID/PID matching, occupied-path refusal and guarded cleanup are tested; host process launch, binary signature verification, capability brokerage and process isolation remain open."
+      "acceptance": "Typed protocol negotiation, sequencing, replay rejection, frame bounds and deadline-bounded Unix exchanges are unit-tested. Private-directory socket creation, mode 0600, bounded OS-reported peer UID/PID matching, opaque verified-stream admission, occupied-path refusal and guarded cleanup are tested; host process launch, binary signature verification, capability brokerage and process isolation remain open."
     },
     {
       "id": "workbenches",

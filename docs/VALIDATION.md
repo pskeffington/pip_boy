@@ -15,13 +15,19 @@ On the current local repair working tree, stable and Rust 1.90 each passed `carg
 
 Source commit `91753624bd39dfd9e7efccd85d5d1e33fe327891` pins Node v22.23.4 and its published architecture-specific digests, routes Rust bootstrap through the repository script, and adds a regression guard against external Action imports or dropped required matrices. Acceptance evidence is recorded below and in the pass index.
 
-## RB-CX-04 socket provenance candidate — local validation, exact-head CI pending
+## RB-CX-04 socket provenance — accepted software-only (2026-10-29)
 
 The local candidate binds transport session construction to an opaque `VerifiedUnixStream` returned only after the Unix listener checks OS-reported peer UID/PID. Listener admission uses an absolute timeout, drops unexpected peers, and cannot be preempted indefinitely by a stalled or unrelated connection. Raw-stream session construction is private; hello package ID remains an unauthenticated claim, the listener has no process launcher, and the physical broker remains deny-all.
 
 Stable and Rust 1.90 each passed format, locked all-target check, workspace tests (402 tests per run) and warnings-denied Clippy. Under both toolchains, Soapy-SDR and SDRconnect each passed locked check, Clippy and the complete workspace suite (402 tests; no receiver discovery/capture). Five listener tests and eight transport tests passed with local Unix socket access. Pass-index, component, host-package (11 tests), repo, security and zero-external-Action CI-policy validators/tests passed. Desktop focus/micro interaction tests and Chromium desktop (1440×900, 1280×800, 1024×768, 800×600) and handheld (480×320, 800×480, 320×568, Custom) regressions passed. The sandbox initially denied local Unix sockets and the browser loopback fixture with `EPERM`; unchanged tests passed when the relevant local socket/bind access was authorized.
 
-This is local candidate evidence only. The last pushed acceptance-index head `2b5af268a048bcb94f6d5625eda3ad4877344641` passed all seven checks in [run 40829454162](https://github.com/pskeffington/pip_boy/actions/runs/40829454162). It does not contain this socket change; RB-CX-04 remains unaccepted until the pushed candidate passes its own exact-head stable, Rust 1.90, SDR, source, Mac and Windows jobs. No process launch, module signature, capability grant, physical-device access or package execution is implemented.
+Exact source head `ab98743b453a9c33f45b5694ac60d2e7cd8f39b1` passed all seven required jobs in [run 40830133847](https://github.com/pskeffington/pip_boy/actions/runs/40830133847): source/catalog, stable, Rust 1.90, Soapy-SDR, SDRconnect, native macOS and native Windows. Diagnostics confirmed each check successful on that exact SHA. The source job ran the zero-external-Action policy and offline validators; Rust/SDR matrices and native UI/terminal jobs passed. CI and local evidence above cover stable/1.90, both SDR feature suites, focused socket regressions, offline checks and desktop/mobile UI regressions.
+
+The RB-CX-04 acceptance record is software-only. No process launch, module signature, capability grant, physical-device access or external package execution is implemented. No approved launcher or binary identity is bound to a package; the deny-only broker remains unchanged.
+
+## RB-CX-05 host MAP regression — local implementation candidate
+
+Added a host-side browser regression asserting that a failed RustGIS file import preserves the last-good county map and leaves the file chooser ready for retry. The importer already parses before replacing visible geometry; the new test locks that rollback behavior at the MAP event boundary. `node tools/test_rustgis_map_import.cjs`, `node tools/test_map_layers.cjs`, `node tools/test_map_zip.cjs` and `node tools/test_map_viewport.cjs` passed. The viewport run passed 480×320, 800×480 and 320×568 without network; local loopback access was required after the sandbox initially returned `EPERM`. This is a host-side regression only; it does not establish independent `rb_gis` renderer parity or field acceptance. `rb_gis/` was not modified.
 
 ## RB-CX-02 backend authorization — accepted, software-only (2026-10-29)
 

@@ -108,6 +108,20 @@ async function main(){
   assert.equal(queries,0);
   assert.equal(ingestions,1);
 
+  // A malformed imported module must not replace the last-good county map.
+  const lastGoodShapes=view.countyShapes;
+  win.RustBoyMapImport={
+    isRustGIS:()=>true,
+    readFile:async()=>{throw Error("fixture corrupt RustGIS map");}
+  };
+  view.file.files=[{name:"corrupt.rgismap",size:32}];
+  await view.file.listeners.change[0]();
+  assert.equal(view.countyShapes,lastGoodShapes,
+    "failed RustGIS import preserves the last-good map geometry");
+  assert.equal(view.countyShapes.length,20004);
+  assert.match(view.status.textContent,/MAP ERROR: fixture corrupt RustGIS map/);
+  assert.equal(view.file.value,"");
+
   // At field zoom, a 20k-feature dataset must not be scanned in full.
   view.latitude.value="40";view.longitude.value="-75";
   view.manual.listeners.submit[0]({preventDefault(){}});
