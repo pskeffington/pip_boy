@@ -3,7 +3,7 @@
 ## 2026-10-29 — Host lifecycle binding and SDK-aligned transport
 
 - Bind desktop and handheld Settings transitions to `UniversalAdapterHost`, invoking its host-owned suspend/resume lifecycle while keeping package selection disabled without a trusted installed roster.
-- Add same-origin host APIs for the actual mounted roster and foreground selection; reference designs cannot be selected through these endpoints.
+- Add same-origin host APIs for the actual mounted roster, inert foreground view and foreground selection; reference designs cannot be selected through these endpoints. Test a synthetic mounted adapter through the dashboard boundary.
 - Align the deadline-bounded Unix session with the portable SDK hello, command and correlated-reply envelopes; enforce the SDK's 16 KiB frame bound before payload allocation.
 - Keep transport trust explicit: hello identity is only a claim, and listener ownership, authenticated provenance, dispatch, capability grants and process isolation remain open gates.
 - Add backend, browser and viewport regressions for same-origin Settings updates and preserve existing module independence and authorization.

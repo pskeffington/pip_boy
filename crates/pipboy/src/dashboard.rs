@@ -377,6 +377,10 @@ fn host_packages_snapshot() -> Result<Value, Response> {
     let host = UNIVERSAL_ADAPTER_HOST
         .lock()
         .map_err(|_| Response::error(500, "Host package state unavailable"))?;
+    Ok(host_packages_value(&host))
+}
+
+fn host_packages_value(host: &UniversalAdapterHost) -> Value {
     let packages: Vec<Value> = host
         .package_ids()
         .map(|package_id| {
@@ -391,13 +395,14 @@ fn host_packages_snapshot() -> Result<Value, Response> {
             json!({"package_id": package_id, "state": state})
         })
         .collect();
-    Ok(json!({
+    json!({
         "packages": packages,
         "mounted_package_count": host.len(),
         "selected_package_id": host.selected_package_id(),
         "foreground": host_foreground_value(host.surface()),
-        "settings_open": host.settings_open()
-    }))
+        "settings_open": host.settings_open(),
+        "foreground_view": host.foreground_view()
+    })
 }
 
 fn host_select_package(req: &Request) -> Result<Response, Response> {
@@ -406,6 +411,13 @@ fn host_select_package(req: &Request) -> Result<Response, Response> {
     let mut host = UNIVERSAL_ADAPTER_HOST
         .lock()
         .map_err(|_| Response::error(500, "Host package state unavailable"))?;
+    select_host_package(&mut host, package_id)
+}
+
+fn select_host_package(
+    host: &mut UniversalAdapterHost,
+    package_id: &str,
+) -> Result<Response, Response> {
     host.select(package_id)
         .map_err(|_| Response::error(409, "Package is not mounted or cannot be activated"))?;
     Ok(Response::json(
@@ -413,7 +425,8 @@ fn host_select_package(req: &Request) -> Result<Response, Response> {
         &json!({
             "selected_package_id": host.selected_package_id(),
             "foreground": host_foreground_value(host.surface()),
-            "settings_open": host.settings_open()
+            "settings_open": host.settings_open(),
+            "foreground_view": host.foreground_view()
         }),
     ))
 }
@@ -1519,7 +1532,26 @@ mod tests {
     use super::task_routes::task_store;
     use super::*;
     use pipboy_core::tasks::Status;
+    use pipboy_core::universal_adapter::{
+        AdapterEnvelope, AdapterError, AdapterReply, UniversalPackageAdapter,
+    };
     use std::fs;
+
+    struct DashboardAdapter {
+        id: String,
+    }
+
+    impl UniversalPackageAdapter for DashboardAdapter {
+        fn package_id(&self) -> &str {
+            &self.id
+        }
+
+        fn handle(&mut self, _request: AdapterEnvelope) -> Result<AdapterReply, AdapterError> {
+            Ok(AdapterReply::View {
+                state: json!({"screen": "test adapter"}),
+            })
+        }
+    }
 
     fn request(method: &str, path: &str, body: Value) -> Request {
         let mut headers = BTreeMap::new();
@@ -2713,6 +2745,34 @@ mod tests {
             .headers
             .insert("origin".into(), "https://untrusted.invalid".into());
         assert_eq!(dispatch(&cross_origin, &store, 8765).status, 403);
+    }
+
+    #[test]
+    fn host_api_selects_a_mounted_adapter_and_exposes_only_its_inert_view() {
+        let mut host = UniversalAdapterHost::new(Viewport::new(480, 320).unwrap());
+        let catalog = pipboy_core::package_socket::reference_catalog().unwrap();
+        let manifest = catalog.get("org.rustboy.radio").unwrap();
+        let mut manifest = serde_json::to_value(manifest).unwrap();
+        manifest.as_object_mut().unwrap().remove("status");
+        host.mount_trusted(
+            &manifest.to_string(),
+            Box::new(DashboardAdapter {
+                id: "org.rustboy.radio".into(),
+            }),
+        )
+        .unwrap();
+
+        let response = select_host_package(&mut host, "org.rustboy.radio").unwrap();
+        assert_eq!(response.status, 200);
+        let selected: Value = serde_json::from_slice(&response.body).unwrap();
+        assert_eq!(selected["selected_package_id"], "org.rustboy.radio");
+        assert_eq!(selected["foreground_view"]["screen"], "test adapter");
+
+        host.open_settings();
+        let settings = host_packages_value(&host);
+        assert_eq!(settings["foreground"]["surface"], "settings");
+        assert_eq!(settings["selected_package_id"], "org.rustboy.radio");
+        assert_eq!(settings["foreground_view"], Value::Null);
     }
 
     #[test]
