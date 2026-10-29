@@ -14,6 +14,14 @@ Start with `python3 tools/codex_next.py` or `python3 tools/codex_next.py --json`
 5. Run the applicable offline, Rust, Node/Chromium and hardware gates. Record exact commit SHA, commands, outcomes and unrun limitations in `docs/PROD_STATUS.md` and, for substantive findings, `docs/VALIDATION.md`. Source-only tests and empty CI status are not passing evidence.
 6. Update machine indexes and documentation together. Commit a coherent checkpoint to the active authorized development branch and synchronize the PR description. Merge only after verified CI/review gates; do not bypass failed checks to save context.
 
+## First-party CI policy — current development checkpoint
+
+The draft `.github/workflows/rust.yml` now uses **zero external GitHub Action `uses:` imports**. Preserve the repository-owned exact-SHA checkout and `scripts/ci_bootstrap.sh` for official `rustup` installation and Node 22 verification. Do not add `dtolnay/rust-toolchain`, `actions/checkout`, `actions/setup-node`, or any other externally fetched action without explicit supply-chain approval.
+
+**Scope:** This removes third-party GitHub Action repositories, not external downloads. Rust toolchains, locked Cargo dependencies, system packages, and runner-provided Node still need documented provenance. Do not claim offline or hermetic builds.
+
+For RB-CX-00, inspect [workflow run 40823597748](https://github.com/pskeffington/pip_boy/actions/runs/40823597748) for actual job admission, conclusions and logs. A run marked `queued` or `in_progress` is **pending**, not accepted. If jobs fail, fix root causes without removing tests, weakening permissions or bypassing the stable/1.90, SDR, or native matrices. Keep PR #71 draft until all required evidence passes.
+
 ## RB-CX-00 execution order and stop conditions
 
 For the currently indexed `RB-CX-00`, perform a read-only baseline first: `git status --short --branch`, `git rev-parse HEAD`, `git fetch origin` (only if network access is explicitly available), and `git log --oneline --max-count=5`. Before changing tracked files, compare the current branch against `origin/main`, inspect PR #71, and preserve independent open PR changes.

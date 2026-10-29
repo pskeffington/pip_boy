@@ -1,5 +1,9 @@
 # Rust Boy production checkpoint
 
+## Codex instruction checkpoint — 2026-10-29
+
+The Codex operating guide now requires first-party GitHub Actions orchestration and direct inspection of the newly admitted workflow. The first-party bootstrap is a **candidate**, not proof that the full job matrix passed. RB-CX-00 stays open until current-head job conclusions and required checks are verified; PR #71 stays draft.
+
 ## Workflow independence candidate
 
 The draft workflow no longer imports third-party GitHub Action repositories. It fetches its own source SHA and uses runner-native `rustup`/Node checks. This **does not demonstrate** restored workflow admission: PR #71 remains draft, RB-CX-00 blocked, and exact-head CI/platform acceptance open. External official toolchain downloads, apt packages and locked Cargo crates remain dependencies.

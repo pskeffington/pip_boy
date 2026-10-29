@@ -55,6 +55,12 @@ node tools/test_micro_viewport.cjs
 
 The existing [quality workflow](../.github/workflows/rust.yml) retains its Rust stable/1.90, native Mac/Windows and UI gates. Run all checks referenced in the selected JSON pass in addition to these common ones. See [validation history](VALIDATION.md), [index ownership map](INDEXING.md), [adapter guide](UNIVERSAL_ADAPTER.md) and [fleet-sync security gates](RB_SYNC_ROADMAP.md).
 
+## CI dependency elimination checkpoint
+
+Commit `63093badc2046a59689693f68896fa502dd95234` removes external GitHub Action `uses:` calls from the draft workflow, replacing them with direct exact-SHA Git checkout, runner-native `rustup`, and a Node 22 runtime check in `scripts/ci_bootstrap.sh`. This is **first-party action orchestration, not a fully self-hosted or offline build**.
+
+Codex must inspect [run 40823597748](https://github.com/pskeffington/pip_boy/actions/runs/40823597748) and subsequent exact-head runs, confirm whether jobs actually start, evaluate the full stable/1.90/SDR/native matrix, and record failed commands and platform-specific defects. Do not reintroduce remote GitHub actions or mark a gate accepted based only on a running workflow. If checkout/toolchain provisioning fails, repair the first-party bootstrap while retaining all original validations.
+
 ## RB-CX-00 acceptance checklist and Codex handoff
 
 **Scope:** repair/verify the passive, explicitly compiled RADIO catalog and host-owned navigation before implementing any generic external package loader. No changes to independent radio/GIS/TV/COMMS repositories are implied.
