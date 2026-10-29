@@ -8,6 +8,8 @@
 - Clean-build the remote `main` source snapshot `629f34f0ce21e37c6d2bc6567919ccc5c862c80d` with `cargo +stable build --workspace --locked`; run the CLI help and real loopback micro-dashboard smoke successfully on macOS ARM64.
 - Document Debian/Ubuntu ALSA build prerequisites and the locked workspace build/CLI smoke commands. Hardware, Mac operator and field acceptance remain separate.
 
+The earlier universal adapter draft entry below describes historical status; it was superseded by the passing build and exact-head evidence above. No current build failure is known. RB-CX-05 remains an implementation candidate pending independent `rb_gis` renderer parity and its remaining acceptance checks.
+
 
 ## 2026-10-29 — Codex development-pass indexing (validated)
 
@@ -48,7 +50,7 @@
 - Add `pipboy_core::universal_adapter` for trusted in-process mounting, exactly one foreground package, host-owned Settings, lifecycle switching, explicit unmount, view bounds and deny-by-default scoped intents.
 - Test four synthetic MAP / TV / RADIO / COMMS module identities using the same adapter trait, including faults, resume, sizing, replacement and protocol regressions; preserve the existing live desktop/micro interfaces.
 - Index code ownership and expand read-only `GET /api/packages` with adapter protocol metadata. No real external packages are yet loaded or authorized.
-- Build/MSRV/Clippy acceptance remains open because GitHub Actions is failing at startup and this execution environment has no Rust compiler. See [universal adapter contract](docs/UNIVERSAL_ADAPTER.md).
+- Historical note: at the time of this draft, Build/MSRV/Clippy acceptance was open because GitHub Actions failed at startup and the execution environment had no Rust compiler. That status was superseded by the verified build and CI evidence recorded above. See [universal adapter contract](docs/UNIVERSAL_ADAPTER.md).
 
 ## 2026-10-26 — Operator titles and public camera fallback
 

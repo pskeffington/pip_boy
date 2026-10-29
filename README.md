@@ -1,9 +1,9 @@
 # Rust-Boy
 
-**First-party CI:** the [Rust workflow](.github/workflows/rust.yml) uses zero external GitHub Action `uses:` dependencies, checks out the exact triggering SHA, and validates stable Rust, the 1.90 MSRV, both optional SDR features, and native macOS/Windows builds. Final PR head `ea30d048fb0f58ae6c2f997beb289eb61408e0c6` passed all seven checks in [run 40838125904](https://github.com/pskeffington/pip_boy/actions/runs/40838125904), including the push-triggered PR run [40838127662](https://github.com/pskeffington/pip_boy/actions/runs/40838127662). This is not a fully offline build: Rustup, system packages and pinned Cargo dependencies still require their respective sources.
+**First-party CI:** the [Rust workflow](.github/workflows/rust.yml) uses zero external GitHub Action `uses:` dependencies, checks out the exact triggering SHA, and validates stable Rust, the 1.90 MSRV, both optional SDR features, and native macOS/Windows builds. The status badge tracks this development branch's PR checks. Verified PR head `ea30d048fb0f58ae6c2f997beb289eb61408e0c6` passed all seven checks in [run 40838125904](https://github.com/pskeffington/pip_boy/actions/runs/40838125904), including the push-triggered PR run [40838127662](https://github.com/pskeffington/pip_boy/actions/runs/40838127662). This is not a fully offline build: Rustup, system packages and pinned Cargo dependencies still require their respective sources.
 
 
-[![Rust-Boy quality gates](https://github.com/pskeffington/pip_boy/actions/workflows/rust.yml/badge.svg?branch=main)](https://github.com/pskeffington/pip_boy/actions/workflows/rust.yml)
+[![Rust-Boy quality gates](https://github.com/pskeffington/pip_boy/actions/workflows/rust.yml/badge.svg?branch=codex%2Fpackage-adapter-protocol)](https://github.com/pskeffington/pip_boy/actions/workflows/rust.yml?query=branch%3Acodex%2Fpackage-adapter-protocol)
 [![License: MIT](https://img.shields.io/badge/license-MIT-informational)](LICENSE)
 [![Rust: 1.90+](https://img.shields.io/badge/Rust-1.90%2B-informational)](Cargo.toml)
 
