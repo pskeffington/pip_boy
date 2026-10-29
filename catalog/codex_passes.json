@@ -271,7 +271,7 @@
         "Verify rollback before legacy map removal."
       ],
       "blockers": [
-        "Independent rb_gis renderer parity remains open."
+        "The independent rb_gis main at bcb3b3a57024559826755df95bcf31911c4bc445 contains only LICENSE and README.md; no renderer source or parity fixtures are available. Renderer parity must remain open until independent implementation evidence exists."
       ],
       "external_repositories": [
         "pskeffington/rb_gis"

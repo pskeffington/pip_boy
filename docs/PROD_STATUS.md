@@ -20,6 +20,12 @@ Updated: 2026-10-29
 - The main workflow still contains third-party Action imports. The PR branch replaces these with repository-owned exact-SHA checkout and official toolchain bootstrap, preserving the stable/1.90, SDR and native platform gates. Main's badge will reflect the repaired workflow after the change is merged.
 - PR #71 remains draft because RB-CX-05's independent `rb_gis` renderer parity and operator/field acceptance remain open. Do not treat the green PR CI matrix as acceptance of those gates.
 
+## Current exact-head and independent GIS source check — 2026-10-29
+
+- PR #71 head `0fc2d9376d045c67071594fdc7363570561cba37` passed all seven jobs in [run 40865570902](https://github.com/pskeffington/pip_boy/actions/runs/40865570902). The PR's green status does not change `main`'s separate failing badge.
+- Read-only GitHub inspection of `pskeffington/rb_gis` found `main` at `bcb3b3a57024559826755df95bcf31911c4bc445`; its complete non-truncated tree contains only `LICENSE` and `README.md`. The README describes it as a future independent Rust-Boy MAP implementation. There is no renderer source, executable, or conformance fixture to compare with the Rust-Boy host.
+- This verifies why renderer parity cannot currently be accepted. Keep RB-CX-05 open and keep `rb_gis` independent; resume renderer comparison when upstream implementation evidence is available. Do not treat the current host-side GeoJSON interchange as equivalent evidence.
+
 ## RB-CX-05 host package interoperability — local candidate
 
 - Candidate source checkpoint: `0d648f20a96796a30beef443bfe0439439e57ff7` (same source tree on which the local commands below passed). Hosted exact-head CI has not run yet.
