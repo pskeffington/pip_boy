@@ -2,8 +2,8 @@
 //! Run: cargo run --locked -p rust-boy-adapter-sdk --example hello_adapter
 
 use rust_boy_adapter_sdk::{
-    AdapterCommand, AdapterEnvelope, AdapterError, AdapterReply, UniversalPackageAdapter,
-    Viewport, ADAPTER_PROTOCOL,
+    AdapterCommand, AdapterEnvelope, AdapterError, AdapterReply, UniversalPackageAdapter, Viewport,
+    ADAPTER_PROTOCOL,
 };
 use serde_json::json;
 
@@ -33,12 +33,8 @@ impl UniversalPackageAdapter for HelloPackage {
                 Ok(AdapterReply::Ack)
             }
             AdapterCommand::Resize { .. } => Ok(AdapterReply::Ack),
-            AdapterCommand::Intent { action, .. } if action == "ui.select" => {
-                Ok(AdapterReply::Ack)
-            }
-            AdapterCommand::Intent { .. } => {
-                Err(AdapterError::Denied("unreviewed package intent"))
-            }
+            AdapterCommand::Intent { action, .. } if action == "ui.select" => Ok(AdapterReply::Ack),
+            AdapterCommand::Intent { .. } => Err(AdapterError::Denied("unreviewed package intent")),
         }
     }
 }

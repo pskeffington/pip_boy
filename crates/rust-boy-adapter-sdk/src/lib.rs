@@ -36,10 +36,16 @@ impl Viewport {
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 #[serde(tag = "command", rename_all = "snake_case")]
 pub enum AdapterCommand {
-    Activate { viewport: Viewport },
+    Activate {
+        viewport: Viewport,
+    },
     Suspend,
-    Resume { viewport: Viewport },
-    Resize { viewport: Viewport },
+    Resume {
+        viewport: Viewport,
+    },
+    Resize {
+        viewport: Viewport,
+    },
     Intent {
         action: String,
         required_scope: Option<String>,

@@ -1844,7 +1844,8 @@ mod tests {
         assert!(
             String::from_utf8_lossy(&dispatch(&net, &store, 8765).body).contains("192.168.1.0/24")
         );
-        let remove = request("POST", "/api/custom/remove", json!({"id":1}));
+        let custom_slot_id = store.load().unwrap().slots.last().unwrap().id;
+        let remove = request("POST", "/api/custom/remove", json!({"id": custom_slot_id}));
         assert_eq!(dispatch(&remove, &store, 8765).status, 200);
         assert!(store.load().unwrap().slots.is_empty());
         assert!(!root.join("notes.json").exists());
@@ -2513,7 +2514,9 @@ mod tests {
         }
         assert!(!temp.path().join("private").exists());
         let mut bad_host = request("GET", "/api/packages", Value::Null);
-        bad_host.headers.insert("host".into(), "external.invalid".into());
+        bad_host
+            .headers
+            .insert("host".into(), "external.invalid".into());
         assert_eq!(dispatch(&bad_host, &store, 8765).status, 403);
     }
 
