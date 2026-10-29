@@ -1,13 +1,56 @@
 # Changelog
 
+## 2026-10-29 — First-party CI and user build verification
+
+- Verify the PR branch's seven-job, zero-external-Action workflow on exact source `520b3bf2801d8a0a261ff16e96c40c3a2a02e5fb` ([run 40836201769](https://github.com/pskeffington/pip_boy/actions/runs/40836201769)).
+- Verify documentation head `bfe8570fc62fcac7ab570d405241ab7835834a76` on all seven exact-head checks ([run 40837409917](https://github.com/pskeffington/pip_boy/actions/runs/40837409917)).
+- Verify final PR head `ea30d048fb0f58ae6c2f997beb289eb61408e0c6` on all seven exact-head checks in both [run 40838125904](https://github.com/pskeffington/pip_boy/actions/runs/40838125904) and the push-triggered [run 40838127662](https://github.com/pskeffington/pip_boy/actions/runs/40838127662).
+- Clean-build the remote `main` source snapshot `629f34f0ce21e37c6d2bc6567919ccc5c862c80d` with `cargo +stable build --workspace --locked`; run the CLI help and real loopback micro-dashboard smoke successfully on macOS ARM64.
+- Document Debian/Ubuntu ALSA build prerequisites and the locked workspace build/CLI smoke commands. Hardware, Mac operator and field acceptance remain separate.
+
+The earlier universal adapter draft entry below describes historical status; it was superseded by the passing build and exact-head evidence above. No current build failure is known. RB-CX-05 remains an implementation candidate pending independent `rb_gis` renderer parity and its remaining acceptance checks.
+
+
+## 2026-10-29 — Codex development-pass indexing (validated)
+
+- Add root Codex development instructions, a typed 11-pass dependency/index queue and source-of-truth navigation guide.
+- Repair duplicate dashboard HTTP entrypoint ownership in the component index; cross-module integration remains documented without a second code owner.
+- Add offline pass-index validator/negative tests to the existing catalog CI job; update production checkpoint to distinguish the passive RADIO source candidate from earlier executed UI/transport checks. Checkpoint head `520b3bf2801d8a0a261ff16e96c40c3a2a02e5fb` passed all seven jobs in [run 40836201769](https://github.com/pskeffington/pip_boy/actions/runs/40836201769).
+
+
+## 2026-10-29 — Compile-time first-party RADIO catalogue (draft)
+
+- Register one reviewed passive RADIO adapter using the pinned `rust_radio` station directory, with zero requested capabilities and no automatic playback/network I/O.
+- Bind the live mounted roster to the existing desktop/micro selector; preserve legacy explicit radio playback and host-owned Settings.
+- Add lifecycle, denial and manifest-negative regressions, plus component index. New Rust/CI/browser verification is pending.
+
+## 2026-10-29 — Host lifecycle binding and SDK-aligned transport
+
+- Add `PrivateUnixListener` for current-user-owned private runtime directories, mode-0600 sockets, existing-path refusal, expected OS PID/UID matching and guarded cleanup; keep launch verification, code signing, broker policy and isolation explicitly separate.
+- Add a compact mounted-package selector and inert full-canvas view to desktop and micro shells; both remain disabled with an empty roster.
+- Route selector changes, Settings transitions and returns to shell navigation through the host foreground APIs, keeping shell state synchronized with lifecycle responses.
+- Add desktop focus and micro interaction regressions for empty/mounted rosters, switching, safe text rendering and foreground clearing.
+- Tighten short-screen Settings spacing so the 44px role targets fit at 480×320; update the handheld viewport fixture to permit only the host-owned Settings lifecycle POST.
+- Bind desktop and handheld Settings transitions to `UniversalAdapterHost`, invoking its host-owned suspend/resume lifecycle while keeping package selection disabled without a trusted installed roster.
+- Add same-origin host APIs for the actual mounted roster, inert foreground view and foreground selection; reference designs cannot be selected through these endpoints. Test a synthetic mounted adapter through the dashboard boundary.
+- Add a lifecycle-aware foreground clear operation so returning to the host shell suspends, but does not uninstall, the selected adapter; Settings remains available if already open.
+- Align the deadline-bounded Unix session with the portable SDK hello, command and correlated-reply envelopes; enforce the SDK's 16 KiB frame bound before payload allocation.
+- Keep transport trust explicit: hello identity is only a claim, and listener ownership, authenticated provenance, dispatch, capability grants and process isolation remain open gates.
+- Add backend, browser and viewport regressions for same-origin Settings updates and preserve existing module independence and authorization.
+
+## 2026-10-28 — Bounded package adapter request codec
+
+- Add typed version-1 request, hello-claim and response codecs with monotonic request sequencing, request correlation, a 64-request in-flight cap, package ID validation, viewport bounds and a 64 KiB frame limit.
+- Add generic 4-byte length-prefixed stream framing with clean EOF, truncation and oversized-frame handling.
+- Exercise version negotiation, valid round trips, duplicate/out-of-order IDs, mismatched responses and invalid or oversized frames.
+- Keep the codec inert: transport, cryptographic authentication, dispatch, capabilities and process isolation remain open gates.
 ## 2026-10-28 — Universal package adapter SDK (implementation candidate)
 
 - Add lightweight `rust-boy-adapter-sdk` with a bounded versioned JSON command/reply contract and synthetic hello adapter example for independent module authors.
 - Add `pipboy_core::universal_adapter` for trusted in-process mounting, exactly one foreground package, host-owned Settings, lifecycle switching, explicit unmount, view bounds and deny-by-default scoped intents.
 - Test four synthetic MAP / TV / RADIO / COMMS module identities using the same adapter trait, including faults, resume, sizing, replacement and protocol regressions; preserve the existing live desktop/micro interfaces.
 - Index code ownership and expand read-only `GET /api/packages` with adapter protocol metadata. No real external packages are yet loaded or authorized.
-- Build/MSRV/Clippy acceptance remains open because GitHub Actions is failing at startup and this execution environment has no Rust compiler. See [universal adapter contract](docs/UNIVERSAL_ADAPTER.md).
-
+- Historical note: at the time of this draft, Build/MSRV/Clippy acceptance was open because GitHub Actions failed at startup and the execution environment had no Rust compiler. That status was superseded by the verified build and CI evidence recorded above. See [universal adapter contract](docs/UNIVERSAL_ADAPTER.md).
 
 ## 2026-10-26 — Operator titles and public camera fallback
 

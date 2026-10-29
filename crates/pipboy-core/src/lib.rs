@@ -7,6 +7,7 @@
 pub mod blueprint;
 pub mod branding;
 pub mod buffer;
+pub mod builtin_packages;
 pub mod capability;
 pub mod catalog;
 pub mod device_simulator;
@@ -26,11 +27,15 @@ pub mod network_probe;
 pub mod network_suite;
 pub mod notes;
 pub mod observation;
-pub mod package_socket;
 pub mod organization;
 pub mod organization_authority;
 pub mod organization_identity;
 pub mod organization_policy;
+#[cfg(unix)]
+pub mod package_listener;
+pub mod package_socket;
+#[cfg(unix)]
+pub mod package_transport;
 pub mod peers;
 pub mod permissions;
 pub mod process_safety;

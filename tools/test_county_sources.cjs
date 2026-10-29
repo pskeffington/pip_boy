@@ -67,7 +67,9 @@ function fixture(layer,geoid="25025",compress=false){
    layer==="roads"?"Massachusetts Avenue":layer==="areawater"?"Boston Harbor":"Charles River")},compress);
 }
 const sourceIds=["tiger-roads","tiger-areawater","tiger-linearwater","tiger-pointlm"];
-const calls=[],bundles=Object.fromEntries(sourceIds.slice(0,3).map(id=>[id,fixture(id.slice(6))]));
+const calls=[],activations=[];
+const bundles=Object.fromEntries(sourceIds.slice(0,3).map(id=>[id,fixture(id.slice(6))]));
+let activeGeoid="25025",failGeoid=null;
 const manifest={
  schema:1,vintage:"2025",sources:sourceIds.map(id=>({id})),limits:{max_zip_bytes:12582912}
 };
@@ -75,12 +77,24 @@ const window={},fetchMock=async(url,opts={})=>{
  calls.push({url,opts});
  if(url==="/api/map/sources")return{ok:true,json:async()=>manifest};
  if(url==="/api/map/cache")return{ok:true,json:async()=>({
-   schema:1,vintage:"2025",active_geoid:"25025",cached_sources:sourceIds,network_used:false
+   schema:1,vintage:"2025",active_geoid:activeGeoid,
+   cached_sources:sourceIds,network_used:false
  })};
+ if(url==="/api/map/activate"){
+   const q=JSON.parse(opts.body);
+   assert.equal(q.confirm,true);
+   activations.push(q.geoid);
+   activeGeoid=q.geoid;
+   return{ok:true,json:async()=>({schema:1,vintage:"2025",
+     active_geoid:activeGeoid,cached_sources:sourceIds,
+     boundary_cached:true,network_used:false})};
+ }
  if(url==="/api/map/package"){
    const q=JSON.parse(opts.body);
-   assert.equal(q.geoid,"25025");assert.ok(sourceIds.includes(q.source));
+   assert.ok(/^\d{5}$/.test(q.geoid));assert.ok(sourceIds.includes(q.source));
    assert.equal(opts.credentials,"omit");assert.equal(opts.method,"POST");
+   if(q.geoid===failGeoid)return{ok:false,status:404};
+   if(q.geoid!=="25025")return{ok:false,status:404};
    return{ok:true,headers:{get:()=>null},arrayBuffer:async()=>Uint8Array.from(bundles[q.source]).buffer};
  }
  throw new Error("Unexpected local source request "+url);
@@ -122,12 +136,20 @@ async function main(){
  assert.ok(r.warnings.some(x=>x.includes("POINTLM hidden")),"Offline landmarks need polygon");
  assert.equal(calls.filter(c=>c.url==="/api/map/sources").length,1);
  assert.equal(calls.filter(c=>c.url==="/api/map/package").length,3);
+ assert.deepEqual(activations,["25025"],
+   "validated base geometry explicitly commits the cold-start county");
  const active=await window.RustBoyCounty.active();
  assert.equal(active.active_geoid,"25025");
  const fromCache=await window.RustBoyCounty.load("25025",{cacheOnly:true});
  assert.equal(fromCache.features,3);
  const p=calls.filter(c=>c.url==="/api/map/package").slice(-3);
  assert.ok(p.every(c=>JSON.parse(c.opts.body).cache_only===true));
+ failGeoid="25023";
+ const activationsBeforeFailure=activations.length;
+ await assert.rejects(()=>window.RustBoyCounty.load("25023"),/No county source loaded/);
+ assert.equal(activeGeoid,"25025","failed source parsing does not replace active offline county");
+ assert.equal(activations.length,activationsBeforeFailure,
+   "an unvalidated county never reaches the cache activation endpoint");
  // Integrated MAP: auto restore a cached county without network or GPS.
  class E {
    constructor(tag){this.tag=tag;this.children=[];this.listeners={};this.attrs={};

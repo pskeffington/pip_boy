@@ -1,4 +1,4 @@
-//! Reclamation Scout GIS bridge: read-only, offline GeoJSON Point inspection
+//! Reclamation Scout GIS bridge: read-only, offline GeoJSON inspection
 //! and explicit waypoint/distance calculations. Independent code; no RustGIS
 //! source vendoring, sockets, location sampling or data persistence.
 use serde::Serialize;
@@ -6,7 +6,9 @@ use serde_json::{json, Value};
 use std::io;
 
 pub const MAX_GEOJSON_BYTES: usize = 1024 * 1024;
-pub const MAX_POINTS: usize = 1000;
+pub const MAX_FEATURES: usize = 1000;
+pub const MAX_POINTS: usize = MAX_FEATURES;
+pub const MAX_VERTICES: usize = 30_000;
 const MEAN_EARTH_RADIUS_M: f64 = 6_371_008.8;
 
 fn invalid(message: &'static str) -> io::Error {
@@ -92,87 +94,212 @@ pub struct GeoJsonSummary {
     pub network_used: bool,
 }
 
-fn point_geometry(value: &Value) -> io::Result<Point> {
-    if value.get("type").and_then(Value::as_str) != Some("Point") {
-        return Err(invalid(
-            "only GeoJSON Point geometries are currently supported",
-        ));
-    }
-    let coordinates = value
-        .get("coordinates")
-        .and_then(Value::as_array)
-        .ok_or_else(|| invalid("GeoJSON Point coordinates must be an array"))?;
-    if coordinates.len() != 2 {
-        return Err(invalid("GeoJSON Point must have exactly two coordinates"));
-    }
-    let lon = coordinates[0]
-        .as_f64()
-        .ok_or_else(|| invalid("longitude must be numeric"))?;
-    let lat = coordinates[1]
-        .as_f64()
-        .ok_or_else(|| invalid("latitude must be numeric"))?;
-    Point::new(lat, lon)
+struct GeometryStats {
+    west: f64,
+    south: f64,
+    east: f64,
+    north: f64,
+    vertices: usize,
+    geometries: usize,
+    types: std::collections::BTreeSet<&'static str>,
 }
 
-fn feature_geometry(value: &Value) -> io::Result<Point> {
-    if value.get("type").and_then(Value::as_str) != Some("Feature") {
-        return Err(invalid(
-            "GeoJSON FeatureCollection entries must be Features",
-        ));
+impl GeometryStats {
+    fn new() -> Self {
+        Self {
+            west: f64::INFINITY,
+            south: f64::INFINITY,
+            east: f64::NEG_INFINITY,
+            north: f64::NEG_INFINITY,
+            vertices: 0,
+            geometries: 0,
+            types: std::collections::BTreeSet::new(),
+        }
     }
-    point_geometry(
-        value
-            .get("geometry")
-            .ok_or_else(|| invalid("GeoJSON Feature requires non-null Point geometry"))?,
-    )
+
+    fn position(&mut self, value: &Value) -> io::Result<()> {
+        let coordinates = value
+            .as_array()
+            .filter(|coordinates| coordinates.len() >= 2)
+            .ok_or_else(|| invalid("GeoJSON position requires longitude and latitude"))?;
+        let lon = coordinates[0]
+            .as_f64()
+            .ok_or_else(|| invalid("longitude must be numeric"))?;
+        let lat = coordinates[1]
+            .as_f64()
+            .ok_or_else(|| invalid("latitude must be numeric"))?;
+        Point::new(lat, lon)?;
+        self.vertices += 1;
+        if self.vertices > MAX_VERTICES {
+            return Err(invalid("GeoJSON exceeds 30,000 positions"));
+        }
+        self.west = self.west.min(lon);
+        self.east = self.east.max(lon);
+        self.south = self.south.min(lat);
+        self.north = self.north.max(lat);
+        Ok(())
+    }
+
+    fn positions(&mut self, value: &Value, minimum: usize) -> io::Result<()> {
+        let values = value
+            .as_array()
+            .filter(|values| values.len() >= minimum)
+            .ok_or_else(|| invalid("GeoJSON coordinate path is empty or too short"))?;
+        for position in values {
+            self.position(position)?;
+        }
+        Ok(())
+    }
+
+    fn geometry(&mut self, value: &Value, depth: usize) -> io::Result<()> {
+        if depth > 6 {
+            return Err(invalid("GeoJSON GeometryCollection nesting exceeds 6"));
+        }
+        let kind = value
+            .get("type")
+            .and_then(Value::as_str)
+            .ok_or_else(|| invalid("GeoJSON geometry requires a type"))?;
+        self.geometries += 1;
+        match kind {
+            "Point" => {
+                self.types.insert("Point");
+                self.position(&value["coordinates"])?;
+            }
+            "MultiPoint" => {
+                self.types.insert("MultiPoint");
+                self.positions(&value["coordinates"], 1)?;
+            }
+            "LineString" => {
+                self.types.insert("LineString");
+                self.positions(&value["coordinates"], 2)?;
+            }
+            "MultiLineString" => {
+                self.types.insert("MultiLineString");
+                let paths = value["coordinates"]
+                    .as_array()
+                    .filter(|paths| !paths.is_empty())
+                    .ok_or_else(|| invalid("MultiLineString requires coordinate paths"))?;
+                for path in paths {
+                    self.positions(path, 2)?;
+                }
+            }
+            "Polygon" => {
+                self.types.insert("Polygon");
+                let rings = value["coordinates"]
+                    .as_array()
+                    .filter(|rings| !rings.is_empty())
+                    .ok_or_else(|| invalid("Polygon requires coordinate rings"))?;
+                for ring in rings {
+                    self.positions(ring, 4)?;
+                }
+            }
+            "MultiPolygon" => {
+                self.types.insert("MultiPolygon");
+                let polygons = value["coordinates"]
+                    .as_array()
+                    .filter(|polygons| !polygons.is_empty())
+                    .ok_or_else(|| invalid("MultiPolygon requires polygons"))?;
+                for polygon in polygons {
+                    let rings = polygon
+                        .as_array()
+                        .filter(|rings| !rings.is_empty())
+                        .ok_or_else(|| invalid("MultiPolygon requires coordinate rings"))?;
+                    for ring in rings {
+                        self.positions(ring, 4)?;
+                    }
+                }
+            }
+            "GeometryCollection" => {
+                let geometries = value
+                    .get("geometries")
+                    .and_then(Value::as_array)
+                    .filter(|geometries| !geometries.is_empty())
+                    .ok_or_else(|| invalid("GeometryCollection requires geometries"))?;
+                for geometry in geometries {
+                    self.geometry(geometry, depth + 1)?;
+                }
+            }
+            _ => return Err(invalid("unsupported GeoJSON geometry type")),
+        }
+        Ok(())
+    }
+
+    fn geometry_label(&self) -> &'static str {
+        if self.types.len() == 1 {
+            self.types.iter().next().copied().unwrap_or("Unknown")
+        } else {
+            "Mixed"
+        }
+    }
 }
 
 /// Bounded read-only interoperability with RustGIS and other RFC 7946 tools.
-/// Reject non-Point data instead of silently omitting geometry.
+/// Supports the geometry types consumed by MAP and rejects unsupported data.
 pub fn inspect_geojson(bytes: &[u8]) -> io::Result<GeoJsonSummary> {
     if bytes.is_empty() || bytes.len() > MAX_GEOJSON_BYTES {
         return Err(invalid("GeoJSON must be 1 byte to 1 MiB"));
     }
     let root: Value =
         serde_json::from_slice(bytes).map_err(|_| invalid("invalid GeoJSON JSON document"))?;
-    let points: Vec<Point> = match root.get("type").and_then(Value::as_str) {
-        Some("Point") => vec![point_geometry(&root)?],
-        Some("Feature") => vec![feature_geometry(&root)?],
+    if root.get("crs").is_some() {
+        return Err(invalid(
+            "GeoJSON must use WGS84 longitude/latitude coordinates without a legacy CRS field",
+        ));
+    }
+    let mut stats = GeometryStats::new();
+    let features = match root.get("type").and_then(Value::as_str) {
+        Some(
+            "Point" | "MultiPoint" | "LineString" | "MultiLineString" | "Polygon" | "MultiPolygon"
+            | "GeometryCollection",
+        ) => {
+            stats.geometry(&root, 0)?;
+            1
+        }
+        Some("Feature") => {
+            stats.geometry(
+                root.get("geometry")
+                    .filter(|geometry| !geometry.is_null())
+                    .ok_or_else(|| invalid("GeoJSON Feature requires non-null geometry"))?,
+                0,
+            )?;
+            1
+        }
         Some("FeatureCollection") => {
             let features = root
                 .get("features")
                 .and_then(Value::as_array)
                 .ok_or_else(|| invalid("FeatureCollection requires a features array"))?;
-            if features.is_empty() || features.len() > MAX_POINTS {
-                return Err(invalid("FeatureCollection must contain 1..1000 Points"));
+            if features.is_empty() || features.len() > MAX_FEATURES {
+                return Err(invalid("FeatureCollection must contain 1..1000 Features"));
             }
-            features
-                .iter()
-                .map(feature_geometry)
-                .collect::<io::Result<Vec<_>>>()?
+            for feature in features {
+                if feature.get("type").and_then(Value::as_str) != Some("Feature") {
+                    return Err(invalid("FeatureCollection entries must be Features"));
+                }
+                stats.geometry(
+                    feature
+                        .get("geometry")
+                        .filter(|geometry| !geometry.is_null())
+                        .ok_or_else(|| invalid("GeoJSON Feature requires non-null geometry"))?,
+                    0,
+                )?;
+            }
+            features.len()
         }
         _ => {
             return Err(invalid(
-                "expected GeoJSON Point, Feature or FeatureCollection of Points",
+                "expected GeoJSON geometry, Feature or FeatureCollection",
             ))
         }
     };
-    let initial = points[0];
-    let mut west = initial.longitude;
-    let mut east = initial.longitude;
-    let mut south = initial.latitude;
-    let mut north = initial.latitude;
-    for point in points.iter().skip(1) {
-        west = west.min(point.longitude);
-        east = east.max(point.longitude);
-        south = south.min(point.latitude);
-        north = north.max(point.latitude);
+    if stats.vertices == 0 {
+        return Err(invalid("GeoJSON contains no coordinate positions"));
     }
     Ok(GeoJsonSummary {
         format: "GeoJSON (RFC 7946)",
-        geometry: "Point",
-        features: points.len(),
-        bbox: [west, south, east, north],
+        geometry: stats.geometry_label(),
+        features,
+        bbox: [stats.west, stats.south, stats.east, stats.north],
         coordinate_order: "longitude,latitude",
         antimeridian_note: "Raw min/max bbox; crossing the antimeridian may create a wide extent",
         network_used: false,
@@ -229,17 +356,101 @@ mod tests {
         for invalid in [
             r#"{}"#,
             r#"{"type":"FeatureCollection","features":[]}"#,
+            r#"{"type":"Point","coordinates":[0,0],"crs":{"type":"name","properties":{"name":"EPSG:3857"}}}"#,
             r#"{"type":"Point","coordinates":[0]}"#,
             r#"{"type":"Point","coordinates":[0,91]}"#,
             r#"{"type":"Point","coordinates":[null,1]}"#,
-            r#"{"type":"Point","coordinates":[1,1,9]}"#,
-            r#"{"type":"LineString","coordinates":[[0,0],[1,1]]}"#,
             r#"{"type":"Feature","geometry":null,"properties":{}}"#,
             r#"{"type":"FeatureCollection","features":[{"type":"Point","coordinates":[1,2]}]}"#,
+            r#"{"type":"LineString","coordinates":[[0,0]]}"#,
+            r#"{"type":"Polygon","coordinates":[[[0,0],[1,0],[1,1]]] }"#,
+            r#"{"type":"GeometryCollection","geometries":[]}"#,
         ] {
             assert!(inspect_geojson(invalid.as_bytes()).is_err(), "{invalid}");
         }
         assert!(inspect_geojson(&vec![b' '; MAX_GEOJSON_BYTES + 1]).is_err());
+        let oversized =
+            json!({"type":"LineString","coordinates":vec![[0.0,0.0]; MAX_VERTICES + 1]});
+        assert!(inspect_geojson(oversized.to_string().as_bytes()).is_err());
+    }
+
+    #[test]
+    fn inspector_accepts_map_geometry_families_and_counts_vertices() {
+        let cases = [
+            (
+                json!({"type":"Point","coordinates":[1,2]}),
+                "Point",
+                1,
+                [1.0, 2.0, 1.0, 2.0],
+            ),
+            (
+                json!({"type":"MultiPoint","coordinates":[[1,2],[3,4]]}),
+                "MultiPoint",
+                2,
+                [1.0, 2.0, 3.0, 4.0],
+            ),
+            (
+                json!({"type":"LineString","coordinates":[[-1,0],[1,2]]}),
+                "LineString",
+                2,
+                [-1.0, 0.0, 1.0, 2.0],
+            ),
+            (
+                json!({"type":"MultiLineString","coordinates":[[[0,0],[1,1]],[[2,2],[3,3]]]}),
+                "MultiLineString",
+                4,
+                [0.0, 0.0, 3.0, 3.0],
+            ),
+            (
+                json!({"type":"Polygon","coordinates":[[[0,0],[2,0],[2,2],[0,0]]]}),
+                "Polygon",
+                4,
+                [0.0, 0.0, 2.0, 2.0],
+            ),
+            (
+                json!({"type":"MultiPolygon","coordinates":[[[[0,0],[1,0],[1,1],[0,0]]],[[[2,2],[3,2],[3,3],[2,2]]]]}),
+                "MultiPolygon",
+                8,
+                [0.0, 0.0, 3.0, 3.0],
+            ),
+        ];
+        for (geometry, expected_type, vertices, bbox) in cases {
+            let summary = inspect_geojson(geometry.to_string().as_bytes()).unwrap();
+            assert_eq!(summary.geometry, expected_type);
+            assert_eq!(summary.features, 1);
+            assert_eq!(summary.bbox, bbox);
+            assert!(!summary.network_used);
+            let mut stats = GeometryStats::new();
+            stats.geometry(&geometry, 0).unwrap();
+            assert_eq!(stats.vertices, vertices);
+        }
+    }
+
+    #[test]
+    fn geometry_collections_and_feature_collections_preserve_feature_counts() {
+        let mixed_feature = json!({"type":"Feature","properties":{},"geometry":{
+            "type":"GeometryCollection","geometries":[
+                {"type":"Point","coordinates":[-81,37]},
+                {"type":"LineString","coordinates":[[-82,36],[-80,38]]}
+            ]
+        }});
+        let summary = inspect_geojson(mixed_feature.to_string().as_bytes()).unwrap();
+        assert_eq!(summary.geometry, "Mixed");
+        assert_eq!(summary.features, 1);
+        assert_eq!(summary.bbox, [-82.0, 36.0, -80.0, 38.0]);
+        let mut stats = GeometryStats::new();
+        stats.geometry(&mixed_feature["geometry"], 0).unwrap();
+        assert_eq!(stats.geometries, 3);
+        assert_eq!(stats.vertices, 3);
+
+        let collection = json!({"type":"FeatureCollection","features":[
+            waypoint("Point", Point::new(37.0,-81.0).unwrap()).unwrap(),
+            {"type":"Feature","properties":{},"geometry":{"type":"Polygon","coordinates":[[[-82,36],[-80,36],[-80,38],[-82,36]]]}}
+        ]});
+        let summary = inspect_geojson(collection.to_string().as_bytes()).unwrap();
+        assert_eq!(summary.geometry, "Mixed");
+        assert_eq!(summary.features, 2);
+        assert_eq!(summary.bbox, [-82.0, 36.0, -80.0, 38.0]);
     }
 
     #[test]
@@ -252,6 +463,25 @@ mod tests {
         assert_eq!(summary.features, 2);
         assert_eq!(summary.bbox, [-72.0, 40.0, -70.0, 41.0]);
         assert_eq!(summary.coordinate_order, "longitude,latitude");
+        let json = serde_json::to_value(summary).unwrap();
+        let keys: Vec<_> = json
+            .as_object()
+            .unwrap()
+            .keys()
+            .map(String::as_str)
+            .collect();
+        assert_eq!(
+            keys,
+            [
+                "antimeridian_note",
+                "bbox",
+                "coordinate_order",
+                "features",
+                "format",
+                "geometry",
+                "network_used"
+            ]
+        );
     }
 
     #[test]

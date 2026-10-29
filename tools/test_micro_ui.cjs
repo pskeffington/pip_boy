@@ -63,7 +63,20 @@ const fixture = {
 const context = vm.createContext({document, window, Element, console, Intl, Date,
   setTimeout:() => 1, clearTimeout() {}, setInterval() {},
   MutationObserver:class {observe() {}},
-  fetch:async url => {requests.push(url); return {ok:true, json:async () => fixture};}
+  fetch:async (url,options) => {
+    requests.push({url,method:options&&options.method||"GET",body:options&&options.body});
+    if (url === "/api/host/foreground") {
+      const body = JSON.parse(options.body);
+      return {ok:true, json:async () => body.package_id
+        ? {selected_package_id:body.package_id, foreground:{surface:"package"}, settings_open:false,
+            foreground_view:{version:1,title:"Fixture package",blocks:[
+              {kind:"text",text:"<img src=x onerror=alert(1)>"},
+              {kind:"status",label:"State",value:"Read only"}
+            ]}}
+        : {selected_package_id:null, foreground:{surface:"empty"}, settings_open:false, foreground_view:null}};
+    }
+    return {ok:true, json:async () => fixture};
+  }
 });
 vm.runInContext(fs.readFileSync(path.join(assets, "micro.js"), "utf8"), context);
 const run = code => vm.runInContext(code, context);
@@ -72,7 +85,7 @@ const buttons = () => content.querySelectorAll(".micro-pager button");
 const tiles = () => content.querySelectorAll(".tile");
 (async () => {
   await new Promise(setImmediate);
-  assert.deepEqual(requests, ["/api/state"], "Startup must only read local state");
+  assert.deepEqual(requests, [{url:"/api/state",method:"GET",body:undefined}], "Startup must only read local state");
   assert.equal(run("toastTimer"), null, "Startup toast should not obscure tools");
   run('setTab("role")');
   assert.equal(tiles().length, 4);
@@ -109,6 +122,10 @@ const tiles = () => content.querySelectorAll(".tile");
   assert.equal(tiles().length, 2, "System tools belong under STATUS");
   document.getElementById("micro-settings").click();
   assert.equal(run("tab"), "conf", "Settings stays reachable outside the five-section rail");
+  document.getElementById("micro-settings").click();
+  assert.equal(run("tab"), "stat", "Settings control closes back to the prior handheld screen");
+  document.getElementById("micro-settings").click();
+  assert.equal(run("tab"), "conf", "Settings remains directly available after returning");
   let locationMounted=0;
   window.RustBoyMap={unmount(){},mountSettings(){locationMounted++;}};
   const locationButton=walk(content).find(x=>x.textContent === "LOCATION / MAP");
@@ -126,7 +143,15 @@ const tiles = () => content.querySelectorAll(".tile");
   const staged = run("pendingProfile");
   document.getElementById("role-next").click();
   assert.equal(run("pendingProfile"), staged, "Paging must not select a different role");
-  assert.deepEqual(requests, ["/api/state"], "Browsing must never apply profiles or run tools");
+  const settingsUpdates = requests.filter(item=>item.url==="/api/host/settings")
+    .map(item=>JSON.parse(item.body).settings_open);
+  assert.deepEqual(settingsUpdates,[true,false,true],
+    "Opening/closing host Settings must update Rust-owned foreground state");
+  assert.ok(requests.every(item=>item.url!=="/api/host/settings" || item.method==="POST"),
+    "Host surface changes must use explicit same-origin mutations");
+  assert.ok(requests.every(item=>item.url==="/api/state" ||
+    item.url==="/api/host/settings"&&item.method==="POST"),
+    "Browsing must never apply profiles or run tools");
   window.innerHeight = 480;
   events.get("resize")();
   assert.equal(roles.children.length, 4);
@@ -141,5 +166,31 @@ const tiles = () => content.querySelectorAll(".tile");
   const editor = content.children[0];
   events.get("resize")();
   assert.equal(content.children[0], editor);
+  const packageSelect = document.getElementById("micro-host-package-select");
+  assert.equal(packageSelect.disabled, true, "Package selection is disabled when no adapters are mounted");
+  run('snapshot.host_packages = {packages:[{package_id:"org.rustboy.radio",state:"registered"}],selected_package_id:null,foreground_view:null}');
+  run("updateHostPackageSelect(snapshot.host_packages)");
+  assert.equal(packageSelect.disabled, false, "Only a mounted roster enables host package selection");
+  assert.deepEqual(packageSelect.children.map(option => option.textContent), ["HOST", "RADIO"]);
+  packageSelect.value = "org.rustboy.radio";
+  packageSelect.events.get("change")({currentTarget:packageSelect});
+  await new Promise(setImmediate);
+  assert.equal(run("tab"), "adapter", "Selecting a mounted package opens the host package surface");
+  const packageView = walk(content).find(node => node.className === "adapter-view-text");
+  assert.ok(packageView?.textContent.includes("<img src=x onerror=alert(1)>"));
+  assert.equal(walk(content).some(node => node.tagName === "img"), false,
+    "Package view text is placed in host-created DOM nodes, never interpreted as markup");
+  assert.ok(walk(content).some(node => node.className === "adapter-view-status"),
+    "Portable status blocks receive a native handheld rendering");
+  const invalidPackageView = run(`(()=>{const root=document.createElement("div");
+    renderPackageView(root,{version:1,title:"Bad",blocks:[{kind:"html",markup:"<script>run()</script>"}]});
+    return root;})()`);
+  assert.match(invalidPackageView.textContent,/No valid foreground view/,
+    "Unknown package view blocks must be rejected instead of ignored or interpreted");
+  run('setTab("stat")');
+  await new Promise(setImmediate);
+  assert.equal(run("tab"), "stat", "Leaving the package returns to the host workbench");
+  assert.ok(requests.some(item => item.url === "/api/host/foreground" &&
+    JSON.parse(item.body).package_id === null), "Leaving a package clears foreground through the host lifecycle API");
   console.log("PASS micro: adaptive paging, complete tool access, focus, staged roles, safe resize, Back and silent startup");
 })().catch(error => {console.error(error); process.exitCode = 1;});

@@ -14,7 +14,9 @@ Run `node tools/test_desktop_focus_ui.cjs`, `node tools/test_desktop_viewport.cj
 
 ## Compact desktop focus layout — 2026-10-26
 
-The shared desktop workspace retains **COMMAND / MODULES / VIEWPORT / MESSAGES / SETTINGS** navigation for every role; station/profile changes happen only in **SETTINGS**. The desktop has one workspace plus an inspector on wide screens, or a two-way WORKSPACE / INSPECTOR switch on narrower windows. Station selection, six-item pages (two on short touch screens), the Custom tool editor, Reclamation Scout MAP/SITES/DUTIES, camera views and the `/micro` UI are preserved.
+The shared desktop workspace retains **COMMAND / MODULES / VIEWPORT / MESSAGES / SETTINGS** navigation for every role; station/profile changes happen only in **SETTINGS**. The workspace is one full-width view; selecting a tool opens full-screen details with a return action. Station selection, six-item pages (two on short touch screens), the Custom tool editor, Reclamation Scout MAP/SITES/DUTIES, camera views and the `/micro` UI are preserved.
+
+Opening or closing Settings updates the Rust-owned `ForegroundSelection` through same-origin `POST /api/host/settings`; `/api/state` reports its current surface so reload restores Settings when that host surface is active. The endpoint accepts only a boolean Settings transition. It cannot select a package or make a reference manifest installed; no approved package roster exists yet. Other desktop stage/pane navigation remains local to the browser.
 
 Visible copy is now intentionally minimal: compact tool buttons with name and meaningful status, a three-value **Station / Tools / Access** band, and concise inspector and Settings labels. Full Rust-authored station/tool descriptions remain available as hover tooltips or inspector **About this tool** disclosure. **Safety & access** is also expandable. Optional guidance is closed by default; no permissions or information are removed.
 
@@ -112,6 +114,10 @@ See [role roadmap](ROLE_ROADMAP.md), [Scout GIS/TAK plan](SCOUT_GIS_TAK.md), [se
 ## One-screen viewport rule (October 2026)
 
 The desktop shell must fit one viewport without document-level scrolling. At wide widths, the central workspace and inspector remain visible together; **no persistent role rail** is displayed. Below 1100 CSS pixels, **WORKSPACE / INSPECTOR** becomes an explicit two-way screen switch. The central workspace always exposes **COMMAND / MODULES / VIEWPORT / MESSAGES / SETTINGS**. Role selection is a nested Settings page, while MANAGE CUSTOM TOOLS opens a paged subview only when Custom is active. Modules, roles, and palette use visible PREV/NEXT controls instead of long vertical lists.
+
+### Host-owned package viewport
+
+The package stage renders the portable v1 `PackageView` schema through host-created headings, paragraphs, status rows and lists. Content is assigned as text; package HTML, scripts, URLs and callbacks are not accepted. The view has an internal bounded scroll region, preserving document-level no-scroll behavior. Package selection remains a native keyboard-accessible control and Settings remains host-owned and always reachable. Interactive package actions are deferred until capability policy passes RB-CX-02.
 
 **Acceptance criteria:** at normal browser zoom, do not expose a body scrollbar; keep the masthead, page switches, active screen and its navigation in the visible window; never hide the last module behind a clipping mask. At 480×320, use the dedicated `/micro` shell, which was specifically designed for the handheld. Dense data output, long device messages, authorization forms, and accessibility zoom may still use *internal* scrolling when needed; hiding essential controls is not an acceptable no-scroll implementation. The desktop radio and other future modules should use the same focused-panel/paging contract rather than adding sections below the fold.
 

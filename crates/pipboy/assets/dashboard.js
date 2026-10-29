@@ -53,6 +53,10 @@ let lastOutput = "";
 let rolePage = 0, modulePage = 0, palettePage = 0;
 let activeStage = "modules";
 let activePane = "workspace";
+let settingsReturnStage = "modules";
+let settingsReturnPane = "workspace";
+let settingsReturnRadioPaneOpen = false;
+let settingsReturnExtensionMode = "map";
 let desktopMessenger = null;
 let desktopCommandUI = null;
 let initialWorkspaceLoaded = false;
@@ -80,8 +84,26 @@ function pager(id, total, current, setter, pageSize = PAGE_SIZE) {
 }
 function activateStage(stage) {
   if (stage === "palette" && snapshot?.active.profile !== "custom") stage = "settings";
-  if (!["command", "modules", "viewport", "messages", "settings", "palette"].includes(stage)) return;
+  if (!["command", "modules", "viewport", "messages", "settings", "palette", "adapter"].includes(stage)) return;
   const previous = activeStage;
+  const wasSettings = previous === "settings" || previous === "palette";
+  const entersSettings = stage === "settings" || stage === "palette";
+  const leavingAdapter = stage !== "adapter" && stage !== "settings" &&
+    (previous === "adapter" || (wasSettings && settingsReturnStage === "adapter"));
+  if (leavingAdapter) {
+    void api("/api/host/foreground", {package_id:null, close_settings:wasSettings})
+      .then(applyHostForegroundResult)
+      .catch(error => notify(`HOST PACKAGE SUSPEND ERROR: ${error.message}`, true));
+  } else if (wasSettings !== entersSettings) {
+    syncHostSettings(entersSettings);
+  }
+  if (stage === "settings" && previous !== "settings" && previous !== "palette") {
+    settingsReturnStage = previous;
+    settingsReturnPane = activePane;
+    settingsReturnRadioPaneOpen = radioPaneOpen;
+    settingsReturnExtensionMode = extensionMode;
+  }
+  if (stage === "settings") activatePane("workspace");
   // Radio is a subview, not a sticky override of later VIEWPORT visits.
   if (stage !== "viewport") radioPaneOpen = false;
   if (stage !== "viewport" && cameraWallUI) { cameraWallUI.destroy(); cameraWallUI = null; }
@@ -96,12 +118,136 @@ function activateStage(stage) {
   for (const section of document.querySelectorAll(".stage-surface")) section.hidden = section.dataset.stage !== stage;
   if (stage === "viewport" && snapshot && !radioPaneOpen) renderExtension();
   else if (previous === "viewport" && window.RustBoyMap) window.RustBoyMap.unmount();
+  if (stage === "adapter") renderHostAdapterSurface();
   syncRadioSubview();
   if (stage === "command" && snapshot) renderCommandCenter();
   // First local journal read occurs only after operator opens MESSAGES.
   if (stage === "messages" && !desktopMessenger && window.RustBoyMessenger) {
     desktopMessenger = window.RustBoyMessenger.mount(byId("messenger-dock"));
   }
+}
+function syncHostSettings(settings_open) {
+  void api("/api/host/settings", { settings_open }).then(applyHostForegroundResult).catch(error =>
+    notify(`Host Settings state could not be saved: ${error.message}`, true));
+}
+
+function applyHostForegroundResult(result) {
+  if (!snapshot?.host_packages || !result) return;
+  snapshot.host_packages = { ...snapshot.host_packages, ...result };
+  updateHostPackageSelect(snapshot.host_packages);
+  if (activeStage === "adapter") renderHostAdapterSurface();
+}
+
+function updateHostPackageSelect(hostState) {
+  const select = byId("host-package-select");
+  if (!select) return;
+  const packages = Array.isArray(hostState?.packages) ? hostState.packages : [];
+  const selected = hostState?.selected_package_id || "";
+  select.replaceChildren();
+  const placeholder = document.createElement("option");
+  placeholder.value = "";
+  placeholder.textContent = packages.length ? "HOST WORKBENCH" : "NO PACKAGES";
+  select.append(placeholder);
+  for (const entry of packages) {
+    const id = typeof entry?.package_id === "string" ? entry.package_id : "";
+    if (id) {
+      const option = document.createElement("option");
+      option.value = id;
+      option.textContent = id.split(".").pop().toUpperCase();
+      select.append(option);
+    }
+  }
+  select.value = selected;
+  select.disabled = packages.length === 0;
+  select.title = packages.length ? "Select a mounted package foreground" : "No trusted adapter is mounted";
+}
+
+function renderHostAdapterSurface() {
+  const state = snapshot?.host_packages;
+  const packageId = state?.selected_package_id;
+  byId("host-adapter-id").textContent = packageId || "HOST";
+  byId("host-adapter-status").textContent = packageId
+    ? "Package view is rendered by the host from bounded data."
+    : "No package is mounted.";
+  renderPackageView(byId("host-adapter-view"), state?.foreground_view);
+}
+
+function renderPackageView(root, view) {
+  root.replaceChildren();
+  if (!view || view.version !== 1 || typeof view.title !== "string" ||
+      !Array.isArray(view.blocks) || view.blocks.length > 24) {
+    root.textContent = "No valid foreground view is available.";
+    return;
+  }
+  const validText = (value, limit) => typeof value === "string" && value.trim().length > 0 &&
+    value.length <= limit && !/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/.test(value);
+  const validBlock = block => block && (
+    (block.kind === "heading" && validText(block.text, 512)) ||
+    (block.kind === "text" && validText(block.text, 512)) ||
+    (block.kind === "status" && validText(block.label, 80) && validText(block.value, 160)) ||
+    (block.kind === "list" && validText(block.label, 80) && Array.isArray(block.items) &&
+      block.items.length > 0 && block.items.length <= 24 && block.items.every(item => validText(item, 160)))
+  );
+  if (!validText(view.title, 80) || view.blocks.length === 0 || !view.blocks.every(validBlock)) {
+    root.textContent = "No valid foreground view is available.";
+    return;
+  }
+  const title = el("h3", "package-view-title", view.title);
+  root.append(title);
+  for (const block of view.blocks) {
+    if (block.kind === "heading") {
+      root.append(el("h4", "package-view-heading", block.text));
+    } else if (block.kind === "text") {
+      root.append(el("p", "package-view-text", block.text));
+    } else if (block.kind === "status") {
+      const row = el("div", "package-view-status");
+      row.append(el("span", "package-view-label", block.label),
+        el("strong", "package-view-value", block.value));
+      root.append(row);
+    } else if (block.kind === "list") {
+      root.append(el("h4", "package-view-heading", block.label));
+      const list = el("ul", "package-view-list");
+      for (const item of block.items) list.append(el("li", "", item));
+      root.append(list);
+    }
+  }
+}
+
+function selectHostPackage(packageId) {
+  if (!packageId) {
+    if (activeStage === "adapter") activateStage("modules");
+    else void api("/api/host/foreground", {package_id:null}).then(applyHostForegroundResult).catch(error =>
+      notify(`HOST PACKAGE CLEAR ERROR: ${error.message}`, true));
+    return;
+  }
+  void api("/api/host/foreground", {package_id:packageId}).then(result => {
+    snapshot.host_packages = {
+      ...snapshot.host_packages,
+      selected_package_id: result.selected_package_id,
+      foreground: result.foreground,
+      settings_open: result.settings_open,
+      foreground_view: result.foreground_view
+    };
+    updateHostPackageSelect(snapshot.host_packages);
+    activateStage("adapter");
+  }).catch(error => {
+    updateHostPackageSelect(snapshot.host_packages);
+    notify(`HOST PACKAGE ERROR: ${error.message}`, true);
+  });
+}
+function returnFromSettings() {
+  const stage = ["command", "modules", "viewport", "messages", "adapter"].includes(settingsReturnStage)
+    ? settingsReturnStage
+    : "modules";
+  const pane = settingsReturnPane === "inspector" && stage === "modules"
+    ? "inspector"
+    : "workspace";
+  if (stage === "viewport") {
+    radioPaneOpen = settingsReturnRadioPaneOpen;
+    extensionMode = settingsReturnExtensionMode;
+  }
+  activateStage(stage);
+  activatePane(pane);
 }
 // Desktop is the vault command station. Role authority comes from Rust's
 // persisted mission-board slot, never from a browser toggle or inferred title.
@@ -334,7 +480,7 @@ function renderModules() {
       ui.detailInfo.open = false;
       renderModules();
       renderDetail();
-      if (window.matchMedia("(max-width: 1100px)").matches) activatePane("inspector");
+      activatePane("inspector");
     });
     ui.modules.append(card);
   }
@@ -649,9 +795,20 @@ function renderAll() {
 async function reload({silent = false} = {}) {
   try {
     snapshot = await api("/api/state");
+    updateHostPackageSelect(snapshot.host_packages);
     if (!initialWorkspaceLoaded) {
-      activeStage = snapshot.active.profile === "overseer" ? "command" : "modules";
+      activeStage = snapshot.foreground?.surface === "settings"
+        ? "settings"
+        : snapshot.foreground?.surface === "package" ? "adapter"
+          : snapshot.active.profile === "overseer" ? "command" : "modules";
       initialWorkspaceLoaded = true;
+    } else if (snapshot.foreground?.surface === "settings" && activeStage !== "settings") {
+      settingsReturnStage = snapshot.host_packages?.selected_package_id ? "adapter" : activeStage;
+      activeStage = "settings";
+    } else if (snapshot.foreground?.surface === "package") {
+      activeStage = "adapter";
+    } else if (activeStage === "adapter") {
+      activeStage = "modules";
     }
     previewId = snapshot.active.profile;
     if (!selectedTool) selectedTool = visibleModuleIds()[0] || null;
@@ -791,6 +948,11 @@ document.querySelectorAll("[data-stage-target]").forEach(button => button.addEve
 }));
 byId("open-palette").addEventListener("click", () => activateStage("palette"));
 byId("palette-back").addEventListener("click", () => activateStage("settings"));
+byId("settings-return").addEventListener("click", returnFromSettings);
+byId("desktop-settings-open").addEventListener("click", () => {
+  if (activeStage === "settings") returnFromSettings();
+  else activateStage("settings");
+});
 byId("radio-view-toggle").addEventListener("click", toggleRadioSubview);
 byId("command-open-messages").addEventListener("click", () => activateStage("messages"));
 byId("command-open-viewport").addEventListener("click", () => activateStage("viewport"));
@@ -878,4 +1040,7 @@ byId("desktop-map-nav")?.addEventListener("change", (event) => {
   } else if (["command", "modules", "messages", "settings"].includes(destination)) {
     activateStage(destination);
   }
+});
+byId("host-package-select")?.addEventListener("change", (event) => {
+  selectHostPackage(event.currentTarget.value);
 });

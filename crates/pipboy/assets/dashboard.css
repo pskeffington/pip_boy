@@ -49,6 +49,16 @@ p { line-height: 1.5; }
 .brand-copy > span { display: block; margin-top: 4px; color: var(--lime-dark); font: 10px var(--mono); letter-spacing: .16em; }
 .version, .dim { color: var(--muted); }
 .masthead-right { display: flex; align-items: center; gap: 18px; }
+.host-package-select { min-height:44px; width:140px; max-width:18vw; color:var(--text); background:#102619; border:1px solid var(--border-lit); border-radius:7px; font:700 10px var(--mono); }
+.host-package-select:disabled { opacity:.55; cursor:not-allowed; }
+.host-adapter-surface { min-height:220px; padding:18px; border:1px solid var(--border); border-radius:var(--radius); background:var(--surface); }
+.package-view { max-height:55vh; overflow:auto; padding:14px; border:1px solid var(--border); border-radius:8px; background:#080d0c; color:var(--lime); overflow-wrap:anywhere; }
+.package-view-title, .package-view-heading { margin:0 0 10px; color:var(--text); font-family:var(--mono); }
+.package-view-heading { margin-top:16px; }
+.package-view-text { white-space:pre-wrap; }
+.package-view-status { display:flex; justify-content:space-between; gap:16px; padding:8px 0; border-bottom:1px solid var(--border); font-family:var(--mono); }
+.package-view-list { margin:0; padding-left:22px; }
+.package-view-list li { padding:4px 0; }
 .status-chip, .edition, .eyebrow, .tiny-label, .active-pill, .section-counter, .role-index, .footer-shortcuts, .statusbar, .mini-button, .role-panel-bottom, .module-category {
   font-family: var(--mono);
 }
@@ -200,6 +210,7 @@ dialog::backdrop { background:#000c; backdrop-filter:blur(4px); }
   .statusbar { padding:8px; }
 }
 @media (max-width:600px) {
+  .host-package-select { width:100px; max-width:26vw; min-height:44px; font-size:9px; }
   .brand-copy strong { font-size:16px; }
   .brand-copy > span { font-size:9px; }
   .brand-mark { width:37px; height:37px; font-size:16px; }
@@ -349,10 +360,7 @@ html, body { height:100%; overflow:hidden; }
 .extension-content > .camera-wall.focused .camera-grid { display:block; }
 .extension-content > .camera-wall-heading { flex:none; }
 .extension-content > .job-command-panel, .extension-content > .job-station-summary { flex:1 1 0; min-height:0; overflow:auto; }
-.inspector-return { display:none; color:var(--lime); background:#15251a; border:1px solid var(--border-lit); border-radius:5px; padding:7px 10px; font:700 11px var(--mono); cursor:pointer; min-height:36px; margin-bottom:9px; }
-@media(max-width:1100px) {
-  .inspector-return { display:block; align-self:flex-start; }
-}
+.inspector-return { display:block; align-self:flex-start; color:var(--lime); background:#15251a; border:1px solid var(--border-lit); border-radius:5px; padding:7px 10px; font:700 11px var(--mono); cursor:pointer; min-height:36px; margin-bottom:9px; }
 @media(max-height:480px) {
   .app-shell { gap:4px; padding:4px; }
   .main-panel { gap:4px; padding:6px; }
@@ -394,10 +402,12 @@ html, body { height:100%; overflow:hidden; }
 }
 
 
-/* Unified role-independent shell: profile choice lives only in Settings. */
-.dashboard { grid-template-columns:minmax(0,2.35fr) minmax(270px,1fr); }
+/* One desktop surface at a time: tool controls never reserve package canvas. */
+.dashboard { grid-template-columns:minmax(0,1fr); }
 .dashboard > .main-panel { grid-column:1; }
-.dashboard > .detail-panel { grid-column:2; }
+.dashboard > .detail-panel { display:none; grid-column:1; }
+.dashboard[data-pane="inspector"] > .main-panel { display:none; }
+.dashboard[data-pane="inspector"] > .detail-panel { display:flex; }
 .settings-surface { gap:7px; }
 .settings-surface .role-panel {
   flex:1 1 0; display:flex; flex-direction:column;
@@ -445,7 +455,7 @@ html, body { height:100%; overflow:hidden; }
   .settings-profile-summary { display:none; }
   .settings-profile-summary .tiny-label { display:none; }
   .settings-profile-summary strong { font-size:10px; }
-  .settings-choice { padding:2px 0; min-height:33px; }
+  .settings-choice { padding:0; min-height:31px; }
   .settings-choice > span { font-size:9px; }
   .settings-choice .primary-button { padding:5px 7px; min-height:31px; font-size:10px; }
   .settings-surface .deck-pager { min-height:32px; }
@@ -533,6 +543,7 @@ html, body { height:100%; overflow:hidden; }
    Settings summary is hidden to preserve 44px station targets. */
 .settings-choice #open-palette { flex:none; min-width:0; min-height:36px; }
 @media(max-height:480px) {
+  .settings-surface { gap:0; }
   .settings-choice { gap:5px; }
   .settings-choice > span { flex:1 1 0; min-width:0; }
   .settings-choice #open-palette {

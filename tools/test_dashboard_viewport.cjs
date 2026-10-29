@@ -114,6 +114,7 @@ function chromeRun(bin,port,width,height,scenario) {
 }
 async function main() {
   const bin=findChrome();
+  let settingsOpen=false;
   const server=http.createServer((req,res)=>{
     const url=new URL(req.url,"http://127.0.0.1");
     const send=(status,body,type)=>{
@@ -121,6 +122,16 @@ async function main() {
         "Content-Security-Policy":"default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; frame-src 'self'"});
       res.end(body);
     };
+    if(req.method==="POST"&&req.url==="/api/host/settings"){
+      let body="";
+      req.on("data",chunk=>body+=chunk);
+      req.on("end",()=>{
+        try { settingsOpen=JSON.parse(body).settings_open===true; }
+        catch { return send(400,JSON.stringify({error:"Invalid fixture request"}),"application/json"); }
+        send(200,JSON.stringify({surface:settingsOpen?"settings":"empty",active_package_id:null}),"application/json");
+      });
+      return;
+    }
     if(req.method!=="GET")return send(405,"Denied","text/plain");
     if(url.pathname==="/host"){
       const w=Number(url.searchParams.get("w")),h=Number(url.searchParams.get("h"));
@@ -163,6 +174,8 @@ async function main() {
       assert.equal(r.width,width);assert.equal(r.height,height);
       assert.equal(r.documentFits,true,"Page scrollbar present on load");
       assert.equal(r.documentFitsAfter,true,"Page scrollbar present after navigation");
+      assert.equal(r.packageView,true,"Bounded host-rendered package view is clipped or interpreted as markup");
+      assert.equal(r.packageSelectorAccessible,true,"Desktop package selector must be keyboard-labeled and touch-sized");
       assert.equal(r.initial.deckFits,true,"Module deck clipped");
       assert.equal(r.initial.cardsFit,true,"Module cards clipped");
       assert.equal(r.initial.rolesHidden,true,"Role selection must be hidden outside Settings");
@@ -181,10 +194,15 @@ async function main() {
       assert.equal(r.settings?.roleButtonsVisible,true,"Settings role selector clipped");
       assert.equal(r.settings?.rolePagerVisible,true,"Settings role pager clipped");
       assert.equal(r.settings?.previewIsolated,true,"Role preview changed active module workspace");
+      assert.equal(r.settingsButtonAvailable,true,"Permanent host Settings control missing");
+      assert.equal(r.settingsGearWorks,true,"Host Settings button did not open Settings");
+      assert.equal(r.settingsRestoresPriorPage,true,"Closing Settings did not restore the prior page");
       assert.equal(r.viewport,true,"Viewport panel clipped");
       assert.equal(r.messages,true,"Messages panel clipped");
       if(scenario!=="custom"){
-        assert.equal(r.inspector,true,"No inspector after module selection");
+        assert.equal(r.toolDetailsFullView,true,"Tool details must replace the workspace view");
+        assert.equal(r.toolDetailsFillWorkspace,true,"Tool details must use the full workspace");
+        assert.equal(r.toolDetailsReturnWorks,true,"Tool details must return to the prior workspace");
         assert.ok(r.nextModules?.count>0,"Module next page missing");
         assert.equal(r.nextModules?.fit,true,"Paged modules clipped");
       }

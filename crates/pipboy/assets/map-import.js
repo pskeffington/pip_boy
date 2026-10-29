@@ -6,6 +6,8 @@
   "use strict";
   const MAX_JSON = 12 * 1024 * 1024, MAX_ZIP = 32 * 1024 * 1024;
   const MAX_FEATURES = 8000, MAX_VERTICES = 120000, R = 6378137;
+  const MAX_PACKAGE_FILES = 12, MAX_PACKAGE_MANIFEST = 64 * 1024;
+  const MAX_PACKAGE_FILE = 2 * 1024 * 1024;
   const bad = (s) => { throw new Error(s); };
   const short = (s, otherwise) => typeof s === "string" && s.trim()
     ? s.trim().slice(0, 80) : otherwise;
@@ -36,6 +38,158 @@
     const value = index >= 0 ? f.attrs[index] : null;
     return typeof value === "string" ? value.slice(0, 36)
       : value && typeof value.Text === "string" ? value.Text.slice(0, 36) : "";
+  }
+
+  function requireWgs84(crs) {
+    if (crs == null || crs === "") return;
+    if (typeof crs !== "string") bad("RustGIS vector CRS must be WGS84 (EPSG:4326)");
+    const normalized = crs.trim().toUpperCase().replace(/[\s_-]/g, "");
+    if (!["EPSG:4326", "4326", "WGS84", "GCSWGS1984"].includes(normalized)) {
+      bad("RustGIS vector CRS must be WGS84 (EPSG:4326); reproject before import");
+    }
+  }
+
+  function parseGeoJSON(text, limits = {}) {
+    if (typeof text !== "string" || !text ||
+        new TextEncoder().encode(text).byteLength > MAX_PACKAGE_FILE) bad("GeoJSON must be 1 byte to 2 MiB");
+    const source = JSON.parse(text);
+    if (!source || typeof source !== "object" || Array.isArray(source) || source.crs) {
+      bad("Export layers as WGS84 GeoJSON (EPSG:4326)");
+    }
+    const shapes=[];let vertices=0,features=0;
+    const featureLimit=Number.isInteger(limits.maxFeatures)?limits.maxFeatures:2000;
+    const vertexLimit=Number.isInteger(limits.maxVertices)?limits.maxVertices:30000;
+    function coordinate(value) {
+      if (!Array.isArray(value)||value.length<2||!value.every(valid)||
+          Math.abs(value[0])>180||Math.abs(value[1])>90) bad("Layer needs valid WGS84 [longitude, latitude] coordinates");
+      return [value[0],value[1]];
+    }
+    function path(values,minLength) {
+      if(!Array.isArray(values)||values.length<minLength)bad("Invalid or empty GeoJSON path");
+      vertices+=values.length;
+      if(vertices>vertexLimit)bad("GeoJSON vertex budget exceeded");
+      return values.map(coordinate);
+    }
+    function ring(values) {
+      const points=path(values,4);
+      const first=values[0],last=values[values.length-1];
+      if(first.length!==last.length||first.some((value,index)=>value!==last[index]))
+        bad("GeoJSON polygon ring must be closed");
+      return points;
+    }
+    function geometry(item,label,depth) {
+      if(depth>6||!item||typeof item!=="object"||Array.isArray(item))bad("Unsupported GeoJSON geometry");
+      const c=item.coordinates;
+      switch(item.type){
+        case "Point": shapes.push({kind:"point",paths:[[coordinate(c)]],label});vertices++;break;
+        case "MultiPoint": shapes.push({kind:"point",paths:[path(c,1)],label});break;
+        case "LineString": shapes.push({kind:"line",paths:[path(c,2)],label});break;
+        case "MultiLineString":
+          if(!Array.isArray(c)||!c.length)bad("Empty MultiLineString");
+          shapes.push({kind:"line",paths:c.map(part=>path(part,2)),label});break;
+        case "Polygon":
+          if(!Array.isArray(c)||!c.length)bad("Empty Polygon");
+          shapes.push({kind:"polygon",paths:c.map(ring),label});break;
+        case "MultiPolygon":
+          if(!Array.isArray(c)||!c.length)bad("Empty MultiPolygon");
+          for(const polygon of c){
+            if(!Array.isArray(polygon)||!polygon.length)bad("Empty polygon part");
+            shapes.push({kind:"polygon",paths:polygon.map(ring),label});
+          }
+          break;
+        case "GeometryCollection":
+          if(!Array.isArray(item.geometries)||!item.geometries.length)bad("Empty GeometryCollection");
+          item.geometries.forEach(child=>geometry(child,label,depth+1));break;
+        default: bad("Unsupported GeoJSON geometry: "+String(item.type).slice(0,30));
+      }
+      if(vertices>vertexLimit)bad("GeoJSON vertex budget exceeded");
+    }
+    function feature(item){
+      if(!item||item.type!=="Feature")bad("Expected GeoJSON Feature");
+      if(++features>featureLimit)bad("GeoJSON feature budget exceeded");
+      if(item.geometry===null)return;
+      const raw=item.properties&&item.properties.name;
+      geometry(item.geometry,typeof raw==="string"?raw.slice(0,36):"",0);
+    }
+    if(source.type==="FeatureCollection"){
+      if(!Array.isArray(source.features)||!source.features.length||source.features.length>featureLimit)
+        bad("FeatureCollection must contain 1 to "+featureLimit+" features");
+      source.features.forEach(feature);
+    }else if(source.type==="Feature")feature(source);
+    else geometry(source,"",0);
+    if(!vertices||!shapes.length)bad("No drawable GeoJSON geometry");
+    return {shapes,vertices,features};
+  }
+
+  function packageText(value,limit,optional=false){
+    if(optional&&(value==null||value===""))return "Unspecified";
+    if(typeof value!=="string"||value.trim()!==value||!value||value.length>limit||
+        value.split("").some(ch=>ch.charCodeAt(0)<32))bad("Invalid rb-gis package metadata");
+    return value;
+  }
+
+  const PACKAGE_STYLES=Object.freeze({
+    roads:{stroke:"#b5db90",width:1.5},
+    water:{stroke:"#82b8c2",fill:"rgba(60,116,132,.28)",width:1},
+    boundary:{stroke:"#f0d79e",fill:"rgba(153,132,89,.08)",width:1},
+    landmarks:{fill:"#f0d79e"},other:{stroke:"#a8cda2",fill:"rgba(116,178,112,.16)",width:1}
+  });
+
+  async function readDirectoryPackage(fileList) {
+    const files=Array.from(fileList||[]);
+    if(!files.length||files.length>MAX_PACKAGE_FILES+1)bad("rb-gis package must contain a manifest and at most 12 layers");
+    const byName=new Map();let root=null,directoryDepth=null,manifestFile=null;
+    for(const file of files){
+      const relative=typeof file.webkitRelativePath==="string"&&file.webkitRelativePath?file.webkitRelativePath:file.name;
+      const parts=relative.split("/");
+      if(!file||!Number.isSafeInteger(file.size)||file.size<0||parts.length>2||
+          parts.some(part=>!part||part==="."||part==="..")||
+          (directoryDepth!==null&&directoryDepth!==parts.length)||
+          (parts.length===2&&root!==null&&root!==parts[0]))bad("Select one flat rb-gis package directory");
+      directoryDepth=parts.length;
+      if(parts.length===2)root=parts[0];
+      const name=parts[parts.length-1],key=name.toLowerCase();
+      if(!/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/.test(name)||byName.has(key))bad("Invalid or duplicate rb-gis package filename");
+      byName.set(key,file);if(key==="manifest.json")manifestFile=file;
+    }
+    if(!manifestFile||manifestFile.size>MAX_PACKAGE_MANIFEST)bad("Missing or oversized rb-gis manifest.json");
+    const manifestText=await manifestFile.text();
+    if(new TextEncoder().encode(manifestText).byteLength>MAX_PACKAGE_MANIFEST)bad("rb-gis manifest exceeds 64 KiB");
+    let manifest;try{manifest=JSON.parse(manifestText);}catch(_){bad("Invalid rb-gis manifest JSON");}
+    if(!manifest||Array.isArray(manifest)||manifest.schema!=="rb-gis-package/v1"||
+        !Array.isArray(manifest.layers)||!manifest.layers.length||manifest.layers.length>MAX_PACKAGE_FILES)
+      bad("Unsupported or invalid rb-gis package manifest");
+    const roles=new Set(["roads","water","boundary","landmarks","other"]),used=new Set();
+    const shapes=[],layers=[];let features=0,vertices=0;
+    for(const entry of manifest.layers){
+      if(!entry||typeof entry!=="object"||Array.isArray(entry))bad("Invalid rb-gis layer entry");
+      const filename=packageText(entry.file,128);
+      if(!/^[A-Za-z0-9][A-Za-z0-9._-]*\.geojson$/i.test(filename))bad("rb-gis layer paths must be simple .geojson filenames");
+      const key=filename.toLowerCase(),file=byName.get(key);
+      if(used.has(key)||!file)bad("Missing or duplicate rb-gis package layer");
+      used.add(key);
+      const name=packageText(entry.name,120),role=packageText(entry.role,20);
+      if(!roles.has(role))bad("Unsupported rb-gis layer role");
+      const source=packageText(entry.source,120),vintage=packageText(entry.vintage,40,true);
+      const attribution=packageText(entry.attribution,200);
+      if(file.size>MAX_PACKAGE_FILE)bad("rb-gis GeoJSON layer exceeds 2 MiB");
+      const json=await file.text(),byteLength=new TextEncoder().encode(json).byteLength;
+      if(!byteLength||byteLength>MAX_PACKAGE_FILE)bad("rb-gis GeoJSON layer exceeds 2 MiB");
+      const parsed=parseGeoJSON(json,{maxFeatures:2000,maxVertices:30000});
+      const layerFeatures=parsed.features||parsed.shapes.length;
+      features+=layerFeatures;vertices+=parsed.vertices;
+      if(features>MAX_FEATURES||vertices>MAX_VERTICES)bad("rb-gis package aggregate geometry limit exceeded");
+      for(const shape of parsed.shapes)shapes.push({...shape,layerName:name,style:{...PACKAGE_STYLES[role]}});
+      layers.push({name,role,source,vintage,attribution,features:layerFeatures,
+        vertices:parsed.vertices,originalCrs:"WGS84 (RFC 7946)"});
+    }
+    if(byName.size!==used.size+1)bad("rb-gis package contains unlisted files");
+    const description=packageText(manifest.description,120,true);
+    return {shapes,layers,features,vertices,warnings:[
+      "rb-gis manifest provenance is operator-declared, not authenticated",
+      "RB_GIS package v1 has no signature or integrity metadata"
+    ],camera:null,format:"rb-gis-package/v1",
+    mapName:description==="Unspecified"?"RB_GIS offline package":description};
   }
 
   function parseRustGIS(text, filename) {
@@ -105,6 +259,7 @@
       if (layer.source) {omittedStream++;continue;}
       const ds = layer.dataset;
       if (ds.crs_incomplete) bad("RustGIS reports incomplete CRS; repair the source before import");
+      requireWgs84(ds.crs);
       if (!Array.isArray(ds.fields) || !Array.isArray(ds.features)) bad("Missing RustGIS feature table");
       const name = short(layer.name, short(ds.name, "Layer"));
       const style = layerStyle(layer,group);
@@ -231,5 +386,5 @@
     const json=zip?await readPackage(await file.arrayBuffer()):{text:await file.text(),name:file.name};
     return parseRustGIS(json.text,json.name);
   }
-  window.RustBoyMapImport=Object.freeze({isRustGIS,parseRustGIS,readFile,readPackage});
+  window.RustBoyMapImport=Object.freeze({isRustGIS,parseGeoJSON,parseRustGIS,readDirectoryPackage,readFile,readPackage});
 })();

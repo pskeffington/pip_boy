@@ -121,6 +121,19 @@ async function main() {
     const send=(status,body,type="application/json")=>{
       res.writeHead(status,{"Content-Type":type,"Cache-Control":"no-store"});res.end(body);
     };
+    if(req.method==="POST"&&url.pathname==="/api/host/settings"){
+      let body="";
+      req.on("data",chunk=>body+=chunk);
+      req.on("end",()=>{
+        let settingsOpen;
+        try { settingsOpen=JSON.parse(body).settings_open===true; }
+        catch { return send(400,JSON.stringify({error:"Invalid fixture request"})); }
+        return send(200,JSON.stringify({surface:settingsOpen?"settings":"empty",
+          foreground:{surface:settingsOpen?"settings":"empty",active_package_id:null},
+          selected_package_id:null,settings_open:settingsOpen,foreground_view:null}));
+      });
+      return;
+    }
     if(req.method!=="GET")return send(405,"Denied","text/plain");
     if(url.pathname==="/host")return send(200,host(Number(url.searchParams.get("w")),
       Number(url.searchParams.get("h")),url.searchParams.get("scenario")),"text/html");
@@ -150,12 +163,15 @@ async function main() {
       assert.ok(!r.error,r.error);
       assert.deepEqual(r.tabs,["stat","role","data","map","radio"]);
       assert.equal(r.settings,true,"Settings header target clipped");
+      assert.equal(r.packageView,true,"Bounded host-rendered package view clipped or interpreted text as markup");
+      assert.equal(r.packageSelectorAccessible,true,"Micro package selector must be keyboard-labeled and touch-sized");
       for(const page of r.pages){
         assert.ok(page.fits,`${w}x${h} ${page.id} overflow: ${JSON.stringify(page)}`);
         assert.ok(page.controlsFit,`${w}x${h} ${page.id} controls clipped`);
       }
-      assert.ok(r.calls.every(x=>x.method==="GET" && x.url.startsWith("/api/")),
-        "Navigation must only read local state");
+      assert.ok(r.calls.every(x=>x.url.startsWith("/api/") &&
+        (x.method==="GET" || (x.method==="POST" && x.url==="/api/host/settings"))),
+        "Navigation may read local state and update only host-owned Settings lifecycle");
       console.log(`PASS micro production viewport ${w}x${h} ${scenario}`);
     }
     for(const [w,h] of [[1280,800],[1920,1080],[800,600]]){

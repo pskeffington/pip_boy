@@ -82,9 +82,12 @@ function fixturePage() {
   const mock = '<script>window.__fixtureRequests=[];' +
     'window.fetch=function(url,opts){' +
     'const method=opts&&opts.method||"GET";' +
-    'window.__fixtureRequests.push({url:String(url),method});' +
+    'const payload=method==="POST"?JSON.parse(opts.body||"{}"):{};' +
+    'window.__fixtureRequests.push({url:String(url),method,settings_open:payload.settings_open});' +
     'if(url==="/api/state"&&method==="GET")return Promise.resolve({' +
     'ok:true,json:()=>Promise.resolve(' + JSON.stringify(state) + ')});' +
+    'if(url==="/api/host/settings"&&method==="POST")return Promise.resolve({' +
+    'ok:true,json:()=>Promise.resolve({surface:payload.settings_open?"settings":"empty",active_package_id:null})});' +
     'if(url==="/api/tasks"&&method==="GET")return Promise.resolve({' +
     'ok:true,json:()=>Promise.resolve({board:{tasks:[]},manager:false,role:"head-engineer"})});' +
     'if(url==="/api/radio"&&method==="GET")return Promise.resolve({' +
@@ -156,6 +159,12 @@ function fixturePage() {
     'report.radioOpened=!radio.hidden&&radio.children.length>0&&',
     'document.getElementById("extension-content").hidden;',
     'report.radioHasPlay=!!radio.querySelector(".rb-radio-play");',
+    'document.getElementById("desktop-settings-open").click();',
+    'report.settingsOpenedFromRadio=!document.querySelector(\'[data-stage="settings"]\').hidden;',
+    'document.getElementById("settings-return").click();',
+    'report.radioRestoredAfterSettings=!radio.hidden&&radio.children.length>0&&',
+    'document.getElementById("extension-content").hidden;',
+    'report.settingsSurfaceUpdates=window.__fixtureRequests.filter(x=>x.url==="/api/host/settings").map(x=>x.settings_open);',
     'report.radioRequests=[...window.__fixtureRequests];',
     'const mainRect=main.getBoundingClientRect();',
     'const radioRect=radio.getBoundingClientRect();',
@@ -238,7 +247,7 @@ function check(data,width,height) {
   assert.equal(data.height,height);
   assert.ok(data.scrollWidth<=width+2,"Unexpected document horizontal overflow");
   assert.ok(data.scrollHeight<=height+2,"One-screen desktop must not scroll the document");
-  assert.equal(data.paneTabs,2,"WORKSPACE/INSPECTOR pane controls missing");
+  assert.equal(data.paneTabs,2,"WORKSPACE/TOOL DETAILS controls missing");
   assert.equal(data.stageTabs,5,"COMMAND/MODULES/VIEW/MESSAGES/SETTINGS pages missing");
   assert.equal(data.roles,6,"First of eight fixture roles must show six entries");
   assert.match(data.rolePager,/1\s*\/\s*2/,"Settings role pager unavailable");
@@ -255,10 +264,15 @@ function check(data,width,height) {
     "Native radio must not mount or take up viewport space at dashboard startup");
   assert.ok(data.radioClosedBeforeClick && data.radioOpened && data.radioHasPlay,
     "VIEWPORT → RADIO must open the native radio control surface explicitly");
+  assert.ok(data.settingsOpenedFromRadio && data.radioRestoredAfterSettings,
+    "Settings must return to the previously selected RADIO viewport");
+  assert.deepEqual(data.settingsSurfaceUpdates.slice(-2),[true,false],
+    "Entering and leaving Settings from Radio must update Rust's foreground controller");
   assert.ok(data.radioRequests.some(x=>x.url==="/api/radio"&&x.method==="GET"),
     "Opening native radio must read local status");
-  assert.ok(data.radioRequests.every(x=>x.method==="GET"),
-    "Radio browsing must never open audio or mutate local preferences");
+  assert.ok(data.radioRequests.every(x=>x.method==="GET" ||
+    x.url==="/api/host/settings"&&x.method==="POST"),
+    "Radio browsing only reads status and updates the host Settings surface");
   assert.ok(data.radioClosedAfterClick,
     "Exiting native radio should unmount the UI and stop status polling");
   assert.ok(data.radioWithinMain,
@@ -269,7 +283,8 @@ function check(data,width,height) {
     "Selecting Messages must mount the local Messenger component");
   assert.ok(data.afterRequests.some(x=>x.url==="/api/messages"&&x.method==="GET"),
     "Selecting Messages should read local journal state");
-  assert.ok(data.afterRequests.every(x=>x.method==="GET"),
+  assert.ok(data.afterRequests.every(x=>x.method==="GET" ||
+    x.url==="/api/host/settings"&&x.method==="POST"),
     "Switching pages must not send messages or network probes");
   assert.ok(data.settingsAfterClick,"Settings page must open manually");
   assert.ok(data.commandOpened && data.commandHasMount && data.commandHasDutyBoard,
@@ -280,7 +295,8 @@ function check(data,width,height) {
     "Task creation must remain unavailable without Task Control");
   assert.ok(data.radioRequestsAfterClose.some(x=>x.url==="/api/tasks"&&x.method==="GET"),
     "Opening Command must read the local task queue");
-  assert.ok(data.radioRequestsAfterClose.every(x=>x.method==="GET"),
+  assert.ok(data.radioRequestsAfterClose.every(x=>x.method==="GET" ||
+    x.url==="/api/host/settings"&&x.method==="POST"),
     "Opening Command and Radio must not issue assignments or send audio");
   assert.equal(data.stationHeightsInSettings.length,6,
     "Station template paging must remain available in Settings");
@@ -290,18 +306,9 @@ function check(data,width,height) {
     "Workspace pages must remain within one-screen viewport");
   assert.ok(data.toolHeights.every(h=>h>=44),
     "Normal desktop tool choices must remain >=44px");
-  if(width>1100) {
-    assert.ok(data.detailVisible,"Wide desktop needs an inspector");
-    for(const pane of [data.main,data.detail]) {
-      assert.ok(pane.w>135 && pane.x>=-2 && pane.right<=width+2,
-        "Pane clipped horizontally: "+JSON.stringify(pane));
-    }
-    assert.ok(data.main.right<=data.detail.x+2,"Desktop inspector overlaps workspace");
-  }else{
-    assert.ok(!data.detailVisible,"Narrow desktop should focus workspace pane");
-    assert.ok(data.main.w>width*.75 && data.main.right<=width+2,
-      "Narrow workspace must fill available window");
-  }
+  assert.ok(!data.detailVisible,"Tool details must not occupy permanent workspace space");
+  assert.ok(data.main.w>width*.90 && data.main.right<=width+2,
+    "Single desktop workspace must fill available window: "+JSON.stringify(data.main));
 }
 
 async function main(){

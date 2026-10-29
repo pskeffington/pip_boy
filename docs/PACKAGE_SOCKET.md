@@ -1,10 +1,10 @@
 # Rust-Boy package socket contract (draft v1)
 
-Status (2026-10-28): **schema-1 registry parsing and read-only local discovery committed, integration still open**. No external executable loader, runtime sandbox, package installation, foreground socket renderer, or rb_gis adapter is claimed.
+Status (2026-10-29): **schema-1 registry parsing, read-only local discovery, the SDK wire protocol, bounded Unix sessions, private socket-path ownership, same-user peer credential checks, and desktop/micro foreground UI integration are implemented candidates; trusted installation and real package integration remain open**. No external executable loader, runtime sandbox, package installation, signed peer identity, or rb_gis adapter is claimed.
 
 ## Shared universal adapter source (2026-10-28)
 
-A portable [`rust-boy-adapter-sdk`](../crates/rust-boy-adapter-sdk/src/lib.rs) now defines the versioned `AdapterEnvelope`, common `UniversalPackageAdapter` trait, bounded messages and inert `AdapterReply` view state. [`pipboy-core::universal_adapter`](../crates/pipboy-core/src/universal_adapter.rs) implements trusted in-process mounting, one-foreground lifecycle, Settings preservation and explicit unmount. The standalone [adapter guide](UNIVERSAL_ADAPTER.md) maps MAP, TV, RADIO and COMMS to this one contract. **No external loader, OS sandbox, signed install path, physical permission grants or live shell adapter are claimed.**
+A portable [`rust-boy-adapter-sdk`](../crates/rust-boy-adapter-sdk/src/lib.rs) defines versioned hello, request and correlated-reply envelopes, the common `UniversalPackageAdapter` trait, bounded messages and inert view state. [`pipboy-core::universal_adapter`](../crates/pipboy-core/src/universal_adapter.rs) implements trusted in-process mounting, one-foreground lifecycle, Settings preservation and explicit unmount. Desktop and micro shell selectors use the host controller, and render adapter state as inert text. **No external loader, OS sandbox, signed install path, physical permission grants, or live mounted package is claimed.**
 
 ## Implemented registry precursor
 
@@ -13,9 +13,13 @@ A portable [`rust-boy-adapter-sdk`](../crates/rust-boy-adapter-sdk/src/lib.rs) n
 - Loopback-only `GET /api/packages` returns these four references with `installed:false` and `activatable:false`. It is deliberately not wired into navigation yet.
 - `tools/validate_host_packages.py` and `tools/test_validate_host_packages.py` provide offline schema and negative fixtures; CI runs these checks when the GitHub Actions runner starts. Rust unit tests cover the same registry contract and local scanning.
 
-A pure `ForegroundSelection` controller has also been added in core. It maintains at most one selected package and a host-owned Settings surface; selection refuses IDs not present in a separate, host-approved installed roster. Its tests use a synthetic approval set. **It is not yet connected to desktop/micro rendering or runtime execution.**
+A pure `ForegroundSelection` controller has also been added in core. It maintains at most one selected package and a host-owned Settings surface; selection refuses IDs not present in a separate, host-approved installed roster. Its tests use a synthetic approval set. The mounted roster is currently empty, so there is no package available for real selection or execution.
 
-This is a **metadata socket**, not an execution socket. Local scanning is operator-initiated and for trusted local files only; it is not a hardened OS-level package-store mechanism. No manifest grants hardware, filesystem, location, radio, network, background, or user permissions. The next implementation gate must introduce host-owned installed/trust state separately from document metadata.
+`pipboy_core::package_socket` provides version-1 JSON codecs for lifecycle requests, bounded version-negotiation hello claims, and correlated completion/rejection responses. Its generic stream framing helper uses a 4-byte big-endian length, rejects empty, truncated and over-64-KiB frames, and recognizes clean EOF. Request IDs must increase within a session, in-flight work is capped at 64, and a response must match both the pending request ID and package ID. Version lists, IDs, resize bounds and rejection codes are bounded and validated.
+
+On Unix targets, `pipboy_core::package_listener::PrivateUnixListener` binds only inside an existing current-user-owned private directory, refuses an occupied path, sets socket mode `0600`, and removes its socket on drop only when the path still identifies that socket. `accept_expected_process(pid, timeout)` checks OS-reported UID and PID within an absolute deadline; unrelated peers are dropped while admission continues. Linux uses `SO_PEERCRED`, and macOS uses `getpeereid` plus `LOCAL_PEERPID`. Successful admission returns an opaque `VerifiedUnixStream`, and the public `UnixAdapterSession::from_verified_peer(...)` constructor requires it; raw stream construction is private. This binds a connection to an expected process ID at connection time, but does not prove the process binary's signature or permissions. The caller must supply the PID of a process it launched and verify the installed binary before constructing a session. Sessions use SDK hello/request/reply envelopes, a 16 KiB limit and monotonic deadlines. Eight transport tests cover framing, exchange, mismatch, replay, correlation, stalled peers, deadlines and verified admission; five listener tests cover private path/mode, process credentials, PID rejection, bounded timeout, invalid paths and safe cleanup. No process launcher, signed identity, domain dispatch, capability brokerage or process isolation exists.
+
+This remains a **metadata and transport precursor**, not an executable package host. Local scanning is operator-initiated and for trusted local files only; it is not a hardened OS-level package-store mechanism. No manifest grants hardware, filesystem, location, radio, network, background, or user permissions. The next implementation gate must introduce host-owned installed/trust state, a process launcher that binds peer credentials to the approved process, and capability brokerage separately from document metadata.
 
 **Quick validation (after compiling Rust):**
 
@@ -78,7 +82,7 @@ Existing Rust-Boy map behavior is the compatibility baseline. GIS implementation
 
 `package -> host: render_state, request_capability, emit_event, health, fatal_error`
 
-All messages are bounded and versioned. Module content is clipped to one host viewport. The socket denies implicit location/device/network access and never lets packages forge host-origin control actions. Use opaque handles for granted capabilities rather than passing bearer credentials. Do not use an unconstrained shell command from user-provided JSON.
+The versioned bounded request envelope is implemented in core; the package response messages and external transport are still design requirements. All messages must be bounded and versioned. Module content is clipped to one host viewport. The socket denies implicit location/device/network access and never lets packages forge host-origin control actions. Use opaque handles for granted capabilities rather than passing bearer credentials. Do not use an unconstrained shell command from user-provided JSON.
 
 ### Disconnect, failure and recovery
 

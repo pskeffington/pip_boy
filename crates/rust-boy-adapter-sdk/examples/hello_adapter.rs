@@ -2,8 +2,8 @@
 //! Run: cargo run --locked -p rust-boy-adapter-sdk --example hello_adapter
 
 use rust_boy_adapter_sdk::{
-    AdapterCommand, AdapterEnvelope, AdapterError, AdapterReply, UniversalPackageAdapter,
-    Viewport, ADAPTER_PROTOCOL,
+    AdapterCommand, AdapterEnvelope, AdapterError, AdapterReply, UniversalPackageAdapter, Viewport,
+    ADAPTER_PROTOCOL,
 };
 use serde_json::json;
 
@@ -25,7 +25,9 @@ impl UniversalPackageAdapter for HelloPackage {
             AdapterCommand::Activate { .. } | AdapterCommand::Resume { .. } => {
                 self.active = true;
                 Ok(AdapterReply::View {
-                    state: json!({"label": "HELLO", "active": self.active}),
+                    state: json!({"version":1, "title":"Hello package", "blocks":[
+                        {"kind":"status", "label":"State", "value": if self.active { "Active" } else { "Inactive" }}
+                    ]}),
                 })
             }
             AdapterCommand::Suspend | AdapterCommand::Shutdown => {
@@ -33,12 +35,8 @@ impl UniversalPackageAdapter for HelloPackage {
                 Ok(AdapterReply::Ack)
             }
             AdapterCommand::Resize { .. } => Ok(AdapterReply::Ack),
-            AdapterCommand::Intent { action, .. } if action == "ui.select" => {
-                Ok(AdapterReply::Ack)
-            }
-            AdapterCommand::Intent { .. } => {
-                Err(AdapterError::Denied("unreviewed package intent"))
-            }
+            AdapterCommand::Intent { action, .. } if action == "ui.select" => Ok(AdapterReply::Ack),
+            AdapterCommand::Intent { .. } => Err(AdapterError::Denied("unreviewed package intent")),
         }
     }
 }

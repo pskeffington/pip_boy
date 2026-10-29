@@ -1,6 +1,9 @@
 # Rust-Boy
 
-[![Rust-Boy quality gates](https://github.com/pskeffington/pip_boy/actions/workflows/rust.yml/badge.svg?branch=main)](https://github.com/pskeffington/pip_boy/actions/workflows/rust.yml)
+**First-party CI:** the [Rust workflow](.github/workflows/rust.yml) uses zero external GitHub Action `uses:` dependencies, checks out the exact triggering SHA, and validates stable Rust, the 1.90 MSRV, both optional SDR features, and native macOS/Windows builds. The status badge below is scoped to `codex/package-adapter-protocol`; PR #71 head `9cb29bb582b9f2b01f36e803a3695ef27e0b3865` passed all seven jobs in [run 40869026497](https://github.com/pskeffington/pip_boy/actions/runs/40869026497). The default-branch README on `main` has a separate red badge: its latest run ([40669977589](https://github.com/pskeffington/pip_boy/actions/runs/40669977589)) ended `startup_failure` with zero jobs on `629f34f0ce21e37c6d2bc6567919ccc5c862c80d`, so it neither failed a build nor verifies current `main`. Draft PR #72 now carries the isolated first-party CI repair; its exact-head run [40871325072](https://github.com/pskeffington/pip_boy/actions/runs/40871325072) has admitted all seven jobs and is still running. `main` will show green only after the repair lands and a successful workflow run completes on `main`. PR #71 remains draft while RB-CX-05 renderer parity and operator/field gates remain open. This is not a fully offline build: Rustup, system packages and pinned Cargo dependencies still require their respective sources.
+
+
+[![Rust-Boy quality gates](https://github.com/pskeffington/pip_boy/actions/workflows/rust.yml/badge.svg?branch=codex%2Fpackage-adapter-protocol)](https://github.com/pskeffington/pip_boy/actions/workflows/rust.yml?query=branch%3Acodex%2Fpackage-adapter-protocol)
 [![License: MIT](https://img.shields.io/badge/license-MIT-informational)](LICENSE)
 [![Rust: 1.90+](https://img.shields.io/badge/Rust-1.90%2B-informational)](Cargo.toml)
 
@@ -14,11 +17,14 @@ Roles use short operator titles: **Overseer, Maintenance, Security, Doctor, Scie
 
 **Planned host redesign:** [Single-package viewport and phased package gates](docs/HOST_PACKAGE_ROADMAP.md). The target shell displays one package at a time with permanent Settings; the existing desktop/micro interface remains in place until the acceptance gates pass.
 
-**Universal adapter precursor:** `crates/rust-boy-adapter-sdk` defines a minimal shared module protocol; `pipboy-core::universal_adapter` hosts trusted built-in adapters, manages one foreground package and keeps Settings host-owned. Four synthetic module integrations are covered by Rust test sources; live modules, GUI mounting and external execution are not yet connected. [Universal adapter guide](docs/UNIVERSAL_ADAPTER.md).
+**Universal adapter precursor:** `crates/rust-boy-adapter-sdk` defines a minimal shared module protocol; `pipboy-core::universal_adapter` hosts trusted built-in adapters, manages one foreground package and keeps Settings host-owned. Four synthetic adapters remain in tests; the development branch additionally mounts one explicitly compiled, read-only RADIO catalogue sourced from `rust_radio`. Its selection starts no playback, network, background task or device access. Real interactive package integration and external execution remain open. [Universal adapter guide](docs/UNIVERSAL_ADAPTER.md).
 
-**Socket registry precursor:** Four independent designs (MAP / TV / RADIO / COMMS) can be inspected and validated without loading packages. `pipboy packages list --json` shows checked-in reference designs; `pipboy packages check PATH` validates an explicit file; `pipboy packages scan DIR --json` discovers JSON manifests in an operator-chosen local directory. All results are **reference/discovered metadata only**, not installed or runnable packages. See [socket contract](docs/PACKAGE_SOCKET.md).
+**Socket registry and transport precursor:** Four independent designs (MAP / TV / RADIO / COMMS) can be inspected and validated without loading packages. `pipboy packages list --json` shows checked-in reference designs; `pipboy packages check PATH` validates an explicit file; `pipboy packages scan DIR --json` discovers JSON manifests in an operator-chosen local directory. A private Unix listener helper checks directory and socket permissions and requires the OS-reported peer PID and UID to match caller-supplied expectations; it is not connected to a package launcher or binary-signature verifier. Registry results remain **reference/discovered metadata only**, not installed or runnable packages. See [socket contract](docs/PACKAGE_SOCKET.md).
 
 ## Project navigation
+
+**Codex development:** [Root instructions](AGENTS.md) · [phased passes](docs/CODEX_PASSES.md) · [machine-readable queue](catalog/codex_passes.json) · [index ownership](docs/INDEXING.md). These development-branch sources do not certify production acceptance.
+
 
 [Documentation index](docs/README.md) · [Repository structure](docs/REPO_STRUCTURE.md) · [Architecture](docs/ARCHITECTURE.md) · [Organizational research](docs/ORGANIZATIONAL_OPTIMIZATION.md) · [Validation](docs/VALIDATION.md) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md).
 
@@ -30,7 +36,21 @@ Roles use short operator titles: **Overseer, Maintenance, Security, Doctor, Scie
 
 ## Quick start
 
-Install [Rust and Cargo](https://www.rust-lang.org/tools/install) — **Rust 1.90 or newer** — and Git. Daily development uses stable Rust; CI also checks the exact 1.90.0 minimum. The workspace retains Rust edition 2021.
+Install [Rust and Cargo](https://www.rust-lang.org/tools/install) — **Rust 1.90 or newer** — and Git. Daily development uses stable Rust; CI also checks the exact 1.90.0 minimum. The workspace retains Rust edition 2021. Linux builds need a C toolchain, `pkg-config` and ALSA development headers. On Debian/Ubuntu:
+
+```bash
+sudo apt-get update
+sudo apt-get install --no-install-recommends build-essential pkg-config libasound2-dev
+```
+
+Build the complete workspace from the locked dependency set, then verify the CLI:
+
+```bash
+cargo +stable build --workspace --locked
+cargo +stable run --locked -p pipboy -- --help
+```
+
+The remote `main` branch at `629f34f0ce21e37c6d2bc6567919ccc5c862c80d` was extracted into a clean directory and both commands passed on macOS ARM64. The resulting binary also passed `python3 tools/smoke_micro.py`, which exercises the real loopback UI/API with temporary state and no WAN/device access. This verifies that source snapshot's build and local startup path; it does not certify hardware or field acceptance.
 
 ```bash
 git clone https://github.com/pskeffington/pip_boy.git

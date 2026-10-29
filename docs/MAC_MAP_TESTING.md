@@ -17,7 +17,9 @@ bash scripts/test-map-macos.command --verify
 bash scripts/test-map-macos.command --launch
 ```
 
-The **verify** step builds the actual macOS Rust `pipboy` binary, runs county-cache Rust tests, starts a temporary Rust loopback server for the micro HTTP integration test, and executes the offline JavaScript map, GPS permission, county-ingestion, boundary, landmark, layer and RustGIS import tests. It does **not** contact Census, OSM or your GPS provider. It doesn't alter your normal workbench. When Chrome/Chromium is installed it also runs the headless 480×320 / 800×480 / 320×568 viewport fixture. Require that check rather than silently skipping it with `--verify --require-chromium`.
+The **verify** step builds the actual macOS Rust `pipboy` binary, runs county-cache Rust tests, starts a temporary Rust loopback server for the micro HTTP integration test, and executes the offline JavaScript map, GPS permission, county-ingestion, boundary, landmark, layer and RustGIS import tests. It does **not** contact Census, OSM or your GPS provider. It doesn't alter your normal workbench. When Chrome/Chromium is installed it also runs the headless 480×320 / 800×480 / 320×568 viewport fixture. The RustGIS import/view fixtures cover native maps and explicit `rb-gis-package/v1` directory packages, including null-only input denial and preservation of the last-good geometry and viewport. Require the viewport check rather than silently skipping it with `--verify --require-chromium`.
+
+The Rust geometry inspector has dedicated core tests and an offline CLI smoke. Run `cargo +stable test -p pipboy-core scout_gis::tests --locked` and `python3 tools/smoke_scout.py` to check supported geometry families, WGS84 bounds, invalid CRS/coordinates, and size limits. The inspector summarizes GeoJSON; it does not provide renderer acceptance.
 
 ### Audit the real saved county without a network connection
 
@@ -58,7 +60,7 @@ The first connected lookup downloads a bounded national Census relationship file
 | M4 — rendering | Use FIT, +/- zoom, pan with trackpad/pointer; expand LAYERS | ROADS, WATER, LANDMARKS, BORDER independently toggle without redownloading or erasing data; named landmarks are legible |
 | M5 — source inspection | Expand DATA SOURCES | County GEOID/vintage, source counts, partial-source labels, canvas draw timings and source load duration are available |
 | M6 — offline restart | After successful M3, stop Rust, disconnect internet, restart with the **same** test home | Previously verified county boundary, roads, water and clipped landmarks reappear without an outbound request |
-| M7 — failure recovery | With internet unavailable, select a different uncached county or reopen existing cached data | Current valid map remains available; failure never substitutes unrelated county geometry |
+| M7 — failure recovery | With internet unavailable, select a different uncached county or reopen existing cached data; also simulate a source failure after the first replacement layer | Current valid map, center, zoom, follow state, retry point and cold-start county remain selected; a successful retry commits them together |
 | M8 — GPS permissions | Deliberately select GPS ON; allow or deny browser/OS location permission | Actual browser-provided fix only when available; denial explains recovery and CENTER remains usable |
 | M9 — viewport | Chrome devtools device emulation, or `--verify --require-chromium` | 480×320 controls remain readable and reachable; browser emulation is **not** evidence of physical touch behavior |
 

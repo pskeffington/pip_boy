@@ -15,7 +15,7 @@ const sample = {
   layers: [
     { id: 1, name: "Authorized wells", visible: true, transparency: 0,
       renderer: { Single: { fill: [5, 240, 90, 255], stroke: [0, 10, 0, 255], stroke_width: 1 } },
-      dataset: { name: "Wells", source: "County GIS / wells.geojson", fields: [{ name: "name", ty: "Text" }],
+      dataset: { name: "Wells", source: "County GIS / wells.geojson", crs: "EPSG:4326", fields: [{ name: "name", ty: "Text" }],
         features: [{ id: 1, geometry: { Point: { x: -81.63, y: 37.44 } },
           attrs: [{ Text: "A1" }] }] } },
     { id: 2, name: "County roads", visible: true, transparency: 0,
@@ -88,12 +88,61 @@ async function check() {
   assert.equal(api.parseRustGIS(JSON.stringify(project), "field.rgis").mapName, "Scout terrain");
   assert.throws(() => api.parseRustGIS(JSON.stringify({ ...sample, body: "mars" }), "mars.rgismap"), /Earth maps/);
   assert.throws(() => api.parseRustGIS(JSON.stringify({ ...sample, layers: [
+    { ...sample.layers[0], dataset: { ...sample.layers[0].dataset, crs: "EPSG:3857" } }
+  ] }), "projected.rgismap"), /CRS must be WGS84/,
+  "projected coordinates must not be silently interpreted as longitude/latitude");
+  assert.throws(() => api.parseRustGIS(JSON.stringify({ ...sample, layers: [
+    { ...sample.layers[0], dataset: { ...sample.layers[0].dataset, crs: { code: 4326 } } }
+  ] }), "invalid-crs.rgismap"), /CRS must be WGS84/);
+  assert.throws(() => api.parseRustGIS(JSON.stringify({ ...sample, layers: [
     { ...sample.layers[0], dataset: { ...sample.layers[0].dataset, crs_incomplete: true } }
   ] }), "bad.rgismap"), /incomplete CRS/);
   assert.throws(() => api.parseRustGIS(JSON.stringify({ ...sample, layers: [
     { ...sample.layers[0], source: { path: "/private/streamed.gpkg" } }
   ] }), "empty.rgismap"), /No embedded vector map data/);
   assert.equal(api.parseRustGIS(JSON.stringify({ ...sample, groups: [{ id: 55, visible: false, children: [2] }] }), "group.rgismap").shapes.length, 1);
+
+  const geo = JSON.stringify({type:"FeatureCollection",features:[
+    {type:"Feature",properties:{name:"Main road"},geometry:{type:"LineString",coordinates:[[-81,37],[-81.1,37.1]]}}
+  ]});
+  const geoWithNullFeature=JSON.stringify({type:"FeatureCollection",features:[
+    {type:"Feature",properties:{name:"No geometry"},geometry:null},
+    {type:"Feature",properties:{name:"Closed area"},geometry:{type:"Polygon",coordinates:[[
+      [-81,37],[-80.9,37],[-80.9,37.1],[-81,37.1],[-81,37]
+    ]]}}
+  ]});
+  const nullGeometryImport=api.parseGeoJSON(geoWithNullFeature);
+  assert.equal(nullGeometryImport.features,2,"null feature geometry is valid GeoJSON and remains counted");
+  assert.equal(nullGeometryImport.shapes.length,1);
+  assert.throws(()=>api.parseGeoJSON(JSON.stringify({type:"Polygon",coordinates:[[
+    [-81,37],[-80.9,37],[-80.9,37.1],[-81,37.1]
+  ]]})),/ring must be closed/,"GeoJSON polygon rings must repeat their first position");
+  assert.throws(()=>api.parseGeoJSON(JSON.stringify({type:"FeatureCollection",features:[
+    {type:"Feature",properties:{},geometry:null}
+  ]})),/No drawable/,"a null-only collection must not replace the current map");
+  const manifest = {schema:"rb-gis-package/v1",description:"County sample",layers:[{
+    file:"roads.geojson",name:"Road network",role:"roads",source:"County GIS",vintage:"2025",
+    attribution:"County GIS office"
+  }]};
+  const pkg=(m=manifest, contents=geo, extra=[])=>[
+    {name:"manifest.json",webkitRelativePath:"fixture/manifest.json",size:Buffer.byteLength(JSON.stringify(m)),text:async()=>JSON.stringify(m)},
+    {name:"roads.geojson",webkitRelativePath:"fixture/roads.geojson",size:Buffer.byteLength(contents),text:async()=>contents},
+    ...extra
+  ];
+  const importedPackage=await api.readDirectoryPackage(pkg());
+  assert.equal(importedPackage.format,"rb-gis-package/v1");
+  assert.equal(importedPackage.layers[0].role,"roads");
+  assert.equal(importedPackage.shapes[0].style.stroke,"#b5db90");
+  assert.ok(importedPackage.warnings.some((w)=>w.includes("not authenticated")));
+  await assert.rejects(api.readDirectoryPackage(pkg({...manifest,schema:"rb-gis-package/v2"})),/Unsupported/);
+  await assert.rejects(api.readDirectoryPackage(pkg({...manifest,layers:[{...manifest.layers[0],file:"../roads.geojson"}]})),/simple/);
+  await assert.rejects(api.readDirectoryPackage(pkg({...manifest,layers:[{...manifest.layers[0],role:"executable"}]})),/role/);
+  await assert.rejects(api.readDirectoryPackage(pkg({...manifest,layers:[{...manifest.layers[0],source:""}]})),/metadata/);
+  await assert.rejects(api.readDirectoryPackage(pkg(manifest,JSON.stringify({type:"Point",coordinates:[200,0]}))),/WGS84/);
+  await assert.rejects(api.readDirectoryPackage(pkg(manifest,geo,[{name:"extra.txt",webkitRelativePath:"fixture/extra.txt",size:1,text:async()=>"x"}])),/unlisted/);
+  await assert.rejects(api.readDirectoryPackage(pkg(manifest,geo,[{name:"other.geojson",webkitRelativePath:"other/other.geojson",size:1,text:async()=>"x"}])),/one flat/);
+  const oversized={name:"roads.geojson",webkitRelativePath:"fixture/roads.geojson",size:2*1024*1024+1,text:async()=>geo};
+  await assert.rejects(api.readDirectoryPackage([pkg()[0],oversized]),/exceeds 2 MiB/);
 
   for (const deflated of [false, true]) {
     const contents = zip("Scout.rgismap", raw, deflated);

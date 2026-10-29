@@ -441,6 +441,21 @@
     return parsePackage(await boundedResponse(response),geoid,id,clipRings);
   }
 
+  async function activate(geoid, signal) {
+    const response=await fetch("/api/map/activate",{
+      method:"POST",headers:{"Content-Type":"application/json"},
+      cache:"no-store",credentials:"omit",signal,
+      body:JSON.stringify({geoid,confirm:true})
+    });
+    if(!response.ok)bad("COUNTY CACHE COMMIT FAILED ("+response.status+")");
+    const value=await response.json();
+    if(!value || value.schema!==1 || value.active_geoid!==geoid ||
+        value.network_used!==false || !Array.isArray(value.cached_sources) ||
+        !value.cached_sources.some(id=>id!=="tiger-pointlm"&&SOURCES.includes(id)))
+      bad("Untrusted county cache commit response");
+    return value;
+  }
+
   async function load(geoid, {cacheOnly=false,signal,onLayer,onStatus,clipRings}={}) {
     if (!validGeoid(geoid)) bad("County GEOID not valid");
     if (!cacheOnly) await sources(signal);
@@ -464,6 +479,9 @@
     }
     if (!report.sourceIds.some(id => id !== "tiger-pointlm"))
       bad("No county source loaded: "+report.errors.join(" | ").slice(0,130));
+    // Individual downloads are artifacts, not a selected cold-start county.
+    // Persist selection only after this client has parsed a real base layer.
+    await activate(geoid,signal);
     return report;
   }
 

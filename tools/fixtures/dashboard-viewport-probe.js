@@ -53,9 +53,14 @@
       }
       if($(".module-card")){
         $(".module-card").click();
-        result.inspector=innerWidth>1100 ||
-          (shown($(".detail-panel")) && shown($("#inspector-return")));
-        if(innerWidth<=1100)$("#inspector-return").click();
+        result.toolDetailsFullView=shown($(".detail-panel")) && !shown($(".main-panel")) &&
+          shown($("#inspector-return"));
+        const detailRect=$(".detail-panel").getBoundingClientRect();
+        const dashboardRect=$(".dashboard").getBoundingClientRect();
+        result.toolDetailsFillWorkspace=detailRect.width>=dashboardRect.width*.95 &&
+          detailRect.left>=dashboardRect.left-1 && detailRect.right<=dashboardRect.right+1;
+        $("#inspector-return").click();
+        result.toolDetailsReturnWorks=shown($(".main-panel")) && !shown($(".detail-panel"));
       }
       $('[data-stage-target="viewport"]').click();
       result.viewport=shown($('[data-stage="viewport"]')) &&
@@ -77,6 +82,11 @@
         inside($('[data-stage="messages"]'),$("#workspace-stage"));
       const beforeRole=$("#status-role").textContent;
       const beforeCards=all(".module-card").map(e=>e.getAttribute("aria-label"));
+      result.settingsButtonAvailable=shown($("#desktop-settings-open"));
+      $("#desktop-settings-open").click();
+      result.settingsGearWorks=shown($('[data-stage="settings"]'));
+      $("#settings-return").click();
+      result.settingsRestoresPriorPage=shown($('[data-stage="messages"]'));
       $('[data-stage-target="settings"]').click();
       result.settings={
         visible:shown($('[data-stage="settings"]')),
@@ -105,6 +115,25 @@
         $("#palette-back").click();
         result.palette.back=shown($('[data-stage="settings"]'));
       }
+      snapshot.host_packages={
+        packages:[{package_id:"org.rustboy.radio",state:"registered"}],
+        selected_package_id:"org.rustboy.radio",
+        foreground:{surface:"package"},settings_open:false,
+        foreground_view:{version:1,title:"Radio catalogue",blocks:[
+          {kind:"status",label:"Player",value:"Not started"},
+          {kind:"list",label:"Stations",items:["<img src=x onerror=alert(1)>","Fixture station"]}
+        ]}
+      };
+      updateHostPackageSelect(snapshot.host_packages);
+      activateStage("adapter");
+      const packageView=$("#host-adapter-view");
+      const packageList=packageView?.querySelector(".package-view-list");
+      const packageSelect=$("#host-package-select");
+      result.packageView=!!packageView && shown($('[data-stage="adapter"]')) &&
+        packageView.textContent.includes("<img src=x onerror=alert(1)>") &&
+        !packageView.querySelector("img") && !!packageList && inside(packageView,$("#workspace-stage"));
+      result.packageSelectorAccessible=packageSelect?.getAttribute("aria-label") === "Mounted package foreground" &&
+        packageSelect.getBoundingClientRect().height >= 44 && inside(packageSelect,$(".masthead"));
       result.documentFitsAfter=documentFits();
       result.ok=true;
     }catch(e){result.error=e.stack || e.message;}

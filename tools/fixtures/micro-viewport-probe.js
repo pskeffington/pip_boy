@@ -73,6 +73,28 @@ const inside=(node,box)=>{
         throw Error("Detail Back/title missing from shared header");
       back();
     }
+    snapshot.host_packages={
+      packages:[{package_id:"org.rustboy.radio",state:"registered"}],
+      selected_package_id:"org.rustboy.radio",foreground:{surface:"package"},
+      settings_open:false,foreground_view:{version:1,title:"Radio catalogue",blocks:[
+        {kind:"status",label:"Player",value:"Not started"},
+        {kind:"list",label:"Stations",items:["<img src=x onerror=alert(1)>","Fixture station"]}
+      ]}
+    };
+    updateHostPackageSelect(snapshot.host_packages);
+    tab="adapter"; openedTool=null; render(); await settle();
+    const packageView=ui.content.querySelector(".adapter-view-title");
+    const packageList=ui.content.querySelector(".adapter-view-list");
+    const packageSelect=document.getElementById("micro-host-package-select");
+    if(!packageView || packageView.textContent!=="Radio catalogue" || !packageList ||
+        !ui.content.textContent.includes("<img src=x onerror=alert(1)>") ||
+        ui.content.querySelector("img") || !inside(packageList,ui.viewport.getBoundingClientRect()) ||
+        packageSelect.getAttribute("aria-label")!=="Mounted package foreground" ||
+        packageSelect.getBoundingClientRect().height<44 ||
+        !inside(packageSelect,document.querySelector(".topbar").getBoundingClientRect()) ||
+        document.documentElement.scrollHeight>innerHeight+1)
+      throw Error("Bounded host-rendered package view clipped or interpreted text as markup");
+    report.packageView=true; report.packageSelectorAccessible=true;
     parent.postMessage({type:"dashboard-viewport",value:report},location.origin);
   }catch(error){parent.postMessage({type:"dashboard-viewport",value:{error:error.message}},location.origin);}
 })();

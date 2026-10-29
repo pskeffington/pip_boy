@@ -4,13 +4,17 @@ Technical contracts, architecture decisions, research provenance and validation 
 
 **Current scope:** Rust 1.90+ desktop CLI/TUI, a separate micro-handheld shell and a loopback-only graphical dashboard, bundled reference library, notes and synthetic-only device workflows. NET ENGINEER performs an explicitly authorized, bounded LAN scan; OS-enforced peripheral permissions and physical device permissions remain separate; a TLS-only, explicitly configured UniFi connected-client reader is implemented. Physical controller acceptance remains open.
 
+## Codex development and indexing
+
+[Codex passes and acceptance](CODEX_PASSES.md) · [machine indexing](INDEXING.md) · [Codex root instructions](../AGENTS.md) · [pass manifest](../catalog/codex_passes.json). Draft-branch state, merged code, CI evidence and hardware acceptance are distinct.
+
 ## Universal adapter SDK
 
 [Universal adapter implementation and four-module integration](UNIVERSAL_ADAPTER.md) documents the portable SDK, trusted host lifecycle manager, one-package viewport contract and open acceptance gates.
 
 ## Package socket and GIS extraction
 
-[Pop-in package socket and GIS extraction](PACKAGE_SOCKET.md) defines the host-owned viewport boundary, package manifest, and independent rb_gis migration gates.
+[Package socket and GIS extraction](PACKAGE_SOCKET.md) documents the registry and bounded Unix transport, private socket-path helper, desktop/micro foreground linkage, and independent rb_gis migration gates.
 
 ## Host package roadmap
 
@@ -24,6 +28,8 @@ Technical contracts, architecture decisions, research provenance and validation 
 | Guide | Focus |
 | --- | --- |
 | [Repository structure and maintenance](REPO_STRUCTURE.md) | Canonical file ownership, code boundaries, documentation navigation and cleanup gates |
+| [Codex development passes](CODEX_PASSES.md) | Current next pass, dependency graph, entrypoints and evidence gates |
+| [Machine indexing](INDEXING.md) | Source-of-truth read order, change matrix and drift tests |
 | [Organizational optimization research](ORGANIZATIONAL_OPTIMIZATION.md) | Measured code concentration, evidence matrix, component boundaries and ranked improvements |
 | [Mac-first / Pi-later architecture decision](adr/0001-mac-first-portable-core.md) | Accepted single-workspace strategy and separate hardware acceptance gates |
 | [Mac-local MAP testing](MAC_MAP_TESTING.md) | Native Cargo launcher, offline tests, real county acquisition, cache restart and local render timing |

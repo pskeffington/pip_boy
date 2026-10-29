@@ -87,6 +87,42 @@ async function main() {
   const cleared = window.RustBoyMap.mount(new Element("div"));
   assert.equal(cleared.shapes.length, 0, "cleared geography must not reappear");
   window.RustBoyMap.unmount();
+  const packageView=window.RustBoyMap.mount(new Element("div"));
+  const manifest={schema:"rb-gis-package/v1",description:"Offline county",layers:[{
+    file:"roads.geojson",name:"County roads",role:"roads",source:"County GIS",
+    vintage:"2025",attribution:"County GIS office"
+  }]};
+  const geo=JSON.stringify({type:"Feature",properties:{name:"Main"},geometry:{type:"LineString",coordinates:[[-81,37],[-81.1,37.1]]}});
+  const makeFile=(name,text)=>({name,size:Buffer.byteLength(text),text:async()=>text,
+    webkitRelativePath:"county/"+name});
+  packageView.packageFile.files=[makeFile("manifest.json",JSON.stringify(manifest)),makeFile("roads.geojson",geo)];
+  await packageView.packageFile.listeners.change[0]();
+  assert.equal(packageView.mapFormat,"rb-gis-package/v1");
+  assert.equal(packageView.layers[0].source,"County GIS");
+  assert.match(packageView.status.textContent,/SOURCE UNVERIFIED/);
+  assert.equal(packageView.shapes[0].style.stroke,"#b5db90");
+  const packageShapes=packageView.shapes,packageLayers=packageView.layers,packageCenter={...packageView.center};
+  const packageZoom=packageView.zoom,packageFormat=packageView.mapFormat;
+  const nullOnly=JSON.stringify({type:"FeatureCollection",features:[
+    {type:"Feature",properties:{name:"No geometry"},geometry:null}
+  ]});
+  packageView.packageFile.files=[makeFile("manifest.json",JSON.stringify(manifest)),makeFile("roads.geojson",nullOnly)];
+  await packageView.packageFile.listeners.change[0]();
+  assert.equal(packageView.shapes,packageShapes,"null-only replacement preserves last-good geometry");
+  assert.equal(packageView.layers,packageLayers,"null-only replacement preserves source metadata");
+  assert.deepEqual(packageView.center,packageCenter,"null-only replacement preserves the viewport center");
+  assert.equal(packageView.zoom,packageZoom,"null-only replacement preserves the viewport zoom");
+  assert.equal(packageView.mapFormat,packageFormat,"null-only replacement preserves the active map format");
+  assert.match(packageView.status.textContent,/MAP ERROR/);
+  assert.equal(packageView.packageFile.value,"");
+  packageView.packageFile.files=[makeFile("manifest.json",JSON.stringify({...manifest,schema:"rb-gis-package/v2"})),makeFile("roads.geojson",geo)];
+  await packageView.packageFile.listeners.change[0]();
+  assert.equal(packageView.shapes,packageShapes,"invalid replacement leaves last-good geometry untouched");
+  assert.equal(packageView.layers,packageLayers,"invalid replacement leaves last-good source metadata untouched");
+  assert.deepEqual(packageView.center,packageCenter,"invalid replacement leaves camera untouched");
+  assert.equal(packageView.packageFile.value,"","directory selection is cleared after failure");
+  assert.match(packageView.status.textContent,/MAP ERROR/);
+  window.RustBoyMap.unmount();
   console.log("RustGIS map import, GPS alignment, volatile reuse and erase: PASS");
 }
 main().catch((error) => { console.error(error); process.exitCode = 1; });

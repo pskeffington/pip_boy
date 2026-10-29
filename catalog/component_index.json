@@ -27,7 +27,7 @@
     },
     {
       "id": "runtime-policy",
-      "boundary": "Canonical runtime, module registry and capabilities; browser UI cannot grant permissions.",
+      "boundary": "Canonical runtime, module registry and role/package/scope-bound ephemeral adapter approvals; browser UI cannot grant permissions and preferences are not grants.",
       "hardware_gate": "software_only",
       "code": [
         "crates/pipboy-core/src/runtime.rs",
@@ -43,6 +43,26 @@
         "tools/smoke_runtime.py",
         "tools/smoke_permissions.py"
       ]
+    },
+    {
+      "id": "package-socket-contract",
+      "boundary": "Bounded manifest registry, typed message codecs, Unix stream sessions with absolute I/O deadlines, version negotiation, request correlation and OS UID/PID peer binding; no package binary authentication, external package execution or capability grants.",
+      "hardware_gate": "software_only",
+      "code": [
+        "crates/pipboy-core/src/package_socket.rs",
+        "crates/pipboy-core/src/package_listener.rs",
+        "crates/pipboy-core/src/package_transport.rs"
+      ],
+      "docs": [
+        "docs/PACKAGE_SOCKET.md",
+        "docs/HOST_PACKAGE_ROADMAP.md",
+        "docs/VALIDATION.md"
+      ],
+      "checks": [
+        "tools/validate_host_packages.py",
+        "tools/test_validate_host_packages.py"
+      ],
+      "acceptance": "Typed protocol negotiation, sequencing, replay rejection, frame bounds and deadline-bounded Unix exchanges are unit-tested. Private-directory socket creation, mode 0600, bounded OS-reported peer UID/PID matching, opaque verified-stream admission, occupied-path refusal and guarded cleanup are tested; host process launch, binary signature verification, capability brokerage and process isolation remain open."
     },
     {
       "id": "workbenches",
@@ -66,16 +86,23 @@
       "hardware_gate": "software_only",
       "code": [
         "crates/pipboy/src/dashboard.rs",
+        "crates/pipboy/assets/dashboard.html",
+        "crates/pipboy/assets/dashboard.css",
         "crates/pipboy/assets/dashboard.js",
         "crates/pipboy/assets/micro.js"
       ],
       "docs": [
         "docs/DASHBOARD_UI.md",
-        "docs/MICRO_UI.md"
+        "docs/MICRO_UI.md",
+        "docs/HOST_PACKAGE_ROADMAP.md"
       ],
       "checks": [
         "tools/smoke_dashboard.py",
-        "tools/smoke_micro.py"
+        "tools/smoke_micro.py",
+        "tools/test_dashboard_viewport.cjs",
+        "tools/test_desktop_viewport.cjs",
+        "tools/test_desktop_focus_ui.cjs",
+        "tools/test_micro_ui.cjs"
       ]
     },
     {
@@ -85,15 +112,22 @@
       "code": [
         "crates/pipboy-core/src/scout_gis.rs",
         "crates/pipboy/src/county_cache.rs",
-        "crates/pipboy/assets/map.js"
+        "crates/pipboy/assets/map.js",
+        "crates/pipboy/assets/map-import.js",
+        "crates/pipboy/src/scout.rs"
       ],
       "docs": [
         "docs/SCOUT_GPS_MAP.md",
-        "docs/COUNTY_SOURCES.md"
+        "docs/COUNTY_SOURCES.md",
+        "docs/SCOUT_GIS_TAK.md"
       ],
       "checks": [
         "tools/smoke_scout.py",
-        "tools/test_map_boot.cjs"
+        "tools/test_map_boot.cjs",
+        "tools/test_rustgis_map_import.cjs",
+        "tools/test_rustgis_map_view.cjs",
+        "tools/test_county_sources.cjs",
+        "tools/test_county_boundary_cache.cjs"
       ]
     },
     {
@@ -239,6 +273,7 @@
       "hardware_gate": "software_only",
       "code": [
         ".github/workflows/rust.yml",
+        "scripts/ci_bootstrap.sh",
         "tools/run_smokes.py"
       ],
       "docs": [
@@ -246,6 +281,8 @@
         "docs/CI_TRIAGE.md"
       ],
       "checks": [
+        "tools/validate_ci_policy.py",
+        "tools/test_validate_ci_policy.py",
         "tools/test_run_smokes.py",
         "tools/validate_repo.py"
       ]
@@ -286,23 +323,55 @@
     },
     {
       "id": "universal-package-adapter",
-      "boundary": "Portable versioned socket SDK and host-owned one-package lifecycle; trusted in-process tests only, with no executable loader, broker grants, or real peripheral access.",
+      "boundary": "Portable typed adapter SDK with a bounded v1 display-only PackageView rendered by host-created DOM, host-owned lifecycle and single-owner audio intent arbitration; manifest declarations are not grants and physical access remains deny-only.",
       "code": [
         "crates/rust-boy-adapter-sdk/Cargo.toml",
         "crates/rust-boy-adapter-sdk/src/lib.rs",
         "crates/pipboy-core/src/universal_adapter.rs",
-        "crates/pipboy-core/src/package_socket.rs",
-        "catalog/host_adapter_contract.json"
+        "catalog/host_adapter_contract.json",
+        "crates/pipboy-core/src/builtin_packages.rs",
+        "catalog/builtin_packages/rust_radio.json"
       ],
       "docs": [
         "docs/UNIVERSAL_ADAPTER.md",
-        "docs/PACKAGE_SOCKET.md"
+        "docs/PACKAGE_SOCKET.md",
+        "docs/HOST_PACKAGE_ROADMAP.md",
+        "docs/PROD_STATUS.md",
+        "docs/DASHBOARD_UI.md",
+        "docs/MICRO_UI.md"
       ],
       "checks": [
         "tools/validate_host_packages.py",
-        "tools/test_validate_host_packages.py"
+        "tools/test_validate_host_packages.py",
+        "tools/test_desktop_focus_ui.cjs",
+        "tools/test_micro_ui.cjs",
+        "tools/test_desktop_viewport.cjs",
+        "tools/test_micro_viewport.cjs"
       ],
       "hardware_gate": "software_only"
+    },
+    {
+      "id": "codex-development-index",
+      "boundary": "Branch-scoped Codex pass navigation, dependency and evidence records with offline deterministic validation. No executable manifest, hardware grant, scheduler or release authority.",
+      "hardware_gate": "software_only",
+      "code": [
+        "AGENTS.md",
+        "catalog/codex_passes.json",
+        "tools/validate_codex_passes.py",
+        "tools/test_validate_codex_passes.py",
+        "tools/codex_next.py",
+        "tools/test_codex_next.py"
+      ],
+      "docs": [
+        "docs/CODEX_PASSES.md",
+        "docs/INDEXING.md"
+      ],
+      "checks": [
+        "tools/validate_codex_passes.py",
+        "tools/test_validate_codex_passes.py",
+        "tools/test_codex_next.py"
+      ],
+      "acceptance": "Current-head source, CI and documentation gate execution is still pending; pass structure is not production acceptance."
     }
   ]
 }

@@ -9,11 +9,29 @@ use crate::package_socket::{
 };
 pub use rust_boy_adapter_sdk::{
     valid_action, AdapterCommand, AdapterEnvelope, AdapterError, AdapterReply, DenyAllScopes,
-    ScopeAuthority, UniversalPackageAdapter, Viewport, ADAPTER_PROTOCOL, MAX_INTENT_BYTES,
-    MAX_WIRE_BYTES,
+    PackageView, ScopeAuthority, UniversalPackageAdapter, ViewBlock, Viewport, ADAPTER_PROTOCOL,
+    MAX_INTENT_BYTES, MAX_WIRE_BYTES,
 };
 use serde_json::Value;
 use std::collections::{BTreeMap, BTreeSet};
+
+/// Host authorization for package intents. Audio requests use explicit
+/// arbitration hooks; authorities that do not implement them deny media.
+pub trait AdapterIntentAuthority {
+    fn is_granted(&self, package_id: &str, scope: &str) -> bool;
+
+    fn authorize_media_action(&self, _package_id: &str, _action: &str) -> bool {
+        false
+    }
+
+    fn complete_media_action(&self, _package_id: &str, _action: &str, _succeeded: bool) {}
+}
+
+impl AdapterIntentAuthority for DenyAllScopes {
+    fn is_granted(&self, _package_id: &str, _scope: &str) -> bool {
+        false
+    }
+}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum AdapterState {
@@ -101,6 +119,15 @@ impl UniversalAdapterHost {
         self.foreground.surface()
     }
 
+    /// The selected package remains known while host Settings is open.
+    pub fn selected_package_id(&self) -> Option<&str> {
+        self.foreground.active_package_id()
+    }
+
+    pub fn settings_open(&self) -> bool {
+        self.foreground.settings_open()
+    }
+
     pub fn state(&self, package_id: &str) -> Option<AdapterState> {
         self.mounted.get(package_id).map(|entry| entry.state)
     }
@@ -147,9 +174,15 @@ impl UniversalAdapterHost {
         let encoded = serde_json::to_vec(&reply)
             .map_err(|_| AdapterError::Fault("invalid package reply".into()))?;
         if encoded.len() > MAX_WIRE_BYTES {
-            return Err(AdapterError::Fault("package reply exceeds wire limit".into()));
+            return Err(AdapterError::Fault(
+                "package reply exceeds wire limit".into(),
+            ));
         }
         if let AdapterReply::View { state } = reply {
+            let view: PackageView = serde_json::from_value(state.clone())
+                .map_err(|_| AdapterError::Fault("invalid package view schema".into()))?;
+            view.validate()
+                .map_err(|_| AdapterError::Fault("invalid package view schema".into()))?;
             entry.last_view = Some(state);
         }
         Ok(())
@@ -284,6 +317,25 @@ impl UniversalAdapterHost {
         Ok(())
     }
 
+    /// Returns foreground ownership to the host shell without uninstalling the
+    /// adapter. When Settings is open the package is already suspended.
+    pub fn clear_foreground(&mut self) -> Result<(), AdapterError> {
+        if let Some(package_id) = self.foreground.active_package_id().map(str::to_owned) {
+            if !self.foreground.settings_open() {
+                if let Err(error) = self.invoke(&package_id, AdapterCommand::Suspend) {
+                    self.fail(&package_id);
+                    self.foreground.clear_package();
+                    return Err(error);
+                }
+                if let Some(entry) = self.mounted.get_mut(&package_id) {
+                    entry.state = AdapterState::Suspended;
+                }
+            }
+            self.foreground.clear_package();
+        }
+        Ok(())
+    }
+
     pub fn resize(&mut self, width: u16, height: u16) -> Result<(), AdapterError> {
         let viewport = Viewport::new(width, height)?;
         self.viewport = viewport;
@@ -319,7 +371,7 @@ impl UniversalAdapterHost {
         action: &str,
         requested_scope: Option<&str>,
         payload: Value,
-        policy: &dyn ScopeAuthority,
+        policy: &dyn AdapterIntentAuthority,
     ) -> Result<(), AdapterError> {
         if !valid_action(action) {
             return Err(AdapterError::Invalid("invalid package intent action"));
@@ -336,24 +388,42 @@ impl UniversalAdapterHost {
                 .get(&active)
                 .expect("selected package is mounted")
                 .manifest;
-            if !manifest.capabilities.iter().any(|declared| declared == scope)
-                || !policy.is_granted(&active, scope)
+            if !manifest
+                .capabilities
+                .iter()
+                .any(|declared| declared == scope)
             {
-                return Err(AdapterError::Denied("scope is not authorized by host policy"));
+                return Err(AdapterError::Denied(
+                    "scope is not authorized by host policy",
+                ));
+            }
+            let authorized = if scope == "media.audio" {
+                policy.authorize_media_action(&active, action)
+            } else {
+                policy.is_granted(&active, scope)
+            };
+            if !authorized {
+                return Err(AdapterError::Denied(
+                    "scope is not authorized by host policy",
+                ));
             }
         } else if !action.starts_with("ui.") {
             return Err(AdapterError::Denied(
                 "non-UI actions require an explicit capability scope",
             ));
         }
-        if let Err(error) = self.invoke(
+        let result = self.invoke(
             &active,
             AdapterCommand::Intent {
                 action: action.to_owned(),
                 required_scope: requested_scope.map(str::to_owned),
                 payload,
             },
-        ) {
+        );
+        if requested_scope == Some("media.audio") {
+            policy.complete_media_action(&active, action, result.is_ok());
+        }
+        if let Err(error) = result {
             // Malformed input should not take a healthy adapter offline;
             // a real adapter fault or bad reply must fail closed.
             if matches!(error, AdapterError::Fault(_) | AdapterError::Registry(_)) {
@@ -440,7 +510,9 @@ mod tests {
                 return Err(AdapterError::Fault("synthetic adapter fault".into()));
             }
             Ok(AdapterReply::View {
-                state: json!({"ready": true, "module": self.id}),
+                state: json!({"version": 1, "title": "Test package", "blocks": [
+                    {"kind": "status", "label": "Module", "value": self.id}
+                ]}),
             })
         }
     }
@@ -504,11 +576,13 @@ mod tests {
     fn design_fixtures_and_untrusted_process_launchers_are_never_mounted() {
         let mut host = UniversalAdapterHost::new(Viewport::new(480, 320).unwrap());
         let calls = Arc::new(Mutex::new(Vec::new()));
-        let runner = || Box::new(Fixture {
-            id: "org.rustboy.gis".into(),
-            calls: calls.clone(),
-            fail: None,
-        });
+        let runner = || {
+            Box::new(Fixture {
+                id: "org.rustboy.gis".into(),
+                calls: calls.clone(),
+                fail: None,
+            })
+        };
         let design = serde_json::to_string(
             crate::package_socket::reference_catalog()
                 .unwrap()
@@ -540,6 +614,39 @@ mod tests {
     }
 
     #[test]
+    fn clearing_foreground_suspends_without_unmounting_and_keeps_settings_open() {
+        let mut host = UniversalAdapterHost::new(Viewport::new(480, 320).unwrap());
+        let calls = mount(&mut host, "org.rustboy.radio", None);
+        host.select("org.rustboy.radio").unwrap();
+        host.clear_foreground().unwrap();
+        assert_eq!(host.surface(), HostSurface::Empty);
+        assert_eq!(
+            host.state("org.rustboy.radio"),
+            Some(AdapterState::Suspended)
+        );
+        assert_eq!(host.len(), 1);
+        assert_eq!(calls.lock().unwrap().len(), 2);
+
+        host.select("org.rustboy.radio").unwrap();
+        host.open_settings();
+        let before = calls.lock().unwrap().len();
+        host.clear_foreground().unwrap();
+        assert_eq!(host.surface(), HostSurface::Settings);
+        assert_eq!(host.selected_package_id(), None);
+        assert_eq!(calls.lock().unwrap().len(), before);
+    }
+
+    #[test]
+    fn failed_suspend_clears_foreground_and_faults_adapter() {
+        let mut host = UniversalAdapterHost::new(Viewport::new(480, 320).unwrap());
+        mount(&mut host, "org.rustboy.radio", Some("suspend"));
+        host.select("org.rustboy.radio").unwrap();
+        assert!(host.clear_foreground().is_err());
+        assert_eq!(host.surface(), HostSurface::Empty);
+        assert_eq!(host.state("org.rustboy.radio"), Some(AdapterState::Faulted));
+    }
+
+    #[test]
     fn failed_activation_restores_previous_foreground() {
         let mut host = UniversalAdapterHost::new(Viewport::new(480, 320).unwrap());
         let previous = mount(&mut host, "org.rustboy.gis", None);
@@ -547,7 +654,10 @@ mod tests {
         host.select("org.rustboy.gis").unwrap();
         assert!(host.select("org.rustboy.tv").is_err());
         assert_eq!(host.surface(), HostSurface::Package("org.rustboy.gis"));
-        assert_eq!(host.state("org.rustboy.gis"), Some(AdapterState::Foreground));
+        assert_eq!(
+            host.state("org.rustboy.gis"),
+            Some(AdapterState::Foreground)
+        );
         assert_eq!(host.state("org.rustboy.tv"), Some(AdapterState::Faulted));
         assert_eq!(previous.lock().unwrap().len(), 3);
         assert_eq!(failing.lock().unwrap().len(), 1);
@@ -558,9 +668,12 @@ mod tests {
     #[test]
     fn intent_scopes_are_host_owned_and_denied_by_default() {
         struct Approved;
-        impl ScopeAuthority for Approved {
+        impl AdapterIntentAuthority for Approved {
             fn is_granted(&self, id: &str, scope: &str) -> bool {
                 id == "org.rustboy.radio" && scope == "media.audio"
+            }
+            fn authorize_media_action(&self, id: &str, action: &str) -> bool {
+                id == "org.rustboy.radio" && action == "play"
             }
         }
         let mut host = UniversalAdapterHost::new(Viewport::new(480, 320).unwrap());
@@ -576,13 +689,43 @@ mod tests {
         assert_eq!(log.lock().unwrap().len(), 1);
         host.intent("ui.select", None, json!({"index": 2}), &DenyAllScopes)
             .unwrap();
-        host.intent("play", Some("media.audio"), json!({"station": "demo"}), &Approved)
-            .unwrap();
+        host.intent(
+            "play",
+            Some("media.audio"),
+            json!({"station": "demo"}),
+            &Approved,
+        )
+        .unwrap();
         assert_eq!(log.lock().unwrap().len(), 3);
         host.open_settings();
         assert!(host
             .intent("play", Some("media.audio"), json!({}), &Approved)
             .is_err());
+    }
+
+    #[test]
+    fn unapproved_network_device_and_message_scopes_are_denied_before_adapter_calls() {
+        let cases = [
+            ("org.rustboy.radio", "fetch", "network.fetch.explicit"),
+            ("org.rustboy.radio", "read", "radio.device"),
+            ("org.rustboy.comms", "send", "messages.local.write"),
+            ("org.rustboy.comms", "connect", "network.connect.explicit"),
+        ];
+        for (package_id, action, scope) in cases {
+            let mut host = UniversalAdapterHost::new(Viewport::new(480, 320).unwrap());
+            let calls = mount(&mut host, package_id, None);
+            host.select(package_id).unwrap();
+            assert!(
+                host.intent(action, Some(scope), json!({}), &DenyAllScopes)
+                    .is_err(),
+                "{package_id} unexpectedly authorized {scope}"
+            );
+            assert_eq!(
+                calls.lock().unwrap().len(),
+                1,
+                "denied {scope} reached the adapter"
+            );
+        }
     }
 
     #[test]
@@ -696,10 +839,7 @@ mod tests {
                 "org.rustboy.gis"
             }
 
-            fn handle(
-                &mut self,
-                _request: AdapterEnvelope,
-            ) -> Result<AdapterReply, AdapterError> {
+            fn handle(&mut self, _request: AdapterEnvelope) -> Result<AdapterReply, AdapterError> {
                 Ok(AdapterReply::View {
                     state: json!({"payload": "x".repeat(MAX_WIRE_BYTES)}),
                 })
@@ -713,6 +853,31 @@ mod tests {
         assert_eq!(host.state("org.rustboy.gis"), Some(AdapterState::Faulted));
         host.open_settings();
         assert_eq!(host.surface(), HostSurface::Settings);
+    }
+
+    #[test]
+    fn malformed_adapter_view_is_faulted_and_never_becomes_foreground() {
+        struct InvalidView;
+        impl UniversalPackageAdapter for InvalidView {
+            fn package_id(&self) -> &str {
+                "org.rustboy.gis"
+            }
+
+            fn handle(&mut self, _request: AdapterEnvelope) -> Result<AdapterReply, AdapterError> {
+                Ok(AdapterReply::View {
+                    state: json!({"version": 1, "title": "Bad", "blocks": [
+                        {"kind": "raw_html", "text": "<script>alert(1)</script>"}
+                    ]}),
+                })
+            }
+        }
+        let mut host = UniversalAdapterHost::new(Viewport::new(480, 320).unwrap());
+        host.mount_trusted(&manifest("org.rustboy.gis"), Box::new(InvalidView))
+            .unwrap();
+        assert!(host.select("org.rustboy.gis").is_err());
+        assert_eq!(host.surface(), HostSurface::Empty);
+        assert_eq!(host.state("org.rustboy.gis"), Some(AdapterState::Faulted));
+        assert!(host.foreground_view().is_none());
     }
 
     #[test]

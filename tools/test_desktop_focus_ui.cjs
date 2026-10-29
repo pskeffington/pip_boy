@@ -18,7 +18,8 @@ for(const id of [
   "command-board","command-open-messages","command-open-viewport","command-open-modules",
   "extension-content","messenger-dock","inspector-return",
   "details-heading","detail-info","detail-description","detail-status",
-  "testbench","network-workspace","lab-form","lab-output","refresh-state"
+  "testbench","network-workspace","lab-form","lab-output","refresh-state",
+  "desktop-settings-open","settings-return"
 ]) assert.ok(ids.includes(id),"Missing desktop contract "+id);
 for(const stage of ["command","modules","viewport","messages","settings"])
   assert.ok(html.includes('data-stage-target="'+stage+'"'),"Missing workspace stage "+stage);
@@ -62,6 +63,10 @@ assert.ok(!js.includes('el("span", "role-desc"'),
   "Permanent role descriptions reintroduced in Settings");
 assert.match(js,/function renderSettingsSelection\(/,
   "Current/selected station state must remain in Settings");
+assert.match(js,/function returnFromSettings\(/,
+  "Closing Settings must restore its prior workspace view");
+assert.match(js,/settingsReturnStage = previous/,
+  "Settings must remember the previously active workspace");
 assert.match(js,/function extensionTabs\(/,
   "Scout MAP/camera focused tabs must remain");
 assert.match(js,/rolesPerPage\(\)/,
@@ -75,8 +80,18 @@ assert.match(css,/\.copy-disclosure summary:focus-visible/,
 // Vault Command is a first-class role-independent page; authority is backend-gated.
 assert.match(html,/data-stage="command"[^>]*hidden/,
   "Command stage must be available but initially hidden in raw HTML");
-assert.match(js,/activeStage = snapshot.active.profile === "overseer" \? "command" : "modules";/,
-  "Overseer should land in the vault command center");
+assert.match(html,/id="host-package-select"[^>]*disabled/,
+  "Desktop package selection must remain disabled without a mounted host roster");
+assert.match(html,/data-stage="adapter"[^>]*hidden/,
+  "The inert host package canvas must be available without replacing legacy tools");
+assert.match(js,/function renderHostAdapterSurface\(/,
+  "Desktop must render host package view data in its dedicated surface");
+assert.match(js,/function renderPackageView\(root, view\)[\s\S]*?el\("h3", "package-view-title", view\.title\)[\s\S]*?root\.append\(title\)/,
+  "Package view data must use host-created elements and textContent, never executable markup");
+assert.match(js,/activeStage = snapshot\.foreground\?\.surface === "settings"\s*\? "settings"\s*:\s*snapshot\.foreground\?\.surface === "package" \? "adapter"\s*:\s*snapshot\.active\.profile === "overseer" \? "command" : "modules";/,
+  "Host Settings/package state must restore while Overseer still lands in the vault command center");
+assert.match(js,/api\("\/api\/host\/settings", \{ settings_open \}\)/,
+  "Desktop Settings must update the Rust-owned foreground controller");
 assert.match(js,/snapshot.active.slots.some\(slot => slot.tool === "mission-board"\)/,
   "Command authority label must reflect Rust-provided tool slots");
 assert.match(js,/window.RustBoyTasks.mount\(root, \{profiles: snapshot.profiles\}\)/,

@@ -39,6 +39,9 @@
         </div>
       </div>
       <div class="masthead-right">
+        <select id="host-package-select" class="host-package-select" aria-label="Mounted package foreground" disabled>
+          <option value="">NO PACKAGES</option>
+        </select>
         <select id="desktop-map-nav" aria-label="Map workspace navigation">
           <option value="map">MAP</option>
           <option value="command">COMMAND</option>
@@ -49,15 +52,17 @@
           <option value="tasks">DUTIES</option>
           <option value="radio">RADIO</option>
         </select>
+        <button type="button" class="icon-button" id="desktop-settings-open"
+          title="Open host Settings" aria-label="Open Settings">⚙</button>
         <span class="status-chip" id="server-status"><span class="live-dot" aria-hidden="true"></span> STARTING</span>
         <a href="/micro" class="mini-button" title="Open handheld view">HANDHELD ↗</a>
         <button type="button" class="icon-button" id="refresh-state" title="Reload saved workspace" aria-label="Reload saved workspace">↻</button>
       </div>
     </header>
 
-    <nav class="pane-tabs" aria-label="Desktop workspace panels">
+    <nav class="pane-tabs" aria-label="Workspace views">
       <button type="button" data-pane-target="workspace" aria-pressed="true">WORKSPACE</button>
-      <button type="button" data-pane-target="inspector" aria-pressed="false">INSPECTOR</button>
+      <button type="button" data-pane-target="inspector" aria-pressed="false">TOOL DETAILS</button>
     </nav>
     <div class="dashboard" data-pane="workspace">
       <main class="main-panel panel" id="workspace" tabindex="-1">
@@ -127,7 +132,10 @@
           <div id="module-pager" class="deck-pager" aria-label="Module pages"></div>
         </section>
         <section class="settings-surface stage-surface" data-stage="settings" aria-label="Device settings" hidden>
-          <div class="section-heading"><h2>Settings</h2><span class="section-counter">LOCAL</span></div>
+          <div class="section-heading">
+            <button id="settings-return" type="button" class="secondary-button" aria-label="Return to previous screen">◀ BACK</button>
+            <h2>Settings</h2><span class="section-counter">LOCAL</span>
+          </div>
           <div class="settings-profile-summary">
             <div><span class="tiny-label">CURRENT ROLE</span><strong id="settings-current-role">—</strong></div>
           </div>
@@ -169,13 +177,21 @@
           </div>
           <div id="messenger-dock" class="rb-msg-root rb-msg-desktop-dock"></div>
         </section>
+        <section id="host-adapter-surface" class="host-adapter-surface stage-surface" data-stage="adapter" aria-labelledby="host-adapter-heading" hidden>
+          <div class="section-heading">
+            <h2 id="host-adapter-heading">Package view</h2>
+            <span class="section-counter" id="host-adapter-id">HOST</span>
+          </div>
+          <p id="host-adapter-status">No package is mounted.</p>
+          <div id="host-adapter-view" class="package-view" aria-label="Package view" aria-live="polite"></div>
+        </section>
         </div>
       </main>
 
       <aside class="detail-panel panel" aria-labelledby="details-heading">
         <div class="panel-top detail-header">
           <button class="inspector-return" id="inspector-return" type="button">◀ TOOLS</button>
-          <span class="eyebrow">INSPECTOR</span>
+          <span class="eyebrow">TOOL DETAILS</span>
           <h2 id="details-heading">Select a tool</h2>
           <div id="detail-status" class="detail-status"></div>
           <details id="detail-info" class="copy-disclosure">

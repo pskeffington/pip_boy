@@ -13,10 +13,12 @@ use crate::radio_playback::NativeRadioEngine;
 use crate::zip_index::ZipIndex;
 use pipboy_core::network_health;
 use pipboy_core::network_suite;
+use pipboy_core::package_socket::HostSurface;
 use pipboy_core::radio_directory::curated_stations;
 use pipboy_core::radio_presets::{MoveDirection, RadioPresetStore, RadioPresets};
 use pipboy_core::reclamation::{NewSite, SiteStatus, SiteStore};
 use pipboy_core::scout_gis::{distance_meters, waypoint, Point};
+use pipboy_core::universal_adapter::{AdapterState, UniversalAdapterHost, Viewport};
 use pipboy_core::workbench::{inspect_hex, tool, WorkbenchStore, PALETTE, PRESETS};
 use serde_json::{json, Value};
 use std::collections::BTreeMap;
@@ -63,6 +65,14 @@ static RADIO_ENGINE: LazyLock<Mutex<Option<NativeRadioEngine>>> =
 static RADIO_SDRCONNECT: LazyLock<Mutex<String>> =
     LazyLock::new(|| Mutex::new("127.0.0.1:5454".into()));
 static RADIO_OUTPUT: LazyLock<Mutex<String>> = LazyLock::new(|| Mutex::new("system".into()));
+static UNIVERSAL_ADAPTER_HOST: LazyLock<Mutex<UniversalAdapterHost>> = LazyLock::new(|| {
+    let viewport = Viewport::new(1280, 720).expect("valid dashboard viewport");
+    let mut host = UniversalAdapterHost::new(viewport);
+    // Registration is passive: no media, network, hardware or process launch.
+    pipboy_core::builtin_packages::mount_approved_builtins(&mut host)
+        .expect("compile-time approved radio manifest must be valid");
+    Mutex::new(host)
+});
 
 struct Request {
     method: String,
@@ -326,11 +336,15 @@ fn state(store: &WorkbenchStore) -> Result<Response, Response> {
             "Cannot read the local workbench; original file preserved",
         )
     })?;
+    let host_packages = host_packages_snapshot()
+        .map_err(|_| Response::error(500, "Host package state unavailable"))?;
     Ok(Response::json(
         200,
         &json!({
             "app": "Rust-Boy",
             "mode": "local_dashboard",
+            "foreground": host_packages["foreground"].clone(),
+            "host_packages": host_packages,
             "active": active,
             "profiles": PRESETS,
             "camera_feeds": pipboy_core::public_cameras::PUBLIC_CAMERA_FEEDS,
@@ -345,6 +359,136 @@ fn state(store: &WorkbenchStore) -> Result<Response, Response> {
             },
             "storage": "local",
             "network": "loopback_only"
+        }),
+    ))
+}
+
+fn host_foreground_value(surface: HostSurface<'_>) -> Value {
+    match surface {
+        HostSurface::Empty => json!({"surface": "empty", "active_package_id": null}),
+        HostSurface::Settings => json!({"surface": "settings", "active_package_id": null}),
+        HostSurface::Package(package_id) => {
+            json!({"surface": "package", "active_package_id": package_id})
+        }
+    }
+}
+
+fn host_packages_snapshot() -> Result<Value, Response> {
+    let host = UNIVERSAL_ADAPTER_HOST
+        .lock()
+        .map_err(|_| Response::error(500, "Host package state unavailable"))?;
+    Ok(host_packages_value(&host))
+}
+
+fn host_packages_value(host: &UniversalAdapterHost) -> Value {
+    let packages: Vec<Value> = host
+        .package_ids()
+        .map(|package_id| {
+            let state = match host.state(package_id) {
+                Some(AdapterState::Registered) => "registered",
+                Some(AdapterState::Foreground) => "foreground",
+                Some(AdapterState::Suspended) => "suspended",
+                Some(AdapterState::Stopped) => "stopped",
+                Some(AdapterState::Faulted) => "faulted",
+                None => "unavailable",
+            };
+            json!({"package_id": package_id, "state": state})
+        })
+        .collect();
+    json!({
+        "packages": packages,
+        "mounted_package_count": host.len(),
+        "selected_package_id": host.selected_package_id(),
+        "foreground": host_foreground_value(host.surface()),
+        "settings_open": host.settings_open(),
+        "foreground_view": host.foreground_view()
+    })
+}
+
+fn host_select_package(req: &Request) -> Result<Response, Response> {
+    let body = parse_json_body(req, &["package_id", "close_settings"])?;
+    let mut host = UNIVERSAL_ADAPTER_HOST
+        .lock()
+        .map_err(|_| Response::error(500, "Host package state unavailable"))?;
+    let close_settings = match body.get("close_settings") {
+        None => false,
+        Some(Value::Bool(value)) => *value,
+        Some(_) => return Err(Response::error(422, "close_settings must be a boolean")),
+    };
+    match body.get("package_id") {
+        Some(Value::String(package_id)) if !package_id.is_empty() => {
+            select_host_package(&mut host, package_id)
+        }
+        Some(Value::Null) => clear_host_foreground(&mut host, close_settings),
+        _ => Err(Response::error(
+            422,
+            "package_id must be a mounted ID or null",
+        )),
+    }
+}
+
+fn select_host_package(
+    host: &mut UniversalAdapterHost,
+    package_id: &str,
+) -> Result<Response, Response> {
+    host.select(package_id)
+        .map_err(|_| Response::error(409, "Package is not mounted or cannot be activated"))?;
+    Ok(Response::json(
+        200,
+        &json!({
+            "selected_package_id": host.selected_package_id(),
+            "foreground": host_foreground_value(host.surface()),
+            "settings_open": host.settings_open(),
+            "foreground_view": host.foreground_view()
+        }),
+    ))
+}
+
+fn clear_host_foreground(
+    host: &mut UniversalAdapterHost,
+    close_settings: bool,
+) -> Result<Response, Response> {
+    let clear_result = host.clear_foreground();
+    if close_settings {
+        host.close_settings()
+            .map_err(|_| Response::error(409, "Unable to close host Settings"))?;
+    }
+    clear_result.map_err(|_| Response::error(409, "Unable to suspend the foreground package"))?;
+    Ok(Response::json(
+        200,
+        &json!({
+            "selected_package_id": host.selected_package_id(),
+            "foreground": host_foreground_value(host.surface()),
+            "settings_open": host.settings_open(),
+            "foreground_view": host.foreground_view()
+        }),
+    ))
+}
+
+fn set_host_settings(req: &Request) -> Result<Response, Response> {
+    let body = parse_json_body(req, &["settings_open"])?;
+    let settings_open = body["settings_open"]
+        .as_bool()
+        .ok_or_else(|| Response::error(422, "settings_open must be a boolean"))?;
+    let mut host = UNIVERSAL_ADAPTER_HOST
+        .lock()
+        .map_err(|_| Response::error(500, "Host foreground state unavailable"))?;
+    if settings_open {
+        host.open_settings();
+    } else {
+        host.close_settings()
+            .map_err(|_| Response::error(409, "Unable to resume the foreground package"))?;
+    }
+    let foreground = host_foreground_value(host.surface());
+    Ok(Response::json(
+        200,
+        &json!({
+            "surface": foreground["surface"],
+            "active_package_id": foreground["active_package_id"],
+            "foreground": foreground,
+            "selected_package_id": host.selected_package_id(),
+            "settings_open": host.settings_open(),
+            "foreground_view": host.foreground_view()
         }),
     ))
 }
@@ -551,6 +695,27 @@ fn county_boundary(req: &Request, store: &WorkbenchStore) -> Result<Response, Re
             _ => Response::error(409, "Census boundary unavailable; existing cache preserved"),
         })?;
     Ok(Response::json(200, &boundary))
+}
+
+fn county_activate(req: &Request, store: &WorkbenchStore) -> Result<Response, Response> {
+    let body = parse_json_body(req, &["geoid", "confirm"])?;
+    if body.get("confirm").and_then(Value::as_bool) != Some(true) {
+        return Err(Response::error(
+            403,
+            "Confirm selection of the validated cached county",
+        ));
+    }
+    let geoid = str_field(&body, "geoid")?;
+    let active = county_cache(store)
+        .activate(geoid)
+        .map_err(|error| match error.kind() {
+            io::ErrorKind::InvalidInput => Response::error(422, "Invalid county GEOID"),
+            io::ErrorKind::NotFound => {
+                Response::error(409, "No validated county base layer to activate")
+            }
+            _ => Response::error(409, "Cannot commit county cache selection"),
+        })?;
+    Ok(Response::json(200, &active))
 }
 
 fn zip_index(store: &WorkbenchStore) -> ZipIndex {
@@ -1205,10 +1370,16 @@ fn dispatch(req: &Request, store: &WorkbenchStore, port: u16) -> Response {
             .unwrap_or_else(|_| Response::error(409, "County cache unavailable")),
         ("POST", "/api/map/package") => county_package(req, store).unwrap_or_else(|error| error),
         ("POST", "/api/map/boundary") => county_boundary(req, store).unwrap_or_else(|error| error),
+        ("POST", "/api/map/activate") => county_activate(req, store).unwrap_or_else(|error| error),
         ("POST", "/api/map/zip") => zip_lookup(req, store).unwrap_or_else(|error| error),
         ("POST", "/api/map/county-zips") => county_zips(req, store).unwrap_or_else(|error| error),
         ("GET", "/api/state") => state(store).unwrap_or_else(|error| error),
         ("GET", "/api/packages") => package_references(),
+        ("GET", "/api/host/packages") => host_packages_snapshot()
+            .map(|body| Response::json(200, &body))
+            .unwrap_or_else(|error| error),
+        ("POST", "/api/host/foreground") => host_select_package(req).unwrap_or_else(|error| error),
+        ("POST", "/api/host/settings") => set_host_settings(req).unwrap_or_else(|error| error),
         ("GET", "/api/radio") => radio_state(store),
         ("POST", "/api/radio") => radio_command(req, store).unwrap_or_else(|error| error),
         ("GET", "/api/reclamation") => reclamation_read(store, false).unwrap_or_else(|error| error),
@@ -1428,7 +1599,28 @@ mod tests {
     use super::task_routes::task_store;
     use super::*;
     use pipboy_core::tasks::Status;
+    use pipboy_core::universal_adapter::{
+        AdapterEnvelope, AdapterError, AdapterReply, UniversalPackageAdapter,
+    };
     use std::fs;
+
+    struct DashboardAdapter {
+        id: String,
+    }
+
+    impl UniversalPackageAdapter for DashboardAdapter {
+        fn package_id(&self) -> &str {
+            &self.id
+        }
+
+        fn handle(&mut self, _request: AdapterEnvelope) -> Result<AdapterReply, AdapterError> {
+            Ok(AdapterReply::View {
+                state: json!({"version": 1, "title": "Test adapter", "blocks": [
+                    {"kind": "text", "text": "Ready"}
+                ]}),
+            })
+        }
+    }
 
     fn request(method: &str, path: &str, body: Value) -> Request {
         let mut headers = BTreeMap::new();
@@ -2012,19 +2204,22 @@ mod tests {
             .status,
             200
         );
+        let started = dispatch(
+            &request(
+                "POST",
+                "/api/tasks/change",
+                json!({"id":1,"revision":3,"operation":"status","status":"in_progress",
+                "note":"Inspection underway"}),
+            ),
+            &store,
+            8765,
+        );
         assert_eq!(
-            dispatch(
-                &request(
-                    "POST",
-                    "/api/tasks/change",
-                    json!({"id":1,"revision":3,"operation":"status","status":"in_progress",
-                    "note":"Inspection underway"})
-                ),
-                &store,
-                8765,
-            )
-            .status,
-            200
+            started.status,
+            200,
+            "response={} task={:?}",
+            String::from_utf8_lossy(&started.body),
+            task_store(&store).task(1)
         );
         assert_eq!(
             task_store(&store).task(1).unwrap().status,
@@ -2385,6 +2580,45 @@ mod tests {
         assert_eq!(response.status, 200);
         assert_eq!(response.content_type, "application/zip");
         assert_eq!(response.body, b"PK\x03\x04local-cached-test");
+        let before_activation =
+            dispatch(&request("GET", "/api/map/cache", Value::Null), &store, 8765);
+        let before_activation: Value = serde_json::from_slice(&before_activation.body).unwrap();
+        assert_eq!(before_activation["active_geoid"], Value::Null);
+        assert_eq!(
+            dispatch(
+                &request("POST", "/api/map/activate", json!({"geoid":"25025"})),
+                &store,
+                8765,
+            )
+            .status,
+            403
+        );
+        let mut hostile_activation = request(
+            "POST",
+            "/api/map/activate",
+            json!({"geoid":"25025","confirm":true}),
+        );
+        hostile_activation
+            .headers
+            .insert("origin".into(), "https://untrusted.invalid".into());
+        assert_eq!(dispatch(&hostile_activation, &store, 8765).status, 403);
+        assert_eq!(
+            dispatch(
+                &request(
+                    "POST",
+                    "/api/map/activate",
+                    json!({"geoid":"25025","confirm":true}),
+                ),
+                &store,
+                8765,
+            )
+            .status,
+            200
+        );
+        let after_activation =
+            dispatch(&request("GET", "/api/map/cache", Value::Null), &store, 8765);
+        let after_activation: Value = serde_json::from_slice(&after_activation.body).unwrap();
+        assert_eq!(after_activation["active_geoid"], "25025");
     }
 
     #[test]
@@ -2513,8 +2747,154 @@ mod tests {
         }
         assert!(!temp.path().join("private").exists());
         let mut bad_host = request("GET", "/api/packages", Value::Null);
-        bad_host.headers.insert("host".into(), "external.invalid".into());
+        bad_host
+            .headers
+            .insert("host".into(), "external.invalid".into());
         assert_eq!(dispatch(&bad_host, &store, 8765).status, 403);
+    }
+
+    #[test]
+    fn host_settings_surface_is_owned_by_foreground_controller_and_same_origin() {
+        let temp = tempfile::tempdir().unwrap();
+        let store = WorkbenchStore::new(temp.path().join("private/workbench.json"));
+        let close = dispatch(
+            &request("POST", "/api/host/settings", json!({"settings_open":false})),
+            &store,
+            8765,
+        );
+        assert_eq!(close.status, 200);
+        let open = dispatch(
+            &request("POST", "/api/host/settings", json!({"settings_open":true})),
+            &store,
+            8765,
+        );
+        assert_eq!(open.status, 200);
+        let open: Value = serde_json::from_slice(&open.body).unwrap();
+        assert_eq!(open["surface"], "settings");
+        assert_eq!(open["active_package_id"], Value::Null);
+
+        let state = dispatch(&request("GET", "/api/state", Value::Null), &store, 8765);
+        let state: Value = serde_json::from_slice(&state.body).unwrap();
+        assert_eq!(state["foreground"]["surface"], "settings");
+        assert_eq!(state["host_packages"]["mounted_package_count"], 1);
+
+        let close = dispatch(
+            &request("POST", "/api/host/settings", json!({"settings_open":false})),
+            &store,
+            8765,
+        );
+        let close: Value = serde_json::from_slice(&close.body).unwrap();
+        assert_eq!(close["surface"], "empty");
+
+        assert_eq!(
+            dispatch(
+                &request(
+                    "POST",
+                    "/api/host/settings",
+                    json!({"settings_open":"true"})
+                ),
+                &store,
+                8765,
+            )
+            .status,
+            422
+        );
+        assert_eq!(
+            dispatch(
+                &request(
+                    "POST",
+                    "/api/host/settings",
+                    json!({"settings_open":true,"active_package_id":"org.rustboy.radio"})
+                ),
+                &store,
+                8765,
+            )
+            .status,
+            400
+        );
+        let mut cross_origin = request("POST", "/api/host/settings", json!({"settings_open":true}));
+        cross_origin
+            .headers
+            .insert("origin".into(), "https://untrusted.invalid".into());
+        assert_eq!(dispatch(&cross_origin, &store, 8765).status, 403);
+    }
+
+    #[test]
+    fn host_package_api_reports_only_compiled_roster_and_rejects_reference_selection() {
+        let temp = tempfile::tempdir().unwrap();
+        let store = WorkbenchStore::new(temp.path().join("private/workbench.json"));
+        let listed = dispatch(
+            &request("GET", "/api/host/packages", Value::Null),
+            &store,
+            8765,
+        );
+        assert_eq!(listed.status, 200);
+        let body: Value = serde_json::from_slice(&listed.body).unwrap();
+        assert_eq!(body["mounted_package_count"], 1);
+        assert_eq!(body["packages"][0]["package_id"], "org.rustboy.radio");
+
+        let reference_selection = dispatch(
+            &request(
+                "POST",
+                "/api/host/foreground",
+                json!({"package_id":"org.rustboy.tv"}),
+            ),
+            &store,
+            8765,
+        );
+        assert_eq!(reference_selection.status, 409);
+
+        let clear = dispatch(
+            &request("POST", "/api/host/foreground", json!({"package_id":null})),
+            &store,
+            8765,
+        );
+        assert_eq!(clear.status, 200);
+        let cleared: Value = serde_json::from_slice(&clear.body).unwrap();
+        assert_eq!(cleared["selected_package_id"], Value::Null);
+
+        let mut cross_origin = request(
+            "POST",
+            "/api/host/foreground",
+            json!({"package_id":"org.rustboy.radio"}),
+        );
+        cross_origin
+            .headers
+            .insert("origin".into(), "https://untrusted.invalid".into());
+        assert_eq!(dispatch(&cross_origin, &store, 8765).status, 403);
+    }
+
+    #[test]
+    fn host_api_selects_a_mounted_adapter_and_exposes_only_its_inert_view() {
+        let mut host = UniversalAdapterHost::new(Viewport::new(480, 320).unwrap());
+        let catalog = pipboy_core::package_socket::reference_catalog().unwrap();
+        let manifest = catalog.get("org.rustboy.radio").unwrap();
+        let mut manifest = serde_json::to_value(manifest).unwrap();
+        manifest.as_object_mut().unwrap().remove("status");
+        host.mount_trusted(
+            &manifest.to_string(),
+            Box::new(DashboardAdapter {
+                id: "org.rustboy.radio".into(),
+            }),
+        )
+        .unwrap();
+
+        let response = select_host_package(&mut host, "org.rustboy.radio").unwrap();
+        assert_eq!(response.status, 200);
+        let selected: Value = serde_json::from_slice(&response.body).unwrap();
+        assert_eq!(selected["selected_package_id"], "org.rustboy.radio");
+        assert_eq!(selected["foreground_view"]["title"], "Test adapter");
+
+        host.open_settings();
+        let settings = host_packages_value(&host);
+        assert_eq!(settings["foreground"]["surface"], "settings");
+        assert_eq!(settings["selected_package_id"], "org.rustboy.radio");
+        assert_eq!(settings["foreground_view"], Value::Null);
+
+        let returned = clear_host_foreground(&mut host, true).unwrap();
+        let returned: Value = serde_json::from_slice(&returned.body).unwrap();
+        assert_eq!(returned["foreground"]["surface"], "empty");
+        assert_eq!(returned["settings_open"], false);
     }
 
     #[test]

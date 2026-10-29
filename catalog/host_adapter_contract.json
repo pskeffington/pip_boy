@@ -27,6 +27,19 @@
     "ack",
     "view"
   ],
+  "package_view": {
+    "version": 1,
+    "blocks": [
+      "heading",
+      "text",
+      "status",
+      "list"
+    ],
+    "max_blocks": 24,
+    "max_list_items": 24,
+    "max_text_bytes": 512,
+    "input_actions": "not_implemented"
+  },
   "package_ids": [
     "org.rustboy.comms",
     "org.rustboy.gis",

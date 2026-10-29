@@ -1,6 +1,6 @@
 # Rust-Boy | Reclamation Scout GIS and TAK-on-Pi design
 
-**Implementation status:** Rust-Boy retains offline WGS84 Point GeoJSON tools and adds an independent browser map viewer on `feat/scout-gps-rustgis-map`. It can import RustGIS native map/project/layer data and zipped mobile packages and align browser geolocation on real embedded vector features. It is **not** an embedded upstream RustGIS renderer, physical GNSS receiver, TAK transport or certified navigation device. See [native map/GPS import and online road reference](SCOUT_GPS_MAP.md). Online-reference queries use the same Overpass provider and category taxonomy as RustGIS's `osm.download` but do not embed the native upstream engine.
+**Implementation status:** Rust-Boy retains offline WGS84 waypoint/distance tools, bounded Point through Polygon GeoJSON inspection in its Rust core, and an independent browser map viewer on `feat/scout-gps-rustgis-map`. It can import RustGIS native map/project/layer data and zipped mobile packages and align browser geolocation on embedded vector features. It is **not** an embedded upstream RustGIS renderer, physical GNSS receiver, TAK transport or certified navigation device. See [native map/GPS import and online road reference](SCOUT_GPS_MAP.md). Online-reference queries use the same Overpass provider and category taxonomy as RustGIS's `osm.download` but do not embed the native upstream engine.
 
 ## Dashboard viewport before navigation
 
@@ -26,11 +26,11 @@ RustGIS's current workspace requires Rust **1.90 or newer** and uses edition **2
 
 **This is compiler readiness, not a RustGIS port.** RustGIS crates have not been added, vendored, API-tested or runtime-validated on Raspberry Pi. Its Apache-2.0 license permits appropriately attributed integration, subject to dependency notices and licensing review. Review crate interfaces, build artifacts, source provenance and ARM64 hardware behavior before selecting a direct integration; do not push to the external RustGIS repository.
 
-The current bridge produces **GeoJSON conforming to RFC 7946's longitude, latitude order**, which can be inspected by RustGIS and other tools. Read-only inspection initially accepts only Point geometries in a Geometry, Feature or FeatureCollection (maximum **1 MiB**, **1,000 points**). It rejects polygons/lines rather than silently discarding important geometry. The bounding box is raw min/max, potentially wide when data straddles the antimeridian. Great-circle estimates use a mean-radius sphere: they are not survey-grade ellipsoidal geodesics.
+The current bridge produces **GeoJSON conforming to RFC 7946's longitude, latitude order**, which can be inspected by RustGIS and other tools. The read-only Rust inspector accepts Point, MultiPoint, LineString, MultiLineString, Polygon, MultiPolygon and GeometryCollection in a Geometry, Feature or FeatureCollection (maximum **1 MiB**, **1,000 features**, **30,000 positions**). It rejects legacy CRS declarations, invalid coordinates and unsupported geometry. Bounds are raw min/max and may be broad across the antimeridian. Great-circle estimates use a mean-radius sphere: they are not survey-grade ellipsoidal geodesics. The existing CLI summary JSON fields remain stable; it reports geometry type, Feature count and bounds, not a rendered map.
 
 ## Use on macOS or ARM64 Raspberry Pi
 
-Build from the Scout development branch with Rust and Cargo installed. Run locally; these commands never discover a LAN, access GNSS, or transmit a location.
+Build from the Scout development branch with Rust and Cargo installed. Run locally; these commands never discover a LAN, access GNSS, or transmit a location. The offline smoke `python3 tools/smoke_scout.py` checks waypoint export, distance math, geometry inspection and invalid-input denial.
 
 ```bash
 git clone --branch feat/reclamation-scout-gis-tak https://github.com/pskeffington/pip_boy.git
@@ -80,7 +80,7 @@ The future TAK bridge should parse and serialize only bounded, explicitly approv
 
 | Gate | Real deliverable | Required evidence |
 | --- | --- | --- |
-| **S0 – Native offline data** | GIS LAB pinned in Reclamation Scout; waypoint GeoJSON export, bounded Point inspection, approximate distance | Golden WGS84 longitude/latitude, antimeridian, invalid data, no-background-network smoke; stable/Rust 1.90/macOS/Windows CI |
+| **S0 – Native offline data** | GIS LAB pinned in Reclamation Scout; waypoint GeoJSON export, bounded GeoJSON geometry inspection, approximate distance | Golden WGS84 longitude/latitude, supported geometry families, vertex and byte limits, antimeridian, invalid data, no-background-network smoke; stable/Rust 1.90/macOS/Windows CI |
 | **S1 – Portable map data** | Optional RustGIS-compatible feature/layer adapter, GPX, manual waypoints, limited tile cache | RustGIS import/export round-trip with fixtures; no compiler/ABI regression; offline rendering in two display sizes |
 | **S2 – Raspberry Pi** | ARM64 native build, rustgis-cli compatibility trial, prototype 4-inch map UI | Actual Pi 5 run with RAM, CPU, cold-start, tile-load and power measurements; fallback when no GPU acceleration |
 | **S3 – TAK interop** | Non-network CoT fixtures, then secure opted-in client to an independently configured OpenTAKServer | Explicit consent, valid certificates, no implicit multicast, short TTL, revoke/reconnect, multi-client interoperability |

@@ -1,0 +1,499 @@
+{
+  "schema_version": 1,
+  "repository": "pskeffington/pip_boy",
+  "integration_branch": "codex/package-adapter-protocol",
+  "scope": "Bounded reviewed Codex passes for the modular Rust-Boy host; never a package installer, task scheduler, permissions grant or release certificate.",
+  "authority": {
+    "agent_instructions": "AGENTS.md",
+    "component_index": "catalog/component_index.json",
+    "pass_guide": "docs/CODEX_PASSES.md",
+    "production_checkpoint": "docs/PROD_STATUS.md",
+    "host_roadmap": "docs/HOST_PACKAGE_ROADMAP.md"
+  },
+  "passes": [
+    {
+      "id": "RB-CX-00",
+      "title": "Validate baseline and passive RADIO bootstrap",
+      "priority": "P0",
+      "status": "accepted",
+      "depends_on": [],
+      "component_ids": [
+        "quality-gates",
+        "universal-package-adapter"
+      ],
+      "entrypoints": [
+        ".github/workflows/rust.yml",
+        "crates/pipboy-core/src/builtin_packages.rs",
+        "catalog/builtin_packages/rust_radio.json"
+      ],
+      "docs": [
+        "docs/PROD_STATUS.md",
+        "docs/VALIDATION.md",
+        "docs/CI_TRIAGE.md"
+      ],
+      "checks": [
+        "tools/validate_ci_policy.py",
+        "tools/test_validate_ci_policy.py",
+        "tools/validate_host_packages.py",
+        "tools/test_validate_host_packages.py",
+        "tools/validate_component_index.py",
+        "tools/test_component_index.py"
+      ],
+      "acceptance": [
+        "Run current-head Rust 1.90 and stable checks plus catalog, security and GUI regressions.",
+        "Record actual CI run and verify compiled RADIO catalogue selection causes no stream/device/background activity.",
+        "Prove host Settings restoration and one-foreground behavior on desktop and micro."
+      ],
+      "blockers": [],
+      "external_repositories": [],
+      "hardware_gate": "software_only",
+      "evidence": {
+        "commit_sha": "c425994eb8a172c357c6920e29d2b4d38cdc5050",
+        "ci_run_url": "https://github.com/pskeffington/pip_boy/actions/runs/40824698037",
+        "field_report": null
+      }
+    },
+    {
+      "id": "RB-CX-01",
+      "title": "Render bounded host-owned package UI safely",
+      "priority": "P0",
+      "status": "accepted",
+      "depends_on": [
+        "RB-CX-00"
+      ],
+      "component_ids": [
+        "local-hud",
+        "universal-package-adapter"
+      ],
+      "entrypoints": [
+        "crates/pipboy/assets/dashboard.js",
+        "crates/pipboy/assets/micro.js",
+        "crates/pipboy/src/dashboard.rs",
+        "crates/rust-boy-adapter-sdk/src/lib.rs"
+      ],
+      "docs": [
+        "docs/DASHBOARD_UI.md",
+        "docs/MICRO_UI.md",
+        "docs/UNIVERSAL_ADAPTER.md"
+      ],
+      "checks": [
+        "tools/test_desktop_focus_ui.cjs",
+        "tools/test_micro_ui.cjs",
+        "tools/test_desktop_viewport.cjs",
+        "tools/test_micro_viewport.cjs"
+      ],
+      "acceptance": [
+        "Render package data using safe DOM/text without script injection.",
+        "Preserve one foreground, permanent Settings, fault isolation and no document scroll.",
+        "Verify keyboard/touch and target handheld and desktop sizes."
+      ],
+      "blockers": [],
+      "external_repositories": [],
+      "hardware_gate": "software_only",
+      "evidence": {
+        "commit_sha": "b039fbe6886920a071d836841d9cffe8fd75be99",
+        "ci_run_url": "https://github.com/pskeffington/pip_boy/actions/runs/40826559481",
+        "field_report": null
+      }
+    },
+    {
+      "id": "RB-CX-02",
+      "title": "Enforce backend capability and media ownership",
+      "priority": "P0",
+      "status": "accepted",
+      "depends_on": [
+        "RB-CX-00",
+        "RB-CX-01"
+      ],
+      "component_ids": [
+        "runtime-policy",
+        "device-broker",
+        "universal-package-adapter"
+      ],
+      "entrypoints": [
+        "crates/pipboy-core/src/universal_adapter.rs",
+        "crates/pipboy-core/src/permissions.rs",
+        "crates/rust-boy-broker/src/main.rs"
+      ],
+      "docs": [
+        "docs/PERMISSIONS.md",
+        "docs/OS_DEVICE_BROKER.md",
+        "docs/UNIVERSAL_ADAPTER.md"
+      ],
+      "checks": [
+        "tools/validate_security.py",
+        "tools/test_validate_security.py",
+        "tools/smoke_permissions.py",
+        "tools/smoke_broker.py"
+      ],
+      "acceptance": [
+        "Deny undeclared or unapproved network/media/device/message intents at backend.",
+        "Test revocation and role mismatch before any side effect.",
+        "Never infer grants from UI or manifest state."
+      ],
+      "blockers": [
+        "OS-enforced physical permissions and durable approvals remain unimplemented; physical adapter access stays disabled."
+      ],
+      "external_repositories": [],
+      "hardware_gate": "software_only",
+      "evidence": {
+        "commit_sha": "c1df259d1e01689dcb93ed48073b250150027f56",
+        "ci_run_url": "https://github.com/pskeffington/pip_boy/actions/runs/40828393462",
+        "field_report": null
+      }
+    },
+    {
+      "id": "RB-CX-03",
+      "title": "Adopt native rust_radio interactive socket adapter",
+      "priority": "P1",
+      "status": "blocked",
+      "depends_on": [
+        "RB-CX-01",
+        "RB-CX-02"
+      ],
+      "component_ids": [
+        "local-hud",
+        "universal-package-adapter"
+      ],
+      "entrypoints": [
+        "crates/pipboy-core/src/builtin_packages.rs",
+        "crates/pipboy/src/radio_playback.rs",
+        "crates/pipboy/assets/radio-ui.js"
+      ],
+      "docs": [
+        "docs/RADIO_NATIVE_ROADMAP.md",
+        "docs/RADIO_SDR.md",
+        "docs/UNIVERSAL_ADAPTER.md"
+      ],
+      "checks": [
+        "tools/test_radio_ui.cjs",
+        "tools/test_radio_viewport.cjs",
+        "tools/smoke_radio_sdrconnect.py"
+      ],
+      "acceptance": [
+        "Play/Stop and native output require explicit intent/authorization.",
+        "Only one audio owner; preserve legacy presets and absence of autoplay.",
+        "Test real Mac playback and recovery separately from synthetic results."
+      ],
+      "blockers": [
+        "Audio grants and real native adapter are not accepted."
+      ],
+      "external_repositories": [
+        "pskeffington/rust_radio"
+      ],
+      "hardware_gate": "field_pending",
+      "evidence": null
+    },
+    {
+      "id": "RB-CX-04",
+      "title": "Secure Unix adapter socket provenance and exchange",
+      "priority": "P0",
+      "status": "accepted",
+      "depends_on": [
+        "RB-CX-00",
+        "RB-CX-02"
+      ],
+      "component_ids": [
+        "package-socket-contract",
+        "device-broker"
+      ],
+      "entrypoints": [
+        "crates/pipboy-core/src/package_transport.rs",
+        "crates/pipboy-core/src/package_socket.rs",
+        "crates/pipboy-core/src/package_listener.rs",
+        "crates/rust-boy-broker/src/main.rs"
+      ],
+      "docs": [
+        "docs/PACKAGE_SOCKET.md",
+        "docs/HOST_PACKAGE_ROADMAP.md",
+        "docs/OS_DEVICE_BROKER.md",
+        "docs/BROKER_PROTOCOL.md"
+      ],
+      "checks": [
+        "tools/validate_host_packages.py",
+        "tools/test_validate_host_packages.py",
+        "tools/validate_security.py"
+      ],
+      "acceptance": [
+        "Verify socket path ownership, restrictive permissions and peer provenance.",
+        "Reject replay, stall, invalid request IDs and oversized frames; keep unsupported platforms deny-only.",
+        "Do not autoload processes or trust an adapter hello claim."
+      ],
+      "blockers": [
+        "No approved launcher or binary identity is bound to a package; external package execution remains unavailable."
+      ],
+      "external_repositories": [],
+      "hardware_gate": "software_only",
+      "evidence": {
+        "commit_sha": "ab98743b453a9c33f45b5694ac60d2e7cd8f39b1",
+        "ci_run_url": "https://github.com/pskeffington/pip_boy/actions/runs/40830133847",
+        "field_report": null
+      }
+    },
+    {
+      "id": "RB-CX-05",
+      "title": "Migrate rb_gis while preserving map parity",
+      "priority": "P1",
+      "status": "next",
+      "depends_on": [
+        "RB-CX-01",
+        "RB-CX-02"
+      ],
+      "component_ids": [
+        "scout-mapping",
+        "local-hud",
+        "universal-package-adapter"
+      ],
+      "entrypoints": [
+        "crates/pipboy-core/src/scout_gis.rs",
+        "crates/pipboy/src/dashboard.rs",
+        "crates/pipboy/src/county_cache.rs",
+        "crates/pipboy/assets/map.js",
+        "crates/pipboy/assets/map-import.js"
+      ],
+      "docs": [
+        "docs/SCOUT_GPS_MAP.md",
+        "docs/MAC_MAP_TESTING.md",
+        "docs/HOST_PACKAGE_ROADMAP.md"
+      ],
+      "checks": [
+        "tools/test_rustgis_map_import.cjs",
+        "tools/test_rustgis_map_view.cjs",
+        "tools/test_county_sources.cjs",
+        "tools/test_county_boundary_cache.cjs",
+        "tools/test_map_viewport.cjs",
+        "tools/test_map_zip.cjs",
+        "tools/test_map_layers.cjs"
+      ],
+      "acceptance": [
+        "Match legacy roads, counties, ZIPs, cache and location-follow behavior offline.",
+        "Keep location ingestion in host Settings and map near-full-canvas.",
+        "Verify rollback before legacy map removal."
+      ],
+      "blockers": [
+        "Independent draft rb_gis PR #1 at aaa7b26e46eaa9e57f0901026bda41da0ec08249 passed hosted run 40869798576: exact-SHA checkout, stable rustup, offline CI policy, formatting, Clippy, and tests. On code source fc27c82, locked stable and Rust 1.90 fmt/check/clippy/test also pass. Polygon fill/holes/clipping and Census loader/cache/ZIP remain pending. Keep parity open until legacy fixtures and field gates pass."
+      ],
+      "external_repositories": [
+        "pskeffington/rb_gis"
+      ],
+      "hardware_gate": "field_pending",
+      "evidence": null
+    },
+    {
+      "id": "RB-CX-06",
+      "title": "Integrate rust_tv native display and audio handoff",
+      "priority": "P1",
+      "status": "blocked",
+      "depends_on": [
+        "RB-CX-01",
+        "RB-CX-02"
+      ],
+      "component_ids": [
+        "local-hud",
+        "universal-package-adapter"
+      ],
+      "entrypoints": [
+        "crates/pipboy/src/dashboard.rs",
+        "crates/rust-boy-adapter-sdk/src/lib.rs",
+        "catalog/host_packages/rust_tv.example.json"
+      ],
+      "docs": [
+        "docs/RUST_STREAM_MEDIA_INTEGRATION.md",
+        "docs/HOST_PACKAGE_ROADMAP.md",
+        "docs/UNIVERSAL_ADAPTER.md"
+      ],
+      "checks": [
+        "tools/validate_host_packages.py",
+        "tools/test_desktop_viewport.cjs",
+        "tools/test_micro_viewport.cjs"
+      ],
+      "acceptance": [
+        "Attach independent native player without copying its engine into shell.",
+        "No autoplay and one owned audio/video session with explicit source choice.",
+        "Validate Mac playback and constrained display, report hardware separately."
+      ],
+      "blockers": [
+        "No accepted rust_tv mount or media ownership handoff."
+      ],
+      "external_repositories": [
+        "pskeffington/rust_tv"
+      ],
+      "hardware_gate": "field_pending",
+      "evidence": null
+    },
+    {
+      "id": "RB-CX-07",
+      "title": "Integrate rusti_rc COMMS with verified session consent",
+      "priority": "P1",
+      "status": "blocked",
+      "depends_on": [
+        "RB-CX-01",
+        "RB-CX-02",
+        "RB-CX-04"
+      ],
+      "component_ids": [
+        "pace-messaging",
+        "universal-package-adapter"
+      ],
+      "entrypoints": [
+        "crates/pipboy-core/src/messenger.rs",
+        "crates/pipboy-core/src/message_protocol.rs",
+        "crates/pipboy/src/dashboard/messenger_routes.rs",
+        "catalog/host_packages/rusti_rc.example.json"
+      ],
+      "docs": [
+        "docs/MESSENGER.md",
+        "docs/MESSENGER_INTEROPERABILITY.md",
+        "docs/RB_SYNC_INTEGRATION.md"
+      ],
+      "checks": [
+        "tools/smoke_messenger_protocol.py",
+        "tools/test_messenger_ui.cjs",
+        "tools/validate_security.py"
+      ],
+      "acceptance": [
+        "Selection must not connect or send; explicit authenticated peer and user action required.",
+        "Test bounded offline retry, disconnect and role scoping.",
+        "Obtain separate two-device interoperability evidence."
+      ],
+      "blockers": [
+        "Trust enrollment and independent COMMS adapter are unaccepted."
+      ],
+      "external_repositories": [
+        "pskeffington/rusti_rc"
+      ],
+      "hardware_gate": "field_pending",
+      "evidence": null
+    },
+    {
+      "id": "RB-CX-08",
+      "title": "Gate signed packages, revocation and process isolation",
+      "priority": "P1",
+      "status": "blocked",
+      "depends_on": [
+        "RB-CX-02",
+        "RB-CX-04"
+      ],
+      "component_ids": [
+        "package-socket-contract",
+        "device-broker",
+        "universal-package-adapter"
+      ],
+      "entrypoints": [
+        "crates/pipboy-core/src/package_socket.rs",
+        "crates/pipboy-core/src/package_transport.rs",
+        "crates/rust-boy-broker/src/main.rs"
+      ],
+      "docs": [
+        "docs/PACKAGE_SOCKET.md",
+        "docs/OS_DEVICE_BROKER.md",
+        "docs/UNIVERSAL_ADAPTER.md"
+      ],
+      "checks": [
+        "tools/validate_host_packages.py",
+        "tools/test_validate_host_packages.py",
+        "tools/validate_security.py"
+      ],
+      "acceptance": [
+        "Verify provenance, integrity, compatibility, rollback and revoked signatures.",
+        "Enforce OS isolation, quotas and explicit scoped access before any untrusted execution.",
+        "Never treat directory scan or JSON status as installation."
+      ],
+      "blockers": [
+        "External process isolation, signed distribution and revocation are open."
+      ],
+      "external_repositories": [],
+      "hardware_gate": "software_only",
+      "evidence": null
+    },
+    {
+      "id": "RB-CX-09",
+      "title": "Add org-trusted RB sync and optional mini-server",
+      "priority": "P2",
+      "status": "blocked",
+      "depends_on": [
+        "RB-CX-04",
+        "RB-CX-07",
+        "RB-CX-08"
+      ],
+      "component_ids": [
+        "offline-sync-v2",
+        "pace-messaging",
+        "task-control"
+      ],
+      "entrypoints": [
+        "crates/pipboy-core/src/sync_delta.rs",
+        "crates/pipboy-core/src/sync_ledger.rs",
+        "crates/pipboy-core/src/organization_identity.rs",
+        "crates/pipboy-core/src/peers.rs"
+      ],
+      "docs": [
+        "docs/RB_SYNC_ROADMAP.md",
+        "docs/RB_SYNC_INTEGRATION.md",
+        "docs/VAULT_ORG_CHART.md"
+      ],
+      "checks": [
+        "tools/smoke_peer.py",
+        "tools/smoke_messenger_protocol.py",
+        "tools/validate_vault_org.py"
+      ],
+      "acceptance": [
+        "Require protected trust roots, persistent anti-replay and revocation.",
+        "Test authenticated offline/IP/proximity delta reconciliation.",
+        "Do not treat unmerged org/server PRs as installed or open a public listener."
+      ],
+      "blockers": [
+        "ORG-3.2, independent mini-server PR and field trials remain open."
+      ],
+      "external_repositories": [],
+      "hardware_gate": "field_pending",
+      "evidence": null
+    },
+    {
+      "id": "RB-CX-10",
+      "title": "Complete cross-platform and hardware release acceptance",
+      "priority": "P2",
+      "status": "blocked",
+      "depends_on": [
+        "RB-CX-03",
+        "RB-CX-05",
+        "RB-CX-06",
+        "RB-CX-07",
+        "RB-CX-08",
+        "RB-CX-09"
+      ],
+      "component_ids": [
+        "quality-gates",
+        "local-hud",
+        "device-broker"
+      ],
+      "entrypoints": [
+        ".github/workflows/rust.yml",
+        "crates/pipboy/src/main.rs",
+        "scripts/test-map-macos.command"
+      ],
+      "docs": [
+        "docs/VALIDATION.md",
+        "docs/PROD_STATUS.md",
+        "docs/MICRO_UI.md",
+        "docs/DASHBOARD_UI.md"
+      ],
+      "checks": [
+        "tools/test_micro_viewport.cjs",
+        "tools/test_desktop_viewport.cjs",
+        "tools/validate_security.py"
+      ],
+      "acceptance": [
+        "Verify exact-head Linux MSRV/stable and native Mac/Windows CI.",
+        "Test physical Raspberry Pi, disconnect, power/network loss and accessibility.",
+        "Release only after full security, audio, UI, module and rollback acceptance."
+      ],
+      "blockers": [
+        "No accepted field hardware and signed isolated package release."
+      ],
+      "external_repositories": [],
+      "hardware_gate": "field_pending",
+      "evidence": null
+    }
+  ]
+}

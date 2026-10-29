@@ -66,6 +66,11 @@ filesystem-like selectors, malformed JSON and oversized frames return
 allow flag, status, reason and source. The broker does not echo request content,
 device paths, caller intent, a token or a handle.
 
+The separate Unix adapter socket precursor does not connect to this broker and
+cannot grant physical access. Its verified peer stream only binds a session to
+OS-reported process/account credentials; it does not verify package binaries,
+authorize capabilities, or change the broker's deny-all behavior.
+
 The maximum input frame is 1,024 bytes, including the final newline. The
 process reads at most 1,025 bytes into memory and handles only the first line.
 Its success exit code (0) means the **protocol responded**, not that access was

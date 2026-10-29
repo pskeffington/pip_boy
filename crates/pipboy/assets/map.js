@@ -50,101 +50,6 @@
     return { lon: wrapLongitude(x / TILE * 360 - 180), lat: latitude };
   }
 
-  function coordinate(value) {
-    if (!Array.isArray(value) || value.length < 2 ||
-        typeof value[0] !== "number" || typeof value[1] !== "number" ||
-        !Number.isFinite(value[0]) || !Number.isFinite(value[1]) ||
-        value[0] < -180 || value[0] > 180 || value[1] < -90 || value[1] > 90) {
-      throw new Error("Layer needs valid WGS84 [longitude, latitude] coordinates");
-    }
-    return [value[0], value[1]];
-  }
-
-  function parseGeoJSON(text) {
-    const source = JSON.parse(text);
-    if (!source || typeof source !== "object" || source.crs) {
-      throw new Error("Export RustGIS layers as WGS84 GeoJSON (EPSG:4326)");
-    }
-    const shapes = [];
-    let vertices = 0;
-    let features = 0;
-
-    function path(values, minLength) {
-      if (!Array.isArray(values) || values.length < minLength) {
-        throw new Error("Invalid or empty GeoJSON path");
-      }
-      vertices += values.length;
-      if (vertices > MAX_VERTICES) throw new Error("Layer exceeds 30,000 vertices");
-      return values.map(coordinate);
-    }
-
-    function geometry(item, label, depth) {
-      if (depth > 6 || !item || typeof item !== "object") {
-        throw new Error("Unsupported GeoJSON geometry");
-      }
-      const c = item.coordinates;
-      switch (item.type) {
-        case "Point":
-          shapes.push({ kind: "point", paths: [[coordinate(c)]], label });
-          vertices++;
-          break;
-        case "MultiPoint":
-          shapes.push({ kind: "point", paths: [path(c, 1)], label });
-          break;
-        case "LineString":
-          shapes.push({ kind: "line", paths: [path(c, 2)], label });
-          break;
-        case "MultiLineString":
-          if (!Array.isArray(c) || !c.length) throw new Error("Empty MultiLineString");
-          shapes.push({ kind: "line", paths: c.map((part) => path(part, 2)), label });
-          break;
-        case "Polygon":
-          if (!Array.isArray(c) || !c.length) throw new Error("Empty Polygon");
-          shapes.push({ kind: "polygon", paths: c.map((ring) => path(ring, 4)), label });
-          break;
-        case "MultiPolygon":
-          if (!Array.isArray(c) || !c.length) throw new Error("Empty MultiPolygon");
-          for (const polygon of c) {
-            if (!Array.isArray(polygon) || !polygon.length) throw new Error("Empty polygon part");
-            shapes.push({ kind: "polygon", paths: polygon.map((ring) => path(ring, 4)), label });
-          }
-          break;
-        case "GeometryCollection":
-          if (!Array.isArray(item.geometries) || !item.geometries.length) {
-            throw new Error("Empty GeometryCollection");
-          }
-          item.geometries.forEach((child) => geometry(child, label, depth + 1));
-          break;
-        default:
-          throw new Error("Unsupported geometry: " + String(item.type).slice(0, 30));
-      }
-      if (vertices > MAX_VERTICES) throw new Error("Layer exceeds 30,000 vertices");
-    }
-
-    function feature(item) {
-      if (!item || item.type !== "Feature") throw new Error("Expected GeoJSON Feature");
-      features++;
-      if (features > MAX_FEATURES) throw new Error("Layer exceeds 2,000 features");
-      const raw = item.properties && item.properties.name;
-      const label = typeof raw === "string" ? raw.slice(0, 36) : "";
-      geometry(item.geometry, label, 0);
-    }
-
-    if (source.type === "FeatureCollection") {
-      if (!Array.isArray(source.features) || !source.features.length ||
-          source.features.length > MAX_FEATURES) {
-        throw new Error("FeatureCollection must contain 1 to 2,000 features");
-      }
-      source.features.forEach(feature);
-    } else if (source.type === "Feature") {
-      feature(source);
-    } else {
-      geometry(source, "", 0);
-    }
-    if (!vertices || !shapes.length) throw new Error("No drawable GeoJSON geometry");
-    return { shapes, vertices, features };
-  }
-
   function niceStep(value) {
     const v = Math.max(1e-6, value);
     const power = Math.pow(10, Math.floor(Math.log10(v)));
@@ -1076,7 +981,8 @@
     return true;
   }
 
-  async function loadCountyPackages(view, geoid, cacheOnly=false) {
+  async function loadCountyPackages(view, geoid, cacheOnly=false,
+      targetBoundary=null, targetLocation=null) {
     if (active !== view || view.sitesVisible || view.siteCentered ||
         !window.RustBoyCounty?.validGeoid(geoid)) return;
     // Stage each new county separately. No request or parse failure may
@@ -1092,7 +998,8 @@
     try {
       const report = await window.RustBoyCounty.load(geoid,{
         cacheOnly,signal:controller.signal,
-        clipRings: view.county?.id === geoid ? view.county.shape.paths : null,
+        clipRings: targetBoundary?.id === geoid ? targetBoundary.shape.paths :
+          view.county?.id === geoid ? view.county.shape.paths : null,
         onStatus: message => {
           if(active===view && view.countyPackageVersion===version) {
             view.countyStatus=message+" / OLD MAP KEPT";refresh(view);
@@ -1102,30 +1009,40 @@
           if(active!==view || view.countyPackageVersion!==version ||
               controller.signal.aborted)return;
           // Index built once on validated ingest, not on every pan/zoom.
-          if(!Object.keys(staged.layers).length)view.paintSamples=[];
           data.renderIndex=buildCountyIndex(data.shapes);
           if(id==="tiger-roads")
             data.majorRenderIndex=buildCountyIndex(
               data.shapes.filter(shape=>shape.countyMajor));
           staged.layers[id]=data;
-          // Hand over after the first validated source; subsequent layers
-          // belong to this same GEOID, never a mixture of two counties.
-          view.countyPackage=staged;
-          view.countyShapes=[
-            ...(staged.layers["tiger-areawater"]?.shapes||[]),
-            ...(staged.layers["tiger-linearwater"]?.shapes||[]),
-            ...(staged.layers["tiger-roads"]?.shapes||[]),
-            ...(staged.layers["tiger-pointlm"]?.shapes||[])
-          ];
-          if(cacheOnly && !view.fix && !view.centerSelected &&
-              !view.shapes.length && !view.onlineShapes.length)
-            fitCountyPackage(view);
-          refresh(view);
         }
       });
       if(active!==view || view.countyPackageVersion!==version)return;
       staged.errors=report.errors;
       staged.warnings=report.warnings || [];
+      if(!Object.keys(staged.layers).length) {
+        view.countyStatus="COUNTY "+geoid+" / NO VALID SOURCES / PREVIOUS MAP KEPT";
+        refresh(view);
+        return false;
+      }
+      // Publish the county boundary and all validated package layers in one
+      // handoff. Until this point the last-good map remains untouched.
+      view.paintSamples=[];
+      view.countyPackage=staged;
+      view.countyShapes=[
+        ...(staged.layers["tiger-areawater"]?.shapes||[]),
+        ...(staged.layers["tiger-linearwater"]?.shapes||[]),
+        ...(staged.layers["tiger-roads"]?.shapes||[]),
+        ...(staged.layers["tiger-pointlm"]?.shapes||[])
+      ];
+      if(targetBoundary?.id===geoid)view.county=targetBoundary;
+      if(targetLocation) {
+        view.center={lat:targetLocation.lat,lon:targetLocation.lon};
+        view.follow=false;
+        view.zoom=Math.max(view.zoom,10);
+      }
+      if(cacheOnly && !view.fix && !view.centerSelected &&
+          !view.shapes.length && !view.onlineShapes.length)
+        fitCountyPackage(view);
       view.countyLoadTiming={
         ms:Math.max(0,monotonicNow()-ingestStarted),
         features:report.features,cacheOnly
@@ -1383,18 +1300,12 @@
     try {
       const county=await window.RustBoyOnline.countyAt(location.lon,location.lat,controller.signal);
       if(active!==view || !view.countyEnabled || version!==view.countyRequest) return;
-      view.county=county;
-      view.countyLastLookup={...location};
-      view.countyStatus=county.name.toUpperCase()+" COUNTY / VERIFIED BOUNDARY";
-      view.center={lat:location.lat,lon:location.lon};
-      view.follow=false;
-      view.zoom=Math.max(view.zoom,10);
-      refresh(view);
       if(window.RustBoyCounty) {
         // The host independently fetches the exact GEOID boundary and caches
         // it; no GPS coordinate is sent to the loopback boundary endpoint.
         // It is safe to fall back to the live Census polygon for this session
         // if boundary storage or the second Census request is unavailable.
+        let targetBoundary=county;
         if(typeof window.RustBoyCounty.boundary==="function") {
           try {
             const saved=await window.RustBoyCounty.boundary(county.id,{
@@ -1402,7 +1313,7 @@
             });
             if(active!==view || !view.countyEnabled ||
                 version!==view.countyRequest || controller.signal.aborted)return;
-            view.county=saved;
+            targetBoundary=saved;
             view.countyStatus=county.name.toUpperCase()+
               (saved.cacheHit?" / BOUNDARY CACHE REUSED":" / BOUNDARY CACHED");
             refresh(view);
@@ -1414,11 +1325,29 @@
             refresh(view);
           }
         }
-        if(active===view && view.countyEnabled && version===view.countyRequest)
-          void loadCountyPackages(view,county.id,false);
+        if(active===view && view.countyEnabled && version===view.countyRequest &&
+            !controller.signal.aborted) {
+          const loaded=await loadCountyPackages(
+            view,county.id,false,targetBoundary,location);
+          if(active!==view || !view.countyEnabled || version!==view.countyRequest ||
+              controller.signal.aborted)return;
+          if(loaded)view.countyLastLookup={...location};
+        }
       } else if(view.webEnabled) {
+        view.center={lat:location.lat,lon:location.lon};
+        view.follow=false;
+        view.zoom=Math.max(view.zoom,10);
+        view.county=county;
+        view.countyLastLookup={...location};
+        view.countyStatus=county.name.toUpperCase()+" COUNTY / VERIFIED BOUNDARY";
+        refresh(view);
         void webFetch(view);
       } else {
+        view.center={lat:location.lat,lon:location.lon};
+        view.follow=false;
+        view.zoom=Math.max(view.zoom,10);
+        view.county=county;
+        view.countyLastLookup={...location};
         view.countyStatus += " / NO CENSUS PACKAGE CLIENT / WEB OPTIONAL";
         refresh(view);
       }
@@ -1684,6 +1613,11 @@
     file.type = "file";
     file.accept = ".rgismap,.rgis,.rgislyr,.rgismpk,.rgispkg,.geojson,.json,application/geo+json";
     file.hidden = true;
+    const packageFile = make("input", "");
+    packageFile.type = "file";
+    packageFile.webkitdirectory = true;
+    packageFile.multiple = true;
+    packageFile.hidden = true;
     const attribution = make("a", "rb-map-attribution",
       "© OpenStreetMap contributors · ODbL");
     attribution.href = "https://www.openstreetmap.org/copyright";
@@ -1800,7 +1734,7 @@
     sitePager.append(sitePrev, sitePageLabel, siteNext, siteRefresh);
     sitePanel.append(siteSummary, siteStatus, siteList, sitePager);
     const view = {
-      host, root, stage, canvas, status, file, sourceBox, sourceSummary, sourceLines, settingsMode,
+      host, root, stage, canvas, status, file, packageFile, sourceBox, sourceSummary, sourceLines, settingsMode,
       manual, latitude, longitude,
       zipPanel,zipForm,zipInput,zipStatus,zipCandidates,zipCountyButton,
       zipList,zipListPrev,zipListNext,zipOffset:0,zipVersion:0,
@@ -1879,6 +1813,8 @@
     view.webRefresh.hidden = true;
     const importButton = control("RUSTGIS", () => file.click(),
       "Import native RustGIS map/project/mobile package or GeoJSON");
+    const rbGisButton = control("RB-GIS PKG", () => packageFile.click(),
+      "Import an explicitly selected local rb-gis-package/v1 directory; provenance is not authenticated");
     const manualButton = control("CENTER", () => {
       manual.hidden = !manual.hidden;
       if (!manual.hidden) latitude.focus();
@@ -1919,7 +1855,7 @@
     setLayerStatus(view); // Valid aria-pressed from the first paint onward.
     const tools = make("details", "rb-map-tools");
     const extra = make("div", "rb-map-extra");
-    extra.append(importButton, view.siteButton, view.webButton, view.webRefresh);
+    extra.append(importButton, rbGisButton, view.siteButton, view.webButton, view.webRefresh);
     if (options && typeof options.onTools === "function") {
       extra.append(control("GIS", options.onTools, "Open Scout GIS tools"));
     }
@@ -1930,13 +1866,13 @@
         "Choose GPS, ZIP or coordinates once. County lookup sends the selected location to Census. GPS resumes only while Map or Location settings is open."));
       apply.textContent = "LOAD AREA";
       root.append(toolbar, zipPanel, manual, countyNode, status, gpsHelp, layerPanel,
-        tools, webStatusNode, sitePanel, sourceBox, file, stage);
+        tools, webStatusNode, sitePanel, sourceBox, file, packageFile, stage);
       stage.hidden = true;
     } else if (navigationOnly) {
       root.append(stage);
       root.classList.add("rb-map-canvas-only");
     } else root.append(toolbar, layerPanel, tools, zipPanel, manual, stage, webStatusNode, countyNode, status, gpsHelp,
-      sitePanel, sourceBox, file);
+      sitePanel, sourceBox, file, packageFile);
     host.replaceChildren(root);
 
     zipForm.addEventListener("submit",event=>{
@@ -1983,7 +1919,7 @@
           if (new TextEncoder().encode(text).length > MAX_FILE_BYTES) {
             throw new Error("GeoJSON exceeds 2 MiB");
           }
-          parsed = parseGeoJSON(text);
+          parsed = importer.parseGeoJSON(text);
         }
         if (active !== view) return;
         view.shapes = parsed.shapes;
@@ -2020,6 +1956,41 @@
         }
       } finally {
         file.value = "";
+      }
+    });
+
+    packageFile.addEventListener("change", async () => {
+      const selected = packageFile.files;
+      if (!selected || !selected.length) return;
+      try {
+        const parsed = await window.RustBoyMapImport.readDirectoryPackage(selected);
+        if (active !== view) return;
+        // Commit only after every manifest and layer has passed validation.
+        view.shapes = parsed.shapes;
+        view.layers = parsed.layers;
+        view.warnings = parsed.warnings;
+        view.mapName = parsed.mapName;
+        view.mapFormat = parsed.format;
+        view.layerName = view.mapName + " (" + parsed.features + " features)";
+        view.siteCentered = false;
+        view.siteReturn = null;
+        view.selectedSiteId = null;
+        if (view.fix && view.follow) {
+          view.center = { lat: view.fix.lat, lon: view.fix.lon };
+          view.zoom = Math.max(view.zoom, 14);
+        } else {
+          fitLayer(view);
+        }
+        view.gpsState = "LOCAL RB-GIS PACKAGE / SOURCE UNVERIFIED";
+        refresh(view);
+        if (view.webEnabled) void webFetch(view);
+      } catch (error) {
+        if (active === view) {
+          view.gpsState = "MAP ERROR: " + (error instanceof Error ? error.message : "Invalid package");
+          refresh(view);
+        }
+      } finally {
+        packageFile.value = "";
       }
     });
 

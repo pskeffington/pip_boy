@@ -1,5 +1,27 @@
 # Rust-Boy | CI troubleshooting history
 
+## First-party CI diagnosis and Node bootstrap repair — 2026-10-29
+
+All `uses:` references have been removed from the workflow in this draft. Exact SHA checkout uses GitHub's own repository via `git fetch`; stable/1.90 Rust use runner-native `rustup`. `scripts/ci_bootstrap.sh` pins Node.js v22.23.4 from the official Node distribution, verifies its published SHA-256 for each supported runner architecture, and adds the verified binary to the job PATH. The shell checkout must remain inline because no repository script exists before the initial fetch.
+
+This removes third-party **GitHub Action repositories**, not upstream toolchain distributions or Cargo dependencies. `rustup`, apt packages, locked Rust dependencies and the pinned Node distribution still require external network sources or a future mirrored/offline supply chain. The prior exact-head run exposed Node 24 on macOS despite the Node 22 requirement; the repository bootstrap now obtains a pinned, digest-checked Node 22 instead of depending on runner image contents. Test with exact-head Actions evidence before closing RB-CX-00.
+
+### Exact admitted runs
+
+- [Run 40823597748](https://github.com/pskeffington/pip_boy/actions/runs/40823597748), head `63093badc2046a59689693f68896fa502dd95234`: manifest validation passed. Stable, Rust 1.90, SDR and native jobs were cancelled when the newer PR run started under the workflow's `cancel-in-progress` concurrency policy. There were no failed steps; cancellation is not a source failure.
+- [Run 40823687340](https://github.com/pskeffington/pip_boy/actions/runs/40823687340), exact head `5ad4327d34751cb723eae0ae7de7ef653e3702cf`: all seven jobs were admitted. Catalog validation, stable and Rust 1.90, both SDR feature jobs, and native Windows passed. Stable Linux UI/Chromium regressions and runtime smokes passed. macOS compile, 393-test suite, native smoke roster and PTY passed, then the job failed at Node verification (`v24.22.0` supplied; Node 22 required); the subsequent Mac-first MAP step was skipped. This is the specific failure repaired by the pinned bootstrap.
+- RB-CX-00 remains open until the repair passes on a new exact PR head. Do not accept this partial green run or treat job admission alone as acceptance.
+
+
+## Codex queue/ownership offline gates — 2026-10-29
+
+The catalog job additionally registers `python3 tools/validate_codex_passes.py` and `python3 tools/test_validate_codex_passes.py`. These are filesystem-only schema, dependency, component-ID and path checks; they do not build Rust or certify a release. [Actions run 40821379695](https://github.com/pskeffington/pip_boy/actions/runs/40821379695) at `5b4a66e` ended in `startup_failure` with zero jobs, so the new pass checks did not execute. Investigate run-level annotations and runner admission without asserting a compiler failure. Inspect exact-head workflow evidence before marking a pass accepted. The existing component owner index must remain single-owner even when a module is used by multiple integration layers.
+
+For exact source revision `8a5c9d162af5ede9449dcf924f88fba15e9bdb38`, [Actions run 40822394927](https://github.com/pskeffington/pip_boy/actions/runs/40822394927) also ended `startup_failure`. PR check diagnostics returned zero jobs, checks and statuses. Local stable and Rust 1.90 gates passed, but this run provides no CI execution result or root-cause explanation; the pass remains open.
+
+The next exact-head run, [40822764662](https://github.com/pskeffington/pip_boy/actions/runs/40822764662) for `6f1e8d276595e62930b506d5f878e0b952832777`, failed the same way: REST reports `startup_failure` and its jobs endpoint returns `total_count: 0`. The checked-in workflow has an unfiltered `pull_request` trigger and statically defines the catalog, stable/1.90 Rust matrix, optional SDR and native jobs; no workflow-level skip condition is visible. [GitHub Status](https://www.githubstatus.com/) lists Actions operational and no incident for Oct 29. These observations narrow the evidence to pre-job admission but do not identify whether the repository policy, account settings, or GitHub's run service caused it. Keep workflow gates unchanged and obtain repository Actions settings or GitHub support diagnostics before altering YAML.
+
+
 ## Current smoke-test inventory (2026-10-26)
 
 The CI workflow now uses one explicit [Python smoke-test roster](../tools/run_smokes.py). It replaces duplicated per-platform command lists; it does **not** add hardware operations or reduce test coverage. Child scripts run in their prior order, with the currently selected Python interpreter, and the first failure stops the suite.

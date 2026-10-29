@@ -12,6 +12,8 @@ Desktop Map fills at least 95% of the workspace zone, hiding station/status bloc
 
 Every mini UI section and tool detail uses one 44px header: Back when needed, the current page title, one local indicator when space permits, Settings, time and Desktop. The separate Field Terminal branding row and duplicate Local badge are removed. This returns 28–50px of vertical content space, depending on viewport size. Back, Settings and Desktop retain 44px touch targets; long page titles truncate within the available width. Profile selection remains in Settings.
 
+Entering or leaving Settings updates the same Rust-owned foreground controller used by the desktop, and `/api/state` restores the Settings surface after reload. This integration covers the host Settings state only; the other handheld tabs are still local navigation, and package selection remains unavailable without a host-approved installed roster.
+
 The production Chromium probe checks the shared header height, title and control bounds, and verifies that content starts immediately below it on Status, role tools, Data, Map, Radio and Settings, including a tool-detail Back action. It covers 480×320, 800×480 and narrow portrait layouts.
 
 ## Universal sections
@@ -35,6 +37,10 @@ Role and Data decks show four tools below 260 CSS pixels of content height and s
 ## Back navigation and temporary drafts
 
 Back/Escape returns from a result to its inputs before leaving a tool. Network inputs return to the tool menu; the next Back exits the module. Local input drafts survive tab navigation and GIS-mode changes within this browser session, scoped by role/tool/mode. They are not written to disk and clear on reload. Completed local results focus EDIT INPUTS; editing focuses the first field. Detached requests cannot update the current status or show stale errors.
+
+## Host-owned package viewport
+
+The package stage renders only the portable v1 view blocks (heading, text, status and list) into host-created elements. Text is inserted through DOM text nodes; package markup, scripts, links and callbacks are unsupported. Lists scroll inside their own bounded region so the 480×320 shell does not acquire document scrolling. Package activation is display-only until the later capability gate authorizes input actions; the native host selector and Settings remain available.
 
 ## Micro readability pass
 

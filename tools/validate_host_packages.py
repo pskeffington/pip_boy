@@ -157,6 +157,14 @@ def check_adapter_contract(root=ROOT):
             "adapter command index drift")
     require(contract.get("replies") == ["ack", "view"],
             "adapter reply index drift")
+    require(contract.get("package_view") == {
+                "version": 1,
+                "blocks": ["heading", "text", "status", "list"],
+                "max_blocks": 24,
+                "max_list_items": 24,
+                "max_text_bytes": 512,
+                "input_actions": "not_implemented",
+            }, "adapter package view schema drift")
     require(contract.get("host_surfaces") == ["empty", "settings", "package"],
             "adapter host surface index drift")
     require(contract.get("package_ids") == sorted(v[0] for v in EXPECTED.values()),
@@ -166,11 +174,69 @@ def check_adapter_contract(root=ROOT):
     ).read_text(encoding="utf-8")
     require("pub const ADAPTER_PROTOCOL: u32 = 1;" in sdk
             and "pub const MAX_WIRE_BYTES: usize = 16 * 1024;" in sdk
-            and "pub const MAX_INTENT_BYTES: usize = 4 * 1024;" in sdk,
+            and "pub const MAX_INTENT_BYTES: usize = 4 * 1024;" in sdk
+            and "pub const MAX_VIEW_BLOCKS: usize = 24;" in sdk
+            and "pub const MAX_VIEW_LIST_ITEMS: usize = 24;" in sdk
+            and "pub const MAX_VIEW_TEXT_BYTES: usize = 512;" in sdk,
             "adapter machine index and Rust constants disagree")
+    require("pub struct PackageView" in sdk and "pub enum ViewBlock" in sdk
+            and 'rename_all = "snake_case", deny_unknown_fields' in sdk,
+            "adapter SDK is missing the strict package view schema")
     require(contract.get("third_party_execution") == "not_implemented",
             "adapter contract must not claim unreviewed external execution")
 
+
+
+def check_builtin_radio_manifest(m):
+    """A compile-time catalogue must remain capability-free and non-executable."""
+    identifier = check_manifest(m)
+    require("status" not in m, "built-in manifest must omit installation claims")
+    require(identifier == "org.rustboy.radio" and m["name"] == "RADIO CATALOG",
+            "unreviewed built-in identity")
+    require(m["version"] == "0.1.0", "unreviewed built-in adapter version")
+    require(m["source_repository"] == "https://github.com/pskeffington/rust_radio",
+            "unreviewed radio source")
+    require(m["entrypoint"] == {"type": "builtin_adapter"},
+            "built-in radio cannot start external processes")
+    require(m["capabilities"] == [] and m["background"] == {"allowed": False},
+            "built-in catalogue cannot request capabilities or background work")
+    return identifier
+
+
+def check_builtin_radio(root=ROOT):
+    path = root / "catalog/builtin_packages/rust_radio.json"
+    require(path.is_file() and not path.is_symlink(), "invalid built-in radio manifest")
+    require(path.stat().st_size <= MAX_BYTES, "built-in manifest too large")
+    check_builtin_radio_manifest(json.loads(path.read_text(encoding="utf-8")))
+    core = (root / "crates/pipboy-core/src/builtin_packages.rs").read_text(encoding="utf-8")
+    require('include_str!("../../../catalog/builtin_packages/rust_radio.json")' in core
+            and "pub fn mount_approved_builtins(" in core
+            and "Box::new(RadioCatalogAdapter::default())" in core,
+            "compile-time roster mismatch")
+    shell = (root / "crates/pipboy/src/dashboard.rs").read_text(encoding="utf-8")
+    require("builtin_packages::mount_approved_builtins(&mut host)" in shell,
+            "dashboard does not mount the compile-time roster")
+
+
+def check_socket_admission(root=ROOT):
+    """Guard that production sessions cannot be built from unverified streams."""
+    listener = (root / "crates/pipboy-core/src/package_listener.rs").read_text(
+        encoding="utf-8"
+    )
+    transport = (root / "crates/pipboy-core/src/package_transport.rs").read_text(
+        encoding="utf-8"
+    )
+    require("pub struct VerifiedUnixStream" in listener
+            and "pub fn accept_expected_process(" in listener
+            and "timeout: Duration" in listener
+            and "credentials.uid == current_uid() && credentials.pid == expected_pid"
+            in listener,
+            "Unix listener must provide bounded OS-credential-verified admission")
+    require("pub fn from_verified_peer(" in transport
+            and "fn from_stream(" in transport
+            and "pub fn from_stream(" not in transport
+            and "VerifiedUnixStream" in transport,
+            "adapter sessions must require listener-verified peer provenance")
 
 
 def validate(root=ROOT):
@@ -198,7 +264,9 @@ def validate(root=ROOT):
             "Rust reference registry and checked-in fixtures drift")
     check_adapter_sdk(root)
     check_adapter_contract(root)
-    print(f"PASS: {len(seen)} inert manifests and portable SDK boundary; no executable package installed")
+    check_builtin_radio(root)
+    check_socket_admission(root)
+    print(f"PASS: {len(seen)} inert manifests, a read-only compile-time radio catalogue and SDK boundary")
     return len(seen)
 
 
