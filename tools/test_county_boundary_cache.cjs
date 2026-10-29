@@ -11,6 +11,7 @@ const rings=[[[-71.2,42.25],[-70.9,42.25],[-70.9,42.5],
   [-71.2,42.5],[-71.2,42.25]]];
 const official="U.S. Census TIGERweb State_County ACS 2025 / January 1 2025";
 let invalidBoundary=false, remoteBoundary=false, censusLookups=0, gpsCalls=0;
+const activations=[];
 const calls=[];
 const packages={
   "tiger-roads":fixture("roads"),
@@ -52,6 +53,15 @@ const fetchMock=async (url,opts={})=>{
     assert.equal(req.cache_only,!remoteBoundary);
     return{ok:true,headers:{get:()=>null},
       arrayBuffer:async()=>Uint8Array.from(packages[req.source]).buffer};
+  }
+  if(url==="/api/map/activate"){
+    const req=JSON.parse(opts.body);
+    assert.equal(req.geoid,"25025");
+    assert.equal(req.confirm,true);
+    activations.push(req.geoid);
+    return{ok:true,json:async()=>({schema:1,vintage:"2025",
+      active_geoid:req.geoid,cached_sources:ids.slice(0,3),
+      boundary_cached:true,network_used:false})};
   }
   throw new Error("Unexpected external map call: "+url);
 };
@@ -119,6 +129,8 @@ async function main(){
   assert.equal(calls.filter(c=>c.url==="/api/map/package").length,4);
   assert.ok(calls.filter(c=>c.url==="/api/map/package")
     .every(c=>JSON.parse(c.opts.body).cache_only));
+  assert.deepEqual(activations,["25025"],
+    "Offline boundary and sources commit only after the real base layer parses");
 
   view.latitude.value="42.35";view.longitude.value="-71.05";
   view.manual.listeners.submit[0]({preventDefault(){}});

@@ -50,6 +50,7 @@ const bundles={
 };
 const ids=Object.keys(bundles);
 const calls=[];
+const activations=[];
 const fetchMock=async (url,opts={})=>{
   calls.push({url,opts});
   if(url==="/api/map/sources")return{ok:true,json:async()=>({
@@ -61,6 +62,15 @@ const fetchMock=async (url,opts={})=>{
     assert.ok(ids.includes(input.source));
     return{ok:true,headers:{get:()=>null},
       arrayBuffer:async()=>Uint8Array.from(bundles[input.source]).buffer};
+  }
+  if(url==="/api/map/activate"){
+    const input=JSON.parse(opts.body);
+    assert.equal(input.geoid,"25025");
+    assert.equal(input.confirm,true);
+    activations.push(input.geoid);
+    return{ok:true,json:async()=>({schema:1,vintage:"2025",
+      active_geoid:input.geoid,cached_sources:ids.slice(0,3),
+      boundary_cached:true,network_used:false})};
   }
   throw Error("Unexpected local network request: "+url);
 };
@@ -108,11 +118,15 @@ async function main(){
   assert.equal(report.features,5);
   assert.equal(clipped.find(x=>x.id==="tiger-pointlm").count,2);
   assert.equal(calls.filter(c=>c.url==="/api/map/package").length,4);
+  assert.deepEqual(activations,["25025"],
+    "Only a parsed county base layer explicitly commits offline selection");
   const cached=await r.load("25025",{cacheOnly:true});
   assert.ok(cached.warnings.some(s=>s.includes("POINTLM hidden")));
   assert.ok(!cached.sourceIds.includes("tiger-pointlm"));
   assert.equal(calls.filter(c=>c.url==="/api/map/package").length,7,
     "Offline restore must never fetch/use state POIs without a polygon");
+  assert.deepEqual(activations,["25025","25025"],
+    "A valid cached offline restore confirms the selected county");
   console.log("POINTLM: real state filename, named point SHP, verified county clip and hole, offline fail-closed PASS");
 }
 if(require.main===module)main().catch(e=>{console.error(e);process.exitCode=1;});

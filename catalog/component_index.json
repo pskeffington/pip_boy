@@ -120,7 +120,9 @@
       ],
       "checks": [
         "tools/smoke_scout.py",
-        "tools/test_map_boot.cjs"
+    "tools/test_map_boot.cjs",
+        "tools/test_county_sources.cjs",
+        "tools/test_county_boundary_cache.cjs"
       ]
     },
     {
