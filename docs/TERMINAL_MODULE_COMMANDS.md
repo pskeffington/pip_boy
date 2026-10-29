@@ -2,6 +2,10 @@
 
 Status: **initial executable bridge committed but not compile/field-verified**. `pipboy terminal` loads saved Workbench pins and supports `tools`, `select TOOL`, `help`, `run COMMAND`, and `quit`. Supported offline handler tool IDs are `host`, `diag`, `library`, `byte-lab`, and `net-lab`. Direct tool names select pinned tools, and selected-tool verbs can run without the `run` prefix; `q`, `quit`, and `exit` close the prompt. Do not paste the printed `rb:host>` prompt itself. Two new regression tests cover direct selection, command entry, prompt paste and denied network requests. The updated behavior is awaiting Mac validation; other pinned tools are not runnable through this command prompt. It is separate from the full-screen `tui`, and does **not** mount MAP/TV/RADIO/COMMS sockets. Complete the gated common dispatcher and UI integration below before calling this production-ready.
 
+## Agent execution
+
+Follow [root AGENTS.md](../AGENTS.md), [GitHub-first execution packets](TERMINAL_AGENT_EXECUTION.md), and [machine-readable task statuses](../catalog/terminal_agent_tasks.json). Software gates should progress through GitHub source and CI, without requiring operator live side-by-side testing. Hardware/field release acceptance remains separate.
+
 ## Goal
 
 Both `pipboy tui` and the graphical desktop/micro shell use one host-owned command catalog. The operator selects a toolset, sees only that toolset's available verbs, and can run reviewed commands through the same Rust module/service implementations used by the graphical UI. No duplicated module logic, untrusted shell invocation, or implicit permissions.
