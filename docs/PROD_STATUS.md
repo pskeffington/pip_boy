@@ -6,7 +6,7 @@ Updated: 2026-10-28
 
 - **Current gate:** PROD-1 / adapter protocol contract — **in progress**.
 - **Last completed gate:** PROD-0 baseline repair — **not accepted**. Mainline working tree and local validation are understood; GitHub Actions evidence is currently unavailable for the inspected commit, and CI startup failure has not been diagnosed.
-- **Branch:** `codex/package-adapter-protocol`, based on `2c13594` (`docs: record pure single foreground selector and remaining GUI integration gate`). Protocol commits: `5749054` (request codec) and `28fa747` (negotiation/correlation).
+- **Branch:** `codex/package-adapter-protocol`, based on `2c13594` (`docs: record pure single foreground selector and remaining GUI integration gate`). Protocol commits: `5749054` (request codec), `28fa747` (negotiation/correlation), and `c15fbe3` (bounded stream framing).
 - **Relevant pinned module revision:** `rust_radio` dependency revision `3d77d11da3a31fbc3144635da6d391a3febf38b7` from the workspace lock/config. The local `rust_radio/` directory is a separate untracked nested repository and was preserved untouched.
 
 ## Implementation and evidence
