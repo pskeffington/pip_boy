@@ -10,9 +10,9 @@ Rust-Boy is a modular pop-in socket: the shell owns **one package viewport**, co
 | --- | --- | --- | --- | --- |
 | RB-CX-00 | P0 | **Accepted** | Exact-head build/CI baseline and passive Radio bootstrap verification | None |
 | RB-CX-01 | P0 | **Accepted** | Safe universal data-driven viewport, Settings and fault handling | 00 |
-| RB-CX-02 | P0 | **Next** | Backend capability intent, audio/device/transport arbitration | 00, 01 |
+| RB-CX-02 | P0 | **Accepted** | Backend capability intent, audio/device/transport arbitration | 00, 01 |
 | RB-CX-03 | P1 | Blocked | Real interactive `rust_radio` package, explicit Play/Stop | 01, 02 |
-| RB-CX-04 | P0 | Blocked | Unix socket ownership, authenticated peer provenance, bounded IPC | 00, 02 |
+| RB-CX-04 | P0 | **Next** | Unix socket ownership, authenticated peer provenance, bounded IPC | 00, 02 |
 | RB-CX-05 | P1 | Queued | `rb_gis` migration with roads, county/ZIP parity and rollback | 01, 02 |
 | RB-CX-06 | P1 | Blocked | `rust_tv` native display and exclusive audio handoff | 01, 02 |
 | RB-CX-07 | P1 | Blocked | `rusti_rc` session, explicit COMMS consent and offline recovery | 01, 02, 04 |
@@ -91,12 +91,12 @@ Codex must inspect [run 40823597748](https://github.com/pskeffington/pip_boy/act
 - The Rust SDK defines bounded v1 `PackageView` heading/text/status/list blocks. Core rejects unknown or oversized view data and faults the package before foreground exposure. Desktop and micro use host-created DOM/text nodes; no package HTML, scripts, callbacks, links or privileged input actions are supported.
 - Stable and Rust 1.90 each passed workspace format/check/tests/Clippy (395 tests); both SDR feature check/Clippy/test matrices passed under both toolchains. Offline catalog, host-package, component, repo, pass-index, CI-policy, security, roles, Vault and smoke validators passed.
 - Desktop focus and micro interaction tests passed. Chromium desktop sizes 1440×900, 1280×800, 1024×768 and 800×600, and handheld 480×320, 800×480 and 320×568 plus Custom passed without document scrolling. Package selectors expose an accessible label and 44px touch targets; HTML-looking fixture text remained text in both renderers.
-- `hardware_gate` is `software_only`. This accepts the bounded display pass only; package intents, OS grants, external loader/trust and physical-hardware acceptance remain later gates. RB-CX-02 is now `next`; PR #71 remains a draft.
+- `hardware_gate` is `software_only`. This accepts the bounded display pass only; OS grants, external loader/trust and physical-hardware acceptance remain later gates. RB-CX-02 was next and is now accepted below; PR #71 remains a draft.
 
 ## Exact next-pass instructions
 
-> Continue **RB-CX-02** on `codex/package-adapter-protocol`. Enforce backend capability intent and media ownership in `universal_adapter.rs`, `permissions.rs` and the deny-only broker. Deny undeclared/unapproved network, media, device and message intents before side effects; test revocation and role mismatch; never infer grants from UI or manifest state. Run the indexed security/smoke checks and full exact-head CI, update production evidence, and keep PR #71 draft. Do not open physical devices or claim OS-enforced grants until their dedicated requirements are implemented and tested.
+> Continue **RB-CX-04** on `codex/package-adapter-protocol`. Harden the Unix adapter socket path and session provenance before accepting a peer: verify restrictive ownership and OS-reported peer identity, bound the exchange, and reject replay/stall/malformed frames. Keep the listener disconnected from a launcher, do not trust hello claims, and preserve the deny-only device broker. Run the indexed package/security checks and exact-head CI; keep PR #71 draft and `rust_radio/`, `rb_gis`, `rust_tv` and `rusti_rc` independent.
 
-### RB-CX-02 implementation checkpoint — not accepted
+### RB-CX-02 acceptance evidence — accepted (software-only)
 
-The current source candidate adds ephemeral role/package/scope approvals with checks at each backend intent, revocation and role-mismatch regressions, and host-level exclusive `media.audio` ownership with successful-stop release. The permissions preference file remains a request/denial store and does not mint these approvals. The standalone device broker remains deny-all. The consent UI, durable approval policy and OS-enforced device permission boundary are still open; do not treat the candidate as production authorization or mark the pass accepted before its full validation and exact-head CI are complete.
+Exact validation head `c1df259d1e01689dcb93ed48073b250150027f56` passed all seven checks in [run 40828393462](https://github.com/pskeffington/pip_boy/actions/runs/40828393462). The implementation adds ephemeral role/package/scope approvals checked at each backend intent, revocation and role-mismatch regressions before adapter calls, and exclusive `media.audio` ownership with release after a successful stop. Stable and Rust 1.90 each passed 398 tests; both SDR feature check/test/Clippy matrices passed under both toolchains. Security/index validators, permission/broker smokes, desktop/micro interaction and desktop/handheld Chromium regressions passed. The broker remains deny-all. Durable approvals, consent UI, OS enforcement, native media and physical-device access remain outside this software-only acceptance; production release gates remain open.

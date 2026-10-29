@@ -23,7 +23,7 @@ The key set is: `device.enumerate`, `gpio.read`, `display.write`, `serial.read`,
 
 `pipboy simulate list` lists 11 *hard-coded* virtual fixtures, and `pipboy simulate run sim:sdr --confirm` demonstrates a short-lived confirmation and lease. A saved `requested` preference alone cannot start even a simulation; a saved `denied` preference blocks it despite `--confirm`. The simulator never opens an OS interface and cannot supply a real device authorization token. See [SIMULATION.md](SIMULATION.md). Actual per-device consent and a privileged OS broker remain unimplemented.
 
-## Host adapter intent checks (RB-CX-02 candidate)
+## Host adapter intent checks (RB-CX-02 accepted software policy)
 
 `AdapterAuthorization` is a host-owned, in-memory policy for the trusted in-process adapter seam. It binds each explicit approval to the active Rust role, package ID and exact manifest scope. `UniversalAdapterHost::intent` first requires the foreground package and its declared scope, then checks the current approval immediately before invoking the adapter. Revocation and role changes therefore deny subsequent requests before the adapter can observe them. UI selection and manifest declarations never create approvals.
 

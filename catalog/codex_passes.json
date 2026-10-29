@@ -100,7 +100,7 @@
       "id": "RB-CX-02",
       "title": "Enforce backend capability and media ownership",
       "priority": "P0",
-      "status": "next",
+      "status": "accepted",
       "depends_on": [
         "RB-CX-00",
         "RB-CX-01"
@@ -132,11 +132,15 @@
         "Never infer grants from UI or manifest state."
       ],
       "blockers": [
-        "OS-enforced permissions and persistent approvals are not implemented."
+        "OS-enforced physical permissions and durable approvals remain unimplemented; physical adapter access stays disabled."
       ],
       "external_repositories": [],
       "hardware_gate": "software_only",
-      "evidence": null
+      "evidence": {
+        "commit_sha": "c1df259d1e01689dcb93ed48073b250150027f56",
+        "ci_run_url": "https://github.com/pskeffington/pip_boy/actions/runs/40828393462",
+        "field_report": null
+      }
     },
     {
       "id": "RB-CX-03",
@@ -184,7 +188,7 @@
       "id": "RB-CX-04",
       "title": "Secure Unix adapter socket provenance and exchange",
       "priority": "P0",
-      "status": "blocked",
+      "status": "next",
       "depends_on": [
         "RB-CX-00",
         "RB-CX-02"
@@ -196,6 +200,7 @@
       "entrypoints": [
         "crates/pipboy-core/src/package_transport.rs",
         "crates/pipboy-core/src/package_socket.rs",
+    "crates/pipboy-core/src/package_listener.rs",
         "crates/rust-boy-broker/src/main.rs"
       ],
       "docs": [
