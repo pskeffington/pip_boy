@@ -57,7 +57,7 @@
       "id": "RB-CX-01",
       "title": "Render bounded host-owned package UI safely",
       "priority": "P0",
-      "status": "next",
+      "status": "accepted",
       "depends_on": [
         "RB-CX-00"
       ],
@@ -87,18 +87,20 @@
         "Preserve one foreground, permanent Settings, fault isolation and no document scroll.",
         "Verify keyboard/touch and target handheld and desktop sizes."
       ],
-      "blockers": [
-        "Real portable view schema and independent UI mount are pending."
-      ],
+      "blockers": [],
       "external_repositories": [],
       "hardware_gate": "software_only",
-      "evidence": null
+      "evidence": {
+        "commit_sha": "b039fbe6886920a071d836841d9cffe8fd75be99",
+        "ci_run_url": "https://github.com/pskeffington/pip_boy/actions/runs/40826559481",
+        "field_report": null
+      }
     },
     {
       "id": "RB-CX-02",
       "title": "Enforce backend capability and media ownership",
       "priority": "P0",
-      "status": "queued",
+      "status": "next",
       "depends_on": [
         "RB-CX-00",
         "RB-CX-01"

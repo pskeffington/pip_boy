@@ -37,11 +37,11 @@ class HandoffTests(unittest.TestCase):
 
     def test_unaccepted_dependency_remains_visible(self):
         data = copy.deepcopy(self.data)
+        for row in data["passes"]:
+            row["status"] = "queued"
+            row["evidence"] = None
         first = data["passes"][0]
         first["status"] = "next"
-        first["evidence"] = None
-        second = data["passes"][1]
-        second["status"] = "queued"
         result = build_handoff(data)
         second = next(item for item in result["remaining"]
                       if item["id"] == "RB-CX-01")
@@ -49,9 +49,9 @@ class HandoffTests(unittest.TestCase):
 
     def test_malformed_index_rejected_not_silently_repaired(self):
         bad = copy.deepcopy(self.data)
-        bad["passes"][0]["status"] = "queued"
-        bad["passes"][0]["evidence"] = None
-        bad["passes"][1]["status"] = "queued"
+        for row in bad["passes"]:
+            row["status"] = "queued"
+            row["evidence"] = None
         with self.assertRaisesRegex(ValueError, "exactly one next"):
             build_handoff(bad)
 

@@ -23,7 +23,7 @@ The successful run confirmed macOS used official Node.js v22.23.4 and passed Mac
 
 The acceptance-index/documentation commit `b4719dcfa896d9d08c38e68d5c11567e8e7f9561` passed all seven exact-head checks in [run 40825620885](https://github.com/pskeffington/pip_boy/actions/runs/40825620885). Its predecessor `d949ea8` exposed stale `tools/test_codex_next.py` expectations (no accepted pass and RB-CX-01 still waiting for RB-CX-00); the fixture was updated to derive accepted passes from the index and construct a valid pending-prerequisite case. The failed catalog job was not waived; the complete follow-up run passed.
 
-## RB-CX-01 bounded package view candidate — local validation, hosted run pending
+## RB-CX-01 bounded package view — accepted
 
 The candidate adds the SDK's strict, bounded v1 `PackageView` with heading, text, status and list blocks; core validation rejects unknown or oversized views and faults the adapter before foreground exposure. Desktop and micro map valid blocks to host-created elements with text content only. Native package selectors are accessible by label and now meet a 44px minimum touch target. Views have no package callbacks, links, HTML, scripts or privileged input actions.
 
@@ -31,7 +31,7 @@ Local stable and Rust 1.90 each passed format, locked all-target check, the comp
 
 The new schema/contract validator suite passed: catalog, host-package (10 tests), component index, repository, Codex pass index, CI policy and their corresponding regressions. Desktop focus and micro UI tests passed. Real Chromium desktop viewports passed 1440×900, 1280×800, 1024×768 and 800×600; handheld viewports passed 480×320, 800×480 and 320×568 plus Custom, with no document scroll, supported view rendering, safe HTML-looking text and 44px selectors. Desktop map coverage and the existing micro map/RADIO journeys remained green. Local UI tests ran with Node v26.10.0; hosted pinned Node v22.23.4 behavior remains covered by the accepted CI pipeline.
 
-This is **not yet accepted RB-CX-01 evidence**: no hosted exact-head run has exercised these changes. The machine pass index keeps RB-CX-01 as `next` until the focused work is pushed and passes the full exact-head matrix.
+Exact-head [run 40826559481](https://github.com/pskeffington/pip_boy/actions/runs/40826559481) tested commit `b039fbe6886920a071d836841d9cffe8fd75be99` and passed all seven checks: catalog/source, stable, Rust 1.90, Soapy SDR, SDRconnect, native macOS and native Windows. The exact PR diagnostics reported each check successful at that SHA. The stable CI log confirms desktop focus, micro UI, desktop 1440×900/1280×800/1024×768/800×600, and handheld 480×320/800×480/320×568 plus Custom. macOS verified pinned official Node.js v22.23.4 and MAP Chromium at 480×320, 800×480 and 320×568 with no network; Windows passed the native build/smokes and ConPTY journey. RB-CX-01 is accepted as software-only; no field report is required. RB-CX-02 is now next. Physical hardware and broader release acceptance remain separate.
 
 ## Earlier exact-head rerun — 2026-10-29
 

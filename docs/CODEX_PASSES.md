@@ -9,8 +9,8 @@ Rust-Boy is a modular pop-in socket: the shell owns **one package viewport**, co
 | Pass | Priority | Status | Focus | Prerequisites |
 | --- | --- | --- | --- | --- |
 | RB-CX-00 | P0 | **Accepted** | Exact-head build/CI baseline and passive Radio bootstrap verification | None |
-| RB-CX-01 | P0 | **Next** | Safe universal data-driven viewport, Settings and fault handling | 00 |
-| RB-CX-02 | P0 | Queued | Backend capability intent, audio/device/transport arbitration | 00, 01 |
+| RB-CX-01 | P0 | **Accepted** | Safe universal data-driven viewport, Settings and fault handling | 00 |
+| RB-CX-02 | P0 | **Next** | Backend capability intent, audio/device/transport arbitration | 00, 01 |
 | RB-CX-03 | P1 | Blocked | Real interactive `rust_radio` package, explicit Play/Stop | 01, 02 |
 | RB-CX-04 | P0 | Blocked | Unix socket ownership, authenticated peer provenance, bounded IPC | 00, 02 |
 | RB-CX-05 | P1 | Queued | `rb_gis` migration with roads, county/ZIP parity and rollback | 01, 02 |
@@ -81,10 +81,18 @@ Codex must inspect [run 40823597748](https://github.com/pskeffington/pip_boy/act
 - Desktop, micro and RADIO Chromium tests passed. Compact viewport fixtures verified no autoplay, network or device activity; Settings restoration and one foreground remained available. The Mac MAP viewport passed at 480×320, 800×480 and 320×568 without network access.
 - The seven check conclusions and relevant Mac, Linux and Windows job logs were reviewed. Offline CI-policy, pass-index, component-index, host-package, repository, catalog, role, Vault, security and smoke-roster validators passed locally; local Node download was blocked by environment DNS, but the hosted Mac job verified the pinned binary.
 - Acceptance-index checkpoint commit `b4719dcfa896d9d08c38e68d5c11567e8e7f9561` passed all seven CI jobs in run [40825620885](https://github.com/pskeffington/pip_boy/actions/runs/40825620885). That follow-up updated the read-only handoff regression fixture to reflect RB-CX-00's accepted state; it did not alter the recorded RB-CX-00 source acceptance.
-- `hardware_gate` is `software_only`, so no field report is required for this pass. RB-CX-00 is accepted; RB-CX-01 is now next. The PR remains a draft; no merge or production release is claimed.
+- `hardware_gate` is `software_only`, so no field report is required for this pass. RB-CX-00 is accepted. RB-CX-01 subsequently passed its own exact-head validation, recorded below. The PR remains a draft; no merge or production release is claimed.
 
 **RB-CX-01 design boundary (do not implement before RB-CX-00 is accepted):** a generic, schema-validated view model with safe text and input events, no raw package HTML/scripts, one responsive canvas, and host-owned Settings. Before enabling media controls or other privileged intents, require independent host capability policy and explicit operator action.
 
+### RB-CX-01 acceptance evidence — accepted
+
+- Exact source head `b039fbe6886920a071d836841d9cffe8fd75be99`; [run 40826559481](https://github.com/pskeffington/pip_boy/actions/runs/40826559481) completed successfully with all seven exact-head checks. The PR diagnostics reported catalog/source, stable, Rust 1.90, both SDR features, macOS and Windows all successful for that SHA.
+- The Rust SDK defines bounded v1 `PackageView` heading/text/status/list blocks. Core rejects unknown or oversized view data and faults the package before foreground exposure. Desktop and micro use host-created DOM/text nodes; no package HTML, scripts, callbacks, links or privileged input actions are supported.
+- Stable and Rust 1.90 each passed workspace format/check/tests/Clippy (395 tests); both SDR feature check/Clippy/test matrices passed under both toolchains. Offline catalog, host-package, component, repo, pass-index, CI-policy, security, roles, Vault and smoke validators passed.
+- Desktop focus and micro interaction tests passed. Chromium desktop sizes 1440×900, 1280×800, 1024×768 and 800×600, and handheld 480×320, 800×480 and 320×568 plus Custom passed without document scrolling. Package selectors expose an accessible label and 44px touch targets; HTML-looking fixture text remained text in both renderers.
+- `hardware_gate` is `software_only`. This accepts the bounded display pass only; package intents, OS grants, external loader/trust and physical-hardware acceptance remain later gates. RB-CX-02 is now `next`; PR #71 remains a draft.
+
 ## Exact next-pass instructions
 
-> Continue **RB-CX-01** on `codex/package-adapter-protocol`. Finish the bounded, host-owned display schema and safe desktop/micro rendering while preserving one foreground, permanent Settings, fault isolation, input bounds and no-implicit-I/O rules. Keep package views display-only; never execute HTML/script or enable privileged package actions before RB-CX-02. Add focused negative/regression tests, run indexed viewport suites and exact-head CI, then update the production checkpoint and pass index. Keep PR #71 draft; do not merge or publish a production release.
+> Continue **RB-CX-02** on `codex/package-adapter-protocol`. Enforce backend capability intent and media ownership in `universal_adapter.rs`, `permissions.rs` and the deny-only broker. Deny undeclared/unapproved network, media, device and message intents before side effects; test revocation and role mismatch; never infer grants from UI or manifest state. Run the indexed security/smoke checks and full exact-head CI, update production evidence, and keep PR #71 draft. Do not open physical devices or claim OS-enforced grants until their dedicated requirements are implemented and tested.
