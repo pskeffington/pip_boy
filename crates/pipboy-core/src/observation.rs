@@ -29,6 +29,11 @@ pub struct Observation<T> {
     pub expires_after_ms: Option<u64>,
 }
 
+// Shared provenance/identity bounds; preserves existing trim and byte semantics.
+fn valid_required_label(value: &str, max_bytes: usize) -> bool {
+    !value.trim().is_empty() && value.len() <= max_bytes
+}
+
 impl<T> Observation<T> {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
@@ -86,10 +91,10 @@ impl<T> Observation<T> {
         if self.schema_version != OBSERVATION_SCHEMA_VERSION {
             return Err("unsupported observation schema".into());
         }
-        if self.source_id.trim().is_empty() || self.source_id.len() > 128 {
+        if !valid_required_label(&self.source_id, 128) {
             return Err("source_id must contain 1-128 bytes".into());
         }
-        if self.provenance.trim().is_empty() || self.provenance.len() > 256 {
+        if !valid_required_label(&self.provenance, 256) {
             return Err("provenance must contain 1-256 bytes".into());
         }
         if self
@@ -203,6 +208,32 @@ mod tests {
             None
         )
         .is_err());
+    }
+
+    #[test]
+    fn identity_and_provenance_bounds_preserve_byte_semantics() {
+        for (source, provenance, accepted) in [
+            ("x", "y", true),
+            ("   ", "y", false),
+            ("x", "", false),
+        ] {
+            let observation = Observation::new(
+                source, provenance, None, 0, None, Some(1_u8), Quality::Valid, None,
+            );
+            assert_eq!(observation.is_ok(), accepted);
+        }
+        assert!(Observation::new(
+            "x".repeat(128), "y".repeat(256), None, 0, None,
+            Some(1_u8), Quality::Valid, None
+        ).is_ok());
+        assert!(Observation::new(
+            "x".repeat(129), "y", None, 0, None,
+            Some(1_u8), Quality::Valid, None
+        ).is_err());
+        assert!(Observation::new(
+            "x", "y".repeat(257), None, 0, None,
+            Some(1_u8), Quality::Valid, None
+        ).is_err());
     }
 
     #[test]
