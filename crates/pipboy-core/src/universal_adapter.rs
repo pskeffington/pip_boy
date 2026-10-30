@@ -711,6 +711,86 @@ mod tests {
     }
 
     #[test]
+    fn failed_suspend_detaches_only_the_failing_foreground_package() {
+        let mut host = UniversalAdapterHost::new(Viewport::new(480, 320).unwrap());
+        mount(&mut host, "org.rustboy.radio", Some("suspend"));
+        let candidate_calls = mount(&mut host, "org.rustboy.gis", None);
+        host.select("org.rustboy.radio").unwrap();
+        assert!(host.select("org.rustboy.gis").is_err());
+        assert_eq!(host.state("org.rustboy.radio"), Some(AdapterState::Faulted));
+        assert_eq!(host.state("org.rustboy.gis"), Some(AdapterState::Registered));
+        assert_eq!(host.surface(), HostSurface::Empty);
+        assert!(host.foreground_view().is_none());
+        assert!(candidate_calls.lock().unwrap().is_empty());
+        host.open_settings();
+        assert_eq!(host.surface(), HostSurface::Settings);
+    }
+
+    #[test]
+    fn failed_rollback_never_exposes_a_stale_package_view() {
+        let mut host = UniversalAdapterHost::new(Viewport::new(480, 320).unwrap());
+        mount(&mut host, "org.rustboy.gis", Some("resume"));
+        mount(&mut host, "org.rustboy.tv", Some("activate"));
+        host.select("org.rustboy.gis").unwrap();
+        assert!(host.select("org.rustboy.tv").is_err());
+        assert_eq!(host.state("org.rustboy.gis"), Some(AdapterState::Faulted));
+        assert_eq!(host.state("org.rustboy.tv"), Some(AdapterState::Faulted));
+        assert_eq!(host.surface(), HostSurface::Empty);
+        assert!(host.foreground_view().is_none());
+        host.open_settings();
+        assert_eq!(host.surface(), HostSurface::Settings);
+    }
+
+    #[test]
+    fn failed_background_shutdown_preserves_unrelated_foreground() {
+        let mut host = UniversalAdapterHost::new(Viewport::new(480, 320).unwrap());
+        mount(&mut host, "org.rustboy.tv", Some("shutdown"));
+        mount(&mut host, "org.rustboy.gis", None);
+        host.select("org.rustboy.tv").unwrap();
+        host.select("org.rustboy.gis").unwrap();
+        let displayed_before = host.foreground_view().cloned();
+        assert_eq!(host.state("org.rustboy.tv"), Some(AdapterState::Suspended));
+        assert!(host.shutdown("org.rustboy.tv").is_err());
+        assert_eq!(host.state("org.rustboy.tv"), Some(AdapterState::Faulted));
+        assert_eq!(host.surface(), HostSurface::Package("org.rustboy.gis"));
+        assert_eq!(host.foreground_view(), displayed_before.as_ref());
+        assert_eq!(host.state("org.rustboy.gis"), Some(AdapterState::Foreground));
+    }
+
+    #[test]
+    fn failed_foreground_shutdown_clears_canvas_but_preserves_settings() {
+        let mut host = UniversalAdapterHost::new(Viewport::new(480, 320).unwrap());
+        mount(&mut host, "org.rustboy.radio", Some("shutdown"));
+        host.select("org.rustboy.radio").unwrap();
+        assert!(host.shutdown("org.rustboy.radio").is_err());
+        assert_eq!(host.state("org.rustboy.radio"), Some(AdapterState::Faulted));
+        assert_eq!(host.surface(), HostSurface::Empty);
+        assert!(host.foreground_view().is_none());
+        host.open_settings();
+        assert_eq!(host.surface(), HostSurface::Settings);
+    }
+
+    #[test]
+    fn denied_intent_keeps_view_and_adapter_fault_releases_it() {
+        let mut host = UniversalAdapterHost::new(Viewport::new(480, 320).unwrap());
+        let calls = mount(&mut host, "org.rustboy.radio", Some("intent"));
+        host.select("org.rustboy.radio").unwrap();
+        assert!(host.intent("play", None, json!({}), &DenyAllScopes).is_err());
+        assert_eq!(calls.lock().unwrap().len(), 1);
+        assert_eq!(host.state("org.rustboy.radio"), Some(AdapterState::Foreground));
+        assert!(host.foreground_view().is_some());
+        assert!(host
+            .intent("ui.select", None, json!({"station": 0}), &DenyAllScopes)
+            .is_err());
+        assert_eq!(calls.lock().unwrap().len(), 2);
+        assert_eq!(host.state("org.rustboy.radio"), Some(AdapterState::Faulted));
+        assert_eq!(host.surface(), HostSurface::Empty);
+        assert!(host.foreground_view().is_none());
+        host.open_settings();
+        assert_eq!(host.surface(), HostSurface::Settings);
+    }
+
+    #[test]
     fn oversized_adapter_view_is_faulted_before_display() {
         struct HugeView;
         impl UniversalPackageAdapter for HugeView {
