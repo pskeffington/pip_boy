@@ -12,6 +12,8 @@ Desktop Map fills at least 95% of the workspace zone, hiding station/status bloc
 
 Every mini UI section and tool detail uses one 44px header: Back when needed, the current page title, one local indicator when space permits, Settings, time and Desktop. The separate Field Terminal branding row and duplicate Local badge are removed. This returns 28–50px of vertical content space, depending on viewport size. Back, Settings and Desktop retain 44px touch targets; long page titles truncate within the available width. Profile selection remains in Settings.
 
+The header **MODULES** control opens a host-owned modal that reads the local `/api/packages` registry and displays package names, IDs and install/approval state. Registry values are inserted as inert text. All row actions remain disabled: this endpoint lists design references and does not provide activation, installation or adapter trust. TV and COMMS therefore appear as references and cannot yet be switched into the foreground. The viewport probe checks the registry rows, disabled actions, 44px control target and modal bounds at the handheld geometries.
+
 The production Chromium probe checks the shared header height, title and control bounds, and verifies that content starts immediately below it on Status, role tools, Data, Map, Radio and Settings, including a tool-detail Back action. It covers 480×320, 800×480 and narrow portrait layouts.
 
 ## Universal sections
