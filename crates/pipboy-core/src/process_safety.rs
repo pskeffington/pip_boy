@@ -36,6 +36,15 @@ pub fn isolated_command(program: impl AsRef<OsStr>) -> Command {
     command
 }
 
+/// Create a supervised package child with an entirely empty environment.
+/// Package executables must not inherit credentials, PATH, loader overrides,
+/// or ambient configuration from the host process.
+pub fn isolated_package_command(program: impl AsRef<OsStr>) -> Command {
+    let mut command = isolated_command(program);
+    command.env_clear();
+    command
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -61,5 +70,11 @@ mod tests {
         assert!(!command
             .get_envs()
             .any(|(name, _)| name == OsStr::new("PATH")));
+    }
+
+    #[test]
+    fn package_command_has_no_environment_overrides_or_inheritance() {
+        let command = isolated_package_command("rust-boy-nonexistent-test");
+        assert_eq!(command.get_envs().count(), 0);
     }
 }

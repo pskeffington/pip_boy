@@ -14,6 +14,7 @@ const ui = {
   moduleStat: byId("status-modules"),
   moduleCount: byId("module-count"),
   modules: byId("module-grid"),
+  hostPackages: byId("host-package-list"),
   palette: byId("custom-palette"),
   paletteGrid: byId("palette-grid"),
   extension: byId("extension-content"),
@@ -59,6 +60,7 @@ let initialWorkspaceLoaded = false;
 let desktopRadioUI = null;
 let cameraWallUI = null;
 let radioPaneOpen = false;
+let desktopHostPackage = null;
 let extensionMode = "map";
 let queuedSiteId = null;
 const PAGE_SIZE = 6;
@@ -102,6 +104,63 @@ function activateStage(stage) {
   if (stage === "messages" && !desktopMessenger && window.RustBoyMessenger) {
     desktopMessenger = window.RustBoyMessenger.mount(byId("messenger-dock"));
   }
+}
+
+async function loadHostPackages() {
+  if (!ui.hostPackages) return;
+  ui.hostPackages.replaceChildren(el("p", "panel-note", "Reading host package registry…"));
+  try {
+    const registry = await api("/api/packages");
+    ui.hostPackages.replaceChildren();
+    for (const entry of registry.packages || []) {
+      const manifest = entry.manifest || {};
+      const row = el("div", "host-package-row");
+      row.append(el("strong", "", manifest.name || "Unnamed package"));
+      row.append(el("span", "", manifest.package_id || "Unknown package"));
+      row.append(el("span", "", entry.activatable ? `MOUNTED · ${entry.state || "registered"}` : "REFERENCE · UNAVAILABLE"));
+      const select = el("button", "secondary-button", entry.activatable ? "OPEN" : "UNAVAILABLE");
+      select.type = "button";
+      select.disabled = !entry.activatable;
+      if (entry.activatable) select.addEventListener("click", () => { void openHostPackage(manifest.package_id); });
+      row.append(select);
+      ui.hostPackages.append(row);
+    }
+    if (!registry.packages?.some((entry) => entry.activatable)) {
+      ui.hostPackages.append(el("p", "panel-note", "No trusted adapters are mounted. Reference entries cannot launch packages."));
+    }
+  } catch (error) {
+    ui.hostPackages.replaceChildren(el("p", "panel-note", `Host registry unavailable: ${error.message}`));
+  }
+}
+
+async function openHostPackage(packageId) {
+  try {
+    const state = await api("/api/packages/select", { package_id: packageId });
+    desktopHostPackage = { id: state.active_package_id, view: state.view || {} };
+    activateStage("viewport");
+    notify(`Host package active: ${desktopHostPackage.id}`);
+  } catch (error) { notify(error.message, true); }
+}
+
+function renderHostPackage() {
+  const view = desktopHostPackage?.view || {};
+  ui.extension.replaceChildren();
+  ui.extension.append(el("h2", "", typeof view.title === "string" ? view.title : desktopHostPackage.id));
+  if (typeof view.text === "string") ui.extension.append(el("p", "panel-note", view.text));
+  const controls = el("div", "host-package-controls");
+  (Array.isArray(view.items) ? view.items : []).filter((item) => typeof item === "string").slice(0, 32).forEach((item, index) => {
+    const button = el("button", "secondary-button", item);
+    button.type = "button";
+    button.addEventListener("click", async () => {
+      try {
+        const state = await api("/api/packages/intent", { action: "ui.select", payload: { index } });
+        desktopHostPackage = { id: state.active_package_id, view: state.view || {} };
+        renderHostPackage();
+      } catch (error) { notify(error.message, true); }
+    });
+    controls.append(button);
+  });
+  ui.extension.append(controls);
 }
 // Desktop is the vault command station. Role authority comes from Rust's
 // persisted mission-board slot, never from a browser toggle or inferred title.
@@ -394,6 +453,7 @@ function renderExtension() {
   cameraWallUI = null;
   if (window.RustBoyMap) window.RustBoyMap.unmount();
   ui.extension.replaceChildren();
+  if (desktopHostPackage) { renderHostPackage(); return; }
   const selected = profile();
   if (!selected) return;
   if (selected.id === "overseer") {
@@ -795,6 +855,7 @@ byId("radio-view-toggle").addEventListener("click", toggleRadioSubview);
 byId("command-open-messages").addEventListener("click", () => activateStage("messages"));
 byId("command-open-viewport").addEventListener("click", () => activateStage("viewport"));
 byId("command-open-modules").addEventListener("click", () => activateStage("modules"));
+byId("host-packages-open").addEventListener("click", () => { void loadHostPackages(); });
 byId("inspector-return").addEventListener("click", () => { activateStage("modules"); activatePane("workspace"); });
 window.addEventListener("resize", () => { if (!snapshot) return; renderRoles(); renderModules(); });
 document.querySelectorAll("[data-pane-target]").forEach(button => button.addEventListener("click", () => activatePane(button.dataset.paneTarget)));

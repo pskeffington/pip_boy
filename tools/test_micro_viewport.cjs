@@ -136,7 +136,8 @@ async function main() {
         {manifest:{name:"TV",package_id:"org.rustboy.tv"},installed:false,activatable:false},
         {manifest:{name:"COMMS",package_id:"org.rustboy.comms"},installed:false,activatable:false},
         {manifest:{name:"RADIO",package_id:"org.rustboy.radio"},installed:false,activatable:false},
-        {manifest:{name:"MAP",package_id:"org.rustboy.gis"},installed:false,activatable:false}
+        {manifest:{name:"MAP",package_id:"org.rustboy.gis"},installed:false,activatable:false},
+        {manifest:{name:"MUSIC",package_id:"org.rustboy.music"},installed:false,activatable:false}
       ]}));
     if(url.pathname==="/api/tasks")return send(200,JSON.stringify({board:{tasks:[]},manager:true}));
     if(url.pathname==="/api/radio")return send(200,JSON.stringify({source:"none",status:"stopped",

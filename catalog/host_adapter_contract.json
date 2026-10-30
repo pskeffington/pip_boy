@@ -30,6 +30,7 @@
   "package_ids": [
     "org.rustboy.comms",
     "org.rustboy.gis",
+    "org.rustboy.music",
     "org.rustboy.radio",
     "org.rustboy.tv"
   ],

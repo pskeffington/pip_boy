@@ -78,7 +78,7 @@ const inside=(node,box)=>{
     const moduleDialog=document.getElementById("modules-dialog");
     const moduleRows=[...document.querySelectorAll("#modules-list [role='listitem']")];
     const switchButton=document.getElementById("micro-modules");
-    if(!moduleDialog.open || moduleRows.length!==4)
+    if(!moduleDialog.open || moduleRows.length!==5)
       throw Error("Host module switcher did not load all reference packages");
     if(switchButton.getBoundingClientRect().height<44)
       throw Error("Module switcher touch target is smaller than 44px");

@@ -56,7 +56,7 @@
       "depends_on": [
         "TC-A01"
       ],
-      "status": "queued",
+      "status": "in_progress",
       "paths": [
         "crates/pipboy/src/terminal_commands.rs",
         "crates/pipboy/src/console.rs",
@@ -70,7 +70,19 @@
         "Keyboard navigation and bounded output regression"
       ],
       "gate": "TC-2",
-      "issue": 75
+      "issue": 75,
+      "local_evidence": {
+        "stable": "cargo +stable test --locked --offline -p pipboy --bin pipboy terminal_commands::tests (6 passed), console::tests (7 passed), tui::tests (7 passed); warnings-denied Clippy and fmt check passed.",
+        "rust_1_90": "Same focused terminal, console and TUI tests passed (6/7/7); warnings-denied Clippy and fmt check passed.",
+        "remaining": "Full-screen TUI palette is implemented locally; exact-head CI is pending. GUI palette and independent interaction acceptance remain open."
+      },
+      "ci_evidence": {
+        "source_commit": "b21cff7e67d06472c1321113bb2b02f4d7cabab8",
+        "workflow_run": 41125631609,
+        "workflow_url": "https://github.com/pskeffington/pip_boy/actions/runs/41125631609",
+        "jobs_passed": "7/7",
+        "note": "This exact-head run validates the preceding universal-host/docs head; it predates the current TUI palette changes and is not evidence for the pending TUI integration."
+      }
     },
     {
       "id": "TC-A03",

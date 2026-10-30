@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Offline, read-only schema gate for Rust-Boy's four package socket fixtures.
+"""Offline, read-only schema gate for Rust-Boy's five package socket fixtures.
 
 The fixtures advertise *design references*, not installed/runnable packages.
 This script uses only Python's standard library and never executes a manifest.
@@ -19,11 +19,12 @@ EXPECTED = {
     "rb_gis.example.json": ("org.rustboy.gis", "MAP", "rb_gis"),
     "rust_tv.example.json": ("org.rustboy.tv", "TV", "rust_tv"),
     "rust_radio.example.json": ("org.rustboy.radio", "RADIO", "rust_radio"),
+    "rust_music.example.json": ("org.rustboy.music", "MUSIC", "rust_music"),
     "rusti_rc.example.json": ("org.rustboy.comms", "COMMS", "rusti_rc"),
 }
 SCOPES = {
     "location.read", "map.cache.read", "map.cache.write",
-    "network.fetch.explicit", "media.video", "media.audio",
+    "network.fetch.explicit", "media.video", "media.audio", "media.library.read",
     "radio.device", "network.connect.explicit", "messages.local.write",
 }
 TOP_KEYS = {
@@ -33,6 +34,68 @@ TOP_KEYS = {
 }
 ID_PATTERN = re.compile(r"^[a-z][a-z0-9-]*(?:\.[a-z][a-z0-9-]*){2,}$")
 VERSION_PATTERN = re.compile(r"^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(?:[-+][0-9A-Za-z.+-]+)?$")
+EXECUTABLE_SHA256 = re.compile(r"^[0-9a-f]{64}$")
+
+
+def check_approved_executable_roster(root=ROOT, data=None):
+    """Validate source-controlled executable pins; manifests never select code."""
+    root = Path(root)
+    if data is None:
+        path = root / "catalog/approved_package_executables.json"
+        require(path.is_file() and not path.is_symlink(),
+                "approved executable roster missing or symlinked")
+        require(path.stat().st_size <= MAX_BYTES,
+                "approved executable roster exceeds size limit")
+        data = json.loads(path.read_text(encoding="utf-8"))
+    require(isinstance(data, dict) and set(data) == {"schema_version", "executables"}
+            and type(data["schema_version"]) is int and data["schema_version"] == 1,
+            "invalid approved executable roster schema")
+    rows = data["executables"]
+    require(isinstance(rows, list) and len(rows) <= 64,
+            "approved executable roster exceeds entry limit")
+    seen = set()
+    allowed_ids = {value[0] for value in EXPECTED.values()}
+    for row in rows:
+        require(isinstance(row, dict)
+                and set(row) == {"package_id", "relative_executable", "sha256",
+                                "relative_manifest", "manifest_sha256", "arguments"},
+                "invalid approved executable entry fields")
+        package_id = row["package_id"]
+        require(isinstance(package_id, str) and ID_PATTERN.fullmatch(package_id)
+                and package_id in allowed_ids and package_id not in seen,
+                "invalid or duplicate approved package ID")
+        seen.add(package_id)
+        path = row["relative_executable"]
+        require(isinstance(path, str) and path and len(path) <= 240
+                and not path.startswith("/") and "\\" not in path and ":" not in path
+                and all(part not in {"", ".", ".."} for part in path.split("/")),
+                "unsafe approved executable path")
+        for field in ("relative_manifest", "relative_executable"):
+            path = row[field]
+            require(isinstance(path, str) and path and len(path) <= 240
+                    and not path.startswith("/") and "\\" not in path and ":" not in path
+                    and all(part not in {"", ".", ".."} for part in path.split("/")),
+                    f"unsafe approved {field.removeprefix('relative_')} path")
+        for field in ("sha256", "manifest_sha256"):
+            require(isinstance(row[field], str)
+                    and EXECUTABLE_SHA256.fullmatch(row[field]),
+                    f"invalid approved {field.replace('_', ' ').upper()}")
+        args = row["arguments"]
+        require(isinstance(args, list) and len(args) <= 8
+                and all(isinstance(arg, str) and len(arg) <= 256 and "\0" not in arg
+                        for arg in args),
+                "invalid fixed executable arguments")
+    source = (root / "crates/pipboy-core/src/package_process.rs").read_text(encoding="utf-8")
+    safety = (root / "crates/pipboy-core/src/process_safety.rs").read_text(encoding="utf-8")
+    require('include_str!("../../../catalog/approved_package_executables.json")' in source
+            and "isolated_package_command(&spec.executable)" in source
+            and "pub fn isolated_package_command(" in safety
+            and "command.env_clear();" in safety
+            and "fn verify_executable" in source
+            and "fn terminate_and_reap" in source and "pub fn approved_process_spec" not in source
+            and "fn resolve_package_root" in source,
+            "supervised launcher must use the host roster and isolated launch helper, verify hash, and reap")
+    return len(rows)
 
 
 def check_manifest(m):
@@ -198,7 +261,8 @@ def validate(root=ROOT):
             "Rust reference registry and checked-in fixtures drift")
     check_adapter_sdk(root)
     check_adapter_contract(root)
-    print(f"PASS: {len(seen)} inert manifests and portable SDK boundary; no executable package installed")
+    pins = check_approved_executable_roster(root)
+    print(f"PASS: {len(seen)} inert manifests, {pins} reviewed executable pins, and bounded SDK boundary")
     return len(seen)
 
 

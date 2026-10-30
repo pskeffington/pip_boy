@@ -1,14 +1,16 @@
 # Terminal-to-module command surface (implementation contract)
 
-Status: **TC-A01 software gate accepted.** Exact source commit `7c4b06bc64f89cdb41b4be877b7b8742c130f38e` passed all 7 jobs in [Actions run 41003353102](https://github.com/pskeffington/pip_boy/actions/runs/41003353102). `pipboy-core::command_catalog` exposes five pinned offline toolsets with bounded typed arguments, stable native handler IDs, explicit read-only/scope/confirmation/connectivity metadata, source provenance, stable JSON and help descriptors, and structured timestamped outcomes. The existing `pipboy terminal` remains provisional and has not migrated to this shared interface; TC-A02 and TC-A03 are now unblocked. TUI/GUI integration and live MAP/TV/RADIO/COMMS adapters remain later gates.
+Status: **TC-A01 accepted; terminal bridge is hosted-validated; the full-screen TUI palette is implemented locally, with exact-head validation pending for TC-A02. GUI palette remains open.** The prior exact source commit [`d15247c0ee95663dd3b731db6716a42e6dc4e04f`](https://github.com/pskeffington/pip_boy/commit/d15247c0ee95663dd3b731db6716a42e6dc4e04f) passed all 7 jobs in [Actions run 41124747110](https://github.com/pskeffington/pip_boy/actions/runs/41124747110). `pipboy-core::command_catalog` exposes five pinned offline toolsets with bounded typed arguments, stable native handler IDs, explicit read-only/scope/confirmation/connectivity metadata, source provenance, stable JSON and help descriptors, and structured timestamped outcomes. `pipboy terminal` uses the shared parser and dispatcher through a thin native executor. The full-screen TUI now opens `/` as a palette scoped to the selected pinned Workbench tool, dispatches only registered offline handlers, closes on Escape without execution, retains host-owned Settings, and caps displayed output at 4096 bytes. Focused stable and Rust 1.90 tests and Clippy pass locally; the latest hosted exact-head run predates this TUI change. GUI palette integration remains open.
 
 ## Agent execution
 
 Follow [root AGENTS.md](../AGENTS.md), [GitHub-first execution packets](TERMINAL_AGENT_EXECUTION.md), and [machine-readable task statuses](../catalog/terminal_agent_tasks.json). Software gates should progress through GitHub source and CI, without requiring operator live side-by-side testing. Hardware/field release acceptance remains separate.
 
-## TC-A01 implementation checkpoint
+## TC-A01 catalog, TC-A02 terminal bridge, and TUI checkpoint
 
 The catalog is descriptive and deterministic. Parsing a command or selecting a tool never invokes a handler. Requests are admitted only for registered handlers and tools pinned in the caller-supplied Workbench set. Every registered command is currently read-only and offline; side-effect, scope, confirmation and connectivity fields are explicit so future commands cannot inherit implicit authority. `CommandResult<T>` records a typed value or error, handler status, source path and caller-supplied observation time. Tests cover bounds, unsupported/unpinned/shell-like inputs, help/source provenance, stable serialization and non-execution on selection.
+
+The terminal bridge routes `tools`, `select TOOL`, direct tool selection, `run COMMAND`, direct registered verbs, `help`, and quit through `parse_input` and `dispatch`. The full-screen TUI uses that same parser and dispatcher, scopes its slash palette to a pinned tool, bounds command text and rendered output, rejects control actions, and clears the modal on Escape without executing. Stable and Rust 1.90 focused tests pass: terminal command 6/6, console 7/7, TUI 7/7; warnings-denied Clippy and formatting pass on both. These are local checks for the current uncommitted source; the exact-head CI run and GUI palette remain pending.
 
 ## Goal
 
@@ -62,7 +64,8 @@ Unknown or unimplemented verbs must return an informative **NOT IMPLEMENTED** er
 |---|---|---|
 | TC-0 | Inventory existing `workbench`, `tui`, `console`, `radio`, `package_socket`, `universal_adapter`, and dashboard operations; matrix every advertised verb to an actual Rust handler | No imaginary or placeholder live verbs |
 | TC-1 | Shared command descriptor/schema, typed parser and bounded argument validation in `pipboy-core` | Unit tests for malformed inputs, injection attempts, arg bounds and stable help |
-| TC-2 | Local read-only dispatcher plus TUI palette, toolset selection and consistent results; use existing saved Workbench | TUI+CLI integration tests; selecting a toolset never executes a verb |
+| TC-2a | Migrate `pipboy terminal` to the shared parser/dispatcher while preserving direct selection and `run COMMAND` syntax | Focused terminal tests on stable/MSRV, no duplicate token parser, exact-head CI |
+| TC-2b | Integrate full-screen TUI prompt/palette, scoped help, keyboard navigation and bounded output | TUI interaction/snapshot tests, Escape without execution, selected toolset uses saved Workbench |
 | TC-3 | Reuse implemented native RADIO and offline MAP operations only where already validated; keep TV/COMMS unavailable until their real adapters register | Real handler tests and deny-by-default tests; do not import external code or fetch repos during execution |
 | TC-4 | Connect trusted installed adapter commands to the universal adapter host, including lifecycle and capability checks | Cross-surface contract tests, rejected discovery fixtures, revocation and fault isolation |
 | TC-5 | GUI command palette shares catalog, state and policy with TUI; Settings remains host-owned | Desktop + 480x320 keyboard/touch acceptance; no overflow or forced scroll |
