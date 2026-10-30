@@ -101,7 +101,7 @@
       "owner": "SECURITY_QA",
       "priority": 0,
       "depends_on": [],
-      "status": "queued",
+      "status": "accepted_software",
       "paths": [
         "crates/pipboy-core/tests",
         "crates/pipboy/src/terminal_commands.rs",
@@ -114,7 +114,19 @@
         "Fail closed; startup_failure with no jobs recorded blocked"
       ],
       "gate": "TC-1/TC-6",
-      "issue": 74
+      "issue": 74,
+      "local_evidence": {
+        "stable": "cargo +stable test --locked --offline -p pipboy-core command_catalog::tests — 7 passed; cargo +stable test --locked --offline -p pipboy-core --test command_security — 5 passed; pipboy-core Clippy -D warnings passed",
+        "rust_1_90": "cargo +1.90.0 test --locked --offline -p pipboy-core command_catalog::tests — 7 passed; cargo +1.90.0 test --locked --offline -p pipboy-core --test command_security — 5 passed; pipboy-core Clippy -D warnings passed",
+        "security_boundary": "CommandFailure serializes only fixed safe categories, preventing transport details from carrying message bodies or credentials into command-result JSON."
+      },
+      "ci_evidence": {
+        "exact_head_commit": "83cbdf20ca0f1c008f0c0bad2cefd38d7640c349",
+        "workflow_run": 41005115247,
+        "workflow_url": "https://github.com/pskeffington/pip_boy/actions/runs/41005115247",
+        "jobs_passed": "7/7",
+        "note": "Exact PR head passed stable (including desktop/micro Chromium and runtime CLI smoke), Rust 1.90, native macOS, native Windows, both SDR feature jobs, and source/module validation. No hardware acceptance is implied."
+      }
     },
     {
       "id": "TC-A05",
