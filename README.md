@@ -238,3 +238,7 @@ Public brand: **Rust-Boy**. Compatibility names remain `pip_boy` (repository), `
 ### RADIO from the Rust-Boy HUD
 
 Launch the micro HUD with `./scripts/launch-micro.command` or `cargo run --locked -p pipboy -- dashboard --micro`. Under **RADIO**, select a station and explicitly press **PLAY**; Play/Stop and volume control native Rust audio. **☆/★** saves favorites, **★ ONLY** shows user-ordered presets, and **SETTINGS** manages output devices and ordering. Selection survives restart without autoplay. On desktop, select **VIEWPORT → RADIO / IP** to open the same native session and local preferences; it is not shown as an extra scrolling page. Mac speaker/Bluetooth playback has been demonstrated; expanded station availability and Pi hardware acceptance remain open.
+
+## SCAN — planned fifth camera-first module
+
+**Not installed, not activated.** A future [SCAN module](docs/SCAN_RUSTBOY_INTEGRATION.md) will use attached cameras or paired phone cameras, including reciprocal Rust-Boy-camera-to-phone capture requests, for governed TRANS visual OCR/HTR review. [Capture contract](docs/SCAN_CAPTURE_CONTRACT.md) and [cross-repo agent task queue](catalog/scan_agent_tasks.json) define the staged gates. Current `packages scan` manifest discovery and NET ENGINEER `SCAN LAN` remain unrelated and unchanged; the four existing reference package fixtures remain the only indexed module designs until new validator/adapter tests are accepted.
