@@ -56,7 +56,7 @@
       "depends_on": [
         "TC-A01"
       ],
-      "status": "queued",
+      "status": "in_progress",
       "paths": [
         "crates/pipboy/src/terminal_commands.rs",
         "crates/pipboy/src/console.rs",
@@ -70,7 +70,17 @@
         "Keyboard navigation and bounded output regression"
       ],
       "gate": "TC-2",
-      "issue": 75
+      "issue": 75,
+      "progress": {
+        "checkpoint": "Shared typed parser now routes CLI selection, help and execution requests; legacy offline native handler remains bounded by catalog metadata. TUI command palette not yet wired.",
+        "commit": "9e0a46dd63756e12fa7d6d1e725bb7a872e8bd58",
+        "validation": "Pending exact-head CI; no tests executed by connector in this pass",
+        "remaining": [
+          "Migrate TUI command palette through same parser/dispatcher",
+          "Unify native executor rather than retaining temporary CLI adapter",
+          "Run stable and Rust 1.90 workspace, security and interaction CI"
+        ]
+      }
     },
     {
       "id": "TC-A03",
