@@ -16,6 +16,7 @@ class Element {
     this.classList = {
       add: name => { this.className += " " + name; },
       remove: name => { this.className = this.className.split(" ").filter(x => x !== name).join(" "); },
+      contains: name => this.className.split(" ").includes(name),
       toggle: (name, on) => on ? this.classList.add(name) : this.classList.remove(name)
     };
   }
@@ -60,10 +61,23 @@ const fixture = {
   palette:toolIds.map(id => ({id, section:roleIds.includes(id) ? "role" : dataIds.includes(id) ? "data" : "stat", name:id.toUpperCase(), availability:"ready", description:"Invented test tool"})),
   active:{profile:"role-0", slots:toolIds.map((tool, id) => ({id, tool}))}
 };
+const packageFixture = {
+  catalog_state:"reference_designs_only",
+  active_socket_package_id:null,
+  packages:[
+    {manifest:{name:"TV",package_id:"org.rustboy.tv"},installed:true,activatable:true,state:"registered"},
+    {manifest:{name:"COMMS",package_id:"org.rustboy.comms"},installed:false,activatable:false},
+    {manifest:{name:"MUSIC",package_id:"org.rustboy.music"},installed:false,activatable:false},
+    {manifest:{name:"<img src=x>",package_id:"org.test.untrusted"},installed:false,activatable:false}
+  ]
+};
 const context = vm.createContext({document, window, Element, console, Intl, Date,
   setTimeout:() => 1, clearTimeout() {}, setInterval() {},
   MutationObserver:class {observe() {}},
-  fetch:async url => {requests.push(url); return {ok:true, json:async () => fixture};}
+  fetch:async url => {
+    requests.push(url);
+    return {ok:true,json:async()=>url==="/api/packages"?packageFixture:url==="/api/packages/select"?{active_package_id:"org.rustboy.tv",view:{title:"TV",text:"Ready",items:["Channel 1"]}}:fixture};
+  }
 });
 vm.runInContext(fs.readFileSync(path.join(assets, "micro.js"), "utf8"), context);
 const run = code => vm.runInContext(code, context);
@@ -136,6 +150,28 @@ const tiles = () => content.querySelectorAll(".tile");
   run("back()");
   assert.equal(run("tab"), "conf");
   assert.equal(run("paletteOpen"), false, "Back must return to Settings");
+  document.getElementById("micro-modules").click();
+  await new Promise(setImmediate);
+  const moduleDialog=document.getElementById("modules-dialog");
+  const moduleRows=document.getElementById("modules-list").children;
+  assert.equal(moduleDialog.open,true,"The persistent host Modules control opens its dialog");
+  assert.deepEqual(requests,["/api/state","/api/packages"],"Opening Modules reads only the local package registry");
+  assert.equal(moduleRows.length,4,"The switcher displays every returned registry entry");
+  assert.ok(moduleRows[0].textContent.includes("org.rustboy.tv"));
+  assert.ok(moduleRows[1].textContent.includes("org.rustboy.comms"));
+  assert.ok(moduleRows[2].classList.contains("module-music-package"),"MUSIC has distinct phosphor styling");
+  assert.equal(moduleRows[2].dataset.packageId,"org.rustboy.music");
+  assert.ok(moduleRows[3].textContent.includes("<img src=x>"),"Registry labels render as inert text");
+  assert.ok(moduleRows.slice(1).every(row=>row.children[2].disabled),"Reference packages never get an activation control");
+  assert.equal(moduleRows[0].children[2].disabled,false,"A mounted host adapter gets a switch action");
+  moduleRows[0].children[2].click();
+  await new Promise(setImmediate);
+  assert.deepEqual(requests,["/api/state","/api/packages","/api/packages/select"],"Switch uses the host lifecycle route");
+  assert.equal(content.querySelector(".module-live-view").textContent.includes("Channel 1"),true,"Package view is rendered in the live shell");
+  moduleRows[3].children[2].click();
+  assert.deepEqual(requests,["/api/state","/api/packages","/api/packages/select"],"Untrusted package row cannot dispatch a request");
+  document.getElementById("close-modules").click();
+  assert.equal(moduleDialog.open,false,"The module switcher has a visible close action");
   // A resize must leave mounted tool editors intact.
   run('snapshot.active.profile = "role-0"; openTool("byte-lab")');
   const editor = content.children[0];

@@ -16,7 +16,8 @@
     "min_height": 240
   },
   "capabilities": [
-    "media.audio"
+    "media.audio",
+    "media.library.read"
   ],
   "background": {
     "allowed": false

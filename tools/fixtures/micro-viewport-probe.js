@@ -73,6 +73,23 @@ const inside=(node,box)=>{
         throw Error("Detail Back/title missing from shared header");
       back();
     }
+    document.getElementById("micro-modules").click();
+    await settle();
+    const moduleDialog=document.getElementById("modules-dialog");
+    const moduleRows=[...document.querySelectorAll("#modules-list [role='listitem']")];
+    const switchButton=document.getElementById("micro-modules");
+    if(!moduleDialog.open || moduleRows.length!==5)
+      throw Error("Host module switcher did not load all reference packages");
+    if(switchButton.getBoundingClientRect().height<44)
+      throw Error("Module switcher touch target is smaller than 44px");
+    if(!moduleRows.every(row=>row.querySelector("button")?.disabled))
+      throw Error("Reference packages must not expose executable activation controls");
+    const dialogBox=moduleDialog.getBoundingClientRect();
+    if(dialogBox.left<0 || dialogBox.right>window.innerWidth+1 ||
+       dialogBox.top<0 || dialogBox.bottom>window.innerHeight+1)
+      throw Error("Module switcher dialog is clipped by the handheld viewport");
+    document.getElementById("close-modules").click();
+    report.moduleSwitcher={count:moduleRows.length,unavailable:true};
     parent.postMessage({type:"dashboard-viewport",value:report},location.origin);
   }catch(error){parent.postMessage({type:"dashboard-viewport",value:{error:error.message}},location.origin);}
 })();

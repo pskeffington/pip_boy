@@ -31,6 +31,7 @@ const KNOWN_SCOPES: &[&str] = &[
     "network.fetch.explicit",
     "media.video",
     "media.audio",
+    "media.library.read",
     "radio.device",
     "network.connect.explicit",
     "messages.local.write",
@@ -438,9 +439,12 @@ mod tests {
         assert_eq!(catalog.len(), 5);
         let music = catalog.get("org.rustboy.music").unwrap();
         assert_eq!(music.name, "MUSIC");
-        assert_eq!(music.capabilities, ["media.audio"]);
+        assert_eq!(music.capabilities, ["media.audio", "media.library.read"]);
         assert!(!music.background.allowed);
-        assert_eq!(music.status.as_deref(), Some("design_fixture_not_installed"));
+        assert_eq!(
+            music.status.as_deref(),
+            Some("design_fixture_not_installed")
+        );
         for entry in catalog.entries() {
             assert_eq!(
                 entry.status.as_deref(),

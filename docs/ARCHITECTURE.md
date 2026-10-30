@@ -2,7 +2,7 @@
 
 ## Target host and package architecture
 
-The [host package roadmap](HOST_PACKAGE_ROADMAP.md) defines a future **one-foreground-package-at-a-time** shell with an always-available host Settings control. A **read-only manifest registry precursor** is now implemented as `pipboy_core::package_socket`; `pipboy packages` CLI and loopback `GET /api/packages` inspect schema-1 package references but **cannot install or launch them**. Installed/trust state, foreground switching, background lifecycle, capability brokering and independent adapter release gates remain planned; the current in-process ModuleHost is not a security sandbox. Existing dashboard and micro navigation remain the implemented baseline pending HOST-UI gates.
+The [host package roadmap](HOST_PACKAGE_ROADMAP.md) defines a **one-foreground-package-at-a-time** shell with an always-available host Settings control. `pipboy packages` and loopback `GET /api/packages` expose schema-1 references and runtime mount state. Guarded `POST /api/packages/select` can lazily mount a module only when the compiled host roster pins both its executable and manifest, both files are present under `$PIPBOY_HOME/packages/<package-id>` (default `~/.pipboy/packages/<package-id>`), and their SHA-256 checks pass; UI input cannot choose either path. `/api/packages/intent` sends only allowlisted UI actions to mounted adapters. The roster is currently empty, so no external module launches at startup or can be selected. Release artifact approval, persisted capability brokering, native module integration, and independent adapter release gates remain open; this protocol is fault containment, not an OS sandbox.
 
 ## Current Network Engineer integration
 

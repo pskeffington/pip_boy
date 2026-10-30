@@ -4,11 +4,13 @@
 //! UniFi read-only HTTPS discovery; it never scans merely by being imported.
 //! Serial port and radio interfaces remain inactive.
 
+pub mod audio_focus;
 pub mod blueprint;
 pub mod branding;
 pub mod buffer;
 pub mod capability;
 pub mod catalog;
+pub mod command_catalog;
 pub mod device_simulator;
 pub mod diagnostics;
 pub mod game;
@@ -30,6 +32,7 @@ pub mod organization;
 pub mod organization_authority;
 pub mod organization_identity;
 pub mod organization_policy;
+pub mod package_process;
 pub mod package_socket;
 pub mod peers;
 pub mod permissions;

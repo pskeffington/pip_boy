@@ -130,6 +130,15 @@ async function main() {
     if(url.pathname==="/api/state")return send(200,JSON.stringify(state(
       (req.headers.referer||"").includes("scenario=desktop-map")?"scout":
       (req.headers.referer||"").includes("scenario=custom")?"custom":"security")));
+    if(url.pathname==="/api/packages")return send(200,JSON.stringify({
+      catalog_state:"reference_designs_only",adapter_mounting_available:false,
+      active_socket_package_id:null,packages:[
+        {manifest:{name:"TV",package_id:"org.rustboy.tv"},installed:false,activatable:false},
+        {manifest:{name:"COMMS",package_id:"org.rustboy.comms"},installed:false,activatable:false},
+        {manifest:{name:"RADIO",package_id:"org.rustboy.radio"},installed:false,activatable:false},
+        {manifest:{name:"MAP",package_id:"org.rustboy.gis"},installed:false,activatable:false},
+        {manifest:{name:"MUSIC",package_id:"org.rustboy.music"},installed:false,activatable:false}
+      ]}));
     if(url.pathname==="/api/tasks")return send(200,JSON.stringify({board:{tasks:[]},manager:true}));
     if(url.pathname==="/api/radio")return send(200,JSON.stringify({source:"none",status:"stopped",
       station:null,volume:60,outputs:[],output:"system",presets:{favorites:[],last_selected:null},

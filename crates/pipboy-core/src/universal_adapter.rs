@@ -4,6 +4,7 @@
 //! `rust-boy-adapter-sdk` crate. This host never loads arbitrary executables,
 //! grants permissions, or treats package manifests as proof of installation.
 
+use crate::audio_focus::{AudioFocusBroker, AudioFocusLease, AudioModule, HOST_AUDIO_FOCUS};
 use crate::package_socket::{
     EntrypointKind, ForegroundSelection, HostSurface, PackageManifest, PackageRegistry,
 };
@@ -14,6 +15,7 @@ pub use rust_boy_adapter_sdk::{
 };
 use serde_json::Value;
 use std::collections::{BTreeMap, BTreeSet};
+use std::sync::{Arc, Mutex};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum AdapterState {
@@ -29,6 +31,9 @@ struct MountedAdapter {
     runner: Box<dyn UniversalPackageAdapter>,
     state: AdapterState,
     last_view: Option<Value>,
+    /// Retained while an audio-capable adapter may still own output. Release
+    /// only after its lifecycle acknowledges suspend or shutdown.
+    audio_focus: Arc<Mutex<Option<AudioFocusLease>>>,
 }
 
 /// Host-owned foreground manager. Every adapter follows the same protocol;
@@ -39,16 +44,24 @@ pub struct UniversalAdapterHost {
     foreground: ForegroundSelection,
     viewport: Viewport,
     next_request_id: u64,
+    audio_focus: AudioFocusBroker,
 }
 
 impl UniversalAdapterHost {
     pub fn new(viewport: Viewport) -> Self {
+        Self::with_audio_focus(viewport, HOST_AUDIO_FOCUS.clone())
+    }
+
+    /// Construct a host against the shared broker. The explicit broker form
+    /// lets deterministic tests isolate lifecycle claims from the live host.
+    pub(crate) fn with_audio_focus(viewport: Viewport, audio_focus: AudioFocusBroker) -> Self {
         Self {
             registry: PackageRegistry::default(),
             mounted: BTreeMap::new(),
             foreground: ForegroundSelection::default(),
             viewport,
             next_request_id: 0,
+            audio_focus,
         }
     }
 
@@ -60,11 +73,50 @@ impl UniversalAdapterHost {
         manifest_json: &str,
         runner: Box<dyn UniversalPackageAdapter>,
     ) -> Result<(), AdapterError> {
+        self.mount_runner(manifest_json, runner, false)
+    }
+
+    /// Mount a child only when the typed executable selection came from the
+    /// source-controlled host roster. Manifest text cannot choose its path.
+    pub fn mount_approved_process(
+        &mut self,
+        manifest_json: &str,
+        spec: crate::package_process::TrustedProcessSpec,
+    ) -> Result<(), AdapterError> {
         let manifest = PackageManifest::parse(manifest_json)
             .map_err(|error| AdapterError::Registry(error.to_string()))?;
-        if manifest.status.is_some() || manifest.entrypoint.kind != EntrypointKind::BuiltinAdapter {
+        if manifest.status.is_some() || manifest.entrypoint.kind != EntrypointKind::ExternalProcess
+        {
             return Err(AdapterError::Denied(
-                "only approved installed built-in adapters can be mounted",
+                "approved process manifest must omit installation claims and use external_process",
+            ));
+        }
+        if manifest.package_id != spec.package_id() {
+            return Err(AdapterError::Denied(
+                "approved executable does not match package identity",
+            ));
+        }
+        let runner =
+            crate::package_process::SupervisedProcessAdapter::spawn(spec).map_err(|error| {
+                AdapterError::Unavailable(format!("approved package launch failed: {error:?}"))
+            })?;
+        self.mount_runner(manifest_json, Box::new(runner), true)
+    }
+
+    fn mount_runner(
+        &mut self,
+        manifest_json: &str,
+        mut runner: Box<dyn UniversalPackageAdapter>,
+        allow_external_process: bool,
+    ) -> Result<(), AdapterError> {
+        let manifest = PackageManifest::parse(manifest_json)
+            .map_err(|error| AdapterError::Registry(error.to_string()))?;
+        let entrypoint_approved = manifest.entrypoint.kind == EntrypointKind::BuiltinAdapter
+            || (allow_external_process
+                && manifest.entrypoint.kind == EntrypointKind::ExternalProcess);
+        if manifest.status.is_some() || !entrypoint_approved {
+            return Err(AdapterError::Denied(
+                "adapter is not approved for this host mounting path",
             ));
         }
         if runner.package_id() != manifest.package_id {
@@ -73,6 +125,13 @@ impl UniversalAdapterHost {
         self.registry
             .insert_json(manifest_json)
             .map_err(|error| AdapterError::Registry(error.to_string()))?;
+        let audio_focus = Arc::new(Mutex::new(None));
+        let exit_audio_focus = audio_focus.clone();
+        runner.set_process_exit_hook(Arc::new(move || {
+            if let Ok(mut lease) = exit_audio_focus.lock() {
+                lease.take();
+            }
+        }));
         self.mounted.insert(
             manifest.package_id.clone(),
             MountedAdapter {
@@ -80,6 +139,7 @@ impl UniversalAdapterHost {
                 runner,
                 state: AdapterState::Registered,
                 last_view: None,
+                audio_focus,
             },
         );
         Ok(())
@@ -122,6 +182,44 @@ impl UniversalAdapterHost {
         if let Some(entry) = self.mounted.get_mut(package_id) {
             entry.state = AdapterState::Faulted;
             entry.last_view = None;
+        }
+    }
+
+    fn audio_module(package_id: &str) -> Option<AudioModule> {
+        match package_id {
+            "org.rustboy.radio" => Some(AudioModule::Radio),
+            "org.rustboy.music" => Some(AudioModule::Music),
+            "org.rustboy.tv" => Some(AudioModule::Television),
+            _ => None,
+        }
+    }
+
+    fn reserve_audio(&mut self, package_id: &str) -> Result<(), AdapterError> {
+        let Some(module) = Self::audio_module(package_id) else {
+            return Ok(());
+        };
+        let entry = self
+            .mounted
+            .get_mut(package_id)
+            .ok_or_else(|| AdapterError::Unavailable("package is not mounted".into()))?;
+        let mut lease = entry
+            .audio_focus
+            .lock()
+            .map_err(|_| AdapterError::Unavailable("audio ownership state unavailable".into()))?;
+        if lease.is_some() {
+            return Ok(());
+        }
+        *lease = Some(self.audio_focus.try_acquire(module).ok_or_else(|| {
+            AdapterError::Unavailable("Audio output is owned by another module".into())
+        })?);
+        Ok(())
+    }
+
+    fn release_audio(&mut self, package_id: &str) {
+        if let Some(entry) = self.mounted.get_mut(package_id) {
+            if let Ok(mut lease) = entry.audio_focus.lock() {
+                lease.take();
+            }
         }
     }
 
@@ -191,13 +289,18 @@ impl UniversalAdapterHost {
         }
         if let Some(ref id) = prior {
             if !from_settings {
-                if let Err(error) = self.invoke(id, AdapterCommand::Suspend) {
-                    self.fail(id);
-                    self.foreground.clear_package();
-                    return Err(error);
-                }
-                if let Some(entry) = self.mounted.get_mut(id) {
-                    entry.state = AdapterState::Suspended;
+                match self.invoke(id, AdapterCommand::Suspend) {
+                    Ok(()) => {
+                        if let Some(entry) = self.mounted.get_mut(id) {
+                            entry.state = AdapterState::Suspended;
+                        }
+                        self.release_audio(id);
+                    }
+                    Err(error) => {
+                        self.fail(id);
+                        self.foreground.clear_package();
+                        return Err(error);
+                    }
                 }
             }
         }
@@ -211,19 +314,48 @@ impl UniversalAdapterHost {
                 viewport: self.viewport,
             }
         };
-        if let Err(error) = self.invoke(package_id, activate) {
-            self.fail(package_id);
+        if let Err(error) = self.reserve_audio(package_id) {
             if let Some(old) = prior {
                 if !from_settings {
-                    if self
-                        .invoke(
+                    let restored = self.reserve_audio(&old).and_then(|()| {
+                        self.invoke(
                             &old,
                             AdapterCommand::Resume {
                                 viewport: self.viewport,
                             },
                         )
-                        .is_ok()
-                    {
+                    });
+                    if restored.is_ok() {
+                        if let Some(entry) = self.mounted.get_mut(&old) {
+                            entry.state = AdapterState::Foreground;
+                        }
+                    } else {
+                        self.fail(&old);
+                        self.foreground.clear_package();
+                    }
+                }
+            }
+            return Err(error);
+        }
+        if let Err(error) = self.invoke(package_id, activate) {
+            self.fail(package_id);
+            // An adapter may have started output before returning an error.
+            // Retain its reservation unless Shutdown positively acknowledges
+            // cleanup; this prevents a failed package from overlapping audio.
+            if self.invoke(package_id, AdapterCommand::Shutdown).is_ok() {
+                self.release_audio(package_id);
+            }
+            if let Some(old) = prior {
+                if !from_settings {
+                    let restored = self.reserve_audio(&old).and_then(|()| {
+                        self.invoke(
+                            &old,
+                            AdapterCommand::Resume {
+                                viewport: self.viewport,
+                            },
+                        )
+                    });
+                    if restored.is_ok() {
                         if let Some(entry) = self.mounted.get_mut(&old) {
                             entry.state = AdapterState::Foreground;
                         }
@@ -255,8 +387,11 @@ impl UniversalAdapterHost {
             if self.invoke(&id, AdapterCommand::Suspend).is_err() {
                 self.fail(&id);
                 self.foreground.clear_package();
-            } else if let Some(entry) = self.mounted.get_mut(&id) {
-                entry.state = AdapterState::Suspended;
+            } else {
+                if let Some(entry) = self.mounted.get_mut(&id) {
+                    entry.state = AdapterState::Suspended;
+                }
+                self.release_audio(&id);
             }
         }
         self.foreground.open_settings();
@@ -268,6 +403,7 @@ impl UniversalAdapterHost {
         }
         if let Some(id) = self.foreground.active_package_id().map(str::to_owned) {
             self.viewport_supported(&id)?;
+            self.reserve_audio(&id)?;
             if let Err(error) = self.invoke(
                 &id,
                 AdapterCommand::Resume {
@@ -293,10 +429,14 @@ impl UniversalAdapterHost {
             let id = id.to_owned();
             if self.viewport_supported(&id).is_err() {
                 // Keep the shell usable and retain installed package metadata.
-                let _ = self.invoke(&id, AdapterCommand::Suspend);
-                if let Some(entry) = self.mounted.get_mut(&id) {
-                    entry.state = AdapterState::Suspended;
-                    entry.last_view = None;
+                if self.invoke(&id, AdapterCommand::Suspend).is_ok() {
+                    self.release_audio(&id);
+                    if let Some(entry) = self.mounted.get_mut(&id) {
+                        entry.state = AdapterState::Suspended;
+                        entry.last_view = None;
+                    }
+                } else {
+                    self.fail(&id);
                 }
                 self.foreground.clear_package();
                 return Err(AdapterError::Unavailable(
@@ -398,6 +538,7 @@ impl UniversalAdapterHost {
             entry.last_view = None;
             entry.state = AdapterState::Stopped;
         }
+        self.release_audio(package_id);
         if self.foreground.active_package_id() == Some(package_id) {
             self.foreground.clear_package();
         }
@@ -411,7 +552,21 @@ impl Drop for UniversalAdapterHost {
         // handle hung/crashed processes independently of Rust Drop.
         let ids: Vec<_> = self.mounted.keys().cloned().collect();
         for id in ids {
-            let _ = self.shutdown(&id);
+            if self.shutdown(&id).is_err() {
+                if let Some(entry) = self.mounted.get_mut(&id) {
+                    // A supervised runner's Drop kills and reaps the process,
+                    // then its callback releases the still-owned lease cell.
+                    // In-process adapters have no such OS-exit proof, so keep
+                    // their broker claim until the host process exits.
+                    if !entry.runner.is_supervised_process() {
+                        if let Ok(mut slot) = entry.audio_focus.lock() {
+                            if let Some(mut lease) = slot.take() {
+                                lease.retain_claim_on_drop();
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 }
@@ -477,20 +632,25 @@ mod tests {
         calls
     }
 
+    fn isolated_host(viewport: Viewport) -> UniversalAdapterHost {
+        UniversalAdapterHost::with_audio_focus(viewport, AudioFocusBroker::default())
+    }
+
     #[test]
-    fn single_protocol_mounts_all_four_reference_types_without_special_cases() {
-        let mut host = UniversalAdapterHost::new(Viewport::new(480, 320).unwrap());
+    fn single_protocol_mounts_all_five_reference_types_without_special_cases() {
+        let mut host = isolated_host(Viewport::new(480, 320).unwrap());
         let ids = [
             "org.rustboy.gis",
             "org.rustboy.tv",
             "org.rustboy.radio",
             "org.rustboy.comms",
+            "org.rustboy.music",
         ];
         let mut logs = Vec::new();
         for id in ids {
             logs.push(mount(&mut host, id, None));
         }
-        assert_eq!(host.len(), 4);
+        assert_eq!(host.len(), 5);
         assert!(logs.iter().all(|l| l.lock().unwrap().is_empty()));
         for id in ids {
             host.select(id).unwrap();
@@ -498,7 +658,7 @@ mod tests {
             assert_eq!(host.state(id), Some(AdapterState::Foreground));
             assert!(host.foreground_view().is_some());
         }
-        assert_eq!(host.surface(), HostSurface::Package("org.rustboy.comms"));
+        assert_eq!(host.surface(), HostSurface::Package("org.rustboy.music"));
         let foreground = host
             .mounted
             .values()
@@ -508,8 +668,88 @@ mod tests {
     }
 
     #[test]
+    fn audio_adapter_lease_is_shared_and_tracks_acknowledged_lifecycle() {
+        let broker = AudioFocusBroker::default();
+        let mut host = UniversalAdapterHost::with_audio_focus(
+            Viewport::new(480, 320).unwrap(),
+            broker.clone(),
+        );
+        let music_calls = mount(&mut host, "org.rustboy.music", None);
+        let tv_calls = mount(&mut host, "org.rustboy.tv", None);
+
+        host.select("org.rustboy.music").unwrap();
+        assert_eq!(broker.owner(), Some(AudioModule::Music));
+        assert!(broker.try_acquire(AudioModule::Radio).is_none());
+
+        host.open_settings();
+        assert_eq!(broker.owner(), None, "successful suspend releases audio");
+        host.close_settings().unwrap();
+        assert_eq!(broker.owner(), Some(AudioModule::Music));
+
+        host.select("org.rustboy.tv").unwrap();
+        assert_eq!(broker.owner(), Some(AudioModule::Television));
+        assert_eq!(
+            host.state("org.rustboy.music"),
+            Some(AdapterState::Suspended)
+        );
+        assert_eq!(music_calls.lock().unwrap().len(), 4);
+        assert_eq!(tv_calls.lock().unwrap().len(), 1);
+
+        host.unmount("org.rustboy.tv").unwrap();
+        assert_eq!(broker.owner(), None, "acknowledged shutdown releases audio");
+    }
+
+    #[test]
+    fn failed_audio_suspend_retains_lease_and_blocks_another_audio_adapter() {
+        let broker = AudioFocusBroker::default();
+        let mut host = UniversalAdapterHost::with_audio_focus(
+            Viewport::new(480, 320).unwrap(),
+            broker.clone(),
+        );
+        let music_calls = mount(&mut host, "org.rustboy.music", Some("suspend"));
+        let tv_calls = mount(&mut host, "org.rustboy.tv", None);
+
+        host.select("org.rustboy.music").unwrap();
+        host.open_settings();
+        assert_eq!(host.surface(), HostSurface::Settings);
+        assert_eq!(host.state("org.rustboy.music"), Some(AdapterState::Faulted));
+        assert_eq!(broker.owner(), Some(AudioModule::Music));
+
+        assert!(host.select("org.rustboy.tv").is_err());
+        assert!(
+            tv_calls.lock().unwrap().is_empty(),
+            "blocked TV must not activate"
+        );
+        assert_eq!(broker.owner(), Some(AudioModule::Music));
+
+        host.shutdown("org.rustboy.music").unwrap();
+        assert_eq!(broker.owner(), None);
+        assert_eq!(
+            music_calls.lock().unwrap().last(),
+            Some(&AdapterCommand::Shutdown)
+        );
+    }
+
+    #[test]
+    fn failed_audio_shutdown_retains_claim_after_host_drop() {
+        let broker = AudioFocusBroker::default();
+        {
+            let mut host = UniversalAdapterHost::with_audio_focus(
+                Viewport::new(480, 320).unwrap(),
+                broker.clone(),
+            );
+            mount(&mut host, "org.rustboy.music", Some("shutdown"));
+            host.select("org.rustboy.music").unwrap();
+            assert!(host.shutdown("org.rustboy.music").is_err());
+            assert_eq!(broker.owner(), Some(AudioModule::Music));
+        }
+        assert_eq!(broker.owner(), Some(AudioModule::Music));
+        assert!(broker.try_acquire(AudioModule::Television).is_none());
+    }
+
+    #[test]
     fn design_fixtures_and_untrusted_process_launchers_are_never_mounted() {
-        let mut host = UniversalAdapterHost::new(Viewport::new(480, 320).unwrap());
+        let mut host = isolated_host(Viewport::new(480, 320).unwrap());
         let calls = Arc::new(Mutex::new(Vec::new()));
         let runner = || {
             Box::new(Fixture {
@@ -535,7 +775,7 @@ mod tests {
 
     #[test]
     fn settings_never_yields_foreground_canvas_or_loses_selection() {
-        let mut host = UniversalAdapterHost::new(Viewport::new(480, 320).unwrap());
+        let mut host = isolated_host(Viewport::new(480, 320).unwrap());
         let calls = mount(&mut host, "org.rustboy.radio", None);
         host.select("org.rustboy.radio").unwrap();
         host.open_settings();
@@ -550,7 +790,7 @@ mod tests {
 
     #[test]
     fn failed_activation_restores_previous_foreground() {
-        let mut host = UniversalAdapterHost::new(Viewport::new(480, 320).unwrap());
+        let mut host = isolated_host(Viewport::new(480, 320).unwrap());
         let previous = mount(&mut host, "org.rustboy.gis", None);
         let failing = mount(&mut host, "org.rustboy.tv", Some("activate"));
         host.select("org.rustboy.gis").unwrap();
@@ -562,7 +802,11 @@ mod tests {
         );
         assert_eq!(host.state("org.rustboy.tv"), Some(AdapterState::Faulted));
         assert_eq!(previous.lock().unwrap().len(), 3);
-        assert_eq!(failing.lock().unwrap().len(), 1);
+        assert_eq!(
+            failing.lock().unwrap().len(),
+            2,
+            "failed activation is followed by best-effort shutdown"
+        );
         host.open_settings();
         assert_eq!(host.surface(), HostSurface::Settings);
     }
@@ -575,7 +819,7 @@ mod tests {
                 id == "org.rustboy.radio" && scope == "media.audio"
             }
         }
-        let mut host = UniversalAdapterHost::new(Viewport::new(480, 320).unwrap());
+        let mut host = isolated_host(Viewport::new(480, 320).unwrap());
         let log = mount(&mut host, "org.rustboy.radio", None);
         host.select("org.rustboy.radio").unwrap();
         assert!(host
@@ -631,7 +875,7 @@ mod tests {
 
     #[test]
     fn duplicate_or_mismatched_package_rejected_without_calls() {
-        let mut host = UniversalAdapterHost::new(Viewport::new(480, 320).unwrap());
+        let mut host = isolated_host(Viewport::new(480, 320).unwrap());
         mount(&mut host, "org.rustboy.gis", None);
         let calls = Arc::new(Mutex::new(Vec::new()));
         let duplicate = Fixture {
@@ -656,7 +900,7 @@ mod tests {
 
     #[test]
     fn unmount_releases_socket_and_accepts_replacement_adapter() {
-        let mut host = UniversalAdapterHost::new(Viewport::new(480, 320).unwrap());
+        let mut host = isolated_host(Viewport::new(480, 320).unwrap());
         let calls = mount(&mut host, "org.rustboy.tv", None);
         host.select("org.rustboy.tv").unwrap();
         host.unmount("org.rustboy.tv").unwrap();
@@ -671,7 +915,7 @@ mod tests {
 
     #[test]
     fn viewport_downsize_removes_only_package_canvas_and_preserves_settings() {
-        let mut host = UniversalAdapterHost::new(Viewport::new(800, 480).unwrap());
+        let mut host = isolated_host(Viewport::new(800, 480).unwrap());
         let mut wide: Value = serde_json::from_str(&manifest("org.rustboy.gis")).unwrap();
         wide["ui"]["min_width"] = json!(640);
         let calls = Arc::new(Mutex::new(Vec::new()));
@@ -696,7 +940,7 @@ mod tests {
 
     #[test]
     fn failed_resume_does_not_hide_settings() {
-        let mut host = UniversalAdapterHost::new(Viewport::new(480, 320).unwrap());
+        let mut host = isolated_host(Viewport::new(480, 320).unwrap());
         mount(&mut host, "org.rustboy.comms", Some("resume"));
         host.select("org.rustboy.comms").unwrap();
         host.open_settings();
@@ -719,7 +963,7 @@ mod tests {
                 })
             }
         }
-        let mut host = UniversalAdapterHost::new(Viewport::new(480, 320).unwrap());
+        let mut host = isolated_host(Viewport::new(480, 320).unwrap());
         host.mount_trusted(&manifest("org.rustboy.gis"), Box::new(HugeView))
             .unwrap();
         assert!(host.select("org.rustboy.gis").is_err());
@@ -731,7 +975,7 @@ mod tests {
 
     #[test]
     fn shutdown_clears_view_without_affecting_host_settings() {
-        let mut host = UniversalAdapterHost::new(Viewport::new(480, 320).unwrap());
+        let mut host = isolated_host(Viewport::new(480, 320).unwrap());
         mount(&mut host, "org.rustboy.comms", None);
         host.select("org.rustboy.comms").unwrap();
         host.shutdown("org.rustboy.comms").unwrap();

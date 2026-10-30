@@ -641,3 +641,7 @@ body:has(.rb-map-canvas-only) #desktop-map-nav { display:block; }
 @media(pointer:coarse) {
   .command-task-mount .task-button,.command-quick-actions button { min-height:44px; }
 }
+
+.host-package-list { display:grid; gap:8px; margin:10px 0; }
+.host-package-row { display:grid; grid-template-columns:minmax(100px,1fr) minmax(150px,2fr) minmax(130px,1fr) auto; align-items:center; gap:10px; padding:10px; border:1px solid var(--line,#334); border-radius:8px; }
+.host-package-controls { display:flex; flex-wrap:wrap; gap:10px; padding:12px; }

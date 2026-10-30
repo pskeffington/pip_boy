@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-10-30 — Bounded package process transport
+
+- Define `RBPK` v1 binary stdio framing with strict 16 KiB frames, identity and request sequencing, bounded text/library views, and a shared hello vector.
+- Add the Rust Music SDK codec/adapter bridge, direct executable hash pinning, supervised child deadlines/termination/reaping, process-exit audio cleanup, and desktop/handheld host selection and UI input routes.
+- The approval roster remains empty and no module is mounted at startup. Reviewed release artifacts, viewport/field acceptance, and OS isolation are open; this transport is fault containment, not a sandbox.
+
+## 2026-10-30 — Music module identity styling
+
+- Give the distinct `org.rustboy.music` entry a phosphor-green identity in the handheld module switcher, aligned with the Pip-Boy shell palette.
+- Keep the reference row non-activatable while the trusted Music adapter, user intent route and audio worker are pending. Reserve the shared host audio focus for RADIO/MUSIC/TV adapter lifecycles, releasing only after acknowledged suspend/shutdown and retaining claims after failed cleanup.
+- Extend the handheld UI regression to verify MUSIC styling and retain safe inert rendering for untrusted package labels.
+
 ## 2026-10-28 — Universal package adapter SDK (implementation candidate)
 
 - Add lightweight `rust-boy-adapter-sdk` with a bounded versioned JSON command/reply contract and synthetic hello adapter example for independent module authors.
