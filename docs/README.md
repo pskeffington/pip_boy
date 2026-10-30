@@ -103,3 +103,6 @@ The machine-readable `implemented_unverified` catalog label is a **module accept
 
 The product name is **Rust-Boy**; the existing `pip_boy` repository, `pipboy` CLI and `PIPBOY_HOME` storage variable remain compatibility interfaces. Keep implementation status explicit, preserve data provenance, and obtain separate rights clearance before copying third-party software or art.
 
+## SCAN — proposed optical/HTR module
+
+[Camera-first, bidirectional phone/Rust-Boy SCAN integration roadmap](SCAN_RUSTBOY_INTEGRATION.md) · [Capture permissions, metadata/media contract](SCAN_CAPTURE_CONTRACT.md) · [Cross-repository agent queue](../catalog/scan_agent_tasks.json). Documentation/planning only; SCAN is not installed, and physical camera pairing and reciprocal capture are unverified.
