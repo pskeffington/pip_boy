@@ -15,10 +15,11 @@ pub const MANIFEST_SCHEMA_VERSION: u32 = 1;
 pub const MAX_MANIFEST_BYTES: usize = 16 * 1024;
 pub const MAX_CATALOG_PACKAGES: usize = 64;
 
-const REFERENCE_MANIFESTS: [&str; 4] = [
+const REFERENCE_MANIFESTS: [&str; 5] = [
     include_str!("../../../catalog/host_packages/rb_gis.example.json"),
     include_str!("../../../catalog/host_packages/rust_tv.example.json"),
     include_str!("../../../catalog/host_packages/rust_radio.example.json"),
+    include_str!("../../../catalog/host_packages/rust_music.example.json"),
     include_str!("../../../catalog/host_packages/rusti_rc.example.json"),
 ];
 
@@ -418,7 +419,7 @@ mod tests {
     }
 
     #[test]
-    fn four_reference_packages_are_sorted_and_never_installed() {
+    fn five_reference_packages_are_sorted_and_never_installed() {
         let catalog = reference_catalog().unwrap();
         let ids: Vec<_> = catalog
             .entries()
@@ -429,11 +430,17 @@ mod tests {
             [
                 "org.rustboy.comms",
                 "org.rustboy.gis",
+                "org.rustboy.music",
                 "org.rustboy.radio",
                 "org.rustboy.tv"
             ]
         );
-        assert_eq!(catalog.len(), 4);
+        assert_eq!(catalog.len(), 5);
+        let music = catalog.get("org.rustboy.music").unwrap();
+        assert_eq!(music.name, "MUSIC");
+        assert_eq!(music.capabilities, ["media.audio"]);
+        assert!(!music.background.allowed);
+        assert_eq!(music.status.as_deref(), Some("design_fixture_not_installed"));
         for entry in catalog.entries() {
             assert_eq!(
                 entry.status.as_deref(),

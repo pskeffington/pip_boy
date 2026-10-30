@@ -99,8 +99,9 @@ Once mounted, `select(id)` delivers activation/resume, suspending the previous f
 | TV | [rust_tv](https://github.com/pskeffington/rust_tv) | One native player viewport, explicit stream selection; audio ownership policy remains open |
 | RADIO | [rust_radio](https://github.com/pskeffington/rust_radio) | Native radio controls; requested audio/SDR/network capabilities need host authority |
 | COMMS | [rusti_rc](https://github.com/pskeffington/rusti_rc) | Message interface with explicit connect/send consent; background receipt separately gated |
+| MUSIC | [rust_music](https://github.com/pskeffington/rust_music) | Distinct lossless music package; host audio lease, user input, and trusted adapter wiring remain required |
 
-**All four remain independent development repositories.** The core tests use synthetic adapters for each package identity; no real stream, RF device, IRC server, or GIS network endpoint is opened by these tests.
+**All five remain independent development repositories.** The core tests use synthetic adapters for each package identity; no real stream, RF device, IRC server, or GIS network endpoint is opened by these tests.
 
 ## Acceptance ladder
 
