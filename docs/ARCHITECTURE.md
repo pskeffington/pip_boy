@@ -2,7 +2,7 @@
 
 ## Target host and package architecture
 
-The [host package roadmap](HOST_PACKAGE_ROADMAP.md) defines a future **one-foreground-package-at-a-time** shell with an always-available host Settings control. A **read-only manifest registry precursor** is now implemented as `pipboy_core::package_socket`; `pipboy packages` CLI and loopback `GET /api/packages` inspect schema-1 package references but **cannot install or launch them**. Installed/trust state, foreground switching, background lifecycle, capability brokering and independent adapter release gates remain planned; the current in-process ModuleHost is not a security sandbox. Existing dashboard and micro navigation remain the implemented baseline pending HOST-UI gates.
+The [host package roadmap](HOST_PACKAGE_ROADMAP.md) defines a **one-foreground-package-at-a-time** shell with an always-available host Settings control. A **read-only manifest registry precursor** is implemented as `pipboy_core::package_socket`; `pipboy packages` CLI and loopback `GET /api/packages` inspect schema-1 package references but **cannot install or launch them**. The handheld `MODULES` control displays the registry, with activation unavailable until installed/trusted adapter state and a guarded foreground route exist. Background lifecycle, capability brokering and independent adapter release gates remain planned; the current in-process ModuleHost is not a security sandbox. Desktop foreground switching remains pending HOST-UI gates.
 
 ## Current Network Engineer integration
 
