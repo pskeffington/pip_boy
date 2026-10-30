@@ -6,6 +6,7 @@
 //! `TrustedProcessSpec`; manifests and UI input never provide executable
 //! paths or arguments.
 
+use crate::process_safety::isolated_package_command;
 use crate::universal_adapter::{
     AdapterEnvelope, AdapterError, AdapterReply, UniversalPackageAdapter,
 };
@@ -15,7 +16,7 @@ use serde::Deserialize;
 use std::fs::{self, File};
 use std::io::Read;
 use std::path::{Path, PathBuf};
-use std::process::{Child, Command, Stdio};
+use std::process::{Child, Stdio};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{mpsc, Arc, Mutex};
 use std::thread::{self, JoinHandle};
@@ -282,10 +283,9 @@ pub struct SupervisedProcessAdapter {
 impl SupervisedProcessAdapter {
     pub fn spawn(spec: TrustedProcessSpec) -> Result<Self, ProcessError> {
         verify_executable(&spec)?;
-        let mut command = Command::new(&spec.executable);
+        let mut command = isolated_package_command(&spec.executable);
         command
             .args(&spec.arguments)
-            .env_clear()
             .current_dir(
                 spec.executable
                     .parent()

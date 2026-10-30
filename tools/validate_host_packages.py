@@ -86,12 +86,15 @@ def check_approved_executable_roster(root=ROOT, data=None):
                         for arg in args),
                 "invalid fixed executable arguments")
     source = (root / "crates/pipboy-core/src/package_process.rs").read_text(encoding="utf-8")
+    safety = (root / "crates/pipboy-core/src/process_safety.rs").read_text(encoding="utf-8")
     require('include_str!("../../../catalog/approved_package_executables.json")' in source
-            and "Command::new(&spec.executable)" in source
-            and ".env_clear()" in source and "fn verify_executable" in source
+            and "isolated_package_command(&spec.executable)" in source
+            and "pub fn isolated_package_command(" in safety
+            and "command.env_clear();" in safety
+            and "fn verify_executable" in source
             and "fn terminate_and_reap" in source and "pub fn approved_process_spec" not in source
             and "fn resolve_package_root" in source,
-            "supervised launcher must use the host roster, clear inherited env, verify hash, and reap")
+            "supervised launcher must use the host roster and isolated launch helper, verify hash, and reap")
     return len(rows)
 
 
