@@ -146,7 +146,11 @@ fn route(
     }
     // Preserve the legacy `run COMMAND` form while letting the shared parser
     // perform the actual pin, schema, and handler resolution.
-    let normalized = if let Some(command) = input.strip_prefix("run ") {
+    let normalized = if input == "host" && *selected == Some("diag") {
+        // Preserve the original shorthand where `host` runs the selected DIAG
+        // handler instead of switching to the Host toolset.
+        "run host"
+    } else if let Some(command) = input.strip_prefix("run ") {
         command
     } else {
         input
@@ -167,10 +171,12 @@ pub fn run(args: Vec<String>) -> Result<(), Box<dyn Error>> {
     }
     let board = WorkbenchStore::from_environment()?.load()?;
     let pinned = pinned_tools(&board);
-    let initial = command_catalog::registered_tools()
-        .iter()
-        .copied()
-        .find(|tool| pinned.contains(tool));
+    let initial = pinned.iter().find_map(|tool| {
+        command_catalog::registered_tools()
+            .iter()
+            .copied()
+            .find(|registered| registered == tool)
+    });
     let mut selected = initial;
     println!("Rust-Boy / selected-tool command terminal / OFFLINE HANDLERS ONLY");
     println!(
@@ -239,6 +245,15 @@ mod tests {
         assert_eq!(selected, Some("host"));
         assert!(route("run status", &mut selected, &pinned).unwrap());
         assert!(route("exit", &mut selected, &pinned).is_ok_and(|keep| !keep));
+    }
+
+    #[test]
+    fn legacy_diag_host_shorthand_does_not_switch_toolsets() {
+        let board = Workbench::from_preset(&PRESETS[2]);
+        let pinned = pinned_tools(&board);
+        let mut selected = Some("diag");
+        assert!(route("host", &mut selected, &pinned).is_ok());
+        assert_eq!(selected, Some("diag"));
     }
 
     #[test]

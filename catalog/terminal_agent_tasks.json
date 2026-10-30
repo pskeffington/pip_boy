@@ -72,8 +72,8 @@
       "gate": "TC-2",
       "issue": 75,
       "local_evidence": {
-        "stable": "cargo +stable test --locked --offline -p pipboy --bin pipboy terminal_commands::tests — 4 passed; cargo +stable clippy --locked --offline -p pipboy --bin pipboy -- -D warnings — passed",
-        "rust_1_90": "cargo +1.90.0 test --locked --offline -p pipboy --bin pipboy terminal_commands::tests — 4 passed; cargo +1.90.0 clippy --locked --offline -p pipboy --bin pipboy -- -D warnings — passed",
+        "stable": "cargo +stable test --locked --offline -p pipboy --bin pipboy terminal_commands::tests — 5 passed; cargo +stable clippy --locked --offline -p pipboy --bin pipboy -- -D warnings — passed",
+        "rust_1_90": "cargo +1.90.0 test --locked --offline -p pipboy --bin pipboy terminal_commands::tests — 5 passed; cargo +1.90.0 clippy --locked --offline -p pipboy --bin pipboy -- -D warnings — passed",
         "remaining": "Full-screen TUI migration and exact-head hosted CI are still pending."
       }
     },
