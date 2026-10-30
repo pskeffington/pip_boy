@@ -466,7 +466,10 @@ mod tests {
         assert_eq!(scan.name, "SCAN");
         assert_eq!(scan.status.as_deref(), Some("design_fixture_not_installed"));
         assert_eq!(scan.capabilities.len(), 8);
-        assert!(scan.capabilities.iter().any(|scope| scope == "scan.camera.capture"));
+        assert!(scan
+            .capabilities
+            .iter()
+            .any(|scope| scope == "scan.camera.capture"));
         assert!(!scan.background.allowed);
         let mut foreground = ForegroundSelection::default();
         assert!(foreground
