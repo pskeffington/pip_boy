@@ -16,6 +16,12 @@
 - The preceding exact-head run [41124167122](https://github.com/pskeffington/pip_boy/actions/runs/41124167122) for source SHA `30619329be5a81c18d5dd7bc2323228991b0529f` failed its catalog job because the static validator expected inline process construction; stable, Rust 1.90 and both SDR jobs passed, while native jobs were canceled when the newer run started. The launcher now uses the approved `process_safety::isolated_package_command` helper, and the validator explicitly requires both the call site and helper environment clearing.
 - Corrected exact source commit [`d15247c0ee95663dd3b731db6716a42e6dc4e04f`](https://github.com/pskeffington/pip_boy/commit/d15247c0ee95663dd3b731db6716a42e6dc4e04f) passed **7/7 jobs** in [Actions run 41124747110](https://github.com/pskeffington/pip_boy/actions/runs/41124747110): source/module/security validation, Rust stable, Rust 1.90.0, native macOS, native Windows, SoapySDR, and SDRConnect. The stable job includes desktop/micro DOM and viewport regressions and the full workspace test/Clippy gates. This validates the code at that SHA; it does not approve a package artifact or establish an OS sandbox.
 
+## TC-A02 full-screen terminal command palette — local checkpoint (2026-10-30; exact-head CI pending)
+
+The full-screen TUI now uses the shared typed command catalog and native offline dispatcher. Press `/` in Workbench to open commands for the selected pinned tool, type bounded input, navigate with arrows, and press Enter to invoke a registered handler. Escape closes and clears the modal without execution. Output is capped at 4096 bytes; Settings remains host-owned and is available with `S`. Control actions, unpinned tools, and unknown verbs fail closed.
+
+Local validation passed on stable and Rust 1.90: terminal command tests 6/6, console tests 7/7, TUI tests 7/7; format check and warnings-denied Pip-Boy Clippy passed on both. This code is not yet the pushed PR head; exact-head GitHub Actions, GUI palette integration, and interaction acceptance remain pending.
+
 ## TC-A01 typed command catalog — exact-head software acceptance (2026-10-30)
 
 `pipboy_core::command_catalog` provides 16 stable native handler IDs for five offline Workbench toolsets, byte-bounded typed input, explicit access metadata, stable help/JSON and typed outcomes. The terminal command bridge is now wired through this catalog in the current source; the full-screen TUI and GUI palette remain follow-on work.

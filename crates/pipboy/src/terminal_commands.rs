@@ -9,22 +9,23 @@ use pipboy_core::command_catalog::{
 use pipboy_core::network_suite;
 use pipboy_core::workbench::{crc32_hex, encode_hex, inspect_hex, Workbench, WorkbenchStore};
 use std::error::Error;
+use std::fmt::Write as FmtWrite;
 use std::io::{self, Write};
 
 fn pinned_tools(board: &Workbench) -> Vec<&str> {
     board.slots.iter().map(|slot| slot.tool.as_str()).collect()
 }
 
-fn display_help(tool_id: Option<&str>, pinned: &[&str]) {
-    println!("tools | select TOOL | help | run COMMAND | quit");
+fn display_help(tool_id: Option<&str>, pinned: &[&str]) -> String {
+    let mut output = String::from("tools | select TOOL | help | run COMMAND | quit\n");
     if let Some(tool_id) = tool_id {
         if !pinned.contains(&tool_id) {
-            println!("{tool_id}: not pinned");
-            return;
+            let _ = writeln!(output, "{tool_id}: not pinned");
+            return output;
         }
         let commands = command_catalog::help_for(tool_id);
         if commands.is_empty() {
-            println!("{tool_id}: no terminal handlers are registered");
+            let _ = writeln!(output, "{tool_id}: no terminal handlers are registered");
         }
         for command in commands {
             let args = match command.arguments {
@@ -35,18 +36,26 @@ fn display_help(tool_id: Option<&str>, pinned: &[&str]) {
                 ArgumentSchema::NetworkInput => " INPUT".to_owned(),
                 ArgumentSchema::NetworkInputAndExtra => " INPUT EXTRA".to_owned(),
             };
-            println!("  {}{} — source: {}", command.verb, args, command.source);
+            let _ = writeln!(
+                output,
+                "  {}{} — source: {}",
+                command.verb, args, command.source
+            );
         }
     } else {
-        println!("Only registered offline Rust handlers are callable.");
+        output.push_str("Only registered offline Rust handlers are callable.\n");
     }
+    output
 }
 
-struct OfflineExecutor;
+#[derive(Default)]
+struct OfflineExecutor {
+    output: String,
+}
 
 impl CommandExecutor for OfflineExecutor {
     type Output = ();
-    type Error = Box<dyn Error>;
+    type Error = String;
 
     fn execute(&mut self, request: CommandRequest) -> Result<Self::Output, Self::Error> {
         let text = match &request.arguments {
@@ -67,7 +76,8 @@ impl CommandExecutor for OfflineExecutor {
         match request.handler {
             HandlerId::HostStatus => {
                 let snapshot = crate::status::collect()?;
-                println!(
+                let _ = writeln!(
+                    self.output,
                     "SYSTEM STAT / {} {} | RAM {} / {} MiB | UPTIME {} s",
                     snapshot.os,
                     snapshot.arch,
@@ -76,19 +86,44 @@ impl CommandExecutor for OfflineExecutor {
                     snapshot.uptime_s
                 );
             }
-            HandlerId::HostDiagnostics => crate::diagnostics::run(vec!["host".into()])?,
+            HandlerId::HostDiagnostics => {
+                let snapshot = crate::status::collect()?;
+                let report = pipboy_core::diagnostics::analyze_host(&snapshot)?;
+                self.output.push_str(&report.render_text());
+                self.output.push('\n');
+            }
             HandlerId::SourceSearch => {
                 let query = text.unwrap_or_default();
-                for item in sources()?.into_iter().filter(|item| item.matches(query)) {
-                    println!("{} [{}]: {}", item.project, item.license, item.summary);
+                for item in sources()
+                    .map_err(|error| error.to_string())?
+                    .into_iter()
+                    .filter(|item| item.matches(query))
+                {
+                    let _ = writeln!(
+                        self.output,
+                        "{} [{}]: {}",
+                        item.project, item.license, item.summary
+                    );
                 }
             }
-            HandlerId::BytesEncode => println!("{}", encode_hex(text.ok_or("missing text")?)?),
-            HandlerId::HexInspect => print!("{}", inspect_hex(hex.ok_or("missing hex")?)?),
-            HandlerId::HexCrc32 => println!("{}", crc32_hex(hex.ok_or("missing hex")?)?),
+            HandlerId::BytesEncode => {
+                let encoded =
+                    encode_hex(text.ok_or("missing text")?).map_err(|error| error.to_string())?;
+                let _ = writeln!(self.output, "{encoded}");
+            }
+            HandlerId::HexInspect => {
+                let inspected =
+                    inspect_hex(hex.ok_or("missing hex")?).map_err(|error| error.to_string())?;
+                self.output.push_str(&inspected);
+            }
+            HandlerId::HexCrc32 => {
+                let crc =
+                    crc32_hex(hex.ok_or("missing hex")?).map_err(|error| error.to_string())?;
+                let _ = writeln!(self.output, "{crc}");
+            }
             HandlerId::NetworkList => {
                 for op in network_suite::OPERATIONS.iter().filter(|op| !op.active) {
-                    println!("{} / {}", op.id, op.name);
+                    let _ = writeln!(self.output, "{} / {}", op.id, op.name);
                 }
             }
             handler => {
@@ -104,9 +139,11 @@ impl CommandExecutor for OfflineExecutor {
                     HandlerId::NetworkMtu => ("mtu", input, None),
                     _ => return Err("unavailable handler".into()),
                 };
-                println!(
+                let _ = writeln!(
+                    self.output,
                     "{}",
-                    network_suite::run_offline(mode, first.ok_or("missing input")?, second)?
+                    network_suite::run_offline(mode, first.ok_or("missing input")?, second)
+                        .map_err(|error| error.to_string())?
                 );
             }
         }
@@ -114,26 +151,45 @@ impl CommandExecutor for OfflineExecutor {
     }
 }
 
-fn run_action(action: TerminalAction) -> Result<(), Box<dyn Error>> {
-    match command_catalog::dispatch(action, &mut OfflineExecutor)? {
+fn run_action(action: TerminalAction) -> Result<String, String> {
+    let mut output = String::new();
+    let mut executor = OfflineExecutor::default();
+    match command_catalog::dispatch(action, &mut executor)? {
         DispatchResult::Control(TerminalAction::ListTools(tools)) => {
-            println!("Available registered tools: {}", tools.join(", "));
+            let _ = writeln!(output, "Available registered tools: {}", tools.join(", "));
         }
         DispatchResult::Control(TerminalAction::Help { tool_id }) => {
-            display_help(tool_id, command_catalog::registered_tools());
+            output.push_str(&display_help(tool_id, command_catalog::registered_tools()));
         }
         DispatchResult::Control(TerminalAction::SelectTool { tool_id }) => {
-            println!("SELECTED {tool_id}; available:");
-            display_help(Some(tool_id), command_catalog::registered_tools());
+            let _ = writeln!(output, "SELECTED {tool_id}; available:");
+            output.push_str(&display_help(
+                Some(tool_id),
+                command_catalog::registered_tools(),
+            ));
         }
-        DispatchResult::Control(TerminalAction::Empty) => {}
-        DispatchResult::Control(TerminalAction::Quit) => {}
-        DispatchResult::Executed(()) => {}
+        DispatchResult::Control(TerminalAction::Empty | TerminalAction::Quit) => {}
+        DispatchResult::Executed(()) => output.push_str(&executor.output),
         DispatchResult::Control(TerminalAction::Execute(_)) => {
             unreachable!("execute is dispatched")
         }
     }
-    Ok(())
+    Ok(output)
+}
+
+pub(crate) fn execute_tui_command(
+    input: &str,
+    selected_tool: Option<&str>,
+    pinned: &[&str],
+) -> Result<String, String> {
+    let action = command_catalog::parse_input(input, selected_tool, pinned)
+        .map_err(|error| error.to_string())?;
+    if !matches!(&action, TerminalAction::Execute(_)) {
+        return Err(
+            "The TUI palette accepts only registered commands for its selected tool".into(),
+        );
+    }
+    run_action(action)
 }
 
 fn route(
@@ -161,7 +217,7 @@ fn route(
         TerminalAction::Quit => return Ok(false),
         _ => {}
     }
-    run_action(action)?;
+    print!("{}", run_action(action).map_err(io::Error::other)?);
     Ok(true)
 }
 
@@ -245,6 +301,17 @@ mod tests {
         assert_eq!(selected, Some("host"));
         assert!(route("run status", &mut selected, &pinned).unwrap());
         assert!(route("exit", &mut selected, &pinned).is_ok_and(|keep| !keep));
+    }
+
+    #[test]
+    fn tui_palette_dispatches_only_pinned_catalog_handlers() {
+        let board = Workbench::from_preset(&PRESETS[2]);
+        let pinned = pinned_tools(&board);
+        let output = execute_tui_command("cidr 10.0.0.0/24", Some("net-lab"), &pinned).unwrap();
+        assert!(output.contains("10.0.0.0/24"));
+        assert!(execute_tui_command("scan local", Some("net-lab"), &pinned).is_err());
+        assert!(execute_tui_command("status", Some("host"), &["net-lab"]).is_err());
+        assert!(execute_tui_command("select host", Some("net-lab"), &pinned).is_err());
     }
 
     #[test]

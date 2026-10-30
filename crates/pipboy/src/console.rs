@@ -2,6 +2,7 @@
 
 use pipboy_core::branding::PRODUCT_NAME;
 use pipboy_core::catalog::CatalogSource;
+use pipboy_core::command_catalog::{self, ArgumentSchema};
 use pipboy_core::notes::Note;
 use pipboy_core::registry::{Readiness, MODULES};
 use pipboy_core::workbench::{tool, Workbench, PALETTE, PRESETS};
@@ -16,6 +17,7 @@ pub const PANELS: &[&str] = &[
     "MAP",
     "RADIO",
     "MESH",
+    "SETTINGS",
 ];
 
 #[derive(Clone, Copy)]
@@ -33,12 +35,16 @@ pub enum Action {
 #[derive(Default)]
 pub struct Navigation {
     pub panel: usize,
-    selected: [usize; 7],
-    scroll: [u16; 7],
-    max_scroll: [u16; 7],
-    page_rows: [u16; 7],
+    selected: [usize; 8],
+    scroll: [u16; 8],
+    max_scroll: [u16; 8],
+    page_rows: [u16; 8],
     pub palette_open: bool,
     pub palette_selected: usize,
+    pub command_palette_open: bool,
+    pub command_palette_selected: usize,
+    pub command_palette_input: String,
+    pub command_output: String,
     pub profiles_open: bool,
     pub profile_selected: usize,
     pub profile_confirm: bool,
@@ -56,12 +62,14 @@ impl Navigation {
                 self.panel = (panel + 1) % PANELS.len();
                 self.palette_open = false;
                 self.profiles_open = false;
+                self.command_palette_open = false;
                 self.profile_confirm = false;
             }
             Action::Previous => {
                 self.panel = (panel + PANELS.len() - 1) % PANELS.len();
                 self.palette_open = false;
                 self.profiles_open = false;
+                self.command_palette_open = false;
                 self.profile_confirm = false;
             }
             Action::Up if collection => self.selected[panel] = previous.saturating_sub(1),
@@ -94,6 +102,13 @@ impl Navigation {
         board.slots.get(self.selected[3]).map(|slot| slot.id)
     }
 
+    pub fn selected_bench_tool<'a>(&self, board: &'a Workbench) -> Option<&'a str> {
+        board
+            .slots
+            .get(self.selected[3])
+            .map(|slot| slot.tool.as_str())
+    }
+
     pub fn focus_last_bench_slot(&mut self, board: &Workbench) {
         self.selected[3] = board.slots.len().saturating_sub(1);
         self.scroll[3] = 0;
@@ -124,6 +139,20 @@ impl Navigation {
             Action::Home => 0,
             Action::End => last,
             Action::Next | Action::Previous => self.palette_selected,
+        };
+        self.scroll[3] = 0;
+    }
+
+    pub fn command_palette_move(&mut self, action: Action, command_count: usize) {
+        let last = command_count.saturating_sub(1);
+        self.command_palette_selected = match action {
+            Action::Up => self.command_palette_selected.saturating_sub(1),
+            Action::Down => self.command_palette_selected.saturating_add(1).min(last),
+            Action::PageUp => self.command_palette_selected.saturating_sub(5),
+            Action::PageDown => self.command_palette_selected.saturating_add(5).min(last),
+            Action::Home => 0,
+            Action::End => last,
+            Action::Next | Action::Previous => self.command_palette_selected,
         };
         self.scroll[3] = 0;
     }
@@ -181,6 +210,14 @@ pub fn render(frame: &mut Frame, navigation: &mut Navigation, view: View<'_>) {
     }
     let (labels, detail) = match navigation.panel {
         0 => (Vec::new(), view.stat.to_owned()),
+        7 => (
+            Vec::new(),
+            format!(
+                "HOST SETTINGS / OFFLINE\n\nActive profile: {}\nPinned tools: {}\n\nWorkbench → P opens the profile selector.\nWorkbench → A opens the tool palette.\nP on STAT toggles local host-stat collection.\n\nSelecting a profile or tool does not launch modules, grant permissions, or perform network/device activity.",
+                view.workbench.profile,
+                view.workbench.slots.len()
+            ),
+        ),
         1 => {
             let selected = navigation.selected[1].min(view.library.len().saturating_sub(1));
             navigation.selected[1] = selected;
@@ -288,6 +325,46 @@ pub fn render(frame: &mut Frame, navigation: &mut Navigation, view: View<'_>) {
                     }
                 );
                 (labels, detail)
+            } else if navigation.command_palette_open {
+                let tool_id = navigation.selected_bench_tool(view.workbench);
+                let commands = tool_id.map(command_catalog::help_for).unwrap_or_default();
+                navigation.command_palette_selected = navigation
+                    .command_palette_selected
+                    .min(commands.len().saturating_sub(1));
+                let labels = commands
+                    .iter()
+                    .map(|command| {
+                        let args = match command.arguments {
+                            ArgumentSchema::None => "".to_owned(),
+                            ArgumentSchema::OptionalText => " [TEXT]".to_owned(),
+                            ArgumentSchema::Text => " TEXT".to_owned(),
+                            ArgumentSchema::HexBytes => " HEX".to_owned(),
+                            ArgumentSchema::NetworkInput => " INPUT".to_owned(),
+                            ArgumentSchema::NetworkInputAndExtra => " INPUT EXTRA".to_owned(),
+                        };
+                        format!("/{}{}", command.verb, args)
+                    })
+                    .collect();
+                let detail = match (tool_id, commands.get(navigation.command_palette_selected)) {
+                    (Some(tool_id), Some(command)) => format!(
+                        "COMMAND PALETTE / {tool_id}\n\n{}\n\nNative handler: {:?}\nSource: {}\n\nInput: /{}\n\n{}\n\nLAST RESULT:\n{}\n\nEnter: choose or run | Esc: close without execution",
+                        command.verb,
+                        command.handler,
+                        command.source,
+                        navigation.command_palette_input,
+                        if navigation.command_palette_input.is_empty() {
+                            "Choose an offline command or type its bounded arguments."
+                        } else {
+                            "Input is parsed by the shared typed command catalog."
+                        },
+                        navigation.command_output
+                    ),
+                    (Some(tool_id), None) => format!(
+                        "COMMAND PALETTE / {tool_id}\n\nNo offline handlers are registered for this tool.\n\nEsc: close without execution"
+                    ),
+                    (None, _) => "COMMAND PALETTE\n\nSelect a pinned Workbench tool first.\n\nEsc: close without execution".to_owned(),
+                };
+                (labels, detail)
             } else {
                 let selected =
                     navigation.selected[3].min(view.workbench.slots.len().saturating_sub(1));
@@ -310,12 +387,14 @@ pub fn render(frame: &mut Frame, navigation: &mut Navigation, view: View<'_>) {
                     .and_then(|slot| tool(&slot.tool).map(|entry| (slot, entry)))
                     .map(|(slot, entry)| {
                         format!(
-                            "{} / SLOT #{}\nSTATUS: {}\n\n{}\n\nCOMMAND: {}\n\nPinning is not execution. Commands still require their own permissions and flags.\n\nP: role | A: palette | X: unpin | R: reload",
+                            "{} / SLOT #{}\nSTATUS: {}\n\n{}\n\nCOMMAND: {}\n\nPinning is not execution. Commands still require their own permissions and flags.\n\n/ opens the shared offline command palette.\n\nP: role | A: palette | X: unpin | R: reload\n\n{}{}",
                             entry.name,
                             slot.id,
                             entry.availability.label(),
                             entry.description,
-                            entry.command
+                            entry.command,
+                            if navigation.command_output.is_empty() { "" } else { "\nLAST COMMAND RESULT:\n" },
+                            navigation.command_output
                         )
                     })
                     .unwrap_or_else(|| {
@@ -351,6 +430,8 @@ pub fn render(frame: &mut Frame, navigation: &mut Navigation, view: View<'_>) {
         .split(sections[1]);
         let selected = if navigation.panel == 3 && navigation.profiles_open {
             navigation.profile_selected
+        } else if navigation.panel == 3 && navigation.command_palette_open {
+            navigation.command_palette_selected
         } else if navigation.panel == 3 && navigation.palette_open {
             navigation.palette_selected
         } else {
@@ -402,14 +483,18 @@ pub fn render(frame: &mut Frame, navigation: &mut Navigation, view: View<'_>) {
             .style(Style::default().fg(Color::Green)),
         detail_area,
     );
-    let footer = if navigation.panel == 3 && navigation.profiles_open {
+    let footer = if navigation.panel == 3 && navigation.command_palette_open {
+        "COMMANDS: Up/Down choose; type arguments; Enter runs typed handler\nEsc: close without execution | Commands are scoped to selected pinned tool"
+    } else if navigation.panel == 3 && navigation.profiles_open {
         "PROFILES: arrows choose Enter select\nY: apply | N/Esc cancel | Q: quit"
     } else if navigation.panel == 3 && navigation.palette_open {
         "PALETTE: arrows select Enter pin\nEsc: cancel | Tab: next | Q: quit"
     } else if navigation.panel == 3 {
-        "WORKBENCH P:roles A:tools X:remove\nUp/Down: select | R: reload | Q: quit"
+        "WORKBENCH P:roles A:tools /:commands X:remove\nUp/Down: select | R: reload | Q: quit"
+    } else if navigation.panel == 7 {
+        "HOST SETTINGS: Workbench P:roles A:tools\nS: Settings | Tab: panel | Q: quit"
     } else {
-        "Tab: panel | Up/Down: item or text\nPgUp/PgDn: text | Home/End: first/last\nP: pause/resume | R: notes | Q: quit"
+        "Tab: panel | S: settings | Up/Down: item or text\nPgUp/PgDn: text | Home/End: first/last\nP: pause/resume | R: notes | Q: quit"
     };
     frame.render_widget(
         Paragraph::new(footer).style(Style::default().fg(Color::Gray)),
@@ -484,7 +569,7 @@ mod tests {
     fn navigation_bounds_empty_lists_and_preserves_panel_selection() {
         let mut navigation = Navigation::default();
         navigation.apply(Action::Previous, 0);
-        assert_eq!(navigation.panel, 6);
+        assert_eq!(navigation.panel, 7);
         navigation.apply(Action::Next, 0);
         assert_eq!(navigation.panel, 0);
         navigation.apply(Action::Next, 0);
@@ -589,5 +674,53 @@ mod tests {
         navigation.apply(Action::Next, 0);
         assert!(!navigation.profiles_open);
         assert!(!navigation.profile_confirm);
+    }
+
+    #[test]
+    fn scoped_command_palette_renders_only_the_selected_tool_handlers() {
+        let board = Workbench::from_preset(&PRESETS[2]);
+        let selected = board
+            .slots
+            .iter()
+            .position(|slot| slot.tool == "net-lab")
+            .unwrap();
+        let mut navigation = Navigation {
+            panel: 3,
+            command_palette_open: true,
+            ..Navigation::default()
+        };
+        navigation.selected[3] = selected;
+        let view = View {
+            stat: "unused",
+            library: &[],
+            notes: &[],
+            workbench: &board,
+        };
+        let text = screen(100, 28, &mut navigation, view);
+        assert!(text.contains("COMMAND PALETTE / net-lab"));
+        assert!(text.contains("/cidr"));
+        assert!(text.contains("network_suite.rs"));
+        assert!(text.contains("Esc: close without execution"));
+        assert!(!text.contains("/encode"));
+    }
+
+    #[test]
+    fn host_settings_remain_accessible_and_report_profile_without_side_effects() {
+        let board = Workbench::from_preset(&PRESETS[2]);
+        let mut navigation = Navigation {
+            panel: 7,
+            ..Navigation::default()
+        };
+        let view = View {
+            stat: "unused",
+            library: &[],
+            notes: &[],
+            workbench: &board,
+        };
+        let text = screen(100, 28, &mut navigation, view);
+        assert!(text.contains("HOST SETTINGS / OFFLINE"));
+        assert!(text.contains("Workbench → P"));
+        assert!(text.contains("does not launch modules"));
+        assert!(text.contains("SETTINGS"));
     }
 }

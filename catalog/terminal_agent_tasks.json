@@ -72,16 +72,16 @@
       "gate": "TC-2",
       "issue": 75,
       "local_evidence": {
-        "stable": "cargo +stable test --locked --offline -p pipboy --bin pipboy terminal_commands::tests — 5 passed; cargo +stable clippy --locked --offline -p pipboy --bin pipboy -- -D warnings — passed",
-        "rust_1_90": "cargo +1.90.0 test --locked --offline -p pipboy --bin pipboy terminal_commands::tests — 5 passed; cargo +1.90.0 clippy --locked --offline -p pipboy --bin pipboy -- -D warnings — passed",
-        "remaining": "Full-screen TUI migration remains pending; the terminal bridge source commit passed the full repository CI matrix, but that pass does not accept TC-A02."
+        "stable": "cargo +stable test --locked --offline -p pipboy --bin pipboy terminal_commands::tests (6 passed), console::tests (7 passed), tui::tests (7 passed); warnings-denied Clippy and fmt check passed.",
+        "rust_1_90": "Same focused terminal, console and TUI tests passed (6/7/7); warnings-denied Clippy and fmt check passed.",
+        "remaining": "Full-screen TUI palette is implemented locally; exact-head CI is pending. GUI palette and independent interaction acceptance remain open."
       },
       "ci_evidence": {
-        "source_commit": "d15247c0ee95663dd3b731db6716a42e6dc4e04f",
-        "workflow_run": 41124747110,
-        "workflow_url": "https://github.com/pskeffington/pip_boy/actions/runs/41124747110",
+        "source_commit": "b21cff7e67d06472c1321113bb2b02f4d7cabab8",
+        "workflow_run": 41125631609,
+        "workflow_url": "https://github.com/pskeffington/pip_boy/actions/runs/41125631609",
         "jobs_passed": "7/7",
-        "note": "The terminal bridge and repository matrix passed at this source commit; TC-A02 remains open until the full-screen TUI is migrated and validated."
+        "note": "This exact-head run validates the preceding universal-host/docs head; it predates the current TUI palette changes and is not evidence for the pending TUI integration."
       }
     },
     {
