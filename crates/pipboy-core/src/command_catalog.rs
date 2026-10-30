@@ -273,6 +273,28 @@ pub enum CommandState {
     UnknownOutcome,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum CommandFailure {
+    Denied,
+    Unavailable,
+    InvalidInput,
+    Failed,
+    UnknownOutcome,
+}
+
+impl CommandFailure {
+    pub const fn safe_message(self) -> &'static str {
+        match self {
+            Self::Denied => "Command denied by host policy",
+            Self::Unavailable => "Command handler is unavailable",
+            Self::InvalidInput => "Command input is invalid",
+            Self::Failed => "Command failed",
+            Self::UnknownOutcome => "Command outcome could not be verified",
+        }
+    }
+}
+
 /// Shared structured result envelope. Callers supply the observation time so
 /// the core catalog stays deterministic and testable.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
@@ -282,7 +304,7 @@ pub struct CommandResult<T> {
     pub source: &'static str,
     pub observed_at_ms: u64,
     pub value: Option<T>,
-    pub error: Option<String>,
+    pub error: Option<CommandFailure>,
 }
 
 impl<T> CommandResult<T> {
@@ -297,14 +319,14 @@ impl<T> CommandResult<T> {
         }
     }
 
-    pub fn failed(handler: HandlerId, observed_at_ms: u64, error: impl Into<String>) -> Self {
+    pub fn failed(handler: HandlerId, observed_at_ms: u64, error: CommandFailure) -> Self {
         Self {
             handler,
             state: CommandState::Failed,
             source: handler_source(handler),
             observed_at_ms,
             value: None,
-            error: Some(error.into()),
+            error: Some(error),
         }
     }
 }
@@ -598,9 +620,14 @@ mod tests {
         assert_eq!(result.observed_at_ms, 42);
         assert_eq!(result.value, Some("10.0.0.0/24".to_owned()));
         assert_eq!(result.error, None);
-        let error = CommandResult::<()>::failed(HandlerId::HostStatus, 43, "denied");
+        let error = CommandResult::<()>::failed(HandlerId::HostStatus, 43, CommandFailure::Denied);
         assert_eq!(error.state, CommandState::Failed);
-        assert_eq!(error.error.as_deref(), Some("denied"));
+        assert_eq!(error.error, Some(CommandFailure::Denied));
+        assert!(!error
+            .error
+            .unwrap()
+            .safe_message()
+            .contains("PRIVATE-MESSAGE-CONTENT"));
         assert!(error.value.is_none());
     }
 
