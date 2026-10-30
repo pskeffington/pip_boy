@@ -70,15 +70,14 @@ impl ModuleLifecycle {
             (State::Degraded, Event::DataRecovered) => State::Running,
             (State::Running, Event::DeviceUnavailable)
             | (State::Degraded, Event::DeviceUnavailable) => State::Unavailable,
-            (State::Authorized, Event::Stop)
-            | (State::Running, Event::Stop)
-            | (State::Degraded, Event::Stop)
-            | (State::Unavailable, Event::Stop)
-            | (State::Authorized, Event::Revoke)
-            | (State::Running, Event::Revoke)
-            | (State::Degraded, Event::Revoke)
-            | (State::Unavailable, Event::Revoke)
-            | (State::Disabled, Event::Stop | Event::Revoke) => State::Disabled,
+            (
+                State::Authorized
+                | State::Running
+                | State::Degraded
+                | State::Unavailable
+                | State::Disabled,
+                Event::Stop | Event::Revoke,
+            ) => State::Disabled,
             _ => {
                 return Err(format!(
                     "invalid {event:?} while {:?} ({})",
@@ -122,6 +121,48 @@ mod tests {
         assert_eq!(item.transitions(), 5);
         item.apply(Event::Revoke).unwrap();
         assert_eq!(item.transitions(), 5);
+    }
+
+    #[test]
+    fn stop_and_revoke_share_fail_closed_transitions() {
+        for event in [Event::Stop, Event::Revoke] {
+            for initial in [
+                State::Disabled,
+                State::Authorized,
+                State::Running,
+                State::Degraded,
+                State::Unavailable,
+            ] {
+                let mut item = ModuleLifecycle::new("fixture", true).unwrap();
+                if initial != State::Disabled {
+                    item.apply(Event::GrantConfirmed).unwrap();
+                }
+                if matches!(initial, State::Running | State::Degraded) {
+                    item.apply(Event::StartSucceeded).unwrap();
+                }
+                if initial == State::Degraded {
+                    item.apply(Event::DataDegraded).unwrap();
+                }
+                if initial == State::Unavailable {
+                    item.apply(Event::DeviceUnavailable).unwrap();
+                }
+                assert_eq!(item.state(), initial);
+                let before = item.transitions();
+                assert_eq!(item.apply(event).unwrap(), State::Disabled);
+                assert_eq!(
+                    item.transitions(),
+                    before + u64::from(initial != State::Disabled)
+                );
+                assert_eq!(item.apply(event).unwrap(), State::Disabled);
+                assert_eq!(
+                    item.transitions(),
+                    before + u64::from(initial != State::Disabled)
+                );
+            }
+            let mut planned = ModuleLifecycle::new("planned", false).unwrap();
+            assert!(planned.apply(event).is_err());
+            assert_eq!(planned.state(), State::Planned);
+        }
     }
 
     #[test]
