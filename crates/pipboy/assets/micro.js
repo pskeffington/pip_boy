@@ -16,6 +16,9 @@ const ui = {
   tabs: Array.from(document.querySelectorAll("#micro-rail [data-tab]")),
   foot: $("micro-foot-message"),
   rolesDialog: $("roles-dialog"),
+  modulesDialog: $("modules-dialog"),
+  modulesList: $("modules-list"),
+  modulesStatus: $("modules-status"),
   rolesList: $("roles-list"),
   chosenName: $("chosen-role-name"),
   chosenDetail: $("chosen-role-detail"),
@@ -95,6 +98,47 @@ function notify(message, isError = false) {
   ui.foot.textContent = message;
   if (toastTimer !== null) clearTimeout(toastTimer);
   toastTimer = setTimeout(() => { ui.toast.hidden = true; }, 3500);
+}
+
+async function openModuleSwitcher() {
+  ui.modulesDialog.showModal();
+  ui.modulesList.replaceChildren(make("p", "panel-copy", "READING HOST REGISTRY…"));
+  ui.modulesStatus.textContent = "Only host-installed and approved adapters can be switched in.";
+  try {
+    const registry = await api("/api/packages");
+    const entries = Array.isArray(registry.packages) ? registry.packages : [];
+    ui.modulesList.replaceChildren();
+    if (entries.length === 0) {
+      ui.modulesList.append(make("p", "panel-copy", "No modules are registered with this host."));
+      return;
+    }
+    for (const entry of entries) {
+      const manifest = entry?.manifest || {};
+      const row = make("article", "module-switch-row");
+      row.setAttribute("role", "listitem");
+      const identity = make("div", "module-switch-identity");
+      identity.append(make("strong", "", manifest.name || "Unnamed module"));
+      identity.append(make("span", "", manifest.package_id || "Unknown package ID"));
+      row.append(identity);
+      const state = entry.installed && entry.activatable ? "APPROVED · SWITCH ROUTE NOT CONNECTED"
+        : entry.installed ? "INSTALLED · HOST APPROVAL REQUIRED" : "REFERENCE ONLY · NOT INSTALLED";
+      row.append(make("span", "module-switch-state", state));
+      const action = button("UNAVAILABLE", () => {}, "micro-button compact");
+      // This build exposes a read-only reference registry; no switch endpoint
+      // exists yet, so even a future catalog flag cannot trigger execution.
+      action.disabled = true;
+      row.append(action);
+      ui.modulesList.append(row);
+    }
+    if (registry.active_socket_package_id) {
+      ui.modulesStatus.textContent = `Foreground: ${registry.active_socket_package_id}`;
+    } else {
+      ui.modulesStatus.textContent = "No approved adapters are installed yet. TV and COMMS appear here after their host integrations are registered.";
+    }
+  } catch (error) {
+    ui.modulesList.replaceChildren(make("p", "dialog-warning", error.message));
+    ui.modulesStatus.textContent = "Could not read the host module registry.";
+  }
 }
 
 function updateClock() {
@@ -769,6 +813,8 @@ function init() {
   });
   ui.tabs.forEach((item) => item.addEventListener("click", () => setTab(item.dataset.tab)));
   $("micro-settings").addEventListener("click", () => setTab("conf"));
+  $("micro-modules").addEventListener("click", openModuleSwitcher);
+  $("close-modules").addEventListener("click", () => ui.modulesDialog.close());
   ui.back.addEventListener("click", back);
   ui.closeRoles.addEventListener("click", () => ui.rolesDialog.close());
   ui.cancelRoles.addEventListener("click", () => ui.rolesDialog.close());
@@ -788,11 +834,11 @@ function init() {
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape") {
       // Browsers handle closing the native modal themselves.
-      if (ui.rolesDialog.open) return;
+      if (ui.rolesDialog.open || ui.modulesDialog.open) return;
       back();
       return;
     }
-    if (!snapshot || ui.rolesDialog.open || event.altKey || event.metaKey || event.ctrlKey) return;
+    if (!snapshot || ui.rolesDialog.open || ui.modulesDialog.open || event.altKey || event.metaKey || event.ctrlKey) return;
     const target = event.target;
     if (target instanceof Element &&
         target.closest("input,select,textarea,[contenteditable='true']")) return;

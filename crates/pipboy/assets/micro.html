@@ -42,6 +42,7 @@
         </div>
         <div class="right-status">
           <span class="status-local"><span class="tiny-led" aria-hidden="true"></span>LOCAL</span>
+          <button id="micro-modules" class="tiny-button module-switch-button" type="button" aria-haspopup="dialog" aria-controls="modules-dialog">MODULES</button>
           <button id="micro-settings" class="tiny-button" type="button" aria-label="Open settings">⚙</button>
           <time id="local-clock" aria-label="Device local time">--:--</time>
           <a class="desk-link" href="/" aria-label="Return to desktop dashboard">DESK</a>
@@ -69,6 +70,21 @@
     </div>
     <div class="hardware-footer" aria-hidden="true"><span>RUST-BOY</span><span>LOCAL</span></div>
   </div>
+
+  <dialog id="modules-dialog" class="roles-dialog" aria-labelledby="modules-heading">
+    <div class="dialog-wrap">
+      <div class="dialog-head">
+        <span class="micro-label">HOST / MODULES</span>
+        <button id="close-modules" type="button" class="tiny-button" aria-label="Close module switcher">✕</button>
+      </div>
+      <h2 id="modules-heading">MODULE SWITCHER</h2>
+      <p class="dialog-copy">Browse modules registered with this host. Switching becomes available after an approved adapter is installed.</p>
+      <div id="modules-list" class="module-switch-list" role="list" aria-live="polite">
+        <p class="panel-copy">READING HOST REGISTRY…</p>
+      </div>
+      <p id="modules-status" class="dialog-warning">Only host-installed and approved adapters can be switched in.</p>
+    </div>
+  </dialog>
 
   <dialog id="roles-dialog" class="roles-dialog" aria-labelledby="roles-heading">
     <div class="dialog-wrap">

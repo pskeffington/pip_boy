@@ -10,7 +10,7 @@ A portable [`rust-boy-adapter-sdk`](../crates/rust-boy-adapter-sdk/src/lib.rs) n
 
 -  `crates/pipboy-core/src/package_socket.rs` implements strict schema parsing, bounded manifest sizes, known requested-capability vocabulary, host API compatibility, duplicate detection, and deterministic ordering. It embeds four reviewed **design fixtures**.
 - `pipboy packages list [--json]` lists reference fixtures only; `pipboy packages check FILE [--json]` validates a single operator-selected manifest; `pipboy packages scan DIR [--json]` scans direct JSON entries in an explicitly chosen local directory. The scan is bounded to 64 manifests, rejects symlinks and non-regular JSON entries, and performs no package activation.
-- Loopback-only `GET /api/packages` returns these four references with `installed:false` and `activatable:false`. It is deliberately not wired into navigation yet.
+- Loopback-only `GET /api/packages` returns the registered references with `installed:false` and `activatable:false`. The handheld `MODULES` control displays this read-only registry; switching stays unavailable until the host has an installed approved adapter and a guarded activation route.
 - `tools/validate_host_packages.py` and `tools/test_validate_host_packages.py` provide offline schema and negative fixtures; CI runs these checks when the GitHub Actions runner starts. Rust unit tests cover the same registry contract and local scanning.
 
 A pure `ForegroundSelection` controller has also been added in core. It maintains at most one selected package and a host-owned Settings surface; selection refuses IDs not present in a separate, host-approved installed roster. Its tests use a synthetic approval set. **It is not yet connected to desktop/micro rendering or runtime execution.**
