@@ -74,7 +74,14 @@
       "local_evidence": {
         "stable": "cargo +stable test --locked --offline -p pipboy --bin pipboy terminal_commands::tests — 5 passed; cargo +stable clippy --locked --offline -p pipboy --bin pipboy -- -D warnings — passed",
         "rust_1_90": "cargo +1.90.0 test --locked --offline -p pipboy --bin pipboy terminal_commands::tests — 5 passed; cargo +1.90.0 clippy --locked --offline -p pipboy --bin pipboy -- -D warnings — passed",
-        "remaining": "Full-screen TUI migration and exact-head hosted CI are still pending."
+        "remaining": "Full-screen TUI migration remains pending; the terminal bridge source commit passed the full repository CI matrix, but that pass does not accept TC-A02."
+      },
+      "ci_evidence": {
+        "source_commit": "d15247c0ee95663dd3b731db6716a42e6dc4e04f",
+        "workflow_run": 41124747110,
+        "workflow_url": "https://github.com/pskeffington/pip_boy/actions/runs/41124747110",
+        "jobs_passed": "7/7",
+        "note": "The terminal bridge and repository matrix passed at this source commit; TC-A02 remains open until the full-screen TUI is migrated and validated."
       }
     },
     {

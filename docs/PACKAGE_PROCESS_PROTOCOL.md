@@ -5,8 +5,9 @@ endpoint, host SDK bridge, supervised child runner, executable hash roster,
 deadline/terminate/reap handling, process-exit audio-lease callback, and
 loopback shell select/input routes are implemented locally. Production
 acceptance remains blocked: the reviewed executable roster is empty, no module
-is mounted by live startup, real package manifests/binaries are not registered,
-and full shell/mobile acceptance plus platform process behavior are pending.
+is mounted by live startup, and no release package manifests/binaries are
+registered. Exact source commit [`d15247c0ee95663dd3b731db6716a42e6dc4e04f`](https://github.com/pskeffington/pip_boy/commit/d15247c0ee95663dd3b731db6716a42e6dc4e04f)
+passed all seven hosted jobs in [run 41124747110](https://github.com/pskeffington/pip_boy/actions/runs/41124747110), including desktop/handheld regressions and native macOS/Windows jobs; target artifact behavior remains unverified.
 
 **Protocol verification (2026-10-30):** `rust-music-ipc` passed all 7 tests
 using a temporary Cargo target directory outside its checkout; the Pip-Boy SDK

@@ -1,6 +1,6 @@
 # Rust-Boy package socket contract (draft v1)
 
-Status (2026-10-30): **schema-1 registry, supervised-process prototype, trusted lifecycle audio reservation, and desktop/handheld selection/input routes are implemented locally; RM-018 remains open**. The executable approval roster is empty, startup mounts no process, and no OS sandbox or rb_gis adapter is claimed.
+Status (2026-10-30): **schema-1 registry, supervised-process host, trusted lifecycle audio reservation, and desktop/handheld selection/input routes are implemented and pass exact-head CI; RM-018 remains open**. Source commit [`d15247c0ee95663dd3b731db6716a42e6dc4e04f`](https://github.com/pskeffington/pip_boy/commit/d15247c0ee95663dd3b731db6716a42e6dc4e04f) passed [all seven Actions jobs](https://github.com/pskeffington/pip_boy/actions/runs/41124747110). The executable approval roster is empty, startup mounts no process, and no OS sandbox or rb_gis adapter is claimed.
 
 ## Shared universal adapter source (2026-10-28)
 
