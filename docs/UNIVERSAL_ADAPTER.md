@@ -117,3 +117,9 @@ Once mounted, `select(id)` delivers activation/resume, suspending the previous f
 | ADAPTER-REL-1 | Mac/Pi viewport, fault, disconnect, replay, security and resource-budget field acceptance | Open |
 
 **Verification limitation:** There is no available Rust toolchain in the current execution environment; recent repository GitHub Actions returned `startup_failure` before jobs started. These are implemented source changes and regression-test sources, not executed Rust test evidence. See [validation](VALIDATION.md) and [host roadmap](HOST_PACKAGE_ROADMAP.md).
+
+## Fault handling cleanup checkpoint — 2026-10-30 (candidate; not accepted)
+
+The host's internal `fault_and_release` / `release_foreground_if` helpers consolidate repeated view invalidation and conditional foreground release without changing the public protocol. A failure in a suspended package must **not** evict another healthy foreground package. A failed candidate activation must fault the candidate while allowing the previously active adapter's rollback to proceed; if rollback itself fails, the old view is removed. Host Settings remain reachable on fault. Ordinary denied intents remain denied without being treated as adapter crashes.
+
+The regression matrix now includes candidate activation rollback, suspension failure, attempted rollback failure, active and inactive shutdown faults, and denied-intent versus adapter-fault behavior. The tests are committed in a focused draft PR and **have not yet executed** in this pass. Required before acceptance: stable and Rust 1.90 locked Rust test/Clippy/format checks, exact-head GitHub Actions jobs, and regression reconciliation with any independent host/GIS PR. This remains a trusted in-process host, not an OS sandbox or authorization grant.
