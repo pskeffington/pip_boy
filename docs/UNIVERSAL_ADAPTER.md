@@ -93,6 +93,8 @@ Once mounted, `select(id)` delivers activation/resume, suspending the previous f
 
 ## Four initial packages
 
+**Fifth reference, SCAN-H01 (unverified source change):** The registry also contains the inert [`org.rustboy.scan`](../catalog/host_packages/trans_scan.example.json) design for local/paired-phone capture and governed TRANS review. Its eight `scan.*` scope names are only requested-capability vocabulary: they do not register a real device broker grant, create a trusted runner or introduce a fifth synthetic adapter implementation. See the [SCAN roadmap](SCAN_RUSTBOY_INTEGRATION.md).
+
 | Navigation | Independent source | Adapter rule |
 | --- | --- | --- |
 | MAP | [rb_gis](https://github.com/pskeffington/rb_gis) | Full-canvas map only, location acquisition in host Settings, no auto-download |

@@ -2506,7 +2506,15 @@ mod tests {
         assert_eq!(body["settings_owner"], "host");
         assert_eq!(body["active_socket_package_id"], Value::Null);
         let packages = body["packages"].as_array().unwrap();
-        assert_eq!(packages.len(), 4);
+        assert_eq!(packages.len(), 5);
+        let scan = packages
+            .iter()
+            .find(|entry| entry["manifest"]["package_id"] == "org.rustboy.scan")
+            .unwrap();
+        assert_eq!(scan["manifest"]["status"], "design_fixture_not_installed");
+        assert_eq!(scan["manifest"]["background"]["allowed"], false);
+        assert_eq!(scan["installed"], false);
+        assert_eq!(scan["activatable"], false);
         for entry in packages {
             assert_eq!(entry["installed"], false);
             assert_eq!(entry["activatable"], false);

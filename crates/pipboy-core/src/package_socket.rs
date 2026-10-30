@@ -15,11 +15,12 @@ pub const MANIFEST_SCHEMA_VERSION: u32 = 1;
 pub const MAX_MANIFEST_BYTES: usize = 16 * 1024;
 pub const MAX_CATALOG_PACKAGES: usize = 64;
 
-const REFERENCE_MANIFESTS: [&str; 4] = [
+const REFERENCE_MANIFESTS: [&str; 5] = [
     include_str!("../../../catalog/host_packages/rb_gis.example.json"),
     include_str!("../../../catalog/host_packages/rust_tv.example.json"),
     include_str!("../../../catalog/host_packages/rust_radio.example.json"),
     include_str!("../../../catalog/host_packages/rusti_rc.example.json"),
+    include_str!("../../../catalog/host_packages/trans_scan.example.json"),
 ];
 
 // These are requested scopes, NOT permissions granted by the host.
@@ -33,6 +34,14 @@ const KNOWN_SCOPES: &[&str] = &[
     "radio.device",
     "network.connect.explicit",
     "messages.local.write",
+    "scan.camera.enumerate",
+    "scan.camera.preview",
+    "scan.camera.capture",
+    "scan.media.receive",
+    "scan.media.send",
+    "scan.file.read",
+    "scan.local.write",
+    "scan.infer",
 ];
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -222,6 +231,12 @@ impl PackageManifest {
             if !KNOWN_SCOPES.contains(&scope.as_str()) || !seen.insert(scope.as_str()) {
                 return Err(Invalid("unknown or duplicate requested capability"));
             }
+            if scope.starts_with("scan.") && self.package_id != "org.rustboy.scan" {
+                return Err(Invalid("SCAN capability namespace reserved for SCAN"));
+            }
+        }
+        if self.package_id == "org.rustboy.scan" && self.background.allowed {
+            return Err(Invalid("SCAN background capture must stay disabled"));
         }
         if self
             .status
@@ -418,7 +433,7 @@ mod tests {
     }
 
     #[test]
-    fn four_reference_packages_are_sorted_and_never_installed() {
+    fn five_reference_packages_are_sorted_and_never_installed() {
         let catalog = reference_catalog().unwrap();
         let ids: Vec<_> = catalog
             .entries()
@@ -430,10 +445,11 @@ mod tests {
                 "org.rustboy.comms",
                 "org.rustboy.gis",
                 "org.rustboy.radio",
+                "org.rustboy.scan",
                 "org.rustboy.tv"
             ]
         );
-        assert_eq!(catalog.len(), 4);
+        assert_eq!(catalog.len(), 5);
         for entry in catalog.entries() {
             assert_eq!(
                 entry.status.as_deref(),
@@ -441,6 +457,39 @@ mod tests {
             );
             assert_eq!(entry.host_api, SOCKET_API_VERSION);
         }
+    }
+
+    #[test]
+    fn scan_reference_is_inert_and_has_no_implicit_camera_authority() {
+        let catalog = reference_catalog().unwrap();
+        let scan = catalog.get("org.rustboy.scan").unwrap();
+        assert_eq!(scan.name, "SCAN");
+        assert_eq!(scan.status.as_deref(), Some("design_fixture_not_installed"));
+        assert_eq!(scan.capabilities.len(), 8);
+        assert!(scan
+            .capabilities
+            .iter()
+            .any(|scope| scope == "scan.camera.capture"));
+        assert!(!scan.background.allowed);
+        let mut foreground = ForegroundSelection::default();
+        assert!(foreground
+            .select(&catalog, &BTreeSet::new(), "org.rustboy.scan")
+            .is_err());
+        assert_eq!(foreground.surface(), HostSurface::Empty);
+
+        let mut forged: Value = serde_json::from_str(REFERENCE_MANIFESTS[4]).unwrap();
+        forged["status"] = json!("installed");
+        assert!(PackageManifest::parse(&forged.to_string()).is_err());
+        forged["status"] = json!("design_fixture_not_installed");
+        forged["background"]["allowed"] = json!(true);
+        assert!(PackageManifest::parse(&forged.to_string()).is_err());
+
+        let mut map = map();
+        map["capabilities"] = json!(["scan.camera.capture"]);
+        assert!(PackageManifest::parse(&map.to_string()).is_err());
+        forged["background"]["allowed"] = json!(false);
+        forged["capabilities"] = json!(["scan.camera.remote_wake"]);
+        assert!(PackageManifest::parse(&forged.to_string()).is_err());
     }
 
     #[test]

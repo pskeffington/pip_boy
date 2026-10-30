@@ -534,6 +534,27 @@ mod tests {
     }
 
     #[test]
+    fn scan_reference_does_not_mount_camera_runner_or_execute_on_discovery() {
+        let mut host = UniversalAdapterHost::new(Viewport::new(480, 320).unwrap());
+        let calls = Arc::new(Mutex::new(Vec::new()));
+        let fixture = crate::package_socket::reference_catalog().unwrap();
+        let design = serde_json::to_string(fixture.get("org.rustboy.scan").unwrap()).unwrap();
+        let result = host.mount_trusted(
+            &design,
+            Box::new(Fixture {
+                id: "org.rustboy.scan".into(),
+                calls: calls.clone(),
+                fail: None,
+            }),
+        );
+        assert!(result.is_err());
+        assert!(host.is_empty());
+        assert!(calls.lock().unwrap().is_empty());
+        assert!(host.select("org.rustboy.scan").is_err());
+        assert_eq!(host.surface(), HostSurface::Empty);
+    }
+
+    #[test]
     fn settings_never_yields_foreground_canvas_or_loses_selection() {
         let mut host = UniversalAdapterHost::new(Viewport::new(480, 320).unwrap());
         let calls = mount(&mut host, "org.rustboy.radio", None);

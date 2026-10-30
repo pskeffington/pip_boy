@@ -2,6 +2,10 @@
 
 Status (2026-10-28): **architecture accepted; read-only manifest registry source committed; activation/UI gates open**. This document describes target behavior, not a claim that dynamic package activation, approved installation, or isolated containers exist.
 
+### SCAN-H01 extension candidate (2026-10-30)
+
+The `feat/scan-h01-inert-registry` branch adds SCAN as a fifth **design-only** reference with no installed package, no camera/phone access, no broker grant and no live adapter. Its Rust/Python regression tests still require exact-head execution; the original four-package functional adapter acceptance remains separate. See [SCAN integration](SCAN_RUSTBOY_INTEGRATION.md).
+
 ### Current gate evidence
 
 - **HOST-REG-1 / SOCKET-0, implementation candidate:** strict manifest parser in `crates/pipboy-core/src/package_socket.rs`; read-only CLI `pipboy packages list|check|scan`; loopback-only `GET /api/packages`; four indexed design fixtures, Rust unit tests, and offline Python validation.
