@@ -14,6 +14,12 @@
 - Formatting, warnings-denied Clippy, desktop-focus/micro UI unit tests, component-index and host-package validators passed locally. The desktop viewport regression could not bind loopback in this environment.
 - **Still open:** `catalog/approved_package_executables.json` has zero pins; selecting a not-yet-mounted module now resolves a pinned install on demand, but no reviewed production package is present to exercise that live path. The integration binary came from a dirty development checkout, not a reviewed release artifact. This is protocol/supervisor evidence, not production trust approval, OS sandboxing, or platform release acceptance.
 
+## TC-A01 typed command catalog — exact-head software acceptance (2026-10-30)
+
+`pipboy_core::command_catalog` provides 16 stable native handler IDs for five offline Workbench toolsets, byte-bounded typed input, explicit access metadata, stable help/JSON and typed outcomes. The terminal command bridge is now wired through this catalog in the current source; the full-screen TUI and GUI palette remain follow-on work.
+
+Exact source commit [`7c4b06bc64f89cdb41b4be877b7b8742c130f38e`](https://github.com/pskeffington/pip_boy/commit/7c4b06bc64f89cdb41b4be877b7b8742c130f38e) passed **7/7 jobs** in [Actions run 41003353102](https://github.com/pskeffington/pip_boy/actions/runs/41003353102). This accepts TC-A01 only; it is not hosted evidence for the current PR merge head and does not close RM-018.
+
 ## Universal adapter SDK and host manager — 2026-10-28 (source committed; CI startup failure)
 
 The new `crates/rust-boy-adapter-sdk` crate defines `AdapterEnvelope`, `AdapterCommand`, `AdapterReply`, `UniversalPackageAdapter` and a deny-all `ScopeAuthority` interface. `pipboy-core::universal_adapter` manages trusted in-process registrations, bounded requests/replies, one foreground package, separate Settings, scoped intents and explicit unmount/replacement. Unit test sources exercise four synthetic package IDs, lifecycle, protocol bounds, rollback, Settings persistence and oversized replies. The portable hello adapter example contains no network or device requests.

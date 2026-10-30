@@ -1,0 +1,182 @@
+{
+  "schema_version": 1,
+  "updated": "2026-10-30",
+  "project": "Rust-Boy terminal-to-module integration",
+  "source_contract": "docs/TERMINAL_MODULE_COMMANDS.md",
+  "agent_instructions": "AGENTS.md",
+  "execution_guide": "docs/TERMINAL_AGENT_EXECUTION.md",
+  "workflow": "github_first_no_required_live_side_by_side",
+  "status_semantics": {
+    "queued": "ready for development",
+    "blocked_dependency": "requires linked task accepted",
+    "in_progress": "agent working",
+    "implemented_unverified": "code written no executed CI",
+    "blocked_ci": "CI admission/startup failure",
+    "accepted_software": "all relevant automated gates passed",
+    "accepted_hardware": "real device evidence attached"
+  },
+  "tasks": [
+    {
+      "id": "TC-A01",
+      "title": "Extract shared typed command catalog and dispatcher",
+      "owner": "CORE",
+      "priority": 0,
+      "depends_on": [],
+      "status": "accepted_software",
+      "paths": [
+        "crates/pipboy-core/src/command_catalog.rs",
+        "crates/pipboy-core/src/lib.rs"
+      ],
+      "acceptance": [
+        "Registered read-only handlers mapped to real Rust operations, never display commands",
+        "Typed bounded inputs and stable help/JSON representation",
+        "No command execution on selection, unknown tool denied",
+        "Unit tests for parser, paths and injection controls"
+      ],
+      "gate": "TC-1",
+      "issue": 73,
+      "local_evidence": {
+        "stable": "cargo +stable test --locked --offline -p pipboy-core command_catalog::tests — 7 passed",
+        "rust_1_90": "cargo +1.90.0 test --locked --offline -p pipboy-core command_catalog::tests — 7 passed",
+        "hosted_ci": "pending on this PR head"
+      },
+      "ci_evidence": {
+        "source_commit": "7c4b06bc64f89cdb41b4be877b7b8742c130f38e",
+        "workflow_run": 41003353102,
+        "workflow_url": "https://github.com/pskeffington/pip_boy/actions/runs/41003353102",
+        "jobs_passed": "7/7",
+        "note": "TC-A01 software gate only; no hardware acceptance implied"
+      }
+    },
+    {
+      "id": "TC-A02",
+      "title": "Migrate pipboy terminal and integrate full-screen TUI command palette",
+      "owner": "TERMINAL",
+      "priority": 1,
+      "depends_on": [
+        "TC-A01"
+      ],
+      "status": "queued",
+      "paths": [
+        "crates/pipboy/src/terminal_commands.rs",
+        "crates/pipboy/src/console.rs",
+        "crates/pipboy/src/tui.rs",
+        "crates/pipboy/src/main.rs"
+      ],
+      "acceptance": [
+        "Both frontends call shared dispatcher; no duplicate command implementation",
+        "Direct tool selection and direct verbs preserved",
+        "Slash invokes scoped palette, Esc closes without execution, Settings accessible",
+        "Keyboard navigation and bounded output regression"
+      ],
+      "gate": "TC-2",
+      "issue": 75
+    },
+    {
+      "id": "TC-A03",
+      "title": "Bind native RADIO/MAP handlers and trusted adapter lifecycle",
+      "owner": "ADAPTER",
+      "priority": 2,
+      "depends_on": [
+        "TC-A01"
+      ],
+      "status": "queued",
+      "paths": [
+        "crates/pipboy-core/src/universal_adapter.rs",
+        "crates/pipboy/src/radio.rs",
+        "crates/pipboy/src/scout.rs"
+      ],
+      "acceptance": [
+        "Read-only stations and offline MAP actions use real existing Rust implementations",
+        "Live network/audio operations remain explicit opt-in with the same checks as CLI",
+        "Reference or scanned manifests never mount; TV and COMMS unavailable until approved",
+        "Adapter failure, suspend/resume and loss of connectivity tested"
+      ],
+      "gate": "TC-3/TC-4",
+      "issue": 75
+    },
+    {
+      "id": "TC-A04",
+      "title": "Security and CI regression harness for command dispatch",
+      "owner": "SECURITY_QA",
+      "priority": 0,
+      "depends_on": [],
+      "status": "accepted_software",
+      "paths": [
+        "crates/pipboy-core/tests",
+        "crates/pipboy/src/terminal_commands.rs",
+        ".github/workflows/rust.yml"
+      ],
+      "acceptance": [
+        "Negative fixture matrix: unpinned, untrusted, invalid, revoked, oversized, prompt copy, unauthorized transport",
+        "Existing CI pipeline inspected, preserved, with actual job status evidence",
+        "No secrets/location/message bodies leak via command history or errors",
+        "Fail closed; startup_failure with no jobs recorded blocked"
+      ],
+      "gate": "TC-1/TC-6",
+      "issue": 74,
+      "local_evidence": {
+        "stable": "cargo +stable test --locked --offline -p pipboy-core command_catalog::tests — 7 passed; cargo +stable test --locked --offline -p pipboy-core --test command_security — 5 passed; pipboy-core Clippy -D warnings passed",
+        "rust_1_90": "cargo +1.90.0 test --locked --offline -p pipboy-core command_catalog::tests — 7 passed; cargo +1.90.0 test --locked --offline -p pipboy-core --test command_security — 5 passed; pipboy-core Clippy -D warnings passed",
+        "security_boundary": "CommandFailure serializes only fixed safe categories, preventing transport details from carrying message bodies or credentials into command-result JSON."
+      },
+      "ci_evidence": {
+        "exact_head_commit": "83cbdf20ca0f1c008f0c0bad2cefd38d7640c349",
+        "workflow_run": 41005115247,
+        "workflow_url": "https://github.com/pskeffington/pip_boy/actions/runs/41005115247",
+        "jobs_passed": "7/7",
+        "note": "Exact PR head passed stable (including desktop/micro Chromium and runtime CLI smoke), Rust 1.90, native macOS, native Windows, both SDR feature jobs, and source/module validation. No hardware acceptance is implied."
+      }
+    },
+    {
+      "id": "TC-A05",
+      "title": "Shared desktop and micro command palette",
+      "owner": "GUI",
+      "priority": 3,
+      "depends_on": [
+        "TC-A01",
+        "TC-A02"
+      ],
+      "status": "blocked_dependency",
+      "paths": [
+        "crates/pipboy/src/dashboard.rs",
+        "crates/pipboy/src/dashboard"
+      ],
+      "acceptance": [
+        "Same Rust handler catalog and authorization as terminal",
+        "Single active package, host Settings accessible, no background side effects",
+        "480x320 and desktop automated keyboard/touch tests",
+        "No viewport regression or fake readiness indicator"
+      ],
+      "gate": "TC-5",
+      "issue": 75
+    },
+    {
+      "id": "TC-A06",
+      "title": "Release evidence, indexing, CI and acceptance reconciliation",
+      "owner": "RELEASE",
+      "priority": 4,
+      "depends_on": [
+        "TC-A02",
+        "TC-A03",
+        "TC-A04",
+        "TC-A05"
+      ],
+      "status": "blocked_dependency",
+      "paths": [
+        "docs/VALIDATION.md",
+        "docs/TERMINAL_MODULE_COMMANDS.md",
+        "docs/README.md",
+        "README.md",
+        "catalog/terminal_agent_tasks.json"
+      ],
+      "acceptance": [
+        "CI jobs actually ran for tested HEAD; report SHA, results and gaps",
+        "Update top-level index and command usage against implementation",
+        "Mac/Pi and physical device acceptance labeled pending unless evidence exists",
+        "No release claims until documented security and GUI gates pass"
+      ],
+      "gate": "TC-6"
+    }
+  ]
+}
