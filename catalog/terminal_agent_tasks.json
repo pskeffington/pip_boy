@@ -101,7 +101,7 @@
       "owner": "SECURITY_QA",
       "priority": 0,
       "depends_on": [],
-      "status": "implemented_unverified",
+      "status": "accepted_software",
       "paths": [
         "crates/pipboy-core/tests",
         "crates/pipboy/src/terminal_commands.rs",
@@ -118,15 +118,14 @@
       "local_evidence": {
         "stable": "cargo +stable test --locked --offline -p pipboy-core command_catalog::tests — 7 passed; cargo +stable test --locked --offline -p pipboy-core --test command_security — 5 passed; pipboy-core Clippy -D warnings passed",
         "rust_1_90": "cargo +1.90.0 test --locked --offline -p pipboy-core command_catalog::tests — 7 passed; cargo +1.90.0 test --locked --offline -p pipboy-core --test command_security — 5 passed; pipboy-core Clippy -D warnings passed",
-        "security_boundary": "CommandFailure serializes only fixed safe categories, preventing adapter/transport error strings from carrying message bodies or credentials into result JSON."
+        "security_boundary": "CommandFailure serializes only fixed safe categories, preventing transport details from carrying message bodies or credentials into command-result JSON."
       },
       "ci_evidence": {
-        "baseline_commit": "016610eb5de5e3877ec70a20fb741155ce8c0416",
-        "baseline_workflow_run": 41004477851,
-        "baseline_workflow_url": "https://github.com/pskeffington/pip_boy/actions/runs/41004477851",
-        "baseline_jobs_passed": "7/7",
-        "current_head": "TC-A04 PR exact-head workflow pending",
-        "note": "Baseline main passed stable, Rust 1.90, native macOS/Windows, SDR and source/catalog jobs; this does not accept TC-A04 before its own exact-head run."
+        "exact_head_commit": "83cbdf20ca0f1c008f0c0bad2cefd38d7640c349",
+        "workflow_run": 41005115247,
+        "workflow_url": "https://github.com/pskeffington/pip_boy/actions/runs/41005115247",
+        "jobs_passed": "7/7",
+        "note": "Exact PR head passed stable (including desktop/micro Chromium and runtime CLI smoke), Rust 1.90, native macOS, native Windows, both SDR feature jobs, and source/module validation. No hardware acceptance is implied."
       }
     },
     {

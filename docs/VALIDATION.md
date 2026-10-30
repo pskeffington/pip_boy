@@ -316,3 +316,10 @@ volume and temporary preferences. `--live-ip` explicitly adds Skylab playback;
 `--standalone /path/to/rust-radio-cli` also checks the standalone native player.
 It never claims synthetic samples are received RF and is excluded from CI
 profiles that lack audio hardware.
+
+
+## TC-A04 command-dispatch security matrix — exact-head software acceptance (2026-10-30)
+
+Added five security integration tests for pinned/known tool selection, prompt-copy and unsupported command rejection, oversized/control-character input, reference-only/external-process manifest denial, per-intent COMMS scope revalidation after revocation, explicit unknown-delivery results, and the rule that selecting a tool never dispatches a payload. Sensitive command results now use a closed `CommandFailure` enum with static safe messages, so dynamic transport error text cannot serialize message bodies, credentials, or locations.
+
+**Local evidence:** focused catalog tests passed 7/7 and security integration tests passed 5/5 on Rust stable and Rust 1.90.0. `pipboy-core` warnings-denied Clippy passed on both toolchains. **Hosted exact-head evidence:** source commit [`83cbdf20ca0f1c008f0c0bad2cefd38d7640c349`](https://github.com/pskeffington/pip_boy/commit/83cbdf20ca0f1c008f0c0bad2cefd38d7640c349) passed all 7/7 jobs in [Actions run 41005115247](https://github.com/pskeffington/pip_boy/actions/runs/41005115247). The full workflow includes stable (desktop/micro Chromium and runtime CLI), Rust 1.90.0, native macOS/Windows, both SDR feature matrices, and source/module validation. This accepts TC-A04 software checks only; it does not assert hardware acceptance or authorize a live COMMS transport.
