@@ -259,6 +259,26 @@ mod tests {
     }
 
     #[test]
+    fn shared_catalog_aliases_and_diag_precedence() {
+        let board = Workbench::from_preset(&PRESETS[2]);
+        let mut selected = Some("diag");
+        assert!(route(&board, &mut selected, "host").unwrap());
+        assert_eq!(selected, Some("diag"));
+        assert!(route(&board, &mut selected, "?").unwrap());
+        assert!(!route(&board, &mut selected, "q").unwrap());
+    }
+
+    #[test]
+    fn shared_catalog_rejects_wrong_scope_and_invalid_arguments() {
+        let board = Workbench::from_preset(&PRESETS[2]);
+        let mut selected = Some("net-lab");
+        assert!(route(&board, &mut selected, "cidr").is_err());
+        assert!(route(&board, &mut selected, "run scan local").is_err());
+        assert!(route(&board, &mut selected, "select radio").is_err());
+        assert_eq!(selected, Some("net-lab"));
+    }
+
+    #[test]
     fn limits_input() {
         let board = Workbench::from_preset(&PRESETS[0]);
         let mut selected = None;
