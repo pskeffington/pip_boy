@@ -10,7 +10,7 @@
     "RADIO",
     "COMMS"
   ],
-  "state": "planning_only_not_installed",
+  "state": "inert_registry_candidate_not_installed",
   "host_roadmap": "docs/SCAN_RUSTBOY_INTEGRATION.md",
   "capture_contract": "docs/SCAN_CAPTURE_CONTRACT.md",
   "status_semantics": {
@@ -38,11 +38,16 @@
       "priority": "P0",
       "depends_on": [],
       "title": "Freeze camera-first SCAN v0 authority map, capture/media split, protocol and bidirectional source/requester roles",
-      "status": "queued",
+      "status": "implemented_unverified",
       "acceptance": [
         "Reviewed canonical guide and capture proposal",
         "No claim of working device or installed module"
-      ]
+      ],
+      "evidence": {
+        "branch": "docs/scan-camera-bridge-2026-10-30",
+        "pr_url": "https://github.com/pskeffington/pip_boy/pull/83",
+        "acceptance": "pending_separate_review"
+      }
     },
     {
       "id": "SCAN-H01",
@@ -53,11 +58,18 @@
         "SCAN-H00"
       ],
       "title": "Add inert fifth SCAN fixture, known scopes and tests to registry/SDK indexes and validators, no install claim",
-      "status": "blocked_dependency",
+      "status": "implemented_unverified",
       "acceptance": [
         "All manifest invalid cases fail closed",
         "No regressions in four existing module fixtures"
-      ]
+      ],
+      "evidence": {
+        "source_commit": "27629f3580a5148005949b1ded4fc21d1b3a36bf",
+        "branch": "feat/scan-h01-inert-registry",
+        "fixture": "catalog/host_packages/trans_scan.example.json",
+        "validation": "pending_exact_head_ci",
+        "hardware": "not_implemented"
+      }
     },
     {
       "id": "SCAN-H02",

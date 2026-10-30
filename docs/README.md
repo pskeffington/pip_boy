@@ -105,4 +105,4 @@ The product name is **Rust-Boy**; the existing `pip_boy` repository, `pipboy` CL
 
 ## SCAN — proposed optical/HTR module
 
-[Camera-first, bidirectional phone/Rust-Boy SCAN integration roadmap](SCAN_RUSTBOY_INTEGRATION.md) · [Capture permissions, metadata/media contract](SCAN_CAPTURE_CONTRACT.md) · [Cross-repository agent queue](../catalog/scan_agent_tasks.json). Documentation/planning only; SCAN is not installed, and physical camera pairing and reciprocal capture are unverified.
+[Camera-first, bidirectional phone/Rust-Boy SCAN integration roadmap](SCAN_RUSTBOY_INTEGRATION.md) · [Capture permissions, metadata/media contract](SCAN_CAPTURE_CONTRACT.md) · [Cross-repository agent queue](../catalog/scan_agent_tasks.json). SCAN-H01 now has a fifth **inert** package reference and registry/validator test sources awaiting exact-head CI; this is **not** a functioning adapter or camera. Physical camera access, pairing, reciprocal capture, and release remain unverified.

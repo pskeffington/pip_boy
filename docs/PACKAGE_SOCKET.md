@@ -8,7 +8,7 @@ A portable [`rust-boy-adapter-sdk`](../crates/rust-boy-adapter-sdk/src/lib.rs) n
 
 ## Implemented registry precursor
 
--  `crates/pipboy-core/src/package_socket.rs` implements strict schema parsing, bounded manifest sizes, known requested-capability vocabulary, host API compatibility, duplicate detection, and deterministic ordering. It embeds four reviewed **design fixtures**.
+-  `crates/pipboy-core/src/package_socket.rs` implements strict schema parsing, bounded manifest sizes, known requested-capability vocabulary, host API compatibility, duplicate detection, and deterministic ordering. It embeds the original four design fixtures; SCAN-H01 adds a fifth **inert SCAN design fixture** on its unverified implementation branch.
 - `pipboy packages list [--json]` lists reference fixtures only; `pipboy packages check FILE [--json]` validates a single operator-selected manifest; `pipboy packages scan DIR [--json]` scans direct JSON entries in an explicitly chosen local directory. The scan is bounded to 64 manifests, rejects symlinks and non-regular JSON entries, and performs no package activation.
 - Loopback-only `GET /api/packages` returns the registered references with `installed:false` and `activatable:false`. The handheld `MODULES` control displays this read-only registry; switching stays unavailable until the host has an installed approved adapter and a guarded activation route.
 - `tools/validate_host_packages.py` and `tools/test_validate_host_packages.py` provide offline schema and negative fixtures; CI runs these checks when the GitHub Actions runner starts. Rust unit tests cover the same registry contract and local scanning.
@@ -47,9 +47,9 @@ Target installation discovery will use a host-owned allowlisted package director
 
 Reference fixtures in [host package fixtures](../catalog/host_packages/) are **examples only**, not installed package inventory or executable instructions. Never trust publisher/source strings to authorize execution.
 
-## Initial four-package integration set
+## Initial four packages and fifth SCAN reference
 
-The following source repositories are **independent development projects**, not installed or executable host packages. Their manifests are schema-1 **design fixtures** only.
+The original four package source repositories are **independent development projects**, not installed or executable host packages. The fifth SCAN fixture is a host-owned integration reference to the separate TRANS family, not a newly installed processor. Their manifests are schema-1 **design fixtures** only.
 
 | Display | Repository | Fixture | Intended foreground |
 | --- | --- | --- | --- |
@@ -57,10 +57,11 @@ The following source repositories are **independent development projects**, not 
 | TV | [rust_tv](https://github.com/pskeffington/rust_tv) | [TV fixture](../catalog/host_packages/rust_tv.example.json) | Single TV player viewport |
 | RADIO | [rust_radio](https://github.com/pskeffington/rust_radio) | [Radio fixture](../catalog/host_packages/rust_radio.example.json) | Native radio controls |
 | COMMS | [rusti_rc](https://github.com/pskeffington/rusti_rc) | [Comms fixture](../catalog/host_packages/rusti_rc.example.json) | Native message interface |
+| SCAN | [TRANS integration roadmap](SCAN_RUSTBOY_INTEGRATION.md) | [SCAN fixture](../catalog/host_packages/trans_scan.example.json) | Proposed still-image capture, source review, and OCR/HTR; **not implemented** |
 
-All four must implement the same host adapter boundary: version negotiation, no-IO discovery, one foreground viewport, host-owned Settings, explicit capability grant, fault isolation and deterministic unavailability. TV may not automatically fetch streams, RADIO may not automatically access SDR, COMMS may not automatically join channels, MAP may not automatically acquire location or download layers. Background declarations in fixtures are **requests**, never grants.
+The original four and the proposed SCAN module must ultimately implement the same host adapter boundary: version negotiation, no-IO discovery, one foreground viewport, host-owned Settings, explicit capability grant, fault isolation and deterministic unavailability. TV may not automatically fetch streams, RADIO may not automatically access SDR, COMMS may not automatically join channels, MAP may not automatically acquire location or download layers. Background declarations in fixtures are **requests**, never grants.
 
-Integration order: manifest validation for all four first, then independently validated MAP / RADIO / TV / COMMS adapters. Module internals and independent CI remain in their own repositories.
+Integration order: validate the five inert reference manifests first, then independently validate native adapters. SCAN requires its own camera permission broker, paired-device consent and bounded media side channel; SCAN-H01 reserves only package metadata and requested scope names. Module internals and independent CI remain in their own repositories.
 
 ## GIS extraction: strangler adapter
 

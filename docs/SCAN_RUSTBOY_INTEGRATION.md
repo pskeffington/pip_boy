@@ -1,5 +1,5 @@
 # SCAN — camera-first TRANS family integration roadmap
-Status: **design and agent tasking; not installed or released** (2026-10-30).
+Status: **SCAN-H01 inert registry implementation candidate; not installed or released** (2026-10-30). Exact-head CI and contract review pending.
 Owner: Rust-Boy host/adapter integration. Source-of-truth TRANS processing ownership stays in its own repositories.
 
 ## Mission and unambiguous name
@@ -8,7 +8,7 @@ Add **SCAN** as a fifth Rust-Boy socket module, proposed package ID `org.rustboy
 The operator opens a single SCAN viewport, chooses **camera on this device**, **camera on a paired phone**, **camera on a paired Rust-Boy** or **explicitly selected local image/document**. A paired phone can supply captures to Rust-Boy for TRANS processing **and vice versa**: a phone can request/review a capture from Rust-Boy's attached camera. Either endpoint can be a capture source, requestor or processing/viewing endpoint after capability negotiation. Never assume the phone can run the full TRANS stack merely because it can capture. No unsolicited reciprocal camera access.
 
 ## Existing host status
-`crates/rust-boy-adapter-sdk` defines protocol v1, bounded 16-KiB envelopes and 4-KiB intents. `pipboy-core::universal_adapter` owns trusted in-process adapter lifecycle, foreground selection and Settings. `catalog/host_adapter_contract.json`, registry validator and four manifests currently list **MAP, TV, RADIO, COMMS only**. Their current presence is reference metadata, not an installed/untrusted package loader. Add SCAN to those code surfaces **only** in SCAN-H01 together with validators/tests; do not simply change an index and claim installation. The existing module UI remains separately gated by HOST-UI-1, HOST-SEC-1 and current terminal agent queue.
+`crates/rust-boy-adapter-sdk` defines protocol v1, bounded 16-KiB envelopes and 4-KiB intents. `pipboy-core::universal_adapter` owns trusted in-process adapter lifecycle, foreground selection and Settings. The `feat/scan-h01-inert-registry` branch now adds `org.rustboy.scan` as a **fifth inert reference** to `catalog/host_adapter_contract.json`, `crates/pipboy-core/src/package_socket.rs`, the manifest validator, and a `trans_scan.example.json` design fixture. Rust and Python negative tests reject installation claims, unknown/cross-module scopes and SCAN background work. This is written source, **not an executed CI pass**, approved installation, an OS camera permission, a mounted adapter, or a working paired-phone transport. Prior original four synthetic adapter tests remain separate; do not claim they are five native adapters. The existing module UI remains separately gated by HOST-UI-1, HOST-SEC-1 and current terminal agent queue.
 
 ## Capture modes, ordered
 | Mode | Direction | First operation | Release gate |
@@ -39,7 +39,7 @@ SCAN uses the same **single foreground package** as MAP/TV/RADIO/COMMS. Settings
 | Gate | Agent / deliverable | Dependencies | Required evidence |
 |---|---|---|---|
 | SCAN-0 | Contract/index freeze, full source and camera matrix, negative fixtures (SCAN-H00) | none | reviewed docs + pinned head inventory |
-| SCAN-1 | Inert fifth manifest, validator and host catalog/test updates (SCAN-H01) | SCAN-0 | tests reject false installation and unknown capabilities |
+| SCAN-1 | Fifth inert fixture, registry catalog and negative-test source **committed, CI pending** (SCAN-H01) | SCAN-0 review | exact-head tests reject false installation, cross-module scopes and unknown capabilities |
 | SCAN-2 | Synthetic SCAN adapter, typed intents, resource/foreground/Settings behavior (SCAN-H02) | SCAN-1, HOST-ADAPTER-CORE-1 | Rust test evidence and exact CI jobs |
 | SCAN-3 | Attached camera explicit still capture via host-brokered handles (SCAN-H03) | SCAN-2, HOST-SEC-1 | permissions, no select-side IO, deny/revoke + OS camera evidence |
 | SCAN-4 | Paired phone -> RB still handoff + RB -> phone reciprocal capture (SCAN-H04/H05) | SCAN-3, authenticated media boundary | two-owner consent, replay/timeout/peer-offline tests |
