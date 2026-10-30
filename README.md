@@ -18,7 +18,7 @@ Roles use short operator titles: **Overseer, Maintenance, Security, Doctor, Scie
 
 **Socket registry precursor:** Five independent designs (MAP / TV / RADIO / COMMS / MUSIC) can be inspected and validated without loading packages. `pipboy packages list --json` shows checked-in reference designs; `pipboy packages check PATH` validates an explicit file; `pipboy packages scan DIR --json` discovers JSON manifests in an operator-chosen local directory. All results are **reference/discovered metadata only**, not installed or runnable packages. See [socket contract](docs/PACKAGE_SOCKET.md).
 
-**Shared command catalog (TC-A01 accepted):** bounded typed requests and stable native handler metadata passed exact-head CI run [41003353102](https://github.com/pskeffington/pip_boy/actions/runs/41003353102). The provisional terminal is now routed through that catalog; full-screen TUI and GUI command integration remain queued. See [command integration plan](docs/TERMINAL_MODULE_COMMANDS.md).
+**Shared command catalog:** bounded typed requests and stable handler metadata passed exact-head CI run [41003353102](https://github.com/pskeffington/pip_boy/actions/runs/41003353102). `pipboy terminal` now uses the core parser and dispatcher; the full-screen TUI and GUI command palette remain open. See [command integration plan](docs/TERMINAL_MODULE_COMMANDS.md).
 
 **Terminal command bridge:** `pipboy terminal` selects a pinned Workbench tool and dispatches bounded typed requests through the shared catalog to allowlisted offline Rust handlers. Full-screen TUI migration remains open. See [command integration plan](docs/TERMINAL_MODULE_COMMANDS.md).
 
