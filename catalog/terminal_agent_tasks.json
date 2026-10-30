@@ -178,5 +178,21 @@
       ],
       "gate": "TC-6"
     }
-  ]
+  ],
+  "reconciliation": {
+    "date": "2026-10-30",
+    "document": "docs/CHANGE_RECONCILIATION_2026-10-30.md",
+    "mainline_observed": [
+      "635a724b59833dfaf5d6d143799e8e19a912e525",
+      "3a647e973520099d0cf1c23984530d3045365a69",
+      "0a326ae4409bac8566abf00abb5acff6437e6d39",
+      "016610eb5de5e3877ec70a20fb741155ce8c0416"
+    ],
+    "next_unblocked": [
+      "TC-A02",
+      "TC-A03"
+    ],
+    "parallel_track": "HOST-UI-1: host-owned one-foreground Settings/switcher integration; inert until trusted adapter activation",
+    "note": "Documentation-only dispatch reconciliation; no queued status advanced and no new CI evidence claimed"
+  }
 }
