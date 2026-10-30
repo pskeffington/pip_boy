@@ -39,3 +39,7 @@
 ## Release boundary
 
 Software acceptance is not hardware or production acceptance. No demand for operator Mac verification during coding. Hardware radio, physical Raspberry Pi, external streams, paired devices, emergency message delivery, regulated data and native isolation remain separate real-device/security release gates.
+
+## TC-A02 incremental implementation checkpoint — 2026-10-30
+
+The CLI now calls `pipboy_core::command_catalog::parse_input` for bounded command grammar, pin checks and typed execution requests; terminal aliases `q` / `?` and the selected DIAG `host` command were preserved in shared parsing. The existing reviewed offline native executor is temporarily retained behind an explicit read-only/offline/zero-scope/zero-confirmation gate. Regression tests cover aliases, scope rejection and malformed commands. **This is a partial source implementation, not TC-A02 acceptance:** TUI palette and unified executor remain open, and neither Rust tests nor exact-head CI were executed in this connector pass. Queue status is `in_progress`. Next agent should run CI first, fix any compilation/test regressions, then land the TUI command pane and remove duplicated execution mapping in a separate reviewed slice.
