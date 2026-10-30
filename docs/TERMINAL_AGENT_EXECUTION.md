@@ -2,13 +2,13 @@
 
 **Mode:** GitHub-first, agent-driven, no required operator side-by-side/local terminal testing for software gates.
 **Source of truth:** [machine-readable queue](../catalog/terminal_agent_tasks.json), [agent instructions](../AGENTS.md), [terminal contract](TERMINAL_MODULE_COMMANDS.md), [host roadmap](HOST_PACKAGE_ROADMAP.md).
-**Current implementation:** provisional offline `pipboy terminal` selected-tool prompt exists; the full-screen `tui` does not share its dispatcher, and MAP / TV / RADIO / COMMS reference sockets are not installed live modules. The direct-command repair was committed but has no independently verified post-change CI evidence yet.
+**Current implementation:** TC-A01 typed bounded command catalog/parser/dispatcher and structured outcomes are implemented in `pipboy-core`, with exact-head CI pending. The provisional offline `pipboy terminal` and full-screen `tui` have not yet migrated to it. MAP / TV / RADIO / COMMS reference sockets remain uninstalled and unavailable.
 
 ## Agent work packets
 
 | ID | Agent | Work | Dependencies | Merge gate |
 |---|---|---|---|---|
-| TC-A01 | CORE | Define first-party `CommandDescriptor`, `CommandRequest`, `CommandResult`, parser and registry in `pipboy-core`; migrate allowlisted offline handlers only after inventory | None | Typed validation tests and no shell execution |
+| TC-A01 | CORE | Define first-party `CommandDescriptor`, `CommandRequest`, structured `CommandResult`, bounded parser and stable help/source registry in `pipboy-core`; map only inventoried offline handlers | None | Local typed validation passes; exact-head CI and formatter gate pending |
 | TC-A02 | TERMINAL | Route existing `terminal_commands` plus full-screen `tui` through dispatcher; keyboard prompt + scoped toolset help, no privileged side effects from navigation | A01 | TUI snapshot/interaction and CLI compatibility tests |
 | TC-A03 | ADAPTER | Bind actual read-only RADIO and offline MAP handlers, trusted adapter selection/lifecycle. Do not advertise TV/COMMS as runnable until installed and approved | A01 | Real native handler tests; denied manifests/capability gating |
 | TC-A04 | SECURITY/QA | Negative permission, source trust, bad input, cancellation, restart and CI-gate evidence tests | None | Reproducible CI job evidence, not green badges without jobs |

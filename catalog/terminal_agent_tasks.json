@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated": "2026-10-29",
+  "updated": "2026-10-30",
   "project": "Rust-Boy terminal-to-module integration",
   "source_contract": "docs/TERMINAL_MODULE_COMMANDS.md",
   "agent_instructions": "AGENTS.md",
@@ -22,7 +22,7 @@
       "owner": "CORE",
       "priority": 0,
       "depends_on": [],
-      "status": "queued",
+      "status": "implemented_unverified",
       "paths": [
         "crates/pipboy-core/src/command_catalog.rs",
         "crates/pipboy-core/src/lib.rs"
@@ -34,7 +34,12 @@
         "Unit tests for parser, paths and injection controls"
       ],
       "gate": "TC-1",
-      "issue": 73
+      "issue": 73,
+      "local_evidence": {
+        "stable": "cargo +stable test --locked --offline -p pipboy-core command_catalog::tests — 7 passed",
+        "rust_1_90": "cargo +1.90.0 test --locked --offline -p pipboy-core command_catalog::tests — 7 passed",
+        "hosted_ci": "pending on this PR head"
+      }
     },
     {
       "id": "TC-A02",
