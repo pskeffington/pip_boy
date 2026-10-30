@@ -1,6 +1,6 @@
 # Terminal-to-module command surface (implementation contract)
 
-Status: **TC-A01 typed catalog/parser/dispatcher implemented; awaiting exact-head GitHub CI.** `pipboy-core::command_catalog` exposes five pinned offline toolsets with bounded typed arguments, stable native handler IDs, explicit read-only/scope/confirmation/connectivity metadata, source provenance, stable JSON and help descriptors, and structured timestamped outcomes. The existing `pipboy terminal` remains provisional and has not migrated to this shared interface; that is TC-A02. TUI/GUI integration and live MAP/TV/RADIO/COMMS adapters remain later gates.
+Status: **TC-A01 software gate accepted.** Exact source commit `7c4b06bc64f89cdb41b4be877b7b8742c130f38e` passed all 7 jobs in [Actions run 41003353102](https://github.com/pskeffington/pip_boy/actions/runs/41003353102). `pipboy-core::command_catalog` exposes five pinned offline toolsets with bounded typed arguments, stable native handler IDs, explicit read-only/scope/confirmation/connectivity metadata, source provenance, stable JSON and help descriptors, and structured timestamped outcomes. The existing `pipboy terminal` remains provisional and has not migrated to this shared interface; TC-A02 and TC-A03 are now unblocked. TUI/GUI integration and live MAP/TV/RADIO/COMMS adapters remain later gates.
 
 ## Agent execution
 

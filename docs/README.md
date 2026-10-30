@@ -10,7 +10,7 @@ Technical contracts, architecture decisions, research provenance and validation 
 
 ## Terminal module command integration
 
-[Terminal-to-module command surface](TERMINAL_MODULE_COMMANDS.md) documents TC-A01's typed offline catalog/parser/dispatcher and the still-open migration of terminal, TUI and GUI callers. TC-A01 awaits exact-head GitHub CI.
+[Terminal-to-module command surface](TERMINAL_MODULE_COMMANDS.md) documents TC-A01's typed offline catalog/parser/dispatcher and the still-open migration of terminal, TUI and GUI callers. TC-A01 passed all seven exact-head jobs in [Actions run 41003353102](https://github.com/pskeffington/pip_boy/actions/runs/41003353102); terminal, TUI and GUI callers remain queued.
 
 ## Universal adapter SDK
 
