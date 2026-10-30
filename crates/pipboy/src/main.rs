@@ -33,8 +33,8 @@ mod radio_sdrconnect;
 mod sampling;
 mod scout;
 mod status;
-mod tui;
 mod terminal_commands;
+mod tui;
 mod workbench;
 mod zip_index;
 

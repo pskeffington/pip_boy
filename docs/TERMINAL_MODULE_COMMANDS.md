@@ -1,10 +1,14 @@
 # Terminal-to-module command surface (implementation contract)
 
-Status: **initial executable bridge committed but not compile/field-verified**. `pipboy terminal` loads saved Workbench pins and supports `tools`, `select TOOL`, `help`, `run COMMAND`, and `quit`. Supported offline handler tool IDs are `host`, `diag`, `library`, `byte-lab`, and `net-lab`. Direct tool names select pinned tools, and selected-tool verbs can run without the `run` prefix; `q`, `quit`, and `exit` close the prompt. Do not paste the printed `rb:host>` prompt itself. Two new regression tests cover direct selection, command entry, prompt paste and denied network requests. The updated behavior is awaiting Mac validation; other pinned tools are not runnable through this command prompt. It is separate from the full-screen `tui`, and does **not** mount MAP/TV/RADIO/COMMS sockets. Complete the gated common dispatcher and UI integration below before calling this production-ready.
+Status: **TC-A01 software gate accepted.** Exact source commit `7c4b06bc64f89cdb41b4be877b7b8742c130f38e` passed all 7 jobs in [Actions run 41003353102](https://github.com/pskeffington/pip_boy/actions/runs/41003353102). `pipboy-core::command_catalog` exposes five pinned offline toolsets with bounded typed arguments, stable native handler IDs, explicit read-only/scope/confirmation/connectivity metadata, source provenance, stable JSON and help descriptors, and structured timestamped outcomes. The existing `pipboy terminal` remains provisional and has not migrated to this shared interface; TC-A02 and TC-A03 are now unblocked. TUI/GUI integration and live MAP/TV/RADIO/COMMS adapters remain later gates.
 
 ## Agent execution
 
 Follow [root AGENTS.md](../AGENTS.md), [GitHub-first execution packets](TERMINAL_AGENT_EXECUTION.md), and [machine-readable task statuses](../catalog/terminal_agent_tasks.json). Software gates should progress through GitHub source and CI, without requiring operator live side-by-side testing. Hardware/field release acceptance remains separate.
+
+## TC-A01 implementation checkpoint
+
+The catalog is descriptive and deterministic. Parsing a command or selecting a tool never invokes a handler. Requests are admitted only for registered handlers and tools pinned in the caller-supplied Workbench set. Every registered command is currently read-only and offline; side-effect, scope, confirmation and connectivity fields are explicit so future commands cannot inherit implicit authority. `CommandResult<T>` records a typed value or error, handler status, source path and caller-supplied observation time. Tests cover bounds, unsupported/unpinned/shell-like inputs, help/source provenance, stable serialization and non-execution on selection.
 
 ## Goal
 

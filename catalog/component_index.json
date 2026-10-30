@@ -6,16 +6,17 @@
   "components": [
     {
       "id": "workspace",
-      "boundary": "Shared Cargo package and compiler contracts; no platform-specific code moves.",
+      "boundary": "Shared Cargo package/compiler contracts and host-owned offline typed command catalog; no platform-specific code moves.",
       "hardware_gate": "software_only",
       "code": [
         "Cargo.toml",
-        "rust-toolchain.toml",
         "crates/pipboy-core/Cargo.toml",
-        "crates/pipboy/Cargo.toml",
-        "crates/rust-boy-broker/Cargo.toml",
+        "crates/pipboy-core/src/command_catalog.rs",
         "crates/pipboy-core/src/lib.rs",
-        "crates/pipboy/src/main.rs"
+        "crates/pipboy/Cargo.toml",
+        "crates/pipboy/src/main.rs",
+        "crates/rust-boy-broker/Cargo.toml",
+        "rust-toolchain.toml"
       ],
       "docs": [
         "docs/ARCHITECTURE.md",
