@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Offline, read-only schema gate for Rust-Boy's four package socket fixtures.
+"""Offline, read-only schema gate for Rust-Boy's five package socket fixtures.
 
 The fixtures advertise *design references*, not installed/runnable packages.
 This script uses only Python's standard library and never executes a manifest.
@@ -20,12 +20,23 @@ EXPECTED = {
     "rust_tv.example.json": ("org.rustboy.tv", "TV", "rust_tv"),
     "rust_radio.example.json": ("org.rustboy.radio", "RADIO", "rust_radio"),
     "rusti_rc.example.json": ("org.rustboy.comms", "COMMS", "rusti_rc"),
+    "trans_scan.example.json": ("org.rustboy.scan", "SCAN", "pip_boy"),
+}
+SCAN_SCOPES = {
+    "scan.camera.enumerate",
+    "scan.camera.preview",
+    "scan.camera.capture",
+    "scan.media.receive",
+    "scan.media.send",
+    "scan.file.read",
+    "scan.local.write",
+    "scan.infer",
 }
 SCOPES = {
     "location.read", "map.cache.read", "map.cache.write",
     "network.fetch.explicit", "media.video", "media.audio",
     "radio.device", "network.connect.explicit", "messages.local.write",
-}
+} | SCAN_SCOPES
 TOP_KEYS = {
     "schema_version", "package_id", "name", "version", "publisher",
     "license", "source_repository", "host_api", "entrypoint", "ui",
@@ -83,6 +94,10 @@ def check_manifest(m):
     require(isinstance(caps, list) and len(caps) <= 16
             and all(isinstance(c, str) and c in SCOPES for c in caps)
             and len(caps) == len(set(caps)), "unknown or duplicate capabilities")
+    if identifier == "org.rustboy.scan":
+        require(background["allowed"] is False, "SCAN background capture must stay disabled")
+    else:
+        require(not (set(caps) & SCAN_SCOPES), "SCAN capability namespace reserved for SCAN")
     require(m.get("status", "design_fixture_not_installed") == "design_fixture_not_installed",
             "manifest must not claim installed or authorized state")
     return identifier
@@ -190,6 +205,13 @@ def validate(root=ROOT):
         require(manifest["source_repository"]
                 == f"https://github.com/pskeffington/{expected_repo}",
                 f"{filename}: mismatched upstream repository")
+        require(manifest.get("status") == "design_fixture_not_installed",
+                f"{filename}: explicit inert design status required")
+        if identifier == "org.rustboy.scan":
+            require(set(manifest["capabilities"]) == SCAN_SCOPES,
+                    "SCAN fixture scope vocabulary drift")
+            require(manifest["entrypoint"]["type"] == "builtin_adapter",
+                    "SCAN fixture may not declare process execution")
         require(identifier not in seen, f"{filename}: duplicate package ID")
         seen.add(identifier)
     rust = (root / "crates/pipboy-core/src/package_socket.rs").read_text(encoding="utf-8")

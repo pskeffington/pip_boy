@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "package_id": "org.rustboy.scan",
+  "name": "SCAN",
+  "version": "0.0.0-design",
+  "publisher": "Rust-Boy contributors",
+  "license": "MIT",
+  "source_repository": "https://github.com/pskeffington/pip_boy",
+  "host_api": 1,
+  "entrypoint": {
+    "type": "builtin_adapter"
+  },
+  "ui": {
+    "mode": "host_view",
+    "min_width": 320,
+    "min_height": 240
+  },
+  "capabilities": [
+    "scan.camera.enumerate",
+    "scan.camera.preview",
+    "scan.camera.capture",
+    "scan.media.receive",
+    "scan.media.send",
+    "scan.file.read",
+    "scan.local.write",
+    "scan.infer"
+  ],
+  "background": {
+    "allowed": false
+  },
+  "status": "design_fixture_not_installed"
+}

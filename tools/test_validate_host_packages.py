@@ -6,7 +6,7 @@ import json
 import unittest
 from pathlib import Path
 
-from validate_host_packages import ROOT, check_manifest, validate
+from validate_host_packages import ROOT, SCAN_SCOPES, check_manifest, validate
 
 
 class SocketCatalogTests(unittest.TestCase):
@@ -15,12 +15,49 @@ class SocketCatalogTests(unittest.TestCase):
         cls.map_manifest = json.loads(
             (ROOT / "catalog/host_packages/rb_gis.example.json").read_text(encoding="utf-8")
         )
+        cls.scan_manifest = json.loads(
+            (ROOT / "catalog/host_packages/trans_scan.example.json").read_text(encoding="utf-8")
+        )
 
     def fixture(self):
         return copy.deepcopy(self.map_manifest)
 
-    def test_four_reference_fixtures_validate(self):
-        self.assertEqual(validate(), 4)
+    def test_five_reference_fixtures_validate(self):
+        self.assertEqual(validate(), 5)
+
+    def test_scan_is_inert_reference_with_bounded_requested_scopes(self):
+        scan = copy.deepcopy(self.scan_manifest)
+        self.assertEqual(check_manifest(scan), "org.rustboy.scan")
+        self.assertEqual(set(scan["capabilities"]), SCAN_SCOPES)
+        self.assertEqual(scan["status"], "design_fixture_not_installed")
+        self.assertFalse(scan["background"]["allowed"])
+        self.assertEqual(scan["entrypoint"], {"type": "builtin_adapter"})
+
+    def test_scan_cannot_claim_installation_or_background_camera(self):
+        for key, value in (
+            ("status", "installed"),
+            ("background", {"allowed": True}),
+            ("entrypoint", {"type": "external_process", "command": "/bin/sh"}),
+        ):
+            scan = copy.deepcopy(self.scan_manifest)
+            scan[key] = value
+            with self.assertRaises(ValueError):
+                check_manifest(scan)
+
+    def test_scan_capability_namespace_rejects_cross_module_or_unknown(self):
+        other = self.fixture()
+        other["capabilities"] = ["scan.camera.capture"]
+        with self.assertRaisesRegex(ValueError, "SCAN capability namespace"):
+            check_manifest(other)
+        for caps in (
+            ["scan.camera.capture", "scan.camera.capture"],
+            ["scan.camera.remote_wake"],
+            ["scan.camera.capture", "secrets.read"],
+        ):
+            scan = copy.deepcopy(self.scan_manifest)
+            scan["capabilities"] = caps
+            with self.assertRaises(ValueError):
+                check_manifest(scan)
 
     def test_api_drift_is_rejected(self):
         m = self.fixture()
