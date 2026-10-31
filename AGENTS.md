@@ -2,6 +2,10 @@
 
 Scope: the entire `pip_boy` repository. More-specific nested agent instructions may refine, but must not weaken, the security and acceptance gates here.
 
+## Physical engineering reference: Raspberry Pi 5
+
+Raspberry Pi 5 is the **primary reference field test and hardware release platform**. Read [Pi 5 hardware acceptance matrix](docs/PI5_REFERENCE_TEST_BASELINE.md). Keep macOS and Windows as development/compatibility targets; a passing CI/macOS test is not Pi 5 field acceptance. Build ARM64-compatible fixtures and diagnostics independently; real Pi tests remain pending until recorded on hardware.
+
 ## Current coordination documents (2026-10-31)
 
 Before selecting work, read [production roadmap and gate ledger](docs/PRODUCTION_ROADMAP_2026_10_31.md) and [long-horizon Codex loop](docs/CODEX_LONG_HORIZON.md). Reconcile current HEAD and open PRs before using any historical status. The roadmap coordinates HOST-01/02, TC-A02–A06, module installation, ORG-3.2, sync and release. Submitted PRs are not evidence of merge or validation. Continue independent unblocked tasks without weakening gates.
