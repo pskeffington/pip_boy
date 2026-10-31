@@ -718,7 +718,10 @@ mod tests {
         host.select("org.rustboy.radio").unwrap();
         assert!(host.select("org.rustboy.gis").is_err());
         assert_eq!(host.state("org.rustboy.radio"), Some(AdapterState::Faulted));
-        assert_eq!(host.state("org.rustboy.gis"), Some(AdapterState::Registered));
+        assert_eq!(
+            host.state("org.rustboy.gis"),
+            Some(AdapterState::Registered)
+        );
         assert_eq!(host.surface(), HostSurface::Empty);
         assert!(host.foreground_view().is_none());
         assert!(candidate_calls.lock().unwrap().is_empty());
@@ -754,7 +757,10 @@ mod tests {
         assert_eq!(host.state("org.rustboy.tv"), Some(AdapterState::Faulted));
         assert_eq!(host.surface(), HostSurface::Package("org.rustboy.gis"));
         assert_eq!(host.foreground_view(), displayed_before.as_ref());
-        assert_eq!(host.state("org.rustboy.gis"), Some(AdapterState::Foreground));
+        assert_eq!(
+            host.state("org.rustboy.gis"),
+            Some(AdapterState::Foreground)
+        );
     }
 
     #[test]
@@ -775,9 +781,14 @@ mod tests {
         let mut host = UniversalAdapterHost::new(Viewport::new(480, 320).unwrap());
         let calls = mount(&mut host, "org.rustboy.radio", Some("intent"));
         host.select("org.rustboy.radio").unwrap();
-        assert!(host.intent("play", None, json!({}), &DenyAllScopes).is_err());
+        assert!(host
+            .intent("play", None, json!({}), &DenyAllScopes)
+            .is_err());
         assert_eq!(calls.lock().unwrap().len(), 1);
-        assert_eq!(host.state("org.rustboy.radio"), Some(AdapterState::Foreground));
+        assert_eq!(
+            host.state("org.rustboy.radio"),
+            Some(AdapterState::Foreground)
+        );
         assert!(host.foreground_view().is_some());
         assert!(host
             .intent("ui.select", None, json!({"station": 0}), &DenyAllScopes)
