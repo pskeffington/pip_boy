@@ -4,6 +4,10 @@ Technical contracts, architecture decisions, research provenance and validation 
 
 **Current scope:** Rust 1.90+ desktop CLI/TUI, a separate micro-handheld shell and a loopback-only graphical dashboard, bundled reference library, notes and synthetic-only device workflows. NET ENGINEER performs an explicitly authorized, bounded LAN scan; OS-enforced peripheral permissions and physical device permissions remain separate; a TLS-only, explicitly configured UniFi connected-client reader is implemented. Physical controller acceptance remains open.
 
+## Primary hardware baseline
+
+[Physical Raspberry Pi 5 test baseline and PI5-00–PI5-08 gates](PI5_REFERENCE_TEST_BASELINE.md). Mac and Windows remain supported engineering targets, but physical release acceptance centers on Raspberry Pi 5. Do not imply that ARM64 compilation or emulator success proves real-device behavior.
+
 ## Production sequencing and autonomous Codex
 
 [October 31 evidence-based production roadmap](PRODUCTION_ROADMAP_2026_10_31.md) · [Long-horizon Codex instructions](CODEX_LONG_HORIZON.md). These coordinate current host, terminal, module, security, synchronization and field-release dependencies. An open PR or defined test is not an accepted feature. Consult exact-head CI and merge state before claiming completion.
