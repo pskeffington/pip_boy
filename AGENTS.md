@@ -4,7 +4,7 @@ Scope: the entire `pip_boy` repository. More-specific nested agent instructions 
 
 ## Physical engineering reference: Raspberry Pi 5
 
-Raspberry Pi 5 is the **primary reference field test and hardware release platform**. Read [Pi 5 hardware acceptance matrix](docs/PI5_REFERENCE_TEST_BASELINE.md). Keep macOS and Windows as development/compatibility targets; a passing CI/macOS test is not Pi 5 field acceptance. Build ARM64-compatible fixtures and diagnostics independently; real Pi tests remain pending until recorded on hardware.
+Raspberry Pi 5 is the **primary reference hardware test and release platform**. The currently available configuration uses a **full-sized HDMI monitor with keyboard and mouse**. Do not require a touchscreen to advance Pi-native desktop tests; keep physical handheld/touch acceptance separately pending. Read [Pi 5 hardware acceptance matrix](docs/PI5_REFERENCE_TEST_BASELINE.md). Keep macOS and Windows as development/compatibility targets; a passing CI/macOS test is not Pi 5 field acceptance. Build ARM64-compatible fixtures and diagnostics independently; real Pi tests remain pending until recorded on hardware.
 
 ## Current coordination documents (2026-10-31)
 
