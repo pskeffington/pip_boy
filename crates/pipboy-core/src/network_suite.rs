@@ -317,13 +317,14 @@ fn route(input: &str, extra: &str) -> io::Result<String> {
     let target: IpAddr = bounded(input, 64)?
         .parse()
         .map_err(|_| invalid("Enter a literal IPv4 or IPv6 destination"))?;
-    let entries = bounded(extra, MAX_EXTRA)?.split(',').collect::<Vec<_>>();
-    if entries.is_empty() || entries.len() > MAX_ROUTE_ENTRIES {
+    let entries = bounded(extra, MAX_EXTRA)?.split(',');
+    let entry_count = entries.clone().count();
+    if entry_count == 0 || entry_count > MAX_ROUTE_ENTRIES {
         return Err(invalid("Specify 1..16 comma-separated route prefixes"));
     }
     let mut best: Option<(u8, String)> = None;
     let mut matches = 0usize;
-    for prefix in &entries {
+    for prefix in entries {
         let prefix = prefix.trim();
         let (bits, value) = match target {
             IpAddr::V4(ip) => {
@@ -350,7 +351,7 @@ fn route(input: &str, extra: &str) -> io::Result<String> {
     }
     Ok(format!(
         "ROUTE MATCH / OFFLINE\nDestination: {target}\nEvaluated: {} prefixes\nMatching: {matches}\nLongest prefix: {}\nThis is a what-if comparison, not an OS routing-table lookup.",
-        entries.len(),
+        entry_count,
         best.map(|(_, route)| route).unwrap_or_else(|| "NONE".to_string())
     ))
 }
@@ -642,6 +643,24 @@ mod tests {
             .unwrap()
             .contains("Longest prefix: NONE"));
         assert!(run_offline("route", "10.0.0.1", Some("192.0.2.0/24,2001:db8::/32")).is_err());
+    }
+
+    #[test]
+    fn route_entry_limit_and_whitespace_parity() {
+        let sixteen = std::iter::repeat_n("10.0.0.0/8", MAX_ROUTE_ENTRIES)
+            .collect::<Vec<_>>()
+            .join(",");
+        let result = run_offline("route", "10.1.2.3", Some(&sixteen)).unwrap();
+        assert!(result.contains("Evaluated: 16 prefixes"));
+        assert!(result.contains("Matching: 16"));
+        let seventeen = format!("{sixteen},10.0.0.0/8");
+        assert!(run_offline("route", "10.1.2.3", Some(&seventeen)).is_err());
+        assert!(run_offline("route", "10.1.2.3", Some("10.0.0.0/8,")).is_err());
+        assert!(
+            run_offline("route", "10.1.2.3", Some("10.0.0.0/8, 192.0.2.0/24"))
+                .unwrap()
+                .contains("Evaluated: 2 prefixes")
+        );
     }
 
     #[test]
