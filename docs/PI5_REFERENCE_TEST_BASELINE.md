@@ -1,5 +1,7 @@
 # Raspberry Pi 5 reference hardware acceptance — 2026-10-31
 
+**Recommended physical test hardware:** [RB-PI5-REF-A bill of materials and bring-up sequence](PI5_RECOMMENDED_HARDWARE.md): 8GB Pi 5, 256GB NVMe, official 27W supply/Active Cooler, 5-inch Touch Display 2, recovery microSD, and optional independent peer.
+
 **Engineering decision:** Raspberry Pi 5 is the primary physical reference test platform for Rust-Boy's handheld/field deployment. macOS and Windows remain development and compatibility targets, but do not replace Pi 5 release acceptance.
 
 ## Test baseline to record on each device
