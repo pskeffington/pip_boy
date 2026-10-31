@@ -1,12 +1,14 @@
 //! Selected-tool command terminal. Executes only reviewed, offline native handlers.
 //! No shell, dynamic module loading, network activity or implicit permission grants.
 use pipboy_core::catalog::sources;
+use pipboy_core::command_catalog::{
+    parse_input, TerminalAction, TypedArguments, MAX_COMMAND_BYTES,
+};
 use pipboy_core::network_suite;
 use pipboy_core::workbench::{crc32_hex, encode_hex, inspect_hex, tool, Workbench, WorkbenchStore};
 use std::error::Error;
 use std::io::{self, Write};
 
-const MAX_INPUT: usize = 512;
 const OFFLINE_TOOLS: &[&str] = &["host", "diag", "library", "byte-lab", "net-lab"];
 
 fn supported(id: &str) -> bool {
@@ -112,16 +114,18 @@ fn route<'a>(
     selected: &mut Option<&'a str>,
     input: &str,
 ) -> Result<bool, Box<dyn Error>> {
-    if input.len() > MAX_INPUT || input.chars().any(|c| c.is_control()) {
-        return Err("invalid or oversized command".into());
+    // A copied shell prompt is never a command. The shared parser owns all
+    // remaining command grammar, bounds, and workbench pin checks.
+    if input.starts_with("rb:") || input.starts_with("null@nulls-Laptop") {
+        return Err("paste only the command text after the prompt".into());
     }
-    let tokens: Vec<&str> = input.split_whitespace().collect();
-    match tokens.as_slice() {
-        [] => Ok(true),
-        ["q" | "quit" | "exit"] => Ok(false),
-        ["tools"] => {
+    let pinned = selected_tools(board);
+    match parse_input(input, *selected, &pinned)? {
+        TerminalAction::Empty => Ok(true),
+        TerminalAction::Quit => Ok(false),
+        TerminalAction::ListTools(tools) => {
             println!("Available offline handlers for pinned Workbench tools:");
-            for id in selected_tools(board) {
+            for id in tools {
                 println!(
                     "  {id}{}",
                     if Some(id) == *selected {
@@ -132,45 +136,48 @@ fn route<'a>(
                 );
             }
             println!("Select a tool by typing its name, e.g. net-lab.");
-            println!("Other pinned modules are not connected to this terminal.");
             Ok(true)
         }
-        ["select", id] => {
-            select_tool(board, selected, id)?;
-            Ok(true)
-        }
-        [id] if supported(id) => {
-            // Direct names are selectors except where an active tool owns that verb.
-            // For instance, 'host' runs the diagnostic when diag is selected.
-            if let Some(active) = *selected {
-                if active == "diag" && *id == "host" {
-                    dispatch(active, &tokens)?;
-                    return Ok(true);
-                }
-            }
-            select_tool(board, selected, id)?;
-            Ok(true)
-        }
-        ["help" | "?"] => {
+        TerminalAction::Help { tool_id } => {
             println!("tools | TOOL | select TOOL | COMMAND | run COMMAND | q | quit | exit");
             println!("The tool name selects a pinned offline handler without executing it.");
             println!("Commands are available only for the selected tool; no shell commands.");
-            if let Some(id) = selected {
+            if let Some(id) = tool_id {
                 println!("{id}: {}", commands(id));
             }
             Ok(true)
         }
-        ["run", rest @ ..] => {
-            let id = selected.ok_or("no offline tool selected; use tools and select TOOL")?;
-            dispatch(id, rest)?;
+        TerminalAction::SelectTool { tool_id } => {
+            select_tool(board, selected, tool_id)?;
             Ok(true)
         }
-        [first, ..] if first.starts_with("rb:") || *first == "null@nulls-Laptop" => {
-            Err("paste only the command text after the prompt (for example: run status)".into())
-        }
-        _ => {
-            let id = selected.ok_or("no offline tool selected; use tools and select TOOL")?;
-            dispatch(id, &tokens)?;
+        TerminalAction::Execute(request) => {
+            // Only the registered offline/read-only catalog can reach the
+            // legacy native executor during this bounded migration.
+            if request.side_effect != pipboy_core::command_catalog::SideEffectClass::ReadOnly
+                || request.connectivity != pipboy_core::command_catalog::ConnectivityState::Offline
+                || request.required_scope.is_some()
+                || request.confirmation_required
+            {
+                return Err("command is not approved for offline terminal execution".into());
+            }
+            let mut tokens = vec![request.verb];
+            let owned: Vec<String> = match request.arguments {
+                TypedArguments::None => Vec::new(),
+                TypedArguments::Text { value } => {
+                    value.split_whitespace().map(str::to_owned).collect()
+                }
+                TypedArguments::Hex { value } => vec![value],
+                TypedArguments::Network { input, extra, .. } => {
+                    let mut values = vec![input];
+                    if let Some(extra) = extra {
+                        values.push(extra);
+                    }
+                    values
+                }
+            };
+            tokens.extend(owned.iter().map(String::as_str));
+            dispatch(request.tool_id, &tokens)?;
             Ok(true)
         }
     }
@@ -264,10 +271,30 @@ mod tests {
     }
 
     #[test]
+    fn shared_catalog_aliases_and_diag_precedence() {
+        let board = Workbench::from_preset(&PRESETS[2]);
+        let mut selected = Some("diag");
+        assert!(route(&board, &mut selected, "host").unwrap());
+        assert_eq!(selected, Some("diag"));
+        assert!(route(&board, &mut selected, "?").unwrap());
+        assert!(!route(&board, &mut selected, "q").unwrap());
+    }
+
+    #[test]
+    fn shared_catalog_rejects_wrong_scope_and_invalid_arguments() {
+        let board = Workbench::from_preset(&PRESETS[2]);
+        let mut selected = Some("net-lab");
+        assert!(route(&board, &mut selected, "cidr").is_err());
+        assert!(route(&board, &mut selected, "run scan local").is_err());
+        assert!(route(&board, &mut selected, "select radio").is_err());
+        assert_eq!(selected, Some("net-lab"));
+    }
+
+    #[test]
     fn limits_input() {
         let board = Workbench::from_preset(&PRESETS[0]);
         let mut selected = None;
-        assert!(route(&board, &mut selected, &"A".repeat(MAX_INPUT + 1)).is_err());
+        assert!(route(&board, &mut selected, &"A".repeat(MAX_COMMAND_BYTES + 1)).is_err());
         assert!(route(&board, &mut selected, "run status\u{0000}").is_err());
     }
 }

@@ -384,9 +384,9 @@ pub fn parse_input(
     let tokens: Vec<&str> = input.split_whitespace().collect();
     match tokens.as_slice() {
         [] => Ok(TerminalAction::Empty),
-        ["quit"] | ["exit"] => Ok(TerminalAction::Quit),
+        ["q"] | ["quit"] | ["exit"] => Ok(TerminalAction::Quit),
         ["tools"] => Ok(TerminalAction::ListTools(registered_pins(pinned_tools))),
-        ["help"] => {
+        ["help"] | ["?"] => {
             let tool_id = selected_tool.map(validate_tool).transpose()?;
             if let Some(id) = tool_id {
                 require_pinned(id, pinned_tools)?;
@@ -403,6 +403,10 @@ pub fn parse_input(
             validate_tool(tool_id)?;
             require_pinned(tool_id, pinned_tools)?;
             parse_registered(tool_id, rest)
+        }
+        ["host"] if selected_tool == Some("diag") => {
+            require_pinned("diag", pinned_tools)?;
+            parse_registered("diag", &["host"])
         }
         [tool_id] if crate::workbench::tool(tool_id).is_some() => {
             let tool_id = validate_tool(tool_id)?;
