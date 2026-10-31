@@ -1,6 +1,6 @@
 # Raspberry Pi 5 reference hardware acceptance — 2026-10-31
 
-**Recommended physical test hardware:** [RB-PI5-REF-A bill of materials and bring-up sequence](PI5_RECOMMENDED_HARDWARE.md): 8GB Pi 5, 256GB NVMe, official 27W supply/Active Cooler, 5-inch Touch Display 2, recovery microSD, and optional independent peer.
+**Current test bench:** Raspberry Pi 5 with **full-sized HDMI monitor**, keyboard and mouse. See [RB-PI5-REF-A bill of materials](PI5_RECOMMENDED_HARDWARE.md). A 5-inch touchscreen is optional future hardware, not part of the present test prerequisite.
 
 **Engineering decision:** Raspberry Pi 5 is the primary physical reference test platform for Rust-Boy's handheld/field deployment. macOS and Windows remain development and compatibility targets, but do not replace Pi 5 release acceptance.
 
@@ -14,7 +14,8 @@ Record board model/revision, RAM size, bootloader/firmware, OS image and kernel,
 | --- | --- |
 | PI5-00 inventory | Capture platform, OS, kernel, RAM, power, storage, display/input and attached devices; document recovery image and rollback |
 | PI5-01 native boot | Clean ARM64 build/package install; offline boot, restart, graceful stop, logs, persistence and bounded resource use |
-| PI5-02 UI | 480x320 and 800x480 **when supported by test display**; one foreground package, visible Settings, keyboard/touch focus, no root scroll, large targets and accessible contrast/text |
+| PI5-02A UI — current | Full-sized HDMI monitor at recorded actual resolution; one foreground package, visible Settings, keyboard/mouse, no root scroll, map canvas and accessible contrast/text |
+| PI5-02B UI — later | Physical touch at 480x320/800x480 if available on target device, plus eventual DSI touchscreen native resolution; touch focus, hit targets and handheld ergonomics. **Pending until touchscreen attached** |
 | PI5-03 MAP | Offline county cache, safe ZIP/GPS acquisition, viewport coverage, bad-data rollback, county transitions, memory and render latency |
 | PI5-04 RADIO | Actual IP playback/output selection; stop, lost-stream recovery, unplugging and optional SDR tested only on attached authorized hardware |
 | PI5-05 COMMS | Denied-by-default network discovery, explicit authenticated pairing, local-IP loss/rejoin, receipt/unknown delivery and offline queue recovery |
