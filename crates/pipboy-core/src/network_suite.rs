@@ -656,9 +656,11 @@ mod tests {
         let seventeen = format!("{sixteen},10.0.0.0/8");
         assert!(run_offline("route", "10.1.2.3", Some(&seventeen)).is_err());
         assert!(run_offline("route", "10.1.2.3", Some("10.0.0.0/8,")).is_err());
-        assert!(run_offline("route", "10.1.2.3", Some("10.0.0.0/8, 192.0.2.0/24"))
-            .unwrap()
-            .contains("Evaluated: 2 prefixes"));
+        assert!(
+            run_offline("route", "10.1.2.3", Some("10.0.0.0/8, 192.0.2.0/24"))
+                .unwrap()
+                .contains("Evaluated: 2 prefixes")
+        );
     }
 
     #[test]
