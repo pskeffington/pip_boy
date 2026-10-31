@@ -4,6 +4,10 @@ Technical contracts, architecture decisions, research provenance and validation 
 
 **Current scope:** Rust 1.90+ desktop CLI/TUI, a separate micro-handheld shell and a loopback-only graphical dashboard, bundled reference library, notes and synthetic-only device workflows. NET ENGINEER performs an explicitly authorized, bounded LAN scan; OS-enforced peripheral permissions and physical device permissions remain separate; a TLS-only, explicitly configured UniFi connected-client reader is implemented. Physical controller acceptance remains open.
 
+## Hardware source inventory and preflight checks
+
+[Hardware coding inventory](../catalog/hardware_test_inventory.json) · [offline validator](../tools/validate_hardware_inventory.py) · [regression tests](../tools/test_hardware_inventory.py). These plan Pi 5 (reference), Pi 4 (compatibility) and unidentified "Pi 3T" (compatibility). No device discovery or hardware test success is claimed.
+
 ## Raspberry Pi 5 recommended kit
 
 [Reference kit, storage/power/display BOM and bring-up](PI5_RECOMMENDED_HARDWARE.md). Hardware quantities are proposed, not purchased or field validated.
