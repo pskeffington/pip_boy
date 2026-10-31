@@ -1,13 +1,14 @@
 //! Selected-tool command terminal. Executes only reviewed, offline native handlers.
 //! No shell, dynamic module loading, network activity or implicit permission grants.
 use pipboy_core::catalog::sources;
-use pipboy_core::command_catalog::{parse_input, TerminalAction, TypedArguments, MAX_COMMAND_BYTES};
+use pipboy_core::command_catalog::{
+    parse_input, TerminalAction, TypedArguments, MAX_COMMAND_BYTES,
+};
 use pipboy_core::network_suite;
 use pipboy_core::workbench::{crc32_hex, encode_hex, inspect_hex, tool, Workbench, WorkbenchStore};
 use std::error::Error;
 use std::io::{self, Write};
 
-const MAX_INPUT: usize = MAX_COMMAND_BYTES;
 const OFFLINE_TOOLS: &[&str] = &["host", "diag", "library", "byte-lab", "net-lab"];
 
 fn supported(id: &str) -> bool {
@@ -125,7 +126,14 @@ fn route<'a>(
         TerminalAction::ListTools(tools) => {
             println!("Available offline handlers for pinned Workbench tools:");
             for id in tools {
-                println!("  {id}{}", if Some(id) == *selected { " [selected]" } else { "" });
+                println!(
+                    "  {id}{}",
+                    if Some(id) == *selected {
+                        " [selected]"
+                    } else {
+                        ""
+                    }
+                );
             }
             println!("Select a tool by typing its name, e.g. net-lab.");
             Ok(true)
@@ -156,11 +164,15 @@ fn route<'a>(
             let mut tokens = vec![request.verb];
             let owned: Vec<String> = match request.arguments {
                 TypedArguments::None => Vec::new(),
-                TypedArguments::Text { value } => value.split_whitespace().map(str::to_owned).collect(),
+                TypedArguments::Text { value } => {
+                    value.split_whitespace().map(str::to_owned).collect()
+                }
                 TypedArguments::Hex { value } => vec![value],
                 TypedArguments::Network { input, extra, .. } => {
                     let mut values = vec![input];
-                    if let Some(extra) = extra { values.push(extra); }
+                    if let Some(extra) = extra {
+                        values.push(extra);
+                    }
                     values
                 }
             };
@@ -282,7 +294,7 @@ mod tests {
     fn limits_input() {
         let board = Workbench::from_preset(&PRESETS[0]);
         let mut selected = None;
-        assert!(route(&board, &mut selected, &"A".repeat(MAX_INPUT + 1)).is_err());
+        assert!(route(&board, &mut selected, &"A".repeat(MAX_COMMAND_BYTES + 1)).is_err());
         assert!(route(&board, &mut selected, "run status\u{0000}").is_err());
     }
 }
