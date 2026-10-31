@@ -6,6 +6,10 @@ Read root [AGENTS.md](../AGENTS.md) first. This file supplements but cannot over
 
 Raspberry Pi 5 with **full-sized HDMI monitor and keyboard/mouse** is the active physical test bench. Follow [PI5_REFERENCE_TEST_BASELINE](PI5_REFERENCE_TEST_BASELINE.md) and gate PI5-00 through PI5-08; run PI5-02A on current hardware and defer physical touchscreen PI5-02B until one is attached. Continue GitHub-first software implementation when the Pi is unavailable, but never mark hardware passed from Linux ARM64 cross-builds, macOS or synthetic tests. Mac/Windows remain development and portability targets.
 
+## Hardware inventory coding pass (HW-INV-00)
+
+Read [machine-readable hardware inventory](../catalog/hardware_test_inventory.json) before any Pi-specific change. Run `python3 tools/validate_hardware_inventory.py` and `python3 -m unittest discover -s tools -p 'test_hardware_inventory.py'`. First task: inventory verified architecture/OS/RAM with an **explicit operator-initiated**, local-only command (do not collect serial, IP, MAC, credentials or automatically probe). Then build deterministic ARM64/offline smoke fixtures and quantify memory/CPU on Pi 4 and the unidentified Pi 3T. Release evidence comes only from Pi 5. The inventory tests are submitted source, not claimed executed results.
+
 ## Secondary physical test inventory
 
 A reportedly Pi 4 and a unit called "Pi 3T" are available for compatibility testing. Identify exact board model, RAM, OS and architecture before asserting support. Use them for reduced-resource, boot and offline regression checks; they do not replace Pi 5 reference release acceptance. See [Pi hardware baseline](PI5_REFERENCE_TEST_BASELINE.md).
