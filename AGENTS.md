@@ -2,6 +2,10 @@
 
 Scope: the entire `pip_boy` repository. More-specific nested agent instructions may refine, but must not weaken, the security and acceptance gates here.
 
+## Current coordination documents (2026-10-31)
+
+Before selecting work, read [production roadmap and gate ledger](docs/PRODUCTION_ROADMAP_2026_10_31.md) and [long-horizon Codex loop](docs/CODEX_LONG_HORIZON.md). Reconcile current HEAD and open PRs before using any historical status. The roadmap coordinates HOST-01/02, TC-A02–A06, module installation, ORG-3.2, sync and release. Submitted PRs are not evidence of merge or validation. Continue independent unblocked tasks without weakening gates.
+
 ## Mission and workflow
 
 Develop the Rust-Boy host into a production-capable, offline-first, one-package-at-a-time shell. The terminal, full-screen TUI, desktop Vault Command Center, and micro HUD must share **one host-owned typed command catalog**, common capability checks, and the approved native Rust handlers. MAP, RADIO, TV and COMMS remain separately owned packages: never pretend reference manifests are installed packages.
