@@ -2,6 +2,10 @@
 
 Read root [AGENTS.md](../AGENTS.md) first. This file supplements but cannot override its security and review rules. Follow the [production evidence roadmap](PRODUCTION_ROADMAP_2026_10_31.md).
 
+## Primary physical target
+
+Raspberry Pi 5 is the reference hardware acceptance baseline: follow [PI5_REFERENCE_TEST_BASELINE](PI5_REFERENCE_TEST_BASELINE.md) and gate PI5-00 through PI5-08. Continue GitHub-first software implementation when the Pi is unavailable, but never mark hardware passed from Linux ARM64 cross-builds, macOS or synthetic tests. Mac/Windows remain development and portability targets.
+
 ## Mission
 
 Develop Rust-Boy into a robust, portable, offline-first host shell for independently versioned MAP, RADIO, TV, COMMS and eventual SCAN packages. Preserve working desktop, micro, terminal, map, radio, tasks and networking during every incremental migration. Production requires demonstrated software, security, interoperability and physical acceptance—not a large PR.
