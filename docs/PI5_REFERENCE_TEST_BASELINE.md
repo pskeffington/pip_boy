@@ -30,3 +30,15 @@ No emergency/camera/medical claims without device-specific acceptance. Physical 
 ## Codex instructions
 
 Software agents should build ARM64-ready code, deterministic Pi 5 test scripts and offline fixtures in GitHub without waiting for a locally attached Pi. If real Pi 5 access is unavailable, mark field gates `pending_hardware`, never passed. Preserve platform-independent core logic, explicit device broker permission boundaries, and portable logging. Platform-specific fixes belong behind tested target cfg/feature boundaries. Do not turn on hardware probing during UI initialization or tests.
+
+## Additional available inventory — model verification required
+
+The engineering inventory also includes **one reportedly Raspberry Pi 4** and **one device referred to as "Pi 3T"**. Treat both model labels as **unverified until hardware inspection**; do not assume that "3T" is an official Raspberry Pi model. Record the exact model reported by `cat /proc/device-tree/model`, `uname -m`, `cat /etc/os-release`, `free -h`, power adapter and attached peripherals. Preserve raw results without credentials or host-identifying details.
+
+| Test tier | Equipment | Intended role | Status |
+| --- | --- | --- | --- |
+| Reference | Pi 5 + full-sized HDMI monitor | Production-target ARM64 functional and performance acceptance | Planned reference; physical results pending |
+| Compatibility A | Reported Pi 4, RAM/OS unspecified | Build/startup, desktop UI, networking, GIS cache, radio, lower-resource regressions | Available per inventory; exact model not verified |
+| Compatibility B | Reported \"Pi 3T\", identity unspecified | Conservative smoke tests, graceful unsupported-feature handling, minimal-footprint profiling | Available per inventory; verify model and 32/64-bit OS before setting targets |
+
+**Policy:** Never downgrade the Pi 5 reference release gate based on successful Pi 4 or older-device testing. A failed older-board test should be classified as a compatibility finding unless that board is explicitly designated a supported release target. Run bounded tests without assuming native SDR, camera, NVMe, physical touch, sufficient RAM or hardware decoding. Explicitly capture timeouts, memory usage and thermal throttling rather than weakening core security checks. Pi 4/3T may be used immediately for software/bench evaluation while Pi 5 provisioning remains open.
