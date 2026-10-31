@@ -4,7 +4,7 @@ This is the forward execution index, not a claim that open PRs are merged. Canon
 
 ## Reference field hardware decision
 
-**Raspberry Pi 5** is the primary physical acceptance platform; macOS/Windows remain development and regression targets. See [PI5-00 through PI5-08 matrix](PI5_REFERENCE_TEST_BASELINE.md). Physical testing on Pi 5 is an independent release condition; do not claim it from cross-compilation or CI.
+**Raspberry Pi 5 with full-sized HDMI monitor** is the current physical engineering bench. Keyboard/mouse and desktop-scale UI are tested first; physical handheld touchscreen acceptance follows later. macOS/Windows remain development and regression targets. See [PI5-00 through PI5-08 matrix](PI5_REFERENCE_TEST_BASELINE.md). Physical testing on Pi 5 is an independent release condition; do not claim it from cross-compilation or CI.
 
 ## Baseline and classifications
 
