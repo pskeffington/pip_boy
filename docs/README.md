@@ -10,7 +10,7 @@ Technical contracts, architecture decisions, research provenance and validation 
 
 ## Primary hardware baseline
 
-[Physical Raspberry Pi 5 test baseline and PI5-00–PI5-08 gates](PI5_REFERENCE_TEST_BASELINE.md). Mac and Windows remain supported engineering targets, but physical release acceptance centers on Raspberry Pi 5. Do not imply that ARM64 compilation or emulator success proves real-device behavior.
+[Physical Raspberry Pi 5 test baseline (current full-sized HDMI screen; later touch) and PI5-00–PI5-08 gates](PI5_REFERENCE_TEST_BASELINE.md). Mac and Windows remain supported engineering targets, but physical release acceptance centers on Raspberry Pi 5. Do not imply that ARM64 compilation or emulator success proves real-device behavior.
 
 ## Production sequencing and autonomous Codex
 
