@@ -4,7 +4,7 @@ Read root [AGENTS.md](../AGENTS.md) first. This file supplements but cannot over
 
 ## Primary physical target
 
-Raspberry Pi 5 is the reference hardware acceptance baseline: follow [PI5_REFERENCE_TEST_BASELINE](PI5_REFERENCE_TEST_BASELINE.md) and gate PI5-00 through PI5-08. Continue GitHub-first software implementation when the Pi is unavailable, but never mark hardware passed from Linux ARM64 cross-builds, macOS or synthetic tests. Mac/Windows remain development and portability targets.
+Raspberry Pi 5 with **full-sized HDMI monitor and keyboard/mouse** is the active physical test bench. Follow [PI5_REFERENCE_TEST_BASELINE](PI5_REFERENCE_TEST_BASELINE.md) and gate PI5-00 through PI5-08; run PI5-02A on current hardware and defer physical touchscreen PI5-02B until one is attached. Continue GitHub-first software implementation when the Pi is unavailable, but never mark hardware passed from Linux ARM64 cross-builds, macOS or synthetic tests. Mac/Windows remain development and portability targets.
 
 ## Mission
 
