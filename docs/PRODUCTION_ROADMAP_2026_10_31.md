@@ -2,6 +2,10 @@
 
 This is the forward execution index, not a claim that open PRs are merged. Canonical detailed contracts remain in [HOST_PACKAGE_ROADMAP](HOST_PACKAGE_ROADMAP.md), [TERMINAL_AGENT_EXECUTION](TERMINAL_AGENT_EXECUTION.md), [UNIVERSAL_ADAPTER](UNIVERSAL_ADAPTER.md), [RB_SYNC_ROADMAP](RB_SYNC_ROADMAP.md), and [SECURITY](../SECURITY.md).
 
+## Reference field hardware decision
+
+**Raspberry Pi 5** is the primary physical acceptance platform; macOS/Windows remain development and regression targets. See [PI5-00 through PI5-08 matrix](PI5_REFERENCE_TEST_BASELINE.md). Physical testing on Pi 5 is an independent release condition; do not claim it from cross-compilation or CI.
+
 ## Baseline and classifications
 
 - **Implemented on main:** Rust desktop and micro loopback UI, role workbenches, local Task Control, county/ZIP GIS and cache, in-process IP radio, bounded network diagnostics/UniFi adapter, manual pinned-SSH peer transport, and offline typed command catalog.
