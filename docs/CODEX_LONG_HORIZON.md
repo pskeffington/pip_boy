@@ -6,6 +6,10 @@ Read root [AGENTS.md](../AGENTS.md) first. This file supplements but cannot over
 
 Raspberry Pi 5 with **full-sized HDMI monitor and keyboard/mouse** is the active physical test bench. Follow [PI5_REFERENCE_TEST_BASELINE](PI5_REFERENCE_TEST_BASELINE.md) and gate PI5-00 through PI5-08; run PI5-02A on current hardware and defer physical touchscreen PI5-02B until one is attached. Continue GitHub-first software implementation when the Pi is unavailable, but never mark hardware passed from Linux ARM64 cross-builds, macOS or synthetic tests. Mac/Windows remain development and portability targets.
 
+## Secondary physical test inventory
+
+A reportedly Pi 4 and a unit called "Pi 3T" are available for compatibility testing. Identify exact board model, RAM, OS and architecture before asserting support. Use them for reduced-resource, boot and offline regression checks; they do not replace Pi 5 reference release acceptance. See [Pi hardware baseline](PI5_REFERENCE_TEST_BASELINE.md).
+
 ## Mission
 
 Develop Rust-Boy into a robust, portable, offline-first host shell for independently versioned MAP, RADIO, TV, COMMS and eventual SCAN packages. Preserve working desktop, micro, terminal, map, radio, tasks and networking during every incremental migration. Production requires demonstrated software, security, interoperability and physical acceptance—not a large PR.
