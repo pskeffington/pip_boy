@@ -212,28 +212,54 @@ mod tests {
 
     #[test]
     fn identity_and_provenance_bounds_preserve_byte_semantics() {
-        for (source, provenance, accepted) in [
-            ("x", "y", true),
-            ("   ", "y", false),
-            ("x", "", false),
-        ] {
+        for (source, provenance, accepted) in
+            [("x", "y", true), ("   ", "y", false), ("x", "", false)]
+        {
             let observation = Observation::new(
-                source, provenance, None, 0, None, Some(1_u8), Quality::Valid, None,
+                source,
+                provenance,
+                None,
+                0,
+                None,
+                Some(1_u8),
+                Quality::Valid,
+                None,
             );
             assert_eq!(observation.is_ok(), accepted);
         }
         assert!(Observation::new(
-            "x".repeat(128), "y".repeat(256), None, 0, None,
-            Some(1_u8), Quality::Valid, None
-        ).is_ok());
+            "x".repeat(128),
+            "y".repeat(256),
+            None,
+            0,
+            None,
+            Some(1_u8),
+            Quality::Valid,
+            None
+        )
+        .is_ok());
         assert!(Observation::new(
-            "x".repeat(129), "y", None, 0, None,
-            Some(1_u8), Quality::Valid, None
-        ).is_err());
+            "x".repeat(129),
+            "y",
+            None,
+            0,
+            None,
+            Some(1_u8),
+            Quality::Valid,
+            None
+        )
+        .is_err());
         assert!(Observation::new(
-            "x", "y".repeat(257), None, 0, None,
-            Some(1_u8), Quality::Valid, None
-        ).is_err());
+            "x",
+            "y".repeat(257),
+            None,
+            0,
+            None,
+            Some(1_u8),
+            Quality::Valid,
+            None
+        )
+        .is_err());
     }
 
     #[test]
