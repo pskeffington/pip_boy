@@ -12,8 +12,8 @@ Engineering recommendation, not hardware already purchased or validated. The [PI
 | Runtime storage | 256 GB NVMe SSD via compatible M.2 HAT+ | Local map cache, logs, packages and tests; benchmark storage and graceful power loss |
 | Cooling | Official Raspberry Pi 5 Active Cooler | Continuous GIS and native process workload; record CPU temperature and throttling |
 | PSU | Official 27 W USB-C 5.1 V / 5 A | Avoid peripheral current limiting; verify powered hubs for high-draw SDR or SSD |
-| Primary display | Official 5-inch Touch Display 2 (720x1280, landscape rotation validated) | Handheld touch and viewport acceptance |
-| Secondary display | Official 7-inch Touch Display 2 or HDMI screen | Development and text readability; no second display required for mobile acceptance |
+| **Current primary display** | **Full-sized HDMI monitor**, resolution/refresh recorded at test time | Current Raspberry Pi 5 development and functional verification; keyboard and mouse |
+| Later handheld display | Optional 5-inch Touch Display 2 (720x1280 native, landscape rotation subject to validation) | **Deferred** touchscreen/mobile acceptance; not required for the present test bench |
 | Controls | Momentary navigation/Back/Settings buttons through safe GPIO input adapter or USB keypad | Real D-pad and glove-friendly controls, with electrical isolation and tested debounce |
 | Audio | Simple powered speaker / USB audio output | Native IP radio, route and output tests |
 | Network | Onboard Wi-Fi plus wired Gigabit Ethernet | Deterministic offline/link-loss tests; separate controlled lab WLAN |
@@ -28,10 +28,11 @@ Second Pi 5 (or independently configured peer) on isolated lab network for paire
 1. Record board RAM/revision, PSU, SSD/HAT, DSI cable, case clearances and OS image hash.
 2. Boot from recovery microSD, enable firmware-supported SSD boot deliberately, validate the NVMe filesystem and rollback boot media.
 3. Verify ARM64 build and persistent local data home; capture CPU/RAM, idle/load thermals, power stability and logs.
-4. Run native 5-inch UI in landscape and verify one visible package, full map canvas, accessible Settings, touch/back/focus at 720x1280 rotated to 1280x720. Retain synthetic 480x320/800x480 regressions.
-5. Test approved native radio/IP stream and output-failure behavior; then add SDR/GNSS/camera as permission-gated incremental components.
-6. Bring up isolated second peer and test link loss, replay/denial, unknown receipt, local queue and recovery. No automatic discovery or internet exposure.
-7. Run restart/power-loss tests, storage corruption recovery, soak and documented operator acceptance.
+4. **Current bench:** connect Pi 5 to a full-sized HDMI monitor with keyboard and mouse. Verify native desktop/field shell at actual HDMI resolution, Settings, one foreground module, map canvas, input focus, radio, and terminal workflows. Record screen dimensions. Retain automated/synthetic 480x320/800x480 regressions without calling them physical touch acceptance.
+5. **Later stage:** test the optional 5-inch DSI touchscreen, touch/back navigation and physical handheld ergonomics as separately pending PI5-02 field acceptance.
+6. Test approved native radio/IP stream and output-failure behavior; then add SDR/GNSS/camera as permission-gated incremental components.
+7. Bring up isolated second peer and test link loss, replay/denial, unknown receipt, local queue and recovery. No automatic discovery or internet exposure.
+8. Run restart/power-loss tests, storage corruption recovery, soak and documented operator acceptance.
 
 ## Codex acceptance instructions
 
