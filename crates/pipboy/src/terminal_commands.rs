@@ -2,17 +2,15 @@
 //! No shell, dynamic module loading, network activity or implicit permission grants.
 use pipboy_core::catalog::sources;
 use pipboy_core::command_catalog::{
-    parse_input, TerminalAction, TypedArguments, MAX_COMMAND_BYTES,
+    parse_input, registered_tools, TerminalAction, TypedArguments, MAX_COMMAND_BYTES,
 };
 use pipboy_core::network_suite;
 use pipboy_core::workbench::{crc32_hex, encode_hex, inspect_hex, tool, Workbench, WorkbenchStore};
 use std::error::Error;
 use std::io::{self, Write};
 
-const OFFLINE_TOOLS: &[&str] = &["host", "diag", "library", "byte-lab", "net-lab"];
-
 fn supported(id: &str) -> bool {
-    OFFLINE_TOOLS.contains(&id)
+    registered_tools().contains(&id)
 }
 
 fn selected_tools(board: &Workbench) -> Vec<&str> {
@@ -288,6 +286,17 @@ mod tests {
         assert!(route(&board, &mut selected, "run scan local").is_err());
         assert!(route(&board, &mut selected, "select radio").is_err());
         assert_eq!(selected, Some("net-lab"));
+    }
+
+    #[test]
+    fn terminal_support_roster_comes_from_shared_catalog() {
+        for id in registered_tools() {
+            assert!(supported(id));
+        }
+        assert!(!supported("radio"));
+        assert!(!supported("tv"));
+        assert!(!supported("comms"));
+        assert!(!supported("scan"));
     }
 
     #[test]
