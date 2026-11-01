@@ -39,3 +39,7 @@
 ## Release boundary
 
 Software acceptance is not hardware or production acceptance. No demand for operator Mac verification during coding. Hardware radio, physical Raspberry Pi, external streams, paired devices, emergency message delivery, regulated data and native isolation remain separate real-device/security release gates.
+
+## October 31 polishing work packet
+
+[Command consolidation, one-package viewport and regression checklist](POLISHING_PASS_2026-10-31.md) records the observed duplicate offline dispatcher in `terminal_commands.rs`, the still-separate TUI, and the ordered TC-A02 → TC-A03 → TC-A05 polishing gates. This is tasking only, not implementation or test evidence. Codex should start with TC-A02, verify any open PR first, and preserve existing command behavior.
