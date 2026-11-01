@@ -2,7 +2,7 @@
 //! No shell, dynamic module loading, network activity or implicit permission grants.
 use pipboy_core::catalog::sources;
 use pipboy_core::command_catalog::{
-    parse_input, registered_tools, TerminalAction, TypedArguments, MAX_COMMAND_BYTES,
+    parse_input, registered_tools, CommandRequest, HandlerId, TerminalAction, TypedArguments, MAX_COMMAND_BYTES,
 };
 use pipboy_core::network_suite;
 use pipboy_core::workbench::{crc32_hex, encode_hex, inspect_hex, tool, Workbench, WorkbenchStore};
@@ -35,9 +35,11 @@ fn commands(id: &str) -> &'static str {
     }
 }
 
-fn dispatch(id: &str, tokens: &[&str]) -> Result<(), Box<dyn Error>> {
-    match (id, tokens) {
-        ("host", ["status"]) => {
+fn dispatch(request: CommandRequest) -> Result<(), Box<dyn Error>> {
+    let handler = request.handler;
+    let args = request.arguments;
+    match (handler, args) {
+        (HandlerId::HostStatus, TypedArguments::None) => {
             let snapshot = crate::status::collect()?;
             println!(
                 "SYSTEM STAT / {} {} | RAM {} / {} MiB | UPTIME {} s",
@@ -49,46 +51,43 @@ fn dispatch(id: &str, tokens: &[&str]) -> Result<(), Box<dyn Error>> {
             );
             Ok(())
         }
-        ("diag", ["host"]) => crate::diagnostics::run(vec!["host".into()]),
-        ("library", ["sources", query @ ..]) if query.len() <= 8 => {
-            let query = query.join(" ");
+        (HandlerId::HostDiagnostics, TypedArguments::None) => crate::diagnostics::run(vec!["host".into()]),
+        (HandlerId::SourceSearch, TypedArguments::Text { value: query }) => {
+            
             for item in sources()?.into_iter().filter(|item| item.matches(&query)) {
                 println!("{} [{}]: {}", item.project, item.license, item.summary);
             }
             Ok(())
         }
-        ("byte-lab", ["encode", rest @ ..]) if !rest.is_empty() => {
-            println!("{}", encode_hex(&rest.join(" "))?);
+        (HandlerId::BytesEncode, TypedArguments::Text { value }) => {
+            println!("{}", encode_hex(&value)?);
             Ok(())
         }
-        ("byte-lab", ["inspect", value]) => {
-            print!("{}", inspect_hex(value)?);
+        (HandlerId::HexInspect, TypedArguments::Hex { value }) => {
+            print!("{}", inspect_hex(&value)?);
             Ok(())
         }
-        ("byte-lab", ["crc32", value]) => {
-            println!("{}", crc32_hex(value)?);
+        (HandlerId::HexCrc32, TypedArguments::Hex { value }) => {
+            println!("{}", crc32_hex(&value)?);
             Ok(())
         }
-        ("net-lab", ["list"]) => {
+        (HandlerId::NetworkList, TypedArguments::None) => {
             for op in network_suite::OPERATIONS.iter().filter(|op| !op.active) {
                 println!("{} / {}", op.id, op.name);
             }
             Ok(())
         }
-        ("net-lab", [verb, value])
-            if matches!(
-                *verb,
-                "cidr" | "cidr6" | "aggregate4" | "mac" | "vlan" | "mtu"
-            ) =>
-        {
-            println!("{}", network_suite::run_offline(verb, value, None)?);
+        (
+            HandlerId::NetworkCidr4 | HandlerId::NetworkCidr6
+            | HandlerId::NetworkSplit4 | HandlerId::NetworkRoute
+            | HandlerId::NetworkAggregate4 | HandlerId::NetworkOverlap4
+            | HandlerId::NetworkMac | HandlerId::NetworkVlan | HandlerId::NetworkMtu,
+            TypedArguments::Network { input, extra, .. },
+        ) => {
+            println!("{}", network_suite::run_offline(request.verb, &input, extra.as_deref())?);
             Ok(())
         }
-        ("net-lab", [verb, value, extra]) if matches!(*verb, "split4" | "route" | "overlap4") => {
-            println!("{}", network_suite::run_offline(verb, value, Some(extra))?);
-            Ok(())
-        }
-        _ => Err(format!("NOT AVAILABLE: {id} supports: {}", commands(id)).into()),
+        _ => Err("typed handler and argument mismatch".into()),
     }
 }
 
@@ -159,23 +158,7 @@ fn route<'a>(
             {
                 return Err("command is not approved for offline terminal execution".into());
             }
-            let mut tokens = vec![request.verb];
-            let owned: Vec<String> = match request.arguments {
-                TypedArguments::None => Vec::new(),
-                TypedArguments::Text { value } => {
-                    value.split_whitespace().map(str::to_owned).collect()
-                }
-                TypedArguments::Hex { value } => vec![value],
-                TypedArguments::Network { input, extra, .. } => {
-                    let mut values = vec![input];
-                    if let Some(extra) = extra {
-                        values.push(extra);
-                    }
-                    values
-                }
-            };
-            tokens.extend(owned.iter().map(String::as_str));
-            dispatch(request.tool_id, &tokens)?;
+            dispatch(request)?;
             Ok(true)
         }
     }
