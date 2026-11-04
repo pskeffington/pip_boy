@@ -110,6 +110,7 @@ that it preserves the exit code and removes only the temporary build paths.
   packaging regression.
 - Corrected packager head `51a26c33a2661f2535830bed25d4fd96fe338fee` passed 7/7 jobs in [run 41791223195](https://github.com/pskeffington/pip_boy/actions/runs/41791223195), including Rust stable and 1.90, Windows, adapter/manifest, native macOS, and universal bundle smoke jobs.
 - Private failed-attempt evidence implementation head `350609d653a04c450d574b1780f1ad99cb5b0635` passed all 7 CI jobs in [run 41793673976](https://github.com/pskeffington/pip_boy/actions/runs/41793673976), including native macOS universal bundle smoke.
+- EXIT-handler integration test head `f8ad470a021bfb5811bffb65b4d55dae33c5a0bc` passed all 7 jobs in [run 41916479067](https://github.com/pskeffington/pip_boy/actions/runs/41916479067), including injected-failure status preservation and temporary build-path cleanup.
 - Universal bundle slices compile and pass CI smoke; Intel physical-Mac
   install and runtime acceptance remain pending.
 - Hosted AppKit CI verifies programmatic menu target/action dispatch.
