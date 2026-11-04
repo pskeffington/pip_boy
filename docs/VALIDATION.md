@@ -19,46 +19,33 @@ universal build is claimed. Intel hardware acceptance remains separate. The
 hosted AppKit startup/Stop lifecycle passed on ancestor source in run
 41777150345; interactive menu selection remains unverified.
 
-### Mac app release hardening follow-up (2026-11-04; exact-head CI pending)
+### Mac app release hardening follow-up (2026-11-04; software CI accepted)
 
-The next PR #93 slice adds a generated multi-resolution ICNS app icon and
-version/copyright/category plist checks. The hosted AppKit smoke sends actual
-menu target/actions for desktop, micro, Stop and Quit, verifies Quit waits for
-a live child to exit, and tests a missing bundled service through the visible
-Retry action. The builder stages
-the complete app as a temporary sibling and refuses unsafe, symlinked or
-unrelated outputs; an injected Swift compile failure checks that an existing
-bundle remains intact. Developer ID packaging now requires a clean source
-tree and universal executable slices, retains the notary submission responses
-and logs, and emits a source/version/identifier/architecture/checksum manifest
-before atomically installing the final DMG. Each notarization attempt receives
-a unique evidence directory so a retry cannot overwrite earlier Apple logs.
-The local headless app smoke,
-Swift compilation, and ICNS container checks passed. The opt-in local AppKit
-smoke aborted during AppKit application registration through the restricted
-LaunchServices environment (SIGABRT); it does not establish a source-level
-menu failure. Follow-up head `2c6e15446c1414a42a08bc8f3c4c94d3c78d1f14`
-failed the native AppKit smoke in [run
-41782734765](https://github.com/pskeffington/pip_boy/actions/runs/41782734765)
-while six other jobs passed. Log inspection isolated a stale Quit marker
-assertion after Stop began terminating directly; the current worktree removes
-that assertion and waits for live-Quit child-shutdown evidence. At head
-`fd41d089c6e812a5d56786619f0c937a27c05271`, six jobs passed in [run
-41783954586](https://github.com/pskeffington/pip_boy/actions/runs/41783954586),
-while native macOS AppKit smoke remained in progress and its live logs were
-unavailable. Review found the test's unbounded app wait and a nested
-`waitUntilExit()` in the termination handler; the current worktree removes the
-nested wait and bounds test process waits. Hosted native macOS CI must verify
-this correction. Follow-up head `8f69b5a92194fe2e36b5c12b90e27adeee8942a0`
-failed at the live-Quit smoke in [run
-41785148903](https://github.com/pskeffington/pip_boy/actions/runs/41785148903): Stop
-and Retry passed, but Quit did not exit the host app within 30 seconds. The
-current worktree reissues termination after child shutdown and requires the
-child-stopped marker before checking app exit. Rust formatting, warnings-denied Clippy, Rust workspace tests (a full
-rerun passed after one transient 409), Rust 1.90 workspace check, repository
-validators, and smoke roster passed locally. Exact-head hosted CI remains
-pending for this source slice. No signing credentials are present, so no
-notarization or Gatekeeper result is claimed.
+The release slice adds a generated multi-resolution ICNS app icon and
+version/copyright/category plist checks. Hosted AppKit smoke dispatches actual
+menu actions for desktop, micro, Stop and Quit, verifies Quit waits for live
+child shutdown, and tests Retry after a missing bundled service. The builder
+stages the complete app in a temporary sibling and preserves the existing
+bundle on failure. Developer ID packaging requires clean source and universal
+slices, retains notary responses/logs, and writes source/version/identifier/
+architecture/checksum evidence to unique per-attempt directories.
+
+Exact implementation head `7d77c9da0a72b55ff6c5a7fcb4ad5e384702e4e1` passed
+all 7 jobs in [Actions run
+41786181479](https://github.com/pskeffington/pip_boy/actions/runs/41786181479).
+This includes stable Rust format, compile, tests, Clippy and runtime smokes;
+Rust 1.90 compile/tests/Clippy; Windows; both optional adapter jobs; source
+manifest checks; hosted macOS AppKit menu/retry/live-Quit checks; and universal
+arm64+x86_64 bundle smoke. Prior AppKit failures and their specific fixes are
+retained in the linked runs above. Locally, the headless app smoke, Swift
+compilation, shell checks, and repository validators pass. The opt-in local
+AppKit launch aborts in restricted LaunchServices registration (SIGABRT), so
+interactive user-session behavior remains unverified.
+
+Software CI acceptance does not establish a signed distribution. No Apple
+signing identity or notarization profile is configured; no notarization,
+Gatekeeper installation, clean-account upgrade/removal, logged-in
+accessibility review, or production artifact is claimed.
 
 ## RM-018 supervised child integration checkpoint — 2026-10-30 (local, not release acceptance)
 

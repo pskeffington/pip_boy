@@ -20,7 +20,8 @@ universal bundle is built by combining both Rust and Swift slices:
 
 The universal build requires the Rust standard library for both
 `aarch64-apple-darwin` and `x86_64-apple-darwin`, plus Xcode's macOS SDK and
-`lipo`. Exact head `db452596e8b10a42a5fb6d6187b7b0a30c79413b` passed 7/7 jobs
+`lipo`. Exact implementation head `7d77c9da0a72b55ff6c5a7fcb4ad5e384702e4e1`
+passed 7/7 jobs in [Actions run 41786181479](https://github.com/pskeffington/pip_boy/actions/runs/41786181479). The native Mac job passed the hosted AppKit action/retry/live-Quit checks and the universal bundle build/smoke. Earlier universal baseline head `db452596e8b10a42a5fb6d6187b7b0a30c79413` also passed 7/7 jobs
 in [Actions run 41778857053](https://github.com/pskeffington/pip_boy/actions/runs/41778857053).
 The native macOS job installed the Intel Rust target, checked both Rust and
 Swift executable slices, launched the universal bundle, and fetched desktop

@@ -7,7 +7,8 @@
 - Stop and Quit reap the dashboard asynchronously, with bounded SIGKILL escalation; add a live-child Quit regression.
 - Build app bundles in temporary sibling paths and preserve an existing bundle if a rebuild fails.
 - Extend Developer ID packaging to require clean source and universal slices, preserve Apple notarization submissions/logs per attempt, and write source/checksum evidence before installing the final DMG.
-- Keep exact-head CI for this follow-up, Developer ID credentials, Gatekeeper installation, logged-in user accessibility, and production publication pending.
+- Pass 7/7 exact-head CI at `7d77c9d`, including AppKit menu/retry/live-Quit checks and the universal bundle smoke ([run 41786181479](https://github.com/pskeffington/pip_boy/actions/runs/41786181479)).
+- Keep Developer ID credentials, notarization, Gatekeeper installation, logged-in user accessibility, and production publication pending.
 
 ## 2026-11-03 — Mac menu-bar packaging candidate
 

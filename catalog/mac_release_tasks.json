@@ -16,7 +16,7 @@
     {
       "id": "MAC-REL-01",
       "title": "Build and smoke-test a native menu-bar app bundle",
-      "status": "implemented_unverified",
+      "status": "accepted_software",
       "paths": [
         "macos/RustBoyLauncher.swift",
         "macos/generate_app_icon.swift",
@@ -30,9 +30,10 @@
         "swift": "Swift app host compiled for arm64-apple-macosx13.0.",
         "smoke": "tools/test_macos_app.sh passed for the native host architecture: app bundle/plist/executable checks, bundled loopback server startup, desktop and micro GETs, and refusal to produce an unsigned DMG.",
         "universal": "Universal arm64+x86_64 builder and CI smoke passed on the native macOS runner. The runner installed the Intel Rust standard library, checked both Rust and Swift executable slices, and fetched desktop and micro routes from the bundled service.",
-        "limitation": "The exact-head hosted AppKit menu-action/retry smoke is pending. The local opt-in AppKit launch aborted during restricted LaunchServices registration (SIGABRT); this does not establish a source-level menu failure."
+        "limitation": "Local AppKit launch remains unavailable in the restricted LaunchServices environment (SIGABRT). Hosted CI verifies software paths; logged-in user session, accessibility, signing/notarization, Gatekeeper, and hardware acceptance remain separate.",
+        "appkit_ci": "Exact head 7d77c9da0a72b55ff6c5a7fcb4ad5e384702e4e1 passed all 7 jobs in https://github.com/pskeffington/pip_boy/actions/runs/41786181479. Native macOS CI passed actual desktop/micro/Stop/Quit menu actions, live-child shutdown, Retry after missing service, and universal arm64+x86_64 app bundle smoke."
       },
-      "ci_evidence": "Baseline universal code head db452596e8b10a42a5fb6d6187b7b0a30c79413 passed 7/7 jobs in https://github.com/pskeffington/pip_boy/actions/runs/41778857053; final documentation head 0394056a6c3b381bf64b667ccc0ac382d90f5309 passed 7/7 in https://github.com/pskeffington/pip_boy/actions/runs/41779843083. Follow-up head 2c6e15446c1414a42a08bc8f3c4c94d3c78d1f14 failed the native macOS job in https://github.com/pskeffington/pip_boy/actions/runs/41782734765 at the AppKit smoke step; six other jobs passed. Inspection traced the failure to a stale Quit marker assertion after Stop began terminating directly. Commit fd41d089c6e812a5d56786619f0c937a27c05271 run https://github.com/pskeffington/pip_boy/actions/runs/41783954586 has six completed jobs successful, while the native macOS AppKit smoke remains in progress and its live job log endpoint returns 404. Review found an unbounded wait in that smoke and a redundant waitUntilExit inside the Process termination handler; the current worktree removes the nested wait and bounds AppKit process waits to 30 seconds. Commit fd41d089c6e812a5d56786619f0c937a27c05271 run https://github.com/pskeffington/pip_boy/actions/runs/41783954586 stalled in the AppKit step and was canceled when the next commit arrived. Commit 8f69b5a92194fe2e36b5c12b90e27adeee8942a0 run https://github.com/pskeffington/pip_boy/actions/runs/41785148903 failed in the live-Quit smoke: Stop and Retry passed, but the AppKit process did not exit within 30 seconds. The smoke also did not require its child-stopped marker before waiting. Current worktree reissues termination after the child exits and requires that marker. A new exact-head run is required.",
+      "ci_evidence": "Final implementation head 7d77c9da0a72b55ff6c5a7fcb4ad5e384702e4e1 passed 7/7 jobs in https://github.com/pskeffington/pip_boy/actions/runs/41786181479. Earlier failed AppKit follow-ups and fixes are documented in docs/VALIDATION.md. This exact code head clears software CI only; no signing, notarization, interactive acceptance, or production artifact is claimed.",
       "software_acceptance": [
         "macOS native workflow builds and verifies arm64+x86_64 Rust and Swift slices",
         "Universal bundle starts and serves desktop and micro loopback routes on the runner",
