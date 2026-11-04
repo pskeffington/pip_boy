@@ -33,7 +33,7 @@
         "limitation": "Local AppKit launch remains unavailable in the restricted LaunchServices environment (SIGABRT). Hosted CI verifies software paths; logged-in user session, accessibility, signing/notarization, Gatekeeper, and hardware acceptance remain separate.",
         "appkit_ci": "Exact head 7d77c9da0a72b55ff6c5a7fcb4ad5e384702e4e1 passed all 7 jobs in https://github.com/pskeffington/pip_boy/actions/runs/41786181479. Native macOS CI passed actual desktop/micro/Stop/Quit menu actions, live-child shutdown, Retry after missing service, and universal arm64+x86_64 app bundle smoke."
       },
-      "ci_evidence": "Final implementation head 7d77c9da0a72b55ff6c5a7fcb4ad5e384702e4e1 passed 7/7 jobs in https://github.com/pskeffington/pip_boy/actions/runs/41786181479. Earlier failed AppKit follow-ups and fixes are documented in docs/VALIDATION.md. This exact code head clears software CI only; no signing, notarization, interactive acceptance, or production artifact is claimed.",
+      "ci_evidence": "Final Mac implementation head 708cf7aeb0eff3c6a657c33402d26fe640f739e8 passed 7/7 jobs in https://github.com/pskeffington/pip_boy/actions/runs/41787914386, including AppKit desktop/micro/Stop/Quit, live-child shutdown, Retry, and universal bundle smoke. This also validates the package-source regression that binds the release SHA to a clean git archive build.",
       "software_acceptance": [
         "macOS native workflow builds and verifies arm64+x86_64 Rust and Swift slices",
         "Universal bundle starts and serves desktop and micro loopback routes on the runner",
@@ -51,7 +51,7 @@
       "id": "MAC-REL-02",
       "title": "Sign and notarize a Developer ID app and DMG",
       "status": "blocked_credentials",
-      "implementation_status": "implemented_unverified",
+      "implementation_status": "accepted_software",
       "paths": [
         "scripts/build-macos-app.sh",
         "scripts/package-macos-dmg.sh",
@@ -64,7 +64,7 @@
         "App and DMG signatures verify, notarization succeeds, and tickets staple",
         "Gatekeeper validates the stapled distribution"
       ],
-      "evidence": "No Apple signing identity or notarization profile is configured; no distributable artifact exists. The packager now builds a universal app from a fresh git archive of the exact clean source SHA and ignores prebuilt app/binary overrides; a regression check covers this invariant. These source-provenance changes await exact-head CI. The script preserves app/DMG submission JSON, Apple logs, signatures, universal slices and source/checksum evidence in unique per-attempt directories."
+      "evidence": "The source-bound packaging implementation passed exact-head 7/7 CI at 708cf7aeb0eff3c6a657c33402d26fe640f739e8 in https://github.com/pskeffington/pip_boy/actions/runs/41787914386. The packager builds from a fresh git archive of the exact clean source SHA and ignores prebuilt app/binary overrides. No Apple signing identity or notarization profile is configured, so no signed artifact, notarization, or Gatekeeper result exists."
     },
     {
       "id": "MAC-REL-03",

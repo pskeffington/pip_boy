@@ -95,11 +95,12 @@ stapling and Gatekeeper assessment succeed.
 
 ## Acceptance still required
 
-- Exact implementation head `7d77c9da0a72b55ff6c5a7fcb4ad5e384702e4e1`
+- Exact implementation head `708cf7aeb0eff3c6a657c33402d26fe640f739e8`
   passed 7/7 jobs in [run
-  41786181479](https://github.com/pskeffington/pip_boy/actions/runs/41786181479),
+  41787914386](https://github.com/pskeffington/pip_boy/actions/runs/41787914386),
   including actual AppKit desktop/micro/Stop/Quit actions, live-child shutdown,
-  missing-service Retry, and universal arm64+x86_64 bundle smoke.
+  missing-service Retry, universal arm64+x86_64 bundle smoke, and the source-bound
+  packaging regression.
 - Universal bundle slices compile and pass CI smoke; Intel physical-Mac
   install and runtime acceptance remain pending.
 - Hosted AppKit CI verifies programmatic menu target/action dispatch.

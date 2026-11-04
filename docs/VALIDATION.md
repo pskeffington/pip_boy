@@ -30,10 +30,10 @@ bundle on failure. Developer ID packaging requires clean source and universal
 slices, retains notary responses/logs, and writes source/version/identifier/
 architecture/checksum evidence to unique per-attempt directories.
 
-Exact implementation head `7d77c9da0a72b55ff6c5a7fcb4ad5e384702e4e1` passed
+Exact implementation head `708cf7aeb0eff3c6a657c33402d26fe640f739e8` passed
 all 7 jobs in [Actions run
-41786181479](https://github.com/pskeffington/pip_boy/actions/runs/41786181479).
-This includes stable Rust format, compile, tests, Clippy and runtime smokes;
+41787914386](https://github.com/pskeffington/pip_boy/actions/runs/41787914386).
+This includes the source-bound release-packager regression plus stable Rust format, compile, tests, Clippy and runtime smokes;
 Rust 1.90 compile/tests/Clippy; Windows; both optional adapter jobs; source
 manifest checks; hosted macOS AppKit menu/retry/live-Quit checks; and universal
 arm64+x86_64 bundle smoke. Prior AppKit failures and their specific fixes are
