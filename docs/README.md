@@ -1,5 +1,8 @@
 # Rust-Boy documentation
 
+- [Mac release path](MAC_RELEASE.md) — menu-bar app bundle, local validation, Developer ID signing/notarization, and current release blockers.
+- [Mac release task queue](../catalog/mac_release_tasks.json) — app packaging, signing, installation, update, and acceptance gates.
+
 Technical contracts, architecture decisions, research provenance and validation evidence for the [Rust-Boy](../README.md) offline-first field console.
 
 **Current scope:** Rust 1.90+ desktop CLI/TUI, a separate micro-handheld shell and a loopback-only graphical dashboard, bundled reference library, notes and synthetic-only device workflows. NET ENGINEER performs an explicitly authorized, bounded LAN scan; OS-enforced peripheral permissions and physical device permissions remain separate; a TLS-only, explicitly configured UniFi connected-client reader is implemented. Physical controller acceptance remains open.
@@ -8,11 +11,11 @@ Technical contracts, architecture decisions, research provenance and validation 
 
 [Agent instructions](../AGENTS.md) · [Execution work packets and release gates](TERMINAL_AGENT_EXECUTION.md) · [Machine-readable task queue](../catalog/terminal_agent_tasks.json) · [Core dispatcher issue](https://github.com/pskeffington/pip_boy/issues/73) · [Security/CI issue](https://github.com/pskeffington/pip_boy/issues/74). Software implementation is developed and validated through GitHub; operator-local side-by-side testing is not a prerequisite.
 
-[November 3 execution packet and PR reconciliation](CODEX_PASS_2026-11-03.md) records the #88 merge, the current local TC-A03/TC-A05 scope, unresolved PR bases, exact workflow evidence, and Pi 5 physical acceptance boundaries.
+[November 3 execution packet and PR reconciliation](CODEX_PASS_2026-11-03.md) records the #88 merge, PR #92's current exact-head CI evidence, unresolved PR bases, and Pi 5 physical acceptance boundaries.
 
 ## Terminal module command integration
 
-[Terminal-to-module command surface](TERMINAL_MODULE_COMMANDS.md) documents TC-A01 and merged TC-A02. PR #88 merged at `1ba2b8f`; exact source head passed 7/7 jobs in [Actions run 41127024688](https://github.com/pskeffington/pip_boy/actions/runs/41127024688). A follow-up with read-only RADIO metadata and desktop/micro palettes passes local checks; its exact-head CI and Chromium viewport job remain pending. Pi hardware evidence remains pending.
+[Terminal-to-module command surface](TERMINAL_MODULE_COMMANDS.md) documents TC-A01 and merged TC-A02. PR #88 merged at `1ba2b8f`; exact source head passed 7/7 jobs in [Actions run 41127024688](https://github.com/pskeffington/pip_boy/actions/runs/41127024688). PR #92 adds the executor metadata recheck, offline RADIO metadata, and desktop/micro palettes; its exact head passed 7/7 jobs in [Actions run 41761848423](https://github.com/pskeffington/pip_boy/actions/runs/41761848423), and it is ready for review but not merged. Pi hardware evidence remains pending.
 
 ## Universal adapter SDK
 

@@ -1,5 +1,9 @@
 # Rust-Boy | Evidence-based development roadmap
 
+## Mac desktop release checkpoint — 2026-11-03
+
+PR #92's exact source head `815dba08f1782aaca409d45486ba6c445ed30a51` passed all seven Actions jobs, including native macOS and Chromium viewport checks, and is ready for review but not merged. A separate menu-bar app bundle candidate now has local Swift compilation and bundled loopback service smoke evidence; exact-head CI is pending. Developer ID notarization and clean-account Gatekeeper, update, privacy, accessibility and interactive menu checks remain release gates. See [Mac release path](MAC_RELEASE.md) and [task queue](../catalog/mac_release_tasks.json).
+
 ## Mainline integration status — 2026-10-25
 
 - LAN/UniFi connected-client inventory and DIAG ingestion are merged in PR #15; Linux stable, Rust 1.90, native macOS/Windows and catalog validation passed at `badabc5`.

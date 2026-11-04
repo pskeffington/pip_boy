@@ -241,6 +241,10 @@ jobs:
         if: matrix.os == 'macos-latest'
         shell: bash
         run: bash scripts/test-map-macos.command --verify
+      - name: macOS app bundle and loopback launch acceptance
+        if: matrix.os == 'macos-latest'
+        shell: bash
+        run: bash tools/test_macos_app.sh
       - name: Native Windows ConPTY terminal journey
         if: matrix.os == 'windows-latest'
         shell: pwsh

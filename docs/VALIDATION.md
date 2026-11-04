@@ -1,5 +1,11 @@
 # Rust-Boy | Validation evidence
 
+## Mac menu-bar app bundle candidate — local software smoke (2026-11-03)
+
+The new app builder assembles a native menu-bar executable and the Rust dashboard binary into a macOS app bundle. On this Apple Silicon Mac, Swift compiled for `arm64-apple-macosx13.0`; `bash tools/test_macos_app.sh` built the bundle, checked its plist and executables, launched the bundled server in its test mode, and fetched both desktop and micro routes on a dynamically assigned 127.0.0.1 port. The DMG script was also verified to refuse packaging when Developer ID and notary profile values are absent.
+
+The test exercises the bundled Rust service but does not launch the AppKit menu in an interactive session. The local LaunchServices environment rejects app launches, so actual status-menu interaction, signed install, Gatekeeper, notarization, clean-account upgrade/uninstall and accessibility remain pending. Exact-head CI for this candidate is pending. No release artifact is signed or available.
+
 ## RM-018 supervised child integration checkpoint — 2026-10-30 (local, not release acceptance)
 
 - The host install resolver was independently exercised with temporary install roots: a valid executable+manifest pin resolves, changed manifest bytes are denied, and symlinked package roots/manifests are denied. The targeted process suite now passes all 10 tests, including timeout kill/reap, unexpected exit, shutdown, audio-lease cleanup and a supported UI input over the child protocol. Re-running `tools/test_supervised_music_process.py` built the independent module into `/private/tmp` and passed the real Rust Music child handshake/activate/shutdown path under the host. Warnings-denied Clippy, formatting, package/component validators and UI regressions passed in this checkpoint.
@@ -22,11 +28,11 @@ The full-screen TUI now uses the shared typed command catalog and native offline
 
 PR #88 merged this work at `1ba2b8f019cbd3b61b36c89171ddbbb5941f829d`. Its exact source head `457d9659d6e0ee29a6663ade0bae6b3875b2e969` passed 7/7 jobs in [Actions run 41127024688](https://github.com/pskeffington/pip_boy/actions/runs/41127024688), including stable, Rust 1.90, native macOS/Windows, source validation, SoapySDR and SDRConnect. The full-screen Workbench palette is scoped to selected pinned tools; Escape cancels without dispatch; output and input are bounded; Settings remains host-owned. Existing focused tests at that head covered terminal 6/6, console 7/7 and TUI 7/7. A separate local change adds an executor-side metadata recheck and regression test; it is not part of this merge and has not received hosted CI. GUI palette integration and physical Pi acceptance remain open.
 
-## TC-A03 / TC-A05 follow-up — local software checks (exact-head CI pending)
+## TC-A03 / TC-A05 follow-up — exact-head software checks (2026-11-03)
 
 The local follow-up adds the `radio stations` catalog descriptor and static formatter for the checked-in curated directory. It performs no connectivity check, hardware enumeration, or playback. The dashboard exposes pinned command descriptors and an explicit run route through `execute_tui_command`; desktop and micro dialogs do not dispatch on open or selection. The terminal executor rechecks offline/read-only metadata at the point of dispatch.
 
-On the local worktree, `cargo fmt --all -- --check`, warnings-denied workspace Clippy, `cargo test --workspace --locked` (421 passed), and `cargo +1.90.0 check --workspace --locked` passed. `node --check` for dashboard/micro scripts, `node tools/test_micro_ui.cjs`, and `node tools/test_desktop_focus_ui.cjs` passed. `node tools/test_dashboard_viewport.cjs` could not run because Chromium is not installed (`CHROME_BIN` unset); the exact-head Actions run must execute viewport coverage. This worktree is not a GitHub CI head; no hosted result is claimed here.
+PR #92 source head `815dba08f1782aaca409d45486ba6c445ed30a51` passed 7/7 jobs in [Actions run 41761848423](https://github.com/pskeffington/pip_boy/actions/runs/41761848423). The macOS job passed compile/build, offline preference and virtual-device smoke, terminal PTY, and Mac MAP acceptance. The stable job passed Rust formatting, dashboard/MAP/UI Chromium viewport checks, compilation, unit tests, Clippy and CLI smoke; Rust 1.90, Windows ConPTY, both SDR jobs and manifest validation passed. PR #92 is ready for review but not merged. This CI result does not verify the separate menu-bar bundle candidate described above.
 
 ## TC-A01 typed command catalog — exact-head software acceptance (2026-10-30)
 

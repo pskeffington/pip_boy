@@ -8,7 +8,7 @@
 
 Rust-Boy is a Rust workbench for local diagnostics, field maps, network engineering and device-to-device task assignments. It has a desktop dashboard, a phosphor-style micro HUD and a terminal console. Seven occupational profiles come preloaded; Custom starts empty.
 
-**Development preview on `main`.** Implemented modules are merged after software checks pass. Physical Raspberry Pi touchscreen, actual UniFi controller, Mac-to-Pi SSH and PlayStation game acceptance remain separate field tests. There is no packaged production release.
+**Development preview on `main`.** The Mac source launchers require Rust 1.90+ and run the dashboard in a browser on loopback. A native menu-bar app bundle and Developer ID distribution path are under review in [the Mac release work](docs/MAC_RELEASE.md); no signed or notarized production release is available. Raspberry Pi, actual UniFi controller, Mac-to-Pi SSH and PlayStation acceptance remain separate field gates.
 
 Roles use short operator titles: **Overseer, Maintenance, Security, Doctor, Scientist, Reclamations, Recon, Archivist, Custom**. Security's unconfigured camera view offers labeled public publisher views for **DC, NYC, Boston and SF**; private IP-camera enrollment/decoding remains a separate gate. See [camera sources and lifecycle](docs/SECURITY_CAMERA_WALL.md).
 
@@ -18,13 +18,15 @@ Roles use short operator titles: **Overseer, Maintenance, Security, Doctor, Scie
 
 **Socket registry precursor:** Five independent designs (MAP / TV / RADIO / COMMS / MUSIC) can be inspected and validated without loading packages. `pipboy packages list --json` shows checked-in reference designs; `pipboy packages check PATH` validates an explicit file; `pipboy packages scan DIR --json` discovers JSON manifests in an operator-chosen local directory. All results are **reference/discovered metadata only**, not installed or runnable packages. See [socket contract](docs/PACKAGE_SOCKET.md).
 
-**Shared command catalog:** bounded typed requests, terminal dispatch and the full-screen TUI palette are merged in [PR #88](https://github.com/pskeffington/pip_boy/pull/88) at `1ba2b8f`. Exact head `457d965` passed all 7 jobs in [Actions run 41127024688](https://github.com/pskeffington/pip_boy/actions/runs/41127024688). `/` opens the palette for the selected pinned tool, Escape closes without dispatch, and host Settings stays available. The desktop/micro command palette remains in progress. See [command integration plan](docs/TERMINAL_MODULE_COMMANDS.md).
+**Shared command catalog:** bounded typed requests, terminal dispatch and the full-screen TUI palette are merged in [PR #88](https://github.com/pskeffington/pip_boy/pull/88) at `1ba2b8f`. Exact head `457d965` passed all 7 jobs in [Actions run 41127024688](https://github.com/pskeffington/pip_boy/actions/runs/41127024688). `/` opens the palette for the selected pinned tool, Escape closes without dispatch, and host Settings stays available. The desktop/micro palette follow-up [PR #92](https://github.com/pskeffington/pip_boy/pull/92) passed 7/7 exact-head jobs, including Chromium viewports, and is ready for review but not merged. See [command integration plan](docs/TERMINAL_MODULE_COMMANDS.md).
 
 **Terminal command bridge:** `pipboy terminal` and the full-screen TUI use the shared typed catalog and allowlisted offline Rust handlers. Direct selection, `run COMMAND`, legacy DIAG `host`, bounded arguments/output, and keyboard cancellation are covered by compatibility and CI checks. See [command integration plan](docs/TERMINAL_MODULE_COMMANDS.md).
 
 ## Project navigation
 
 [Documentation index](docs/README.md) · [Repository structure](docs/REPO_STRUCTURE.md) · [Architecture](docs/ARCHITECTURE.md) · [Organizational research](docs/ORGANIZATIONAL_OPTIMIZATION.md) · [Validation](docs/VALIDATION.md) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md).
+
+**Mac app distribution:** the source launchers remain available. The native menu-bar bundle candidate is not yet integrated with main or signed; Developer ID notarization, Gatekeeper install testing, and an update policy remain release gates. See [Mac release path](docs/MAC_RELEASE.md).
 
 **Desktop focus:** The Vault Command Center separates **COMMAND / MODULES / VIEWPORT / MESSAGES / SETTINGS**, plus RADIO. Command manages mission/task assignment and explicit paired-device dispatch; the handheld `/micro` remains the field terminal. [Desktop guide](docs/DASHBOARD_UI.md).
 

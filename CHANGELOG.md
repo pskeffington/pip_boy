@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-11-03 — Mac menu-bar packaging candidate
+
+- Add a native status-menu host for starting the loopback dashboard and opening the desktop or micro surface.
+- Add an unsigned local app-bundle builder, a server launch smoke test, and a fail-closed Developer ID DMG notarization script.
+- Keep signed distribution, Gatekeeper install, accessibility, update behavior, and production acceptance open.
+
 ## 2026-11-03 — Shared terminal/TUI command palette and host reconciliation
 
 - Merge PR #88 at `1ba2b8f`; its exact source head passed 7/7 Actions jobs, including terminal/TUI, Rust 1.90, macOS and Windows checks.

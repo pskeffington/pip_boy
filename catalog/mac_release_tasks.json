@@ -1,0 +1,86 @@
+{
+  "schema_version": 1,
+  "updated": "2026-11-03",
+  "project": "Rust-Boy macOS Developer ID release",
+  "distribution": "outside Mac App Store using Developer ID",
+  "workflow": "github_first",
+  "status_semantics": {
+    "queued": "ready for a software slice",
+    "implemented_unverified": "source exists; exact-head CI pending",
+    "blocked_credentials": "requires protected Apple signing or notarization credentials",
+    "blocked_acceptance": "requires a clean interactive Mac or operator evidence",
+    "accepted_software": "relevant automated software gates passed",
+    "released": "signed, notarized, Gatekeeper-verified artifact and release evidence published"
+  },
+  "tasks": [
+    {
+      "id": "MAC-REL-01",
+      "title": "Build and smoke-test a native menu-bar app bundle",
+      "status": "implemented_unverified",
+      "paths": [
+        "macos/RustBoyLauncher.swift",
+        "scripts/build-macos-app.sh",
+        "tools/test_macos_app.sh",
+        ".github/workflows/rust.yml"
+      ],
+      "local_evidence": {
+        "swift": "Swift app host compiled for arm64-apple-macosx13.0.",
+        "smoke": "tools/test_macos_app.sh passed: app bundle/plist/executable checks, bundled loopback server startup, desktop and micro GETs, and refusal to produce an unsigned DMG.",
+        "limitation": "The smoke uses a headless test path and does not launch the AppKit status menu."
+      },
+      "ci_evidence": "pending for the exact commit of the packaging PR",
+      "acceptance": [
+        "macOS native workflow builds the bundle and passes local loopback smoke",
+        "Interactive status-menu startup and Stop/Quit behavior verified separately"
+      ]
+    },
+    {
+      "id": "MAC-REL-02",
+      "title": "Sign and notarize a Developer ID app and DMG",
+      "status": "blocked_credentials",
+      "paths": [
+        "scripts/build-macos-app.sh",
+        "scripts/package-macos-dmg.sh",
+        "docs/MAC_RELEASE.md"
+      ],
+      "acceptance": [
+        "Protected Developer ID Application identity is provisioned",
+        "Notarytool keychain profile is provisioned on a protected macOS runner",
+        "App and DMG signatures verify, notarization succeeds, and tickets staple",
+        "Gatekeeper validates the stapled distribution"
+      ],
+      "evidence": "No Apple signing identity or notarization profile is configured; no distributable artifact exists."
+    },
+    {
+      "id": "MAC-REL-03",
+      "title": "Validate clean-account installation and update/removal behavior",
+      "status": "blocked_acceptance",
+      "depends_on": [
+        "MAC-REL-02"
+      ],
+      "acceptance": [
+        "Install and launch from the signed DMG on a clean supported Mac account",
+        "Check loopback privacy prompt, default-browser routing, menu controls and data isolation",
+        "Upgrade without unintended data loss and document uninstall/data retention",
+        "Complete keyboard, VoiceOver, contrast and reduced-motion review"
+      ],
+      "evidence": "The current execution surface cannot launch GUI apps through LaunchServices; interactive acceptance remains open."
+    },
+    {
+      "id": "MAC-REL-04",
+      "title": "Publish a supported Mac release with provenance and manual updates",
+      "status": "queued",
+      "depends_on": [
+        "MAC-REL-01",
+        "MAC-REL-02",
+        "MAC-REL-03"
+      ],
+      "acceptance": [
+        "Declare supported architectures and minimum macOS version",
+        "Publish signed/notarized app and DMG with source SHA and checksums",
+        "Publish privacy, local-data, update and uninstall guidance",
+        "Do not claim production availability before all prerequisite tasks pass"
+      ]
+    }
+  ]
+}
