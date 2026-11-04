@@ -2,7 +2,7 @@
 
 ## Mac desktop release checkpoint — 2026-11-03
 
-PR #92's exact source head `815dba08f1782aaca409d45486ba6c445ed30a51` passed all seven Actions jobs, including native macOS and Chromium viewport checks, and is ready for review but not merged. Stacked draft PR #93 head `eff3a2c19b91b4e40972eace60caaaf38e85c68f` also passed all seven jobs in [Actions run 41775711784](https://github.com/pskeffington/pip_boy/actions/runs/41775711784), including native macOS app bundle and loopback launch acceptance. Developer ID notarization and clean-account Gatekeeper, update, privacy, accessibility and interactive menu checks remain release gates. See [Mac release path](MAC_RELEASE.md) and [task queue](../catalog/mac_release_tasks.json).
+PR #92's exact source head `815dba08f1782aaca409d45486ba6c445ed30a51` passed all seven Actions jobs, including native macOS and Chromium viewport checks, and is ready for review but not merged. Stacked draft PR #93 head `12f18a0e3e9b0f33226aa99eba900bab0857be82` passed all seven jobs in [Actions run 41777150345](https://github.com/pskeffington/pip_boy/actions/runs/41777150345), including hosted AppKit startup, dashboard child launch, Stop and child exit. Developer ID notarization and clean-account Gatekeeper, update, privacy, accessibility and interactive menu checks remain release gates. See [Mac release path](MAC_RELEASE.md) and [task queue](../catalog/mac_release_tasks.json).
 
 ## Mainline integration status — 2026-10-25
 

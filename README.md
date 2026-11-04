@@ -26,7 +26,7 @@ Roles use short operator titles: **Overseer, Maintenance, Security, Doctor, Scie
 
 [Documentation index](docs/README.md) · [Repository structure](docs/REPO_STRUCTURE.md) · [Architecture](docs/ARCHITECTURE.md) · [Organizational research](docs/ORGANIZATIONAL_OPTIMIZATION.md) · [Validation](docs/VALIDATION.md) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md).
 
-**Mac app distribution:** the native menu-bar bundle and bundled dashboard smoke pass exact-head CI in stacked draft [PR #93](https://github.com/pskeffington/pip_boy/pull/93) (7/7 jobs, [run 41775711784](https://github.com/pskeffington/pip_boy/actions/runs/41775711784)). It is not merged or signed. Developer ID notarization, interactive menu acceptance, Gatekeeper install testing, and an update policy remain release gates. See [Mac release path](docs/MAC_RELEASE.md).
+**Mac app distribution:** the native menu-bar bundle, bundled dashboard smoke, and hosted AppKit startup/Stop lifecycle pass exact-head CI in stacked draft [PR #93](https://github.com/pskeffington/pip_boy/pull/93) (7/7 jobs, [run 41777150345](https://github.com/pskeffington/pip_boy/actions/runs/41777150345)). It is not merged or signed. Interactive menu selection, Developer ID notarization, Gatekeeper install testing, and an update policy remain release gates. See [Mac release path](docs/MAC_RELEASE.md).
 
 **Desktop focus:** The Vault Command Center separates **COMMAND / MODULES / VIEWPORT / MESSAGES / SETTINGS**, plus RADIO. Command manages mission/task assignment and explicit paired-device dispatch; the handheld `/micro` remains the field terminal. [Desktop guide](docs/DASHBOARD_UI.md).
 

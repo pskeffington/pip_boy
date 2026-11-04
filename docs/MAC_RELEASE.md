@@ -69,8 +69,9 @@ not been run and no signed/notarized artifact is available.
 
 - Exact-head CI for the app-bundle launch smoke and release scripts.
 - The automated app smoke exercises the bundled Rust service in a headless
-  mode. It does not prove that the status-menu UI opens in a logged-in desktop
-  session; that requires a native interactive macOS run.
+  mode. Hosted macOS CI also launches the AppKit host, confirms the dashboard
+  child starts, invokes the Stop lifecycle path and checks that the child exits.
+  It does not verify menu selection or use in a logged-in user session.
 - Review of the app bundle identifier, copyright, icon, minimum macOS version,
   privacy wording, update and uninstall behavior.
 - Developer ID signing and notarization on a protected macOS release runner.

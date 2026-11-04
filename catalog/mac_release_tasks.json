@@ -29,13 +29,14 @@
         "limitation": "The smoke uses a headless test path and does not launch the AppKit status menu."
       },
       "ci_evidence": {
-        "head": "eff3a2c19b91b4e40972eace60caaaf38e85c68f",
-        "run": "https://github.com/pskeffington/pip_boy/actions/runs/41775711784",
-        "result": "7/7 jobs passed, including native macOS bundle and loopback launch acceptance"
+        "head": "12f18a0e3e9b0f33226aa99eba900bab0857be82",
+        "run": "https://github.com/pskeffington/pip_boy/actions/runs/41777150345",
+        "result": "7/7 jobs passed, including native macOS bundle smoke and AppKit startup/Stop lifecycle with child exit"
       },
       "acceptance": [
         "macOS native workflow builds the bundle and passes local loopback smoke",
-        "Interactive status-menu startup and Stop/Quit behavior verified separately"
+        "Hosted macOS CI launches AppKit, starts the child dashboard, invokes Stop and verifies child exit",
+        "Interactive status-menu selection, Quit and accessibility verified in a logged-in user session"
       ]
     },
     {
