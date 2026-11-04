@@ -69,7 +69,8 @@ It submits both the app archive and DMG to Apple's notary service, staples accep
 tickets, and runs Gatekeeper assessment. It refuses to package without signing
 and notarization configuration. This repo currently has no configured Apple
 Developer ID certificate or notarization profile, so this final process has
-not been run and no signed/notarized artifact is available. On a configured
+not been run and no signed/notarized artifact is available. Credential setup and
+release evidence requirements are tracked in [issue #94](https://github.com/pskeffington/pip_boy/issues/94). On a configured
 release runner it also refuses a dirty Git tree, validates the universal slices,
 preserves both notary submission responses and JSON logs, and writes a
 source-SHA/version/identifier/architecture/checksum manifest to the private

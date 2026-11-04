@@ -64,7 +64,7 @@
         "App and DMG signatures verify, notarization succeeds, and tickets staple",
         "Gatekeeper validates the stapled distribution"
       ],
-      "evidence": "The source-bound packaging implementation passed exact-head 7/7 CI at 708cf7aeb0eff3c6a657c33402d26fe640f739e8 in https://github.com/pskeffington/pip_boy/actions/runs/41787914386. The packager builds from a fresh git archive of the exact clean source SHA and ignores prebuilt app/binary overrides. No Apple signing identity or notarization profile is configured, so no signed artifact, notarization, or Gatekeeper result exists."
+      "evidence": "The source-bound packaging implementation passed exact-head 7/7 CI at 708cf7aeb0eff3c6a657c33402d26fe640f739e8 in https://github.com/pskeffington/pip_boy/actions/runs/41787914386. The packager builds from a fresh git archive of the exact clean source SHA and ignores prebuilt app/binary overrides. No Apple signing identity or notarization profile is configured, so no signed artifact, notarization, or Gatekeeper result exists. Provisioning and evidence requirements are tracked in https://github.com/pskeffington/pip_boy/issues/94."
     },
     {
       "id": "MAC-REL-03",
@@ -79,7 +79,7 @@
         "Upgrade without unintended data loss and document uninstall/data retention",
         "Complete keyboard, VoiceOver, contrast and reduced-motion review"
       ],
-      "evidence": "The current execution surface cannot launch GUI apps through LaunchServices; interactive acceptance remains open."
+      "evidence": "The current execution surface cannot launch GUI apps through LaunchServices; interactive acceptance remains open. Credential provisioning is tracked in https://github.com/pskeffington/pip_boy/issues/94."
     },
     {
       "id": "MAC-REL-04",
