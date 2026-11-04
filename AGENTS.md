@@ -51,3 +51,7 @@ No side effects from select/help/tab; unknown/unpinned/uninstalled commands deni
 ## Communication and completion
 
 Continue through unblocked tasks without demanding operator live-side testing. When blocked, leave an actionable GitHub issue with exact blocker/evidence and move to a different independent task. Physical Mac/Pi, paired-device, clinical or external-source acceptance remains explicitly pending until real evidence exists. Never mark a production release based on unit tests alone.
+
+## November 3, 2026 active Codex execution packet
+
+Read [`docs/CODEX_PASS_2026-11-03.md`](docs/CODEX_PASS_2026-11-03.md) before selecting the next task. Reconcile open PR #88 supervised host/terminal work and #89 hardware/roadmap work with `main` before making claims about TC-A02 completion or editing overlapping files. Keep physical Pi 5 HDMI and other device acceptance distinct from software CI. This packet is tasking, not validation evidence.

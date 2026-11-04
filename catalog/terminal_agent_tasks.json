@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated": "2026-10-30",
+  "updated": "2026-11-03",
   "project": "Rust-Boy terminal-to-module integration",
   "source_contract": "docs/TERMINAL_MODULE_COMMANDS.md",
   "agent_instructions": "AGENTS.md",
@@ -178,5 +178,17 @@
       ],
       "gate": "TC-6"
     }
-  ]
+  ],
+  "next_execution_packet": "docs/CODEX_PASS_2026-11-03.md",
+  "reconciliation_required": {
+    "status": "pending_source_and_pr_review",
+    "related_prs": [
+      88,
+      89,
+      86,
+      87,
+      83
+    ],
+    "notes": "PR #88 reports terminal routing, but full-screen TUI parity remains unverified on main. Reconcile before updating TC-A02 status. Pi 5 hardware gates remain pending."
+  }
 }
