@@ -16,7 +16,7 @@
     {
       "id": "MAC-REL-01",
       "title": "Build and smoke-test a native menu-bar app bundle",
-      "status": "implemented_unverified",
+      "status": "accepted_software",
       "paths": [
         "macos/RustBoyLauncher.swift",
         "scripts/build-macos-app.sh",
@@ -28,7 +28,11 @@
         "smoke": "tools/test_macos_app.sh passed: app bundle/plist/executable checks, bundled loopback server startup, desktop and micro GETs, and refusal to produce an unsigned DMG.",
         "limitation": "The smoke uses a headless test path and does not launch the AppKit status menu."
       },
-      "ci_evidence": "pending for the exact commit of the packaging PR",
+      "ci_evidence": {
+        "head": "eff3a2c19b91b4e40972eace60caaaf38e85c68f",
+        "run": "https://github.com/pskeffington/pip_boy/actions/runs/41775711784",
+        "result": "7/7 jobs passed, including native macOS bundle and loopback launch acceptance"
+      },
       "acceptance": [
         "macOS native workflow builds the bundle and passes local loopback smoke",
         "Interactive status-menu startup and Stop/Quit behavior verified separately"

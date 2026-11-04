@@ -2,9 +2,9 @@
 
 ## Mac menu-bar app bundle candidate — local software smoke (2026-11-03)
 
-The new app builder assembles a native menu-bar executable and the Rust dashboard binary into a macOS app bundle. On this Apple Silicon Mac, Swift compiled for `arm64-apple-macosx13.0`; `bash tools/test_macos_app.sh` built the bundle, checked its plist and executables, launched the bundled server in its test mode, and fetched both desktop and micro routes on a dynamically assigned 127.0.0.1 port. The DMG script was also verified to refuse packaging when Developer ID and notary profile values are absent.
+The new app builder assembles a native menu-bar executable and the Rust dashboard binary into a macOS app bundle. On this Apple Silicon Mac, Swift compiled for `arm64-apple-macosx13.0`; `bash tools/test_macos_app.sh` built the bundle, checked its plist and executables, launched the bundled server in its test mode, and fetched both desktop and micro routes on a dynamically assigned 127.0.0.1 port. The DMG script was also verified to refuse packaging when Developer ID and notary profile values are absent. Exact PR #93 head `eff3a2c19b91b4e40972eace60caaaf38e85c68f` passed all 7 jobs in [Actions run 41775711784](https://github.com/pskeffington/pip_boy/actions/runs/41775711784), including the native macOS app-bundle acceptance step, stable Rust, Rust 1.90, Windows ConPTY, both optional SDR matrices, and manifest validation.
 
-The test exercises the bundled Rust service but does not launch the AppKit menu in an interactive session. The local LaunchServices environment rejects app launches, so actual status-menu interaction, signed install, Gatekeeper, notarization, clean-account upgrade/uninstall and accessibility remain pending. Exact-head CI for this candidate is pending. No release artifact is signed or available.
+The test exercises the bundled Rust service but does not launch the AppKit menu in an interactive session. The local LaunchServices environment rejects app launches, so actual status-menu interaction, signed install, Gatekeeper, notarization, clean-account upgrade/uninstall and accessibility remain pending. No release artifact is signed or available.
 
 ## RM-018 supervised child integration checkpoint — 2026-10-30 (local, not release acceptance)
 
