@@ -354,6 +354,7 @@
         "macos/build_icns.py",
         "scripts/build-macos-app.sh",
         "scripts/package-macos-dmg.sh",
+        "tools/record_macos_release_failure.py",
         "tools/test_macos_app.sh",
         "tools/test_macos_universal.sh"
       ],
@@ -365,7 +366,7 @@
         "tools/test_macos_universal.sh"
       ],
       "hardware_gate": "software_only",
-      "acceptance": "Hosted macOS builds verify app metadata, universal executable slices, actual NSMenu action dispatch, startup-failure retry state, and loopback desktop/micro routes. Developer ID secrets, Gatekeeper clean-account install, accessibility, and interactive operator acceptance remain separate release gates."
+      "acceptance": "Hosted macOS builds verify app metadata, universal executable slices, actual NSMenu action dispatch, startup-failure retry state, loopback desktop/micro routes, and private failure-state recording for packaging attempts. Developer ID secrets, Gatekeeper clean-account install, accessibility, and interactive operator acceptance remain separate release gates."
     }
   ]
 }

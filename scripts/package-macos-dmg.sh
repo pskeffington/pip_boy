@@ -37,9 +37,17 @@ EVIDENCE_PARENT="$EVIDENCE_ROOT/$SOURCE_SHA"
 [[ ! -L "$EVIDENCE_PARENT" ]] || { printf 'Refusing symlink evidence parent: %s\n' "$EVIDENCE_PARENT" >&2; exit 2; }
 mkdir -p "$EVIDENCE_PARENT"
 EVIDENCE_DIR="$(mktemp -d "$EVIDENCE_PARENT/attempt.XXXXXX")"
+record_failed_attempt_and_cleanup() {
+  local status=$?
+  if (( status != 0 )) && [[ -n "${EVIDENCE_DIR:-}" && -d "$EVIDENCE_DIR" ]]; then
+    python3 "$ROOT/tools/record_macos_release_failure.py" \
+      "$EVIDENCE_DIR/release-context.json" "$SOURCE_SHA" "$status" || true
+  fi
+  rm -rf "$TMP" "${OUTPUT_STAGE:-}"
+}
+trap record_failed_attempt_and_cleanup EXIT
 chmod 700 "$EVIDENCE_DIR"
 OUTPUT_STAGE="$(mktemp -d "$OUTPUT_PARENT/.rustboy-dmg.XXXXXX")"
-trap 'rm -rf "$TMP" "$OUTPUT_STAGE"' EXIT
 SOURCE_ROOT="$TMP/source"
 STAGE="$TMP/stage"
 DMG_CANDIDATE="$OUTPUT_STAGE/Rust-Boy.dmg"

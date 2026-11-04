@@ -77,6 +77,10 @@ source-SHA/version/identifier/architecture/checksum manifest to the private
 per-attempt evidence directory without overwriting earlier attempts. The final
 DMG is moved into place only after notarization,
 stapling and Gatekeeper assessment succeed.
+If a release command fails after an attempt directory is created, the packager
+atomically marks its private `release-context.json` as `failed`, recording the
+source SHA, exit code and timestamp while preserving existing context. It does
+not capture command output or credential values in that record.
 
 ## User data and support boundaries
 

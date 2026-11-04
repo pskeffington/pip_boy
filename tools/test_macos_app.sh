@@ -61,6 +61,38 @@ assert app_assignment < evidence_app_check, "APP must be initialized before evid
 assert 'trap \'rm -rf "$TMP"\' EXIT' in script[:evidence_app_check], (
     "temporary source directory must be cleaned up on early validation failure"
 )
+assert "trap record_failed_attempt_and_cleanup EXIT" in script
+assert 'tools/record_macos_release_failure.py' in script
+PY
+python3 - "$ROOT/tools/record_macos_release_failure.py" "$TMP/release-evidence" <<'PY'
+import json
+import os
+import subprocess
+import sys
+from pathlib import Path
+
+recorder = Path(sys.argv[1])
+attempt = Path(sys.argv[2])
+attempt.mkdir()
+context = attempt / "release-context.json"
+context.write_text(
+    json.dumps({"state": "in_progress", "bundle_identifier": "org.rustboy.desktop"}) + "\n",
+    encoding="utf-8",
+)
+subprocess.run([sys.executable, str(recorder), str(context), "abc123", "23"], check=True)
+record = json.loads(context.read_text(encoding="utf-8"))
+assert record["state"] == "failed"
+assert record["exit_code"] == 23
+assert record["source_sha"] == "abc123"
+assert record["bundle_identifier"] == "org.rustboy.desktop"
+assert record["failed_utc"]
+assert os.stat(context).st_mode & 0o777 == 0o600
+
+fresh_context = attempt / "early-failure.json"
+subprocess.run([sys.executable, str(recorder), str(fresh_context), "def456", "2"], check=True)
+fresh = json.loads(fresh_context.read_text(encoding="utf-8"))
+assert fresh["state"] == "failed" and fresh["exit_code"] == 2
+assert fresh["source_sha"] == "def456"
 PY
 printf 'PASS Developer ID packager builds only from the exact clean source SHA.\n'
 if [[ "${RUSTBOY_VERIFY_ICNS:-0}" == "1" ]]; then
