@@ -51,3 +51,7 @@ No side effects from select/help/tab; unknown/unpinned/uninstalled commands deni
 ## Communication and completion
 
 Continue through unblocked tasks without demanding operator live-side testing. When blocked, leave an actionable GitHub issue with exact blocker/evidence and move to a different independent task. Physical Mac/Pi, paired-device, clinical or external-source acceptance remains explicitly pending until real evidence exists. Never mark a production release based on unit tests alone.
+
+## 2026-10-30 change checkpoint
+
+Before dispatching another task, read [change reconciliation](docs/CHANGE_RECONCILIATION_2026-10-30.md). The newly added handheld MODULES registry is **read-only/inert**, not proof of adapter activation. TC-A01 and TC-A04 have software acceptance evidence in `catalog/terminal_agent_tasks.json`; TC-A02 and TC-A03 remain the next independent command work packets. Host foreground/Settings integration is parallel only with non-overlapping file ownership. TC-A05 depends on TC-A02 and TC-A06 depends on the integration gates. Review open PRs before claiming their changes are on main. Never mark a queue item accepted without exact-head jobs actually executing; never conflate CI, hardware and production release.

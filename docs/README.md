@@ -103,3 +103,5 @@ The machine-readable `implemented_unverified` catalog label is a **module accept
 
 The product name is **Rust-Boy**; the existing `pip_boy` repository, `pipboy` CLI and `PIPBOY_HOME` storage variable remain compatibility interfaces. Keep implementation status explicit, preserve data provenance, and obtain separate rights clearance before copying third-party software or art.
 
+
+- [2026-10-30 change reconciliation and Codex dispatch](CHANGE_RECONCILIATION_2026-10-30.md) — recent command catalog, security matrix, inert module switcher and next agent gates.
