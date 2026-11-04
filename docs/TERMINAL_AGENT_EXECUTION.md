@@ -2,14 +2,14 @@
 
 **Mode:** GitHub-first, agent-driven, no required operator side-by-side/local terminal testing for software gates.
 **Source of truth:** [machine-readable queue](../catalog/terminal_agent_tasks.json), [agent instructions](../AGENTS.md), [terminal contract](TERMINAL_MODULE_COMMANDS.md), [host roadmap](HOST_PACKAGE_ROADMAP.md).
-**Current implementation:** TC-A01 typed bounded command catalog/parser/dispatcher and structured outcomes passed all seven exact-head jobs in [Actions run 41003353102](https://github.com/pskeffington/pip_boy/actions/runs/41003353102). The provisional offline `pipboy terminal` and full-screen `tui` have not yet migrated to it; TC-A02 and TC-A03 are now unblocked. MAP / TV / RADIO / COMMS reference sockets remain uninstalled and unavailable.
+**Current implementation:** TC-A01 typed bounded command catalog/parser/dispatcher and structured outcomes passed all seven exact-head jobs in [Actions run 41003353102](https://github.com/pskeffington/pip_boy/actions/runs/41003353102). The terminal bridge now uses this parser/dispatcher locally; focused tests pass on stable and Rust 1.90. Full-screen `tui` migration remains the next TC-A02 slice, after which TC-A03 and TC-A05 proceed. The current exact PR head still needs hosted validation. MAP / TV / RADIO / COMMS reference sockets remain uninstalled and unavailable.
 
 ## Agent work packets
 
 | ID | Agent | Work | Dependencies | Merge gate |
 |---|---|---|---|---|
 | TC-A01 | CORE | Define first-party `CommandDescriptor`, `CommandRequest`, structured `CommandResult`, bounded parser and stable help/source registry in `pipboy-core`; map only inventoried offline handlers | None | 7/7 exact-head Actions jobs pass on source commit `7c4b06bc64f89cdb41b4be877b7b8742c130f38e` |
-| TC-A02 | TERMINAL | Route existing `terminal_commands` plus full-screen `tui` through dispatcher; keyboard prompt + scoped toolset help, no privileged side effects from navigation | A01 | TUI snapshot/interaction and CLI compatibility tests |
+| TC-A02 | TERMINAL | Route existing `terminal_commands` plus full-screen `tui` through dispatcher; terminal bridge is locally migrated, remaining work is TUI keyboard prompt + scoped toolset help, no privileged side effects from navigation | A01 | TUI snapshot/interaction and CLI compatibility tests; exact-head CI |
 | TC-A03 | ADAPTER | Bind actual read-only RADIO and offline MAP handlers, trusted adapter selection/lifecycle. Do not advertise TV/COMMS as runnable until installed and approved | A01 | Real native handler tests; denied manifests/capability gating |
 | TC-A04 | SECURITY/QA | Negative permission, source trust, bad input, cancellation, restart and CI-gate evidence tests | None | Reproducible CI job evidence, not green badges without jobs |
 | TC-A05 | GUI | One command palette for desktop and micro using shared host dispatcher, not browser-side command emulation | A01+A02 | Automated desktop and 480x320 viewport checks |

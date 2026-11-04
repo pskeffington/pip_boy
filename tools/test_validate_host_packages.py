@@ -6,7 +6,7 @@ import json
 import unittest
 from pathlib import Path
 
-from validate_host_packages import ROOT, check_manifest, validate
+from validate_host_packages import ROOT, check_approved_executable_roster, check_manifest, validate
 
 
 class SocketCatalogTests(unittest.TestCase):
@@ -19,8 +19,38 @@ class SocketCatalogTests(unittest.TestCase):
     def fixture(self):
         return copy.deepcopy(self.map_manifest)
 
-    def test_four_reference_fixtures_validate(self):
-        self.assertEqual(validate(), 4)
+    def test_five_distinct_reference_fixtures_validate(self):
+        self.assertEqual(validate(), 5)
+
+    def test_executable_pins_are_exact_and_manifest_independent(self):
+        self.assertEqual(check_approved_executable_roster(), 0)
+        base = {"schema_version": 1, "executables": [{
+            "package_id": "org.rustboy.music",
+            "relative_executable": "bin/rust-music",
+            "sha256": "a" * 64,
+            "relative_manifest": "manifest.json",
+            "manifest_sha256": "b" * 64,
+            "arguments": ["serve"],
+        }]}
+        self.assertEqual(check_approved_executable_roster(data=base), 1)
+        for field, value in (
+            ("relative_executable", "../music"),
+            ("relative_manifest", "../manifest.json"),
+            ("sha256", "not-a-digest"),
+            ("manifest_sha256", "not-a-digest"),
+            ("arguments", ["\0bad"]),
+            ("package_id", "org.rustboy.unreviewed"),
+        ):
+            changed = copy.deepcopy(base)
+            changed["executables"][0][field] = value
+            with self.assertRaises(ValueError):
+                check_approved_executable_roster(data=changed)
+
+    def test_launcher_resolves_package_scoped_install_directories(self):
+        source = (ROOT / "crates/pipboy-core/src/package_process.rs").read_text(encoding="utf-8")
+        self.assertIn("fn resolve_package_root", source)
+        self.assertIn("resolve_package_root(install_root, &entry.package_id)", source)
+        self.assertNotIn("pub fn approved_process_spec", source)
 
     def test_api_drift_is_rejected(self):
         m = self.fixture()

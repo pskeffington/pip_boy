@@ -61,6 +61,7 @@ let activeNetworkUI = null;
 let activeMessengerUI = null;
 let activeRadioUI = null;
 let activeCameraUI = null;
+let foregroundPackage = null;
 const viewPage = { stat: 0, role: 0, data: 0, conf: 0 };
 let paletteOpen = false;
 let rolePage = 0;
@@ -115,29 +116,74 @@ async function openModuleSwitcher() {
     for (const entry of entries) {
       const manifest = entry?.manifest || {};
       const row = make("article", "module-switch-row");
+      if (manifest.package_id === "org.rustboy.music") {
+        row.classList.add("module-music-package");
+        row.dataset.packageId = manifest.package_id;
+      }
       row.setAttribute("role", "listitem");
       const identity = make("div", "module-switch-identity");
       identity.append(make("strong", "", manifest.name || "Unnamed module"));
       identity.append(make("span", "", manifest.package_id || "Unknown package ID"));
       row.append(identity);
-      const state = entry.installed && entry.activatable ? "APPROVED · SWITCH ROUTE NOT CONNECTED"
+      const state = entry.installed && entry.activatable ? `MOUNTED · ${String(entry.state || "registered").toUpperCase()}`
         : entry.installed ? "INSTALLED · HOST APPROVAL REQUIRED" : "REFERENCE ONLY · NOT INSTALLED";
       row.append(make("span", "module-switch-state", state));
-      const action = button("UNAVAILABLE", () => {}, "micro-button compact");
-      // This build exposes a read-only reference registry; no switch endpoint
-      // exists yet, so even a future catalog flag cannot trigger execution.
-      action.disabled = true;
+      const action = button(entry.activatable ? "SWITCH" : "UNAVAILABLE", () => {
+        if (entry.activatable) void switchPackage(manifest.package_id);
+      }, "micro-button compact");
+      action.disabled = !entry.activatable;
       row.append(action);
       ui.modulesList.append(row);
     }
-    if (registry.active_socket_package_id) {
-      ui.modulesStatus.textContent = `Foreground: ${registry.active_socket_package_id}`;
+    foregroundPackage = registry.active_socket_package_id || null;
+    if (foregroundPackage) {
+      ui.modulesStatus.textContent = `Foreground: ${foregroundPackage}`;
     } else {
-      ui.modulesStatus.textContent = "No approved adapters are installed yet. TV and COMMS appear here after their host integrations are registered.";
+      ui.modulesStatus.textContent = "No approved adapters are installed yet. Registered design references appear here without activation.";
     }
   } catch (error) {
     ui.modulesList.replaceChildren(make("p", "dialog-warning", error.message));
     ui.modulesStatus.textContent = "Could not read the host module registry.";
+  }
+}
+
+function renderPackageView(view) {
+  ui.content.replaceChildren();
+  const panel = make("section", "module-live-view");
+  panel.setAttribute("aria-label", "Active package screen");
+  panel.append(make("h2", "", typeof view?.title === "string" ? view.title : foregroundPackage));
+  if (typeof view?.text === "string") panel.append(make("p", "panel-copy", view.text));
+  const items = Array.isArray(view?.items) ? view.items.filter((item) => typeof item === "string").slice(0, 32) : [];
+  const list = make("div", "module-live-items");
+  list.setAttribute("role", "group");
+  items.forEach((item, index) => {
+    list.append(button(item, () => sendPackageIntent("ui.select", { index }), "micro-button"));
+  });
+  panel.append(list);
+  ui.content.append(panel);
+  ui.title.textContent = typeof view?.title === "string" ? view.title : "MODULE";
+  ui.back.hidden = false;
+}
+
+async function switchPackage(packageId) {
+  try {
+    const state = await api("/api/packages/select", { package_id: packageId });
+    foregroundPackage = state.active_package_id;
+    renderPackageView(state.view || {});
+    ui.modulesDialog.close();
+    notify(`MODULE ACTIVE · ${foregroundPackage}`);
+  } catch (error) {
+    notify(error.message, true);
+  }
+}
+
+async function sendPackageIntent(action, payload) {
+  try {
+    const state = await api("/api/packages/intent", { action, payload });
+    foregroundPackage = state.active_package_id;
+    if (foregroundPackage) renderPackageView(state.view || {});
+  } catch (error) {
+    notify(error.message, true);
   }
 }
 
@@ -842,6 +888,32 @@ function init() {
     const target = event.target;
     if (target instanceof Element &&
         target.closest("input,select,textarea,[contenteditable='true']")) return;
+    if (foregroundPackage) {
+      const controls = Array.from(ui.content.querySelectorAll(".module-live-items button"));
+      const current = controls.indexOf(document.activeElement);
+      if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+        if (controls.length) {
+          event.preventDefault();
+          controls[(current + (event.key === "ArrowDown" ? 1 : controls.length - 1)) % controls.length].focus();
+        }
+        return;
+      }
+      if (/^[1-9]$/.test(event.key)) {
+        const index = Number(event.key) - 1;
+        if (index < controls.length) {
+          event.preventDefault();
+          controls[index].click();
+        }
+        return;
+      }
+      if (event.key === "Enter" && current >= 0) {
+        event.preventDefault();
+        controls[current].click();
+        return;
+      }
+      // Module controls own the handheld key map while in the package canvas.
+      if (/^[1-5]$/.test(event.key)) return;
+    }
     if (/^[1-5]$/.test(event.key)) {
       setTab(pages[Number(event.key) - 1]);
       return;

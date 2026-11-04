@@ -5,6 +5,7 @@ use crossterm::terminal::{
     disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen,
 };
 use pipboy_core::catalog::sources;
+use pipboy_core::command_catalog::{self, ArgumentSchema, MAX_COMMAND_BYTES};
 use pipboy_core::host_report::{self, HostReadings};
 use pipboy_core::host_telemetry::HostTelemetryModule;
 use pipboy_core::lifecycle::State;
@@ -17,6 +18,36 @@ use ratatui::prelude::*;
 use std::error::Error;
 use std::io;
 use std::time::{Duration, Instant};
+
+const TUI_COMMAND_OUTPUT_MAX_BYTES: usize = 4096;
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum CommandPaletteKeyAction {
+    Close,
+    Submit,
+    Updated,
+    Ignored,
+}
+
+fn update_command_palette_input(input: &mut String, key: KeyEvent) -> CommandPaletteKeyAction {
+    match key.code {
+        KeyCode::Esc => CommandPaletteKeyAction::Close,
+        KeyCode::Enter => CommandPaletteKeyAction::Submit,
+        KeyCode::Backspace => {
+            input.pop();
+            CommandPaletteKeyAction::Updated
+        }
+        KeyCode::Char(character)
+            if !key.modifiers.contains(KeyModifiers::CONTROL)
+                && !character.is_control()
+                && input.len() + character.len_utf8() <= MAX_COMMAND_BYTES =>
+        {
+            input.push(character);
+            CommandPaletteKeyAction::Updated
+        }
+        _ => CommandPaletteKeyAction::Ignored,
+    }
+}
 
 pub(crate) struct TerminalGuard;
 
@@ -44,6 +75,46 @@ fn exit_requested(key: KeyEvent) -> bool {
             || (matches!(key.code, KeyCode::Char('c' | 'C'))
                 && key.modifiers.contains(KeyModifiers::CONTROL)
                 && (key.modifiers - (KeyModifiers::CONTROL | KeyModifiers::SHIFT)).is_empty()))
+}
+
+fn settings_requested(key: KeyEvent) -> bool {
+    key.kind == KeyEventKind::Press
+        && matches!(key.code, KeyCode::Char('s' | 'S'))
+        && key.modifiers.is_empty()
+}
+
+fn open_settings_from_shortcut(navigation: &mut crate::console::Navigation, key: KeyEvent) -> bool {
+    if !settings_requested(key) {
+        return false;
+    }
+    navigation.panel = 7;
+    true
+}
+
+fn close_command_palette(navigation: &mut crate::console::Navigation, key: KeyEvent) -> bool {
+    if update_command_palette_input(&mut navigation.command_palette_input, key)
+        != CommandPaletteKeyAction::Close
+    {
+        return false;
+    }
+    navigation.command_palette_open = false;
+    navigation.command_palette_input.clear();
+    true
+}
+
+fn bounded_command_output(mut output: String) -> String {
+    if output.len() <= TUI_COMMAND_OUTPUT_MAX_BYTES {
+        return output;
+    }
+    const MARKER: &str = "\n[output truncated]";
+    let content_limit = TUI_COMMAND_OUTPUT_MAX_BYTES - MARKER.len();
+    let mut boundary = content_limit;
+    while !output.is_char_boundary(boundary) {
+        boundary -= 1;
+    }
+    output.truncate(boundary);
+    output.push_str(MARKER);
+    output
 }
 
 pub fn run() -> Result<(), Box<dyn Error>> {
@@ -84,6 +155,99 @@ pub fn run() -> Result<(), Box<dyn Error>> {
         if event::poll(Duration::from_millis(100))? {
             if let Event::Key(key) = event::read()? {
                 if key.kind != KeyEventKind::Press {
+                    continue;
+                }
+                if navigation.command_palette_open {
+                    if key.modifiers.contains(KeyModifiers::CONTROL)
+                        && matches!(key.code, KeyCode::Char('c' | 'C'))
+                    {
+                        break;
+                    }
+                    match key.code {
+                        KeyCode::Esc => {
+                            close_command_palette(&mut navigation, key);
+                        }
+                        KeyCode::Enter => {
+                            if update_command_palette_input(
+                                &mut navigation.command_palette_input,
+                                key,
+                            ) != CommandPaletteKeyAction::Submit
+                            {
+                                continue;
+                            }
+                            let selected_tool = navigation.selected_bench_tool(&workbench);
+                            let commands = selected_tool
+                                .map(command_catalog::help_for)
+                                .unwrap_or_default();
+                            let command_line = if navigation.command_palette_input.is_empty() {
+                                let Some(command) =
+                                    commands.get(navigation.command_palette_selected)
+                                else {
+                                    navigation.command_output =
+                                        "No registered offline handler for this pinned tool."
+                                            .to_owned();
+                                    continue;
+                                };
+                                if !matches!(
+                                    command.arguments,
+                                    ArgumentSchema::None | ArgumentSchema::OptionalText
+                                ) {
+                                    navigation.command_palette_input = format!("{} ", command.verb);
+                                    continue;
+                                }
+                                command.verb.to_owned()
+                            } else {
+                                navigation.command_palette_input.clone()
+                            };
+                            let pinned: Vec<&str> = workbench
+                                .slots
+                                .iter()
+                                .map(|slot| slot.tool.as_str())
+                                .collect();
+                            match crate::terminal_commands::execute_tui_command(
+                                &command_line,
+                                selected_tool,
+                                &pinned,
+                            ) {
+                                Ok(output) => {
+                                    navigation.command_output = bounded_command_output(output);
+                                    navigation.command_palette_open = false;
+                                    navigation.command_palette_input.clear();
+                                }
+                                Err(error) => {
+                                    navigation.command_output =
+                                        bounded_command_output(format!("DENIED: {error}"));
+                                }
+                            }
+                        }
+                        KeyCode::Up
+                        | KeyCode::Down
+                        | KeyCode::PageUp
+                        | KeyCode::PageDown
+                        | KeyCode::Home
+                        | KeyCode::End => {
+                            let action = match key.code {
+                                KeyCode::Up => Action::Up,
+                                KeyCode::Down => Action::Down,
+                                KeyCode::PageUp => Action::PageUp,
+                                KeyCode::PageDown => Action::PageDown,
+                                KeyCode::Home => Action::Home,
+                                _ => Action::End,
+                            };
+                            let count = navigation
+                                .selected_bench_tool(&workbench)
+                                .map(command_catalog::help_for)
+                                .map_or(0, |commands| commands.len());
+                            navigation.command_palette_move(action, count);
+                        }
+                        KeyCode::Backspace | KeyCode::Char(_) => {
+                            update_command_palette_input(
+                                &mut navigation.command_palette_input,
+                                key,
+                            );
+                        }
+                        _ => {}
+                    }
                     continue;
                 }
                 if navigation.panel == 3 && navigation.profiles_open {
@@ -145,6 +309,9 @@ pub fn run() -> Result<(), Box<dyn Error>> {
                     }
                     continue;
                 }
+                if open_settings_from_shortcut(&mut navigation, key) {
+                    continue;
+                }
                 if exit_requested(key) {
                     break;
                 }
@@ -159,6 +326,11 @@ pub fn run() -> Result<(), Box<dyn Error>> {
                     }
                     KeyCode::Char('a' | 'A') if navigation.panel == 3 => {
                         navigation.palette_open = true;
+                    }
+                    KeyCode::Char('/') if navigation.panel == 3 => {
+                        navigation.command_palette_open = true;
+                        navigation.command_palette_selected = 0;
+                        navigation.command_palette_input.clear();
                     }
                     KeyCode::Char('x' | 'X') | KeyCode::Delete if navigation.panel == 3 => {
                         if let Some(id) = navigation.selected_bench_slot(&workbench) {
@@ -303,6 +475,25 @@ mod tests {
     }
 
     #[test]
+    fn settings_shortcut_is_global_press_only_and_ignores_modified_keys() {
+        assert!(settings_requested(KeyEvent::new(
+            KeyCode::Char('s'),
+            KeyModifiers::NONE
+        )));
+        assert!(settings_requested(KeyEvent::new(
+            KeyCode::Char('S'),
+            KeyModifiers::NONE
+        )));
+        assert!(!settings_requested(KeyEvent::new(
+            KeyCode::Char('s'),
+            KeyModifiers::CONTROL
+        )));
+        let mut release = KeyEvent::new(KeyCode::Char('s'), KeyModifiers::NONE);
+        release.kind = KeyEventKind::Release;
+        assert!(!settings_requested(release));
+    }
+
+    #[test]
     fn pause_message_has_no_host_values_and_explains_resume() {
         let text = stat_body(None, State::Disabled, "old history", 1000);
         assert!(text.contains("PAUSED"));
@@ -346,5 +537,61 @@ mod tests {
         assert!(!paused.contains("fixture"));
         assert!(!paused.contains("64"));
         assert!(!paused.contains("old history"));
+    }
+
+    #[test]
+    fn command_output_is_bounded_at_a_utf8_boundary() {
+        let output = bounded_command_output(format!("{}é", "x".repeat(4095)));
+        assert!(output.ends_with("[output truncated]"));
+        assert!(output.len() <= TUI_COMMAND_OUTPUT_MAX_BYTES);
+        assert!(output.is_char_boundary(output.len()));
+    }
+
+    #[test]
+    fn palette_escape_closes_without_submitting_and_input_is_byte_bounded() {
+        let mut input = "cidr 10.0.0.0/24".to_owned();
+        let original = input.clone();
+        assert_eq!(
+            update_command_palette_input(
+                &mut input,
+                KeyEvent::new(KeyCode::Esc, KeyModifiers::NONE)
+            ),
+            CommandPaletteKeyAction::Close
+        );
+        assert_eq!(input, original);
+        assert_eq!(
+            update_command_palette_input(
+                &mut input,
+                KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE)
+            ),
+            CommandPaletteKeyAction::Submit
+        );
+        input = "x".repeat(MAX_COMMAND_BYTES - 1);
+        assert_eq!(
+            update_command_palette_input(
+                &mut input,
+                KeyEvent::new(KeyCode::Char('é'), KeyModifiers::NONE)
+            ),
+            CommandPaletteKeyAction::Ignored
+        );
+        assert_eq!(input.len(), MAX_COMMAND_BYTES - 1);
+    }
+
+    #[test]
+    fn settings_shortcut_opens_panel_and_palette_escape_only_closes() {
+        let mut navigation = crate::console::Navigation::default();
+        navigation.panel = 3;
+        navigation.command_palette_open = true;
+        navigation.command_palette_input = "cidr 10.0.0.0/24".to_owned();
+        assert!(close_command_palette(
+            &mut navigation,
+            KeyEvent::new(KeyCode::Esc, KeyModifiers::NONE)
+        ));
+        assert!(!navigation.command_palette_open);
+        assert!(navigation.command_palette_input.is_empty());
+
+        let key = KeyEvent::new(KeyCode::Char('S'), KeyModifiers::NONE);
+        assert!(open_settings_from_shortcut(&mut navigation, key));
+        assert_eq!(navigation.panel, 7);
     }
 }

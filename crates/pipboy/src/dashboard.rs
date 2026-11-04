@@ -11,12 +11,14 @@ use crate::county_cache::{self, CountyCache};
 use crate::radio_output::available_outputs;
 use crate::radio_playback::NativeRadioEngine;
 use crate::zip_index::ZipIndex;
+use pipboy_core::audio_focus::{AudioFocusLease, AudioModule, HOST_AUDIO_FOCUS};
 use pipboy_core::network_health;
 use pipboy_core::network_suite;
 use pipboy_core::radio_directory::curated_stations;
 use pipboy_core::radio_presets::{MoveDirection, RadioPresetStore, RadioPresets};
 use pipboy_core::reclamation::{NewSite, SiteStatus, SiteStore};
 use pipboy_core::scout_gis::{distance_meters, waypoint, Point};
+use pipboy_core::universal_adapter::{DenyAllScopes, UniversalAdapterHost, Viewport};
 use pipboy_core::workbench::{inspect_hex, tool, WorkbenchStore, PALETTE, PRESETS};
 use serde_json::{json, Value};
 use std::collections::BTreeMap;
@@ -58,8 +60,62 @@ const CAMERAS_CSS: &str = include_str!("../assets/cameras.css");
 const RADIO_UI_JS: &str = include_str!("../assets/radio-ui.js");
 const RADIO_UI_CSS: &str = include_str!("../assets/radio-ui.css");
 
-static RADIO_ENGINE: LazyLock<Mutex<Option<NativeRadioEngine>>> =
+static RADIO_ENGINE: LazyLock<Mutex<Option<FocusedRadioEngine>>> =
     LazyLock::new(|| Mutex::new(None));
+
+// The browser cannot supply executable paths or create arbitrary adapters.
+// HTTP selection may mount only a package resolved from the compiled roster.
+static UNIVERSAL_HOST: LazyLock<Mutex<UniversalAdapterHost>> = LazyLock::new(|| {
+    Mutex::new(UniversalAdapterHost::new(
+        Viewport::new(480, 320).expect("supported handheld viewport"),
+    ))
+});
+
+struct FocusedRadioEngine {
+    engine: NativeRadioEngine,
+    focus: Option<AudioFocusLease>,
+}
+
+impl FocusedRadioEngine {
+    fn start(create: impl FnOnce() -> Result<NativeRadioEngine, String>) -> Result<Self, String> {
+        let focus = HOST_AUDIO_FOCUS
+            .try_acquire(AudioModule::Radio)
+            .ok_or_else(|| "Audio output is owned by another module".to_string())?;
+        let engine = create()?;
+        Ok(Self {
+            engine,
+            focus: Some(focus),
+        })
+    }
+
+    fn try_finish(&mut self) -> bool {
+        let finished = self.engine.try_finish();
+        if finished
+            && matches!(
+                self.engine.status().state,
+                pipboy_core::radio_controller::PlaybackState::Failed
+                    | pipboy_core::radio_controller::PlaybackState::Stopped
+            )
+        {
+            self.focus.take();
+        }
+        finished
+    }
+
+    fn stop(&mut self) {
+        self.engine.stop();
+        self.focus.take();
+    }
+}
+
+impl std::ops::Deref for FocusedRadioEngine {
+    type Target = NativeRadioEngine;
+
+    fn deref(&self) -> &Self::Target {
+        &self.engine
+    }
+}
+
 static RADIO_SDRCONNECT: LazyLock<Mutex<String>> =
     LazyLock::new(|| Mutex::new("127.0.0.1:5454".into()));
 static RADIO_OUTPUT: LazyLock<Mutex<String>> = LazyLock::new(|| Mutex::new("system".into()));
@@ -287,13 +343,28 @@ fn positive_integer(body: &Value, key: &str) -> Result<u64, Response> {
         .ok_or_else(|| Response::error(422, "Missing or invalid task ID/revision"))
 }
 
-// Read-only design catalog. No package lookup, process spawn, grant or install.
+// Reference designs remain inert. Runtime fields come from the host-owned
+// adapter manager and never from package-supplied installation claims.
+fn package_install_root() -> Result<std::path::PathBuf, Response> {
+    let store = WorkbenchStore::from_environment()
+        .map_err(|_| Response::error(500, "Host data directory unavailable"))?;
+    package_install_root_for(&store)
+}
+
+fn package_install_root_for(store: &WorkbenchStore) -> Result<std::path::PathBuf, Response> {
+    store
+        .path()
+        .parent()
+        .map(|root| root.join("packages"))
+        .ok_or_else(|| Response::error(500, "Host package directory unavailable"))
+}
+
 fn package_references() -> Response {
     let catalog = match pipboy_core::package_socket::reference_catalog() {
         Ok(catalog) => catalog,
         Err(_) => return Response::error(500, "Host package reference catalog invalid"),
     };
-    let packages: Vec<Value> = catalog
+    let mut packages: Vec<Value> = catalog
         .entries()
         .map(|manifest| {
             json!({
@@ -303,18 +374,128 @@ fn package_references() -> Response {
             })
         })
         .collect();
+    let install_root = match package_install_root() {
+        Ok(root) => root,
+        Err(error) => return error,
+    };
+    if let Ok(approved_ids) = pipboy_core::package_process::approved_process_ids() {
+        for package_id in approved_ids {
+            let Ok((_spec, manifest_json)) =
+                pipboy_core::package_process::approved_process_install(&package_id, &install_root)
+            else {
+                continue;
+            };
+            let Ok(manifest) = pipboy_core::package_socket::PackageManifest::parse(&manifest_json)
+            else {
+                continue;
+            };
+            let entry = json!({
+                "manifest": manifest,
+                "installed": true,
+                "activatable": true,
+                "state": "approved"
+            });
+            if let Some(existing) = packages
+                .iter_mut()
+                .find(|entry| entry["manifest"]["package_id"].as_str() == Some(package_id.as_str()))
+            {
+                *existing = entry;
+            } else {
+                packages.push(entry);
+            }
+        }
+    }
+    let host = match UNIVERSAL_HOST.lock() {
+        Ok(host) => host,
+        Err(_) => return Response::error(500, "Host package state unavailable"),
+    };
+    for package_id in host.package_ids() {
+        if let Some(entry) = packages
+            .iter_mut()
+            .find(|entry| entry["manifest"]["package_id"].as_str() == Some(package_id))
+        {
+            entry["installed"] = json!(true);
+            entry["activatable"] = json!(true);
+            entry["state"] = json!(format!(
+                "{:?}",
+                host.state(package_id)
+                    .unwrap_or(pipboy_core::universal_adapter::AdapterState::Faulted)
+            )
+            .to_ascii_lowercase());
+        }
+    }
+    let active = match host.surface() {
+        pipboy_core::package_socket::HostSurface::Package(package_id) => Some(package_id),
+        pipboy_core::package_socket::HostSurface::Empty
+        | pipboy_core::package_socket::HostSurface::Settings => None,
+    };
     Response::json(
         200,
         &json!({
             "socket_api": pipboy_core::package_socket::SOCKET_API_VERSION,
             "adapter_protocol": pipboy_core::universal_adapter::ADAPTER_PROTOCOL,
             "catalog_state": "reference_designs_only",
-            "active_socket_package_id": Value::Null,
-            "mounted_package_count": 0,
-            "adapter_mounting_available": false,
+            "active_socket_package_id": active,
+            "mounted_package_count": host.len(),
+            "adapter_mounting_available": true,
             "foreground_mode": "single_package",
             "settings_owner": "host",
             "packages": packages
+        }),
+    )
+}
+
+fn package_select(req: &Request) -> Result<Response, Response> {
+    let body = parse_json_body(req, &["package_id"])?;
+    let package_id = str_field(&body, "package_id")?;
+    let mut host = UNIVERSAL_HOST
+        .lock()
+        .map_err(|_| Response::error(500, "Host package state unavailable"))?;
+    if host.state(package_id).is_none() {
+        let install_root = package_install_root()?;
+        let (spec, manifest_json) =
+            pipboy_core::package_process::approved_process_install(package_id, &install_root)
+                .map_err(|_| {
+                    Response::error(409, "Package is not installed and approved by this host")
+                })?;
+        host.mount_approved_process(&manifest_json, spec)
+            .map_err(|_| Response::error(409, "Approved package failed to start"))?;
+    }
+    host.select(package_id)
+        .map_err(|error| Response::error(409, &error.to_string()))?;
+    Ok(package_snapshot(&host))
+}
+
+fn package_intent(req: &Request) -> Result<Response, Response> {
+    let body = parse_json_body(req, &["action", "payload"])?;
+    let action = str_field(&body, "action")?;
+    if !action.starts_with("ui.") {
+        return Err(Response::error(
+            403,
+            "Only host-approved UI intents are enabled",
+        ));
+    }
+    let payload = body.get("payload").cloned().unwrap_or_else(|| json!({}));
+    let mut host = UNIVERSAL_HOST
+        .lock()
+        .map_err(|_| Response::error(500, "Host package state unavailable"))?;
+    host.intent(action, None, payload, &DenyAllScopes)
+        .map_err(|error| Response::error(409, &error.to_string()))?;
+    Ok(package_snapshot(&host))
+}
+
+fn package_snapshot(host: &UniversalAdapterHost) -> Response {
+    let active = match host.surface() {
+        pipboy_core::package_socket::HostSurface::Package(package_id) => Some(package_id),
+        pipboy_core::package_socket::HostSurface::Empty
+        | pipboy_core::package_socket::HostSurface::Settings => None,
+    };
+    Response::json(
+        200,
+        &json!({
+            "active_package_id": active,
+            "mounted_package_count": host.len(),
+            "view": host.foreground_view()
         }),
     )
 }
@@ -762,7 +943,7 @@ fn radio_preset_store(store: &WorkbenchStore) -> RadioPresetStore {
     )
 }
 
-fn radio_snapshot(engine: Option<&NativeRadioEngine>, presets: &RadioPresets) -> Value {
+fn radio_snapshot(engine: Option<&FocusedRadioEngine>, presets: &RadioPresets) -> Value {
     let sdrconnect = json!({"available":cfg!(feature="sdrconnect"),
         "endpoint":RADIO_SDRCONNECT.lock().map(|p|p.clone()).unwrap_or_default()});
     let selected_output = RADIO_OUTPUT
@@ -843,7 +1024,7 @@ fn radio_state(store: &WorkbenchStore) -> Response {
     }
 }
 
-fn radio_reap(engine: &mut Option<NativeRadioEngine>) {
+fn radio_reap(engine: &mut Option<FocusedRadioEngine>) {
     if let Some(player) = engine.as_mut() {
         let stopped =
             player.status().state == pipboy_core::radio_controller::PlaybackState::Stopped;
@@ -926,8 +1107,10 @@ fn radio_command(req: &Request, store: &WorkbenchStore) -> Result<Response, Resp
                 .map_err(|_| Response::error(500, "Output settings unavailable"))?
                 .clone();
             *engine = Some(
-                crate::radio_sdrconnect::start_native(&endpoint, volume, &output)
-                    .map_err(|e| Response::error(409, &e))?,
+                FocusedRadioEngine::start(|| {
+                    crate::radio_sdrconnect::start_native(&endpoint, volume, &output)
+                })
+                .map_err(|e| Response::error(409, &e))?,
             );
         }
         "select" => {
@@ -1006,14 +1189,14 @@ fn radio_command(req: &Request, store: &WorkbenchStore) -> Result<Response, Resp
             if let Some(mut old) = engine.take() {
                 old.stop();
             }
+            let output = RADIO_OUTPUT
+                .lock()
+                .map_err(|_| Response::error(500, "Output controller unavailable"))?
+                .clone();
             *engine = Some(
-                NativeRadioEngine::start_internet(
-                    station,
-                    initial_volume,
-                    &RADIO_OUTPUT
-                        .lock()
-                        .map_err(|_| Response::error(500, "Output controller unavailable"))?,
-                )
+                FocusedRadioEngine::start(|| {
+                    NativeRadioEngine::start_internet(station, initial_volume, &output)
+                })
                 .map_err(|_| Response::error(409, "Cannot start native radio worker"))?,
             );
         }
@@ -1038,9 +1221,8 @@ fn radio_command(req: &Request, store: &WorkbenchStore) -> Result<Response, Resp
             // Changing hardware output must be explicitly requested. Restart
             // the same stream/volume using the newly selected native endpoint.
             let previous = engine.as_ref().map(|player| player.status());
-            let recover_failed_output = engine
-                .as_ref()
-                .is_some_and(NativeRadioEngine::output_failed);
+            let recover_failed_output =
+                engine.as_ref().is_some_and(|active| active.output_failed());
             if let Some(mut active) = engine.take() {
                 active.stop();
             }
@@ -1055,11 +1237,13 @@ fn radio_command(req: &Request, store: &WorkbenchStore) -> Result<Response, Resp
                 ) {
                     if let Some(station) = state.station_id {
                         *engine = Some(
-                            NativeRadioEngine::start_internet(
-                                &station,
-                                state.volume_percent,
-                                output_id,
-                            )
+                            FocusedRadioEngine::start(|| {
+                                NativeRadioEngine::start_internet(
+                                    &station,
+                                    state.volume_percent,
+                                    output_id,
+                                )
+                            })
                             .map_err(|_| {
                                 Response::error(409, "Cannot restart radio on selected output")
                             })?,
@@ -1070,11 +1254,13 @@ fn radio_command(req: &Request, store: &WorkbenchStore) -> Result<Response, Resp
                             .map_err(|_| Response::error(500, "Receiver settings unavailable"))?
                             .clone();
                         *engine = Some(
-                            crate::radio_sdrconnect::start_native(
-                                &endpoint,
-                                state.volume_percent,
-                                output_id,
-                            )
+                            FocusedRadioEngine::start(|| {
+                                crate::radio_sdrconnect::start_native(
+                                    &endpoint,
+                                    state.volume_percent,
+                                    output_id,
+                                )
+                            })
                             .map_err(|e| Response::error(409, &e))?,
                         );
                     }
@@ -1209,6 +1395,8 @@ fn dispatch(req: &Request, store: &WorkbenchStore, port: u16) -> Response {
         ("POST", "/api/map/county-zips") => county_zips(req, store).unwrap_or_else(|error| error),
         ("GET", "/api/state") => state(store).unwrap_or_else(|error| error),
         ("GET", "/api/packages") => package_references(),
+        ("POST", "/api/packages/select") => package_select(req).unwrap_or_else(|error| error),
+        ("POST", "/api/packages/intent") => package_intent(req).unwrap_or_else(|error| error),
         ("GET", "/api/radio") => radio_state(store),
         ("POST", "/api/radio") => radio_command(req, store).unwrap_or_else(|error| error),
         ("GET", "/api/reclamation") => reclamation_read(store, false).unwrap_or_else(|error| error),
@@ -1581,6 +1769,33 @@ mod tests {
         assert!(RADIO_UI_JS.contains("/api/radio"));
         assert!(MICRO_JS.contains("native-radio"));
         assert!(HTML.contains("radio-dock"));
+    }
+
+    #[test]
+    fn radio_output_waits_for_host_focus_and_releases_it_on_start_failure() {
+        assert_eq!(HOST_AUDIO_FOCUS.owner(), None);
+        let music = HOST_AUDIO_FOCUS
+            .try_acquire(AudioModule::Music)
+            .expect("Music test lease");
+        let mut worker_started = false;
+        let blocked = FocusedRadioEngine::start(|| {
+            worker_started = true;
+            Err("test sink must not start while Music owns output".into())
+        });
+        assert!(blocked.is_err());
+        assert!(
+            !worker_started,
+            "contending Radio must not construct its sink"
+        );
+        assert_eq!(HOST_AUDIO_FOCUS.owner(), Some(AudioModule::Music));
+        drop(music);
+
+        let failed_start = FocusedRadioEngine::start(|| {
+            assert_eq!(HOST_AUDIO_FOCUS.owner(), Some(AudioModule::Radio));
+            Err("simulated native sink initialization failure".into())
+        });
+        assert!(failed_start.is_err());
+        assert_eq!(HOST_AUDIO_FOCUS.owner(), None);
     }
 
     #[test]
@@ -2492,7 +2707,7 @@ mod tests {
     }
 
     #[test]
-    fn socket_reference_api_is_read_only_and_does_not_activate_packages() {
+    fn socket_reference_api_reports_empty_host_and_switch_route_is_approval_gated() {
         let temp = tempfile::tempdir().unwrap();
         let store = WorkbenchStore::new(temp.path().join("private/workbench.json"));
         let response = dispatch(&request("GET", "/api/packages", Value::Null), &store, 8765);
@@ -2500,13 +2715,13 @@ mod tests {
         let body: Value = serde_json::from_slice(&response.body).unwrap();
         assert_eq!(body["catalog_state"], "reference_designs_only");
         assert_eq!(body["adapter_protocol"], 1);
-        assert_eq!(body["adapter_mounting_available"], false);
+        assert_eq!(body["adapter_mounting_available"], true);
         assert_eq!(body["mounted_package_count"], 0);
         assert_eq!(body["foreground_mode"], "single_package");
         assert_eq!(body["settings_owner"], "host");
         assert_eq!(body["active_socket_package_id"], Value::Null);
         let packages = body["packages"].as_array().unwrap();
-        assert_eq!(packages.len(), 4);
+        assert_eq!(packages.len(), 5);
         for entry in packages {
             assert_eq!(entry["installed"], false);
             assert_eq!(entry["activatable"], false);
@@ -2518,6 +2733,40 @@ mod tests {
             .headers
             .insert("host".into(), "external.invalid".into());
         assert_eq!(dispatch(&bad_host, &store, 8765).status, 403);
+        let select = request(
+            "POST",
+            "/api/packages/select",
+            json!({"package_id":"org.rustboy.tv"}),
+        );
+        assert_eq!(dispatch(&select, &store, 8765).status, 409);
+        let privileged = request(
+            "POST",
+            "/api/packages/intent",
+            json!({"action":"media.play","payload":{}}),
+        );
+        assert_eq!(dispatch(&privileged, &store, 8765).status, 403);
+        let ui_input = request(
+            "POST",
+            "/api/packages/intent",
+            json!({"action":"ui.select","payload":{"index":0}}),
+        );
+        assert_eq!(dispatch(&ui_input, &store, 8765).status, 409);
+    }
+
+    #[test]
+    fn package_install_root_is_inside_selected_host_data_directory() {
+        let temp = tempfile::tempdir().unwrap();
+        let store = WorkbenchStore::new(temp.path().join("operator-data"));
+        let root = package_install_root_for(&store).unwrap();
+        assert_eq!(root, temp.path().join("operator-data/packages"));
+        assert_ne!(
+            root,
+            std::env::current_exe()
+                .unwrap()
+                .parent()
+                .unwrap()
+                .join("packages")
+        );
     }
 
     #[test]

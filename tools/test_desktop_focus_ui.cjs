@@ -17,6 +17,7 @@ for(const id of [
   "command-heading","command-authority","command-current-role","command-policy",
   "command-board","command-open-messages","command-open-viewport","command-open-modules",
   "extension-content","messenger-dock","inspector-return",
+  "host-packages-open","host-package-list",
   "details-heading","detail-info","detail-description","detail-status",
   "testbench","network-workspace","lab-form","lab-output","refresh-state"
 ]) assert.ok(ids.includes(id),"Missing desktop contract "+id);
@@ -64,6 +65,12 @@ assert.match(js,/function renderSettingsSelection\(/,
   "Current/selected station state must remain in Settings");
 assert.match(js,/function extensionTabs\(/,
   "Scout MAP/camera focused tabs must remain");
+assert.match(js,/api\("\/api\/packages"\)/,
+  "Desktop host package list must use the local host registry");
+assert.match(js,/api\("\/api\/packages\/select", \{ package_id: packageId \}\)/,
+  "Desktop package switching must use the host lifecycle route");
+assert.match(js,/api\("\/api\/packages\/intent", \{ action: "ui\.select", payload: \{ index \} \}\)/,
+  "Desktop package input must use the host intent route");
 assert.match(js,/rolesPerPage\(\)/,
   "Mainline adaptive station paging must remain");
 assert.match(css,/\.module-card\s*\{[^}]*min-height:\s*48px/s,

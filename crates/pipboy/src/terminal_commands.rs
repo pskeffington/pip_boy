@@ -1,179 +1,224 @@
-//! Selected-tool command terminal. Executes only reviewed, offline native handlers.
-//! No shell, dynamic module loading, network activity or implicit permission grants.
+//! Selected-tool terminal backed by the shared typed command catalog.
+//! No shell, dynamic module loading, network activity or implicit grants.
+
 use pipboy_core::catalog::sources;
+use pipboy_core::command_catalog::{
+    self, ArgumentSchema, CommandExecutor, CommandRequest, DispatchResult, HandlerId,
+    TerminalAction, TypedArguments,
+};
 use pipboy_core::network_suite;
-use pipboy_core::workbench::{crc32_hex, encode_hex, inspect_hex, tool, Workbench, WorkbenchStore};
+use pipboy_core::workbench::{crc32_hex, encode_hex, inspect_hex, Workbench, WorkbenchStore};
 use std::error::Error;
+use std::fmt::Write as FmtWrite;
 use std::io::{self, Write};
 
-const MAX_INPUT: usize = 512;
-const OFFLINE_TOOLS: &[&str] = &["host", "diag", "library", "byte-lab", "net-lab"];
-
-fn supported(id: &str) -> bool {
-    OFFLINE_TOOLS.contains(&id)
+fn pinned_tools(board: &Workbench) -> Vec<&str> {
+    board.slots.iter().map(|slot| slot.tool.as_str()).collect()
 }
 
-fn selected_tools(board: &Workbench) -> Vec<&str> {
-    board
-        .slots
-        .iter()
-        .filter_map(|slot| {
-            let id = slot.tool.as_str();
-            (tool(id).is_some() && supported(id)).then_some(id)
-        })
-        .collect()
-}
-
-fn commands(id: &str) -> &'static str {
-    match id {
-        "host" => "status",
-        "diag" => "host",
-        "library" => "sources [query]",
-        "byte-lab" => "encode TEXT | inspect HEX | crc32 HEX",
-        "net-lab" => "list | cidr INPUT | cidr6 INPUT | split4 INPUT PREFIX | route INPUT ROUTE | aggregate4 INPUT | overlap4 INPUT | mac INPUT | vlan INPUT | mtu INPUT",
-        _ => "No terminal commands connected to this tool.",
-    }
-}
-
-fn dispatch(id: &str, tokens: &[&str]) -> Result<(), Box<dyn Error>> {
-    match (id, tokens) {
-        ("host", ["status"]) => {
-            let snapshot = crate::status::collect()?;
-            println!(
-                "SYSTEM STAT / {} {} | RAM {} / {} MiB | UPTIME {} s",
-                snapshot.os,
-                snapshot.arch,
-                snapshot.memory_used_mib,
-                snapshot.memory_total_mib,
-                snapshot.uptime_s
+fn display_help(tool_id: Option<&str>, pinned: &[&str]) -> String {
+    let mut output = String::from("tools | select TOOL | help | run COMMAND | quit\n");
+    if let Some(tool_id) = tool_id {
+        if !pinned.contains(&tool_id) {
+            let _ = writeln!(output, "{tool_id}: not pinned");
+            return output;
+        }
+        let commands = command_catalog::help_for(tool_id);
+        if commands.is_empty() {
+            let _ = writeln!(output, "{tool_id}: no terminal handlers are registered");
+        }
+        for command in commands {
+            let args = match command.arguments {
+                ArgumentSchema::None => "".to_owned(),
+                ArgumentSchema::OptionalText => " [TEXT]".to_owned(),
+                ArgumentSchema::Text => " TEXT".to_owned(),
+                ArgumentSchema::HexBytes => " HEX".to_owned(),
+                ArgumentSchema::NetworkInput => " INPUT".to_owned(),
+                ArgumentSchema::NetworkInputAndExtra => " INPUT EXTRA".to_owned(),
+            };
+            let _ = writeln!(
+                output,
+                "  {}{} — source: {}",
+                command.verb, args, command.source
             );
-            Ok(())
         }
-        ("diag", ["host"]) => crate::diagnostics::run(vec!["host".into()]),
-        ("library", ["sources", query @ ..]) if query.len() <= 8 => {
-            let query = query.join(" ");
-            for item in sources()?.into_iter().filter(|item| item.matches(&query)) {
-                println!("{} [{}]: {}", item.project, item.license, item.summary);
-            }
-            Ok(())
-        }
-        ("byte-lab", ["encode", rest @ ..]) if !rest.is_empty() => {
-            println!("{}", encode_hex(&rest.join(" "))?);
-            Ok(())
-        }
-        ("byte-lab", ["inspect", value]) => {
-            print!("{}", inspect_hex(value)?);
-            Ok(())
-        }
-        ("byte-lab", ["crc32", value]) => {
-            println!("{}", crc32_hex(value)?);
-            Ok(())
-        }
-        ("net-lab", ["list"]) => {
-            for op in network_suite::OPERATIONS.iter().filter(|op| !op.active) {
-                println!("{} / {}", op.id, op.name);
-            }
-            Ok(())
-        }
-        ("net-lab", [verb, value])
-            if matches!(
-                *verb,
-                "cidr" | "cidr6" | "aggregate4" | "mac" | "vlan" | "mtu"
-            ) =>
-        {
-            println!("{}", network_suite::run_offline(verb, value, None)?);
-            Ok(())
-        }
-        ("net-lab", [verb, value, extra]) if matches!(*verb, "split4" | "route" | "overlap4") => {
-            println!("{}", network_suite::run_offline(verb, value, Some(extra))?);
-            Ok(())
-        }
-        _ => Err(format!("NOT AVAILABLE: {id} supports: {}", commands(id)).into()),
+    } else {
+        output.push_str("Only registered offline Rust handlers are callable.\n");
     }
+    output
 }
 
-fn select_tool<'a>(
-    board: &'a Workbench,
-    selected: &mut Option<&'a str>,
-    id: &str,
-) -> Result<(), Box<dyn Error>> {
-    let pinned = board
-        .slots
-        .iter()
-        .find(|slot| slot.tool == id && supported(id))
-        .ok_or("tool is not pinned or has no validated offline terminal handler")?;
-    *selected = Some(pinned.tool.as_str());
-    println!("SELECTED {id}; available: {}", commands(id));
-    Ok(())
+#[derive(Default)]
+struct OfflineExecutor {
+    output: String,
 }
 
-fn route<'a>(
-    board: &'a Workbench,
-    selected: &mut Option<&'a str>,
-    input: &str,
-) -> Result<bool, Box<dyn Error>> {
-    if input.len() > MAX_INPUT || input.chars().any(|c| c.is_control()) {
-        return Err("invalid or oversized command".into());
-    }
-    let tokens: Vec<&str> = input.split_whitespace().collect();
-    match tokens.as_slice() {
-        [] => Ok(true),
-        ["q" | "quit" | "exit"] => Ok(false),
-        ["tools"] => {
-            println!("Available offline handlers for pinned Workbench tools:");
-            for id in selected_tools(board) {
-                println!(
-                    "  {id}{}",
-                    if Some(id) == *selected {
-                        " [selected]"
-                    } else {
-                        ""
-                    }
+impl CommandExecutor for OfflineExecutor {
+    type Output = ();
+    type Error = String;
+
+    fn execute(&mut self, request: CommandRequest) -> Result<Self::Output, Self::Error> {
+        let text = match &request.arguments {
+            TypedArguments::Text { value } => Some(value.as_str()),
+            _ => None,
+        };
+        let (input, extra) = match &request.arguments {
+            TypedArguments::Network { input, extra, .. } => {
+                (Some(input.as_str()), extra.as_deref())
+            }
+            _ => (None, None),
+        };
+        let hex = match &request.arguments {
+            TypedArguments::Hex { value } => Some(value.as_str()),
+            _ => None,
+        };
+
+        match request.handler {
+            HandlerId::HostStatus => {
+                let snapshot = crate::status::collect()?;
+                let _ = writeln!(
+                    self.output,
+                    "SYSTEM STAT / {} {} | RAM {} / {} MiB | UPTIME {} s",
+                    snapshot.os,
+                    snapshot.arch,
+                    snapshot.memory_used_mib,
+                    snapshot.memory_total_mib,
+                    snapshot.uptime_s
                 );
             }
-            println!("Select a tool by typing its name, e.g. net-lab.");
-            println!("Other pinned modules are not connected to this terminal.");
-            Ok(true)
-        }
-        ["select", id] => {
-            select_tool(board, selected, id)?;
-            Ok(true)
-        }
-        [id] if supported(id) => {
-            // Direct names are selectors except where an active tool owns that verb.
-            // For instance, 'host' runs the diagnostic when diag is selected.
-            if let Some(active) = *selected {
-                if active == "diag" && *id == "host" {
-                    dispatch(active, &tokens)?;
-                    return Ok(true);
+            HandlerId::HostDiagnostics => {
+                let snapshot = crate::status::collect()?;
+                let report = pipboy_core::diagnostics::analyze_host(&snapshot)?;
+                self.output.push_str(&report.render_text());
+                self.output.push('\n');
+            }
+            HandlerId::SourceSearch => {
+                let query = text.unwrap_or_default();
+                for item in sources()
+                    .map_err(|error| error.to_string())?
+                    .into_iter()
+                    .filter(|item| item.matches(query))
+                {
+                    let _ = writeln!(
+                        self.output,
+                        "{} [{}]: {}",
+                        item.project, item.license, item.summary
+                    );
                 }
             }
-            select_tool(board, selected, id)?;
-            Ok(true)
-        }
-        ["help" | "?"] => {
-            println!("tools | TOOL | select TOOL | COMMAND | run COMMAND | q | quit | exit");
-            println!("The tool name selects a pinned offline handler without executing it.");
-            println!("Commands are available only for the selected tool; no shell commands.");
-            if let Some(id) = selected {
-                println!("{id}: {}", commands(id));
+            HandlerId::BytesEncode => {
+                let encoded =
+                    encode_hex(text.ok_or("missing text")?).map_err(|error| error.to_string())?;
+                let _ = writeln!(self.output, "{encoded}");
             }
-            Ok(true)
+            HandlerId::HexInspect => {
+                let inspected =
+                    inspect_hex(hex.ok_or("missing hex")?).map_err(|error| error.to_string())?;
+                self.output.push_str(&inspected);
+            }
+            HandlerId::HexCrc32 => {
+                let crc =
+                    crc32_hex(hex.ok_or("missing hex")?).map_err(|error| error.to_string())?;
+                let _ = writeln!(self.output, "{crc}");
+            }
+            HandlerId::NetworkList => {
+                for op in network_suite::OPERATIONS.iter().filter(|op| !op.active) {
+                    let _ = writeln!(self.output, "{} / {}", op.id, op.name);
+                }
+            }
+            handler => {
+                let (mode, first, second) = match handler {
+                    HandlerId::NetworkCidr4 => ("cidr", input, None),
+                    HandlerId::NetworkCidr6 => ("cidr6", input, None),
+                    HandlerId::NetworkSplit4 => ("split4", input, extra),
+                    HandlerId::NetworkRoute => ("route", input, extra),
+                    HandlerId::NetworkAggregate4 => ("aggregate4", input, None),
+                    HandlerId::NetworkOverlap4 => ("overlap4", input, extra),
+                    HandlerId::NetworkMac => ("mac", input, None),
+                    HandlerId::NetworkVlan => ("vlan", input, None),
+                    HandlerId::NetworkMtu => ("mtu", input, None),
+                    _ => return Err("unavailable handler".into()),
+                };
+                let _ = writeln!(
+                    self.output,
+                    "{}",
+                    network_suite::run_offline(mode, first.ok_or("missing input")?, second)
+                        .map_err(|error| error.to_string())?
+                );
+            }
         }
-        ["run", rest @ ..] => {
-            let id = selected.ok_or("no offline tool selected; use tools and select TOOL")?;
-            dispatch(id, rest)?;
-            Ok(true)
+        Ok(())
+    }
+}
+
+fn run_action(action: TerminalAction) -> Result<String, String> {
+    let mut output = String::new();
+    let mut executor = OfflineExecutor::default();
+    match command_catalog::dispatch(action, &mut executor)? {
+        DispatchResult::Control(TerminalAction::ListTools(tools)) => {
+            let _ = writeln!(output, "Available registered tools: {}", tools.join(", "));
         }
-        [first, ..] if first.starts_with("rb:") || *first == "null@nulls-Laptop" => {
-            Err("paste only the command text after the prompt (for example: run status)".into())
+        DispatchResult::Control(TerminalAction::Help { tool_id }) => {
+            output.push_str(&display_help(tool_id, command_catalog::registered_tools()));
         }
-        _ => {
-            let id = selected.ok_or("no offline tool selected; use tools and select TOOL")?;
-            dispatch(id, &tokens)?;
-            Ok(true)
+        DispatchResult::Control(TerminalAction::SelectTool { tool_id }) => {
+            let _ = writeln!(output, "SELECTED {tool_id}; available:");
+            output.push_str(&display_help(
+                Some(tool_id),
+                command_catalog::registered_tools(),
+            ));
+        }
+        DispatchResult::Control(TerminalAction::Empty | TerminalAction::Quit) => {}
+        DispatchResult::Executed(()) => output.push_str(&executor.output),
+        DispatchResult::Control(TerminalAction::Execute(_)) => {
+            unreachable!("execute is dispatched")
         }
     }
+    Ok(output)
+}
+
+pub(crate) fn execute_tui_command(
+    input: &str,
+    selected_tool: Option<&str>,
+    pinned: &[&str],
+) -> Result<String, String> {
+    let action = command_catalog::parse_input(input, selected_tool, pinned)
+        .map_err(|error| error.to_string())?;
+    if !matches!(&action, TerminalAction::Execute(_)) {
+        return Err(
+            "The TUI palette accepts only registered commands for its selected tool".into(),
+        );
+    }
+    run_action(action)
+}
+
+fn route(
+    input: &str,
+    selected: &mut Option<&'static str>,
+    pinned: &[&str],
+) -> Result<bool, Box<dyn Error>> {
+    if input.trim() == "q" {
+        return Ok(false);
+    }
+    // Preserve the legacy `run COMMAND` form while letting the shared parser
+    // perform the actual pin, schema, and handler resolution.
+    let normalized = if input == "host" && *selected == Some("diag") {
+        // Preserve the original shorthand where `host` runs the selected DIAG
+        // handler instead of switching to the Host toolset.
+        "run host"
+    } else if let Some(command) = input.strip_prefix("run ") {
+        command
+    } else {
+        input
+    };
+    let action = command_catalog::parse_input(normalized, *selected, pinned)?;
+    match &action {
+        TerminalAction::SelectTool { tool_id } => *selected = Some(tool_id),
+        TerminalAction::Quit => return Ok(false),
+        _ => {}
+    }
+    print!("{}", run_action(action).map_err(io::Error::other)?);
+    Ok(true)
 }
 
 pub fn run(args: Vec<String>) -> Result<(), Box<dyn Error>> {
@@ -181,7 +226,13 @@ pub fn run(args: Vec<String>) -> Result<(), Box<dyn Error>> {
         return Err("usage: pipboy terminal".into());
     }
     let board = WorkbenchStore::from_environment()?.load()?;
-    let initial = selected_tools(&board).first().copied();
+    let pinned = pinned_tools(&board);
+    let initial = pinned.iter().find_map(|tool| {
+        command_catalog::registered_tools()
+            .iter()
+            .copied()
+            .find(|registered| registered == tool)
+    });
     let mut selected = initial;
     println!("Rust-Boy / selected-tool command terminal / OFFLINE HANDLERS ONLY");
     println!(
@@ -204,7 +255,7 @@ pub fn run(args: Vec<String>) -> Result<(), Box<dyn Error>> {
             break;
         }
         let input = line.trim_end_matches(['\r', '\n']);
-        match route(&board, &mut selected, input) {
+        match route(input, &mut selected, &pinned) {
             Ok(true) => (),
             Ok(false) => break,
             Err(error) => eprintln!("DENIED/ERROR: {error}"),
@@ -219,55 +270,70 @@ mod tests {
     use pipboy_core::workbench::PRESETS;
 
     #[test]
-    fn toolset_selection_never_executes() {
+    fn tool_selection_is_catalog_control_and_never_executes() {
         let board = Workbench::from_preset(&PRESETS[0]);
+        let pinned = pinned_tools(&board);
         let mut selected = None;
-        assert!(route(&board, &mut selected, "select host").unwrap());
+        assert!(route("select host", &mut selected, &pinned).unwrap());
         assert_eq!(selected, Some("host"));
-        assert!(route(&board, &mut selected, "run status").unwrap());
     }
 
     #[test]
-    fn refuses_unpinned_and_unsupported_tools() {
+    fn catalog_denies_unpinned_unsupported_and_active_operations() {
         let board = Workbench::from_preset(&PRESETS[0]);
+        let pinned = pinned_tools(&board);
         let mut selected = None;
-        assert!(route(&board, &mut selected, "select net-lab").is_err());
-        assert!(route(&board, &mut selected, "select radio").is_err());
-        assert!(route(&board, &mut selected, "run status").is_err());
-        assert!(route(&board, &mut selected, "sh -c id").is_err());
-        assert!(route(&board, &mut selected, "run net scan local --confirm").is_err());
+        assert!(route("select net-lab", &mut selected, &pinned).is_err());
+        assert!(route("select radio", &mut selected, &pinned).is_err());
+        assert!(route("net scan local --confirm", &mut selected, &pinned).is_err());
+        assert!(route("sh -c id", &mut selected, &pinned).is_err());
+        assert!(route("rb:host> run status", &mut selected, &pinned).is_err());
     }
 
     #[test]
-    fn direct_selection_and_commands() {
-        let board = Workbench::from_preset(&PRESETS[2]); // Security
+    fn typed_catalog_requests_execute_and_legacy_run_prefix_is_supported() {
+        let board = Workbench::from_preset(&PRESETS[2]);
+        let pinned = pinned_tools(&board);
         let mut selected = None;
-        assert!(route(&board, &mut selected, "net-lab").unwrap());
-        assert_eq!(selected, Some("net-lab"));
-        assert!(route(&board, &mut selected, "list").unwrap());
-        assert!(route(&board, &mut selected, "host").unwrap());
+        assert!(route("net-lab", &mut selected, &pinned).unwrap());
+        assert!(route("run list", &mut selected, &pinned).unwrap());
+        assert!(route("host", &mut selected, &pinned).unwrap());
         assert_eq!(selected, Some("host"));
-        assert!(route(&board, &mut selected, "status").unwrap());
-        assert!(route(&board, &mut selected, "byte-lab").unwrap());
-        assert!(route(&board, &mut selected, "encode Rust Boy").unwrap());
-        assert!(!route(&board, &mut selected, "q").unwrap());
+        assert!(route("run status", &mut selected, &pinned).unwrap());
+        assert!(route("exit", &mut selected, &pinned).is_ok_and(|keep| !keep));
     }
 
     #[test]
-    fn prompt_paste_and_active_network_remain_rejected() {
-        let board = Workbench::from_preset(&PRESETS[2]); // Security
-        let mut selected = Some("host");
-        assert!(route(&board, &mut selected, "rb:host> run status").is_err());
-        assert!(route(&board, &mut selected, "net scan local --confirm").is_err());
-        assert!(route(&board, &mut selected, "select net-lab run").is_err());
-        assert!(route(&board, &mut selected, "radio").is_err());
+    fn tui_palette_dispatches_only_pinned_catalog_handlers() {
+        let board = Workbench::from_preset(&PRESETS[2]);
+        let pinned = pinned_tools(&board);
+        let output = execute_tui_command("cidr 10.0.0.0/24", Some("net-lab"), &pinned).unwrap();
+        assert!(output.contains("10.0.0.0/24"));
+        assert!(execute_tui_command("scan local", Some("net-lab"), &pinned).is_err());
+        assert!(execute_tui_command("status", Some("host"), &["net-lab"]).is_err());
+        assert!(execute_tui_command("select host", Some("net-lab"), &pinned).is_err());
     }
 
     #[test]
-    fn limits_input() {
+    fn legacy_diag_host_shorthand_does_not_switch_toolsets() {
+        let board = Workbench::from_preset(&PRESETS[2]);
+        let pinned = pinned_tools(&board);
+        let mut selected = Some("diag");
+        assert!(route("host", &mut selected, &pinned).is_ok());
+        assert_eq!(selected, Some("diag"));
+    }
+
+    #[test]
+    fn oversized_or_control_input_is_denied_by_shared_parser() {
         let board = Workbench::from_preset(&PRESETS[0]);
+        let pinned = pinned_tools(&board);
         let mut selected = None;
-        assert!(route(&board, &mut selected, &"A".repeat(MAX_INPUT + 1)).is_err());
-        assert!(route(&board, &mut selected, "run status\u{0000}").is_err());
+        assert!(route(
+            &"A".repeat(command_catalog::MAX_COMMAND_BYTES + 1),
+            &mut selected,
+            &pinned
+        )
+        .is_err());
+        assert!(route("run status\0", &mut selected, &pinned).is_err());
     }
 }

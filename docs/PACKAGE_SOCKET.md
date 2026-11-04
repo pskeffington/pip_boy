@@ -1,21 +1,21 @@
 # Rust-Boy package socket contract (draft v1)
 
-Status (2026-10-28): **schema-1 registry parsing and read-only local discovery committed, integration still open**. No external executable loader, runtime sandbox, package installation, foreground socket renderer, or rb_gis adapter is claimed.
+Status (2026-10-30): **schema-1 registry, supervised-process host, trusted lifecycle audio reservation, and desktop/handheld selection/input routes are implemented and pass exact-head CI; RM-018 remains open**. Source commit [`d15247c0ee95663dd3b731db6716a42e6dc4e04f`](https://github.com/pskeffington/pip_boy/commit/d15247c0ee95663dd3b731db6716a42e6dc4e04f) passed [all seven Actions jobs](https://github.com/pskeffington/pip_boy/actions/runs/41124747110). The executable approval roster is empty, startup mounts no process, and no OS sandbox or rb_gis adapter is claimed.
 
 ## Shared universal adapter source (2026-10-28)
 
-A portable [`rust-boy-adapter-sdk`](../crates/rust-boy-adapter-sdk/src/lib.rs) now defines the versioned `AdapterEnvelope`, common `UniversalPackageAdapter` trait, bounded messages and inert `AdapterReply` view state. [`pipboy-core::universal_adapter`](../crates/pipboy-core/src/universal_adapter.rs) implements trusted in-process mounting, one-foreground lifecycle, Settings preservation and explicit unmount. The standalone [adapter guide](UNIVERSAL_ADAPTER.md) maps MAP, TV, RADIO and COMMS to this one contract. **No external loader, OS sandbox, signed install path, physical permission grants or live shell adapter are claimed.**
+A portable [`rust-boy-adapter-sdk`](../crates/rust-boy-adapter-sdk/src/lib.rs) defines the versioned `AdapterEnvelope`, common `UniversalPackageAdapter` trait, bounded messages and inert `AdapterReply` view state. [`pipboy-core::universal_adapter`](../crates/pipboy-core/src/universal_adapter.rs) implements trusted in-process mounting, one-foreground lifecycle, Settings preservation and explicit unmount. Its synthetic lifecycle tests cover the five distinct IDs MAP, TV, RADIO, COMMS and MUSIC. The live Radio path and hosted RADIO/MUSIC/TV lifecycles reserve the shared [`audio-focus broker`](../crates/pipboy-core/src/audio_focus.rs); desktop and handheld shell routes can resolve and mount only packages already approved by the host roster. Production roster entries, native MUSIC/TV output engines, signed distribution and physical permission grants remain open. **The child process protocol is not an OS sandbox.**
 
 ## Implemented registry precursor
 
--  `crates/pipboy-core/src/package_socket.rs` implements strict schema parsing, bounded manifest sizes, known requested-capability vocabulary, host API compatibility, duplicate detection, and deterministic ordering. It embeds four reviewed **design fixtures**.
+-  `crates/pipboy-core/src/package_socket.rs` implements strict schema parsing, bounded manifest sizes, known requested-capability vocabulary, host API compatibility, duplicate detection, and deterministic ordering. It embeds five reviewed **design fixtures**.
 - `pipboy packages list [--json]` lists reference fixtures only; `pipboy packages check FILE [--json]` validates a single operator-selected manifest; `pipboy packages scan DIR [--json]` scans direct JSON entries in an explicitly chosen local directory. The scan is bounded to 64 manifests, rejects symlinks and non-regular JSON entries, and performs no package activation.
-- Loopback-only `GET /api/packages` returns the registered references with `installed:false` and `activatable:false`. The handheld `MODULES` control displays this read-only registry; switching stays unavailable until the host has an installed approved adapter and a guarded activation route.
+- Loopback-only `GET /api/packages` combines references with host-mounted state; unapproved references remain `installed:false` and `activatable:false`. `POST /api/packages/select` may mount a package on demand only when its executable and manifest are both pinned in the compiled host roster and installed at the fixed host package directory. `POST /api/packages/intent` accepts only `ui.*` actions with deny-all scope policy. Neither route installs packages, accepts paths/arguments, or changes approval.
 - `tools/validate_host_packages.py` and `tools/test_validate_host_packages.py` provide offline schema and negative fixtures; CI runs these checks when the GitHub Actions runner starts. Rust unit tests cover the same registry contract and local scanning.
 
-A pure `ForegroundSelection` controller has also been added in core. It maintains at most one selected package and a host-owned Settings surface; selection refuses IDs not present in a separate, host-approved installed roster. Its tests use a synthetic approval set. **It is not yet connected to desktop/micro rendering or runtime execution.**
+A `UniversalAdapterHost` controller in core maintains one selected package and a host-owned Settings surface; selection refuses IDs not mounted through a trusted host path. Both desktop and micro shells render bounded view data and send UI input through the host intent route. A live startup mount remains open.
 
-This is a **metadata socket**, not an execution socket. Local scanning is operator-initiated and for trusted local files only; it is not a hardened OS-level package-store mechanism. No manifest grants hardware, filesystem, location, radio, network, background, or user permissions. The next implementation gate must introduce host-owned installed/trust state separately from document metadata.
+This is a **host-controlled package socket**. The design catalog and local scan remain metadata-only; live execution requires separate source-controlled host approval and fixed-directory integrity checks. The current executable roster is empty. No manifest grants hardware, filesystem, location, radio, network, background, or user permissions. Package fault containment does not provide an OS sandbox.
 
 **Quick validation (after compiling Rust):**
 
@@ -32,7 +32,7 @@ python3 tools/test_validate_host_packages.py
 
 The **socket** belongs to Rust-Boy; packages are independently maintained, installed and replaced. A package must not modify host navigation, Settings, role authority, device credentials, networking policy, or other packages' UI. The host shows **exactly one** package in its foreground viewport. The socket is a **versioned protocol**, not a Rust `dyn Trait` binary ABI and not an OS container.
 
-Target installation discovery will use a host-owned allowlisted package directory, with zero I/O beyond bounded local manifest reads. The currently implemented `scan DIR` requires an explicitly selected local directory and returns untrusted metadata only. The future installed-state layer must separately resolve package ID -> compatible trusted runner -> package view and services, while retaining Settings on failure.
+The runtime resolver uses `$PIPBOY_HOME/packages/<package-id>` (default `~/.pipboy/packages/<package-id>`) only for package IDs in the compiled approval roster; each executable and manifest path and digest is separately pinned. `tools/install_approved_package.py` stages exactly those verified files after a roster pin is approved; it cannot change approval or grant capabilities. This per-user data path stays outside signed app bundles. The `scan DIR` command remains metadata-only and returns untrusted data. There is no downloader or implicit grant path.
 
 ### Required manifest keys
 
@@ -40,14 +40,14 @@ Target installation discovery will use a host-owned allowlisted package director
 - `package_id`: lowercase stable reverse-DNS identifier, never inferred from UI label.
 - `name`, `version`, `publisher`, `license`, `source_repository`: package identity/provenance, not proof of authenticity.
 - `host_api`: exact supported socket protocol major version (1).
-- `entrypoint`: `type` (`external_process`, `builtin_adapter`); `command` only for allowlisted/signed installed packages at future runtime gate. Manifest must not cause execution during scanning.
+- `entrypoint`: `type` (`external_process`, `builtin_adapter`). Manifests never contain executable commands; the separately reviewed host roster owns fixed executable paths and hashes. Manifest scanning never causes execution.
 - `ui`: `mode` (host_view) and `min_width`/`min_height`; package content only.
 - `capabilities`: explicit requested scopes, denied until host policy approves.
 - `background`: `allowed` boolean; explicit service contract independent of foreground selection.
 
 Reference fixtures in [host package fixtures](../catalog/host_packages/) are **examples only**, not installed package inventory or executable instructions. Never trust publisher/source strings to authorize execution.
 
-## Initial four-package integration set
+## Five distinct package identities
 
 The following source repositories are **independent development projects**, not installed or executable host packages. Their manifests are schema-1 **design fixtures** only.
 
@@ -57,10 +57,11 @@ The following source repositories are **independent development projects**, not 
 | TV | [rust_tv](https://github.com/pskeffington/rust_tv) | [TV fixture](../catalog/host_packages/rust_tv.example.json) | Single TV player viewport |
 | RADIO | [rust_radio](https://github.com/pskeffington/rust_radio) | [Radio fixture](../catalog/host_packages/rust_radio.example.json) | Native radio controls |
 | COMMS | [rusti_rc](https://github.com/pskeffington/rusti_rc) | [Comms fixture](../catalog/host_packages/rusti_rc.example.json) | Native message interface |
+| MUSIC | [rust_music](https://github.com/pskeffington/rust_music) | [Music fixture](../catalog/host_packages/rust_music.example.json) | Lossless library/player; must share host audio focus with RADIO/TV |
 
-All four must implement the same host adapter boundary: version negotiation, no-IO discovery, one foreground viewport, host-owned Settings, explicit capability grant, fault isolation and deterministic unavailability. TV may not automatically fetch streams, RADIO may not automatically access SDR, COMMS may not automatically join channels, MAP may not automatically acquire location or download layers. Background declarations in fixtures are **requests**, never grants.
+All five must implement the same host adapter boundary: version negotiation, no-IO discovery, one foreground viewport, host-owned Settings, explicit capability grant, fault isolation and deterministic unavailability. TV may not automatically fetch streams, RADIO may not automatically access SDR, COMMS may not automatically join channels, MAP may not automatically acquire location or download layers, and MUSIC may not scan or play until the user explicitly requests it. Background declarations in fixtures are **requests**, never grants.
 
-Integration order: manifest validation for all four first, then independently validated MAP / RADIO / TV / COMMS adapters. Module internals and independent CI remain in their own repositories.
+Integration order: validate all five manifests, then independently validate MAP / RADIO / TV / COMMS / MUSIC adapters. Module internals and independent CI remain in their own repositories. The audio broker is in-process only; cross-process audio ownership remains a separate IPC service gate. `UniversalAdapterHost` reserves the claim before adapter activation and releases it only after an acknowledged suspend/shutdown. Failed cleanup keeps the claim fail-closed for the rest of the process.
 
 ## GIS extraction: strangler adapter
 

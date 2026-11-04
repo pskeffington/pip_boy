@@ -6,6 +6,8 @@
 //! This crate does not confer installation trust or grant privileges.
 #![forbid(unsafe_code)]
 
+pub mod process_protocol;
+
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::error::Error;
@@ -176,6 +178,16 @@ impl Error for AdapterError {}
 pub trait UniversalPackageAdapter: Send {
     fn package_id(&self) -> &str;
     fn handle(&mut self, request: AdapterEnvelope) -> Result<AdapterReply, AdapterError>;
+
+    /// Optional notification for a supervised process adapter. The host uses
+    /// this only to release resources after the child is confirmed reaped.
+    fn set_process_exit_hook(&mut self, _hook: std::sync::Arc<dyn Fn() + Send + Sync>) {}
+
+    /// Indicates that dropping this adapter synchronously terminates and
+    /// reaps its child process before the registered exit hook runs.
+    fn is_supervised_process(&self) -> bool {
+        false
+    }
 }
 
 /// Only the host's already-authorized policy authority may approve a scope.

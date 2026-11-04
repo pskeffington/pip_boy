@@ -10,13 +10,13 @@
       "hardware_gate": "software_only",
       "code": [
         "Cargo.toml",
+        "rust-toolchain.toml",
         "crates/pipboy-core/Cargo.toml",
-        "crates/pipboy-core/src/command_catalog.rs",
-        "crates/pipboy-core/src/lib.rs",
         "crates/pipboy/Cargo.toml",
-        "crates/pipboy/src/main.rs",
         "crates/rust-boy-broker/Cargo.toml",
-        "rust-toolchain.toml"
+        "crates/pipboy-core/src/lib.rs",
+        "crates/pipboy-core/src/command_catalog.rs",
+        "crates/pipboy/src/main.rs"
       ],
       "docs": [
         "docs/ARCHITECTURE.md",
@@ -287,23 +287,63 @@
     },
     {
       "id": "universal-package-adapter",
-      "boundary": "Portable versioned socket SDK and host-owned one-package lifecycle; trusted in-process tests only, with no executable loader, broker grants, or real peripheral access.",
+      "boundary": "Portable versioned adapter SDK, bounded process transport codec, and host-owned one-package lifecycle; no supervised executable loader, broker grants, or real peripheral access.",
       "code": [
         "crates/rust-boy-adapter-sdk/Cargo.toml",
         "crates/rust-boy-adapter-sdk/src/lib.rs",
+        "crates/rust-boy-adapter-sdk/src/process_protocol.rs",
         "crates/pipboy-core/src/universal_adapter.rs",
         "crates/pipboy-core/src/package_socket.rs",
         "catalog/host_adapter_contract.json"
       ],
       "docs": [
         "docs/UNIVERSAL_ADAPTER.md",
-        "docs/PACKAGE_SOCKET.md"
+        "docs/PACKAGE_SOCKET.md",
+        "docs/PACKAGE_PROCESS_PROTOCOL.md"
       ],
       "checks": [
         "tools/validate_host_packages.py",
         "tools/test_validate_host_packages.py"
       ],
       "hardware_gate": "software_only"
+    },
+    {
+      "id": "supervised-package-process",
+      "boundary": "Host-owned absolute executable pins, bounded RBPK child supervision, deadline termination/reaping, and process-exit cleanup callbacks; no OS sandbox or process-tree containment.",
+      "code": [
+        "crates/pipboy-core/src/package_process.rs",
+        "tools/install_approved_package.py",
+        "tools/check_package_process.py",
+        "catalog/approved_package_executables.json"
+      ],
+      "docs": [
+        "docs/PACKAGE_PROCESS_PROTOCOL.md",
+        "docs/HOST_PACKAGE_ROADMAP.md"
+      ],
+      "checks": [
+        "tools/validate_host_packages.py",
+        "tools/test_validate_host_packages.py",
+        "tools/test_install_approved_package.py",
+        "tools/test_supervised_music_process.py"
+      ],
+      "hardware_gate": "software_only",
+      "acceptance": "In progress: source-controlled executable and manifest hash roster is empty pending reviewed release artifacts; a staging command copies only pinned files under PIPBOY_HOME/packages/<package-id> (default ~/.pipboy/packages/<package-id>) outside signed app bundles. Handheld and desktop selection can lazily mount only a pinned install. Staging and resolver tests cover valid pins, tampering and symlinks; live production mounting and target shell/input acceptance remain open. Protocol framing does not create OS isolation."
+    },
+    {
+      "id": "shared-audio-focus",
+      "boundary": "Single in-process RAII audio lease guards native Radio and reserves output across hosted Radio/Music/TV adapter lifecycle; native Music/TV engines remain pending.",
+      "code": [
+        "crates/pipboy-core/src/audio_focus.rs"
+      ],
+      "docs": [
+        "docs/UNIVERSAL_ADAPTER.md",
+        "docs/HOST_PACKAGE_ROADMAP.md"
+      ],
+      "checks": [
+        "tools/validate_component_index.py"
+      ],
+      "hardware_gate": "software_only",
+      "acceptance": "Core tests verify non-preemptive Music/TV/RADIO reservations, acknowledged Settings/switch release, and claim retention on failed suspend/shutdown. Real Music/TV engine integration and hardware acceptance remain open."
     }
   ]
 }
