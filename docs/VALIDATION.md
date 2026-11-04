@@ -23,19 +23,27 @@ hosted AppKit startup/Stop lifecycle passed on ancestor source in run
 
 The next PR #93 slice adds a generated multi-resolution ICNS app icon and
 version/copyright/category plist checks. The hosted AppKit smoke sends actual
-menu target/actions for desktop, micro, Stop and Quit, and tests a missing
-bundled service through the visible Retry action. The builder stages
+menu target/actions for desktop, micro, Stop and Quit, verifies Quit waits for
+a live child to exit, and tests a missing bundled service through the visible
+Retry action. The builder stages
 the complete app as a temporary sibling and refuses unsafe, symlinked or
 unrelated outputs; an injected Swift compile failure checks that an existing
 bundle remains intact. Developer ID packaging now requires a clean source
 tree and universal executable slices, retains the notary submission responses
 and logs, and emits a source/version/identifier/architecture/checksum manifest
-before atomically installing the final DMG. The local headless app smoke,
+before atomically installing the final DMG. Each notarization attempt receives
+a unique evidence directory so a retry cannot overwrite earlier Apple logs.
+The local headless app smoke,
 Swift compilation, and ICNS container checks passed. The opt-in local AppKit
 smoke aborted during AppKit application registration through the restricted
 LaunchServices environment (SIGABRT); it does not establish a source-level
-menu failure. Hosted native macOS CI must verify those menu action and retry
-paths. Rust formatting, warnings-denied Clippy, Rust workspace tests (a full
+menu failure. Follow-up head `2c6e15446c1414a42a08bc8f3c4c94d3c78d1f14`
+failed the native AppKit smoke in [run
+41782734765](https://github.com/pskeffington/pip_boy/actions/runs/41782734765)
+while six other jobs passed. Log inspection isolated a stale Quit marker
+assertion after Stop began terminating directly; the current worktree removes
+that assertion and waits for live-Quit child-shutdown evidence. Hosted native
+macOS CI must verify the correction. Rust formatting, warnings-denied Clippy, Rust workspace tests (a full
 rerun passed after one transient 409), Rust 1.90 workspace check, repository
 validators, and smoke roster passed locally. Exact-head hosted CI remains
 pending for this source slice. No signing credentials are present, so no

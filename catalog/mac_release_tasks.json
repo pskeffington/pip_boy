@@ -32,11 +32,12 @@
         "universal": "Universal arm64+x86_64 builder and CI smoke passed on the native macOS runner. The runner installed the Intel Rust standard library, checked both Rust and Swift executable slices, and fetched desktop and micro routes from the bundled service.",
         "limitation": "The exact-head hosted AppKit menu-action/retry smoke is pending. The local opt-in AppKit launch aborted during restricted LaunchServices registration (SIGABRT); this does not establish a source-level menu failure."
       },
-      "ci_evidence": "Baseline universal code head db452596e8b10a42a5fb6d6187b7b0a30c79413 passed 7/7 jobs in https://github.com/pskeffington/pip_boy/actions/runs/41778857053; final documentation head 0394056a6c3b381bf64b667ccc0ac382d90f5309 passed 7/7 in https://github.com/pskeffington/pip_boy/actions/runs/41779843083. New icon, retry-state, menu-dispatch, and atomic-output changes await exact-head CI.",
+      "ci_evidence": "Baseline universal code head db452596e8b10a42a5fb6d6187b7b0a30c79413 passed 7/7 jobs in https://github.com/pskeffington/pip_boy/actions/runs/41778857053; final documentation head 0394056a6c3b381bf64b667ccc0ac382d90f5309 passed 7/7 in https://github.com/pskeffington/pip_boy/actions/runs/41779843083. Follow-up head 2c6e15446c1414a42a08bc8f3c4c94d3c78d1f14 failed the native macOS job in https://github.com/pskeffington/pip_boy/actions/runs/41782734765 at the AppKit smoke step; six other jobs passed. Inspection traced the failure to a stale Quit marker assertion after Stop began terminating directly. The assertion and live-Quit completion polling are corrected in the current worktree; a new exact-head run is pending.",
       "software_acceptance": [
         "macOS native workflow builds and verifies arm64+x86_64 Rust and Swift slices",
         "Universal bundle starts and serves desktop and micro loopback routes on the runner",
         "Hosted macOS CI invokes the actual open, Stop, and Quit menu actions and verifies child exit",
+        "Hosted macOS CI verifies Quit asynchronously waits for its live child to exit",
         "Hosted macOS CI verifies a missing bundled service exposes a working Retry action",
         "Bundle includes an ICNS icon accepted by macOS iconutil plus tested version, copyright and category metadata; failed rebuilds preserve the existing app"
       ],
@@ -61,7 +62,7 @@
         "App and DMG signatures verify, notarization succeeds, and tickets staple",
         "Gatekeeper validates the stapled distribution"
       ],
-      "evidence": "No Apple signing identity or notarization profile is configured; no distributable artifact exists. The software follow-up captures app/DMG submission JSON, Apple logs, signatures, universal slices and source/checksum evidence; its exact-head CI is pending."
+      "evidence": "No Apple signing identity or notarization profile is configured; no distributable artifact exists. The software follow-up captures app/DMG submission JSON, Apple logs, signatures, universal slices and source/checksum evidence in unique per-attempt directories; its exact-head CI is pending."
     },
     {
       "id": "MAC-REL-03",

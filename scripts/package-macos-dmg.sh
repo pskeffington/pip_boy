@@ -42,9 +42,10 @@ if os.path.commonpath((str(evidence_root), str(app_bundle))) == str(app_bundle):
     print("Release evidence must be stored outside the signed app bundle.", file=sys.stderr)
     raise SystemExit(2)
 PY
-EVIDENCE_DIR="$EVIDENCE_ROOT/$SOURCE_SHA"
-[[ ! -L "$EVIDENCE_DIR" ]] || { printf 'Refusing symlink evidence directory: %s\n' "$EVIDENCE_DIR" >&2; exit 2; }
-mkdir -p "$EVIDENCE_DIR"
+EVIDENCE_PARENT="$EVIDENCE_ROOT/$SOURCE_SHA"
+[[ ! -L "$EVIDENCE_PARENT" ]] || { printf 'Refusing symlink evidence parent: %s\n' "$EVIDENCE_PARENT" >&2; exit 2; }
+mkdir -p "$EVIDENCE_PARENT"
+EVIDENCE_DIR="$(mktemp -d "$EVIDENCE_PARENT/attempt.XXXXXX")"
 chmod 700 "$EVIDENCE_DIR"
 TMP="$(mktemp -d)"
 OUTPUT_STAGE="$(mktemp -d "$OUTPUT_PARENT/.rustboy-dmg.XXXXXX")"

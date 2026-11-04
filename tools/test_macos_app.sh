@@ -10,6 +10,7 @@ SERVER_PID=""
 LIFECYCLE_APP_PID=""
 LIFECYCLE_SERVER_PID=""
 FAILURE_APP_PID=""
+QUIT_LIVE_APP_PID=""
 BUNDLE_ID="org.rustboy.desktop.test"
 cleanup() {
   [[ -n "$SERVER_PID" ]] && kill "$SERVER_PID" 2>/dev/null || true
@@ -17,9 +18,11 @@ cleanup() {
   [[ -n "$LIFECYCLE_SERVER_PID" ]] && kill "$LIFECYCLE_SERVER_PID" 2>/dev/null || true
   [[ -n "$LIFECYCLE_APP_PID" ]] && kill "$LIFECYCLE_APP_PID" 2>/dev/null || true
   [[ -n "$FAILURE_APP_PID" ]] && kill "$FAILURE_APP_PID" 2>/dev/null || true
+  [[ -n "$QUIT_LIVE_APP_PID" ]] && kill "$QUIT_LIVE_APP_PID" 2>/dev/null || true
   [[ -n "$APP_PID" ]] && wait "$APP_PID" 2>/dev/null || true
   [[ -n "$LIFECYCLE_APP_PID" ]] && wait "$LIFECYCLE_APP_PID" 2>/dev/null || true
   [[ -n "$FAILURE_APP_PID" ]] && wait "$FAILURE_APP_PID" 2>/dev/null || true
+  [[ -n "$QUIT_LIVE_APP_PID" ]] && wait "$QUIT_LIVE_APP_PID" 2>/dev/null || true
   rm -rf "$TMP"
 }
 trap cleanup EXIT
@@ -90,7 +93,7 @@ if [[ "${RUSTBOY_TEST_APPKIT:-0}" == "1" ]]; then
     "$APP/Contents/MacOS/RustBoy" &
   LIFECYCLE_APP_PID=$!
   for _ in $(seq 1 150); do
-    [[ -s "$LIFECYCLE_RESULT" ]] && break
+    grep -q '^stopped_child_pid=' "$LIFECYCLE_RESULT" 2>/dev/null && break
     if ! kill -0 "$LIFECYCLE_APP_PID" 2>/dev/null; then
       wait "$LIFECYCLE_APP_PID"
     fi
@@ -107,7 +110,6 @@ if [[ "${RUSTBOY_TEST_APPKIT:-0}" == "1" ]]; then
   grep -qx 'desktop_action=true' "$LIFECYCLE_RESULT"
   grep -qx 'micro_action=true' "$LIFECYCLE_RESULT"
   grep -qx 'stop_action=true' "$LIFECYCLE_RESULT"
-  grep -qx 'quit_action=true' "$LIFECYCLE_RESULT"
   printf 'PASS AppKit menu actions opened both surfaces, stopped the child and quit.\n'
 
   BROKEN_APP="$TMP/Rust-Boy-broken.app"
@@ -129,4 +131,22 @@ if [[ "${RUSTBOY_TEST_APPKIT:-0}" == "1" ]]; then
   grep -qx 'retry_available=true' "$FAILURE_RESULT"
   grep -q '^state=Dashboard unavailable' "$FAILURE_RESULT"
   printf 'PASS AppKit shows a retry action after the bundled service fails to start.\n'
+
+  QUIT_LIVE_RESULT="$TMP/quit-live-result"
+  PIPBOY_HOME="$TMP/quit-live-data" RUSTBOY_QUIT_LIVE_SMOKE=1 RUSTBOY_DISABLE_BROWSER_OPEN=1 \
+    RUSTBOY_LIFECYCLE_RESULT_FILE="$QUIT_LIVE_RESULT" "$APP/Contents/MacOS/RustBoy" &
+  QUIT_LIVE_APP_PID=$!
+  for _ in $(seq 1 150); do
+    grep -q '^quit_stopped_child_pid=' "$QUIT_LIVE_RESULT" 2>/dev/null && break
+    if ! kill -0 "$QUIT_LIVE_APP_PID" 2>/dev/null; then wait "$QUIT_LIVE_APP_PID"; fi
+    sleep 0.1
+  done
+  test -s "$QUIT_LIVE_RESULT"
+  wait "$QUIT_LIVE_APP_PID"
+  QUIT_LIVE_APP_PID=""
+  grep -qx 'quit_action=true' "$QUIT_LIVE_RESULT"
+  QUIT_STOPPED_PID="$(sed -n 's/^quit_stopped_child_pid=//p' "$QUIT_LIVE_RESULT")"
+  [[ "$QUIT_STOPPED_PID" =~ ^[0-9]+$ ]]
+  ! kill -0 "$QUIT_STOPPED_PID" 2>/dev/null
+  printf 'PASS Quit waits asynchronously for the live dashboard child to exit.\n'
 fi

@@ -4,8 +4,9 @@
 
 - Add a generated multi-resolution Rust-Boy app icon and tested bundle version, copyright, and category metadata.
 - Drive actual AppKit menu item actions in hosted CI; verify desktop/micro actions, Stop/Quit, and retry after a missing-service startup failure.
+- Stop and Quit reap the dashboard asynchronously, with bounded SIGKILL escalation; add a live-child Quit regression.
 - Build app bundles in temporary sibling paths and preserve an existing bundle if a rebuild fails.
-- Extend Developer ID packaging to require clean source and universal slices, preserve Apple notarization submissions/logs, and write source/checksum evidence before installing the final DMG.
+- Extend Developer ID packaging to require clean source and universal slices, preserve Apple notarization submissions/logs per attempt, and write source/checksum evidence before installing the final DMG.
 - Keep exact-head CI for this follow-up, Developer ID credentials, Gatekeeper installation, logged-in user accessibility, and production publication pending.
 
 ## 2026-11-03 — Mac menu-bar packaging candidate

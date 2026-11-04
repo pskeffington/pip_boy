@@ -40,6 +40,8 @@ unrelated existing bundles. Hosted macOS smoke drives the actual menu item
 actions for both browser surfaces, Stop, and Quit; a separate negative case
 removes the bundled service and verifies the menu exposes Retry. The hosted
 smoke also asks Apple's `iconutil` to decode the generated ICNS resource.
+Stop and Quit send SIGTERM off the main-thread path, wait asynchronously, and
+send SIGKILL after a bounded grace period if the dashboard does not exit.
 
 ## Developer ID distribution
 
@@ -67,7 +69,8 @@ not been run and no signed/notarized artifact is available. On a configured
 release runner it also refuses a dirty Git tree, validates the universal slices,
 preserves both notary submission responses and JSON logs, and writes a
 source-SHA/version/identifier/architecture/checksum manifest to the private
-evidence directory. The final DMG is moved into place only after notarization,
+per-attempt evidence directory without overwriting earlier attempts. The final
+DMG is moved into place only after notarization,
 stapling and Gatekeeper assessment succeed.
 
 ## User data and support boundaries
@@ -93,8 +96,12 @@ stapling and Gatekeeper assessment succeed.
   41778857053](https://github.com/pskeffington/pip_boy/actions/runs/41778857053)
   and for documentation head `0394056a6c3b381bf64b667ccc0ac382d90f5309` in
   [run 41779843083](https://github.com/pskeffington/pip_boy/actions/runs/41779843083).
-  The new icon, retry-state, actual menu-action, and atomic-output regression
-  changes are awaiting their exact-head CI.
+  Follow-up head `2c6e15446c1414a42a08bc8f3c4c94d3c78d1f14` failed the native
+  AppKit smoke in [run 41782734765](https://github.com/pskeffington/pip_boy/actions/runs/41782734765)
+  while six other jobs passed. The failure was a stale Quit marker assertion
+  after Stop began terminating directly; the current worktree corrects that
+  assertion and waits for live-Quit child-shutdown evidence. Exact-head CI for
+  the fix is pending.
 - Universal bundle slices compile and pass CI smoke; Intel physical-Mac
   install and runtime acceptance remain pending.
 - The automated app smoke exercises the bundled Rust service in a headless
