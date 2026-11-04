@@ -12,7 +12,6 @@ if [[ -n "$(git -C "$ROOT" status --porcelain)" ]]; then
   echo "Refusing release packaging from a dirty working tree; commit or discard changes first." >&2
   exit 2
 fi
-APP="${RUSTBOY_APP_PATH:-$ROOT/target/macos/Rust-Boy.app}"
 OUTPUT="${RUSTBOY_DMG_OUTPUT:-$ROOT/target/macos/Rust-Boy.dmg}"
 OUTPUT_NAME="$(basename -- "$OUTPUT")"
 OUTPUT_PARENT_RAW="$(dirname -- "$OUTPUT")"
@@ -31,6 +30,25 @@ if [[ "$EVIDENCE_ROOT" == "/" || "$EVIDENCE_ROOT" == "$APP" || "$EVIDENCE_ROOT" 
   printf 'Unsafe release evidence root: %s\n' "$EVIDENCE_ROOT" >&2
   exit 2
 fi
+EVIDENCE_PARENT="$EVIDENCE_ROOT/$SOURCE_SHA"
+[[ ! -L "$EVIDENCE_PARENT" ]] || { printf 'Refusing symlink evidence parent: %s\n' "$EVIDENCE_PARENT" >&2; exit 2; }
+mkdir -p "$EVIDENCE_PARENT"
+EVIDENCE_DIR="$(mktemp -d "$EVIDENCE_PARENT/attempt.XXXXXX")"
+chmod 700 "$EVIDENCE_DIR"
+TMP="$(mktemp -d)"
+OUTPUT_STAGE="$(mktemp -d "$OUTPUT_PARENT/.rustboy-dmg.XXXXXX")"
+trap 'rm -rf "$TMP" "$OUTPUT_STAGE"' EXIT
+SOURCE_ROOT="$TMP/source"
+APP="$TMP/Rust-Boy.app"
+STAGE="$TMP/stage"
+DMG_CANDIDATE="$OUTPUT_STAGE/Rust-Boy.dmg"
+mkdir -p "$SOURCE_ROOT" "$STAGE"
+git -C "$ROOT" archive --format=tar "$SOURCE_SHA" | tar -xf - -C "$SOURCE_ROOT"
+env -u RUSTBOY_BINARY -u RUSTBOY_APP_PATH \
+  RUSTBOY_TARGET=universal RUSTBOY_BUNDLE_ID=org.rustboy.desktop \
+  RUSTBOY_APP_OUTPUT="$APP" RUSTBOY_SIGN_IDENTITY="$RUSTBOY_SIGN_IDENTITY" \
+  bash "$SOURCE_ROOT/scripts/build-macos-app.sh"
+[[ -d "$APP" ]] || { printf 'Missing app bundle: %s\n' "$APP" >&2; exit 1; }
 python3 - "$EVIDENCE_ROOT" "$APP" <<'PY'
 import os
 import sys
@@ -42,18 +60,6 @@ if os.path.commonpath((str(evidence_root), str(app_bundle))) == str(app_bundle):
     print("Release evidence must be stored outside the signed app bundle.", file=sys.stderr)
     raise SystemExit(2)
 PY
-EVIDENCE_PARENT="$EVIDENCE_ROOT/$SOURCE_SHA"
-[[ ! -L "$EVIDENCE_PARENT" ]] || { printf 'Refusing symlink evidence parent: %s\n' "$EVIDENCE_PARENT" >&2; exit 2; }
-mkdir -p "$EVIDENCE_PARENT"
-EVIDENCE_DIR="$(mktemp -d "$EVIDENCE_PARENT/attempt.XXXXXX")"
-chmod 700 "$EVIDENCE_DIR"
-TMP="$(mktemp -d)"
-OUTPUT_STAGE="$(mktemp -d "$OUTPUT_PARENT/.rustboy-dmg.XXXXXX")"
-trap 'rm -rf "$TMP" "$OUTPUT_STAGE"' EXIT
-STAGE="$TMP/stage"
-DMG_CANDIDATE="$OUTPUT_STAGE/Rust-Boy.dmg"
-mkdir -p "$STAGE"
-[[ -d "$APP" ]] || { printf 'Missing app bundle: %s\n' "$APP" >&2; exit 1; }
 APP_ARCHS="$(lipo -archs "$APP/Contents/MacOS/RustBoy")"
 SERVICE_ARCHS="$(lipo -archs "$APP/Contents/MacOS/pipboy")"
 for architecture in arm64 x86_64; do

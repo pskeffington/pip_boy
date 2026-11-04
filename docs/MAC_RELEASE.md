@@ -55,14 +55,17 @@ secret store; never commit them or print them in logs.
    RUSTBOY_SIGN_IDENTITY to its exact signing identity.
 2. Store notary credentials once with xcrun notarytool store-credentials and
    set RUSTBOY_NOTARY_PROFILE to that keychain profile name.
-3. Build the app with RUSTBOY_SIGN_IDENTITY set, then run
-   scripts/package-macos-dmg.sh.
+3. Run scripts/package-macos-dmg.sh. It builds the universal app from the
+   clean exact source HEAD and ignores any prebuilt binary or app override.
 4. Preserve the resulting app/DMG, notarization submission ID and log,
    codesign verification, stapler validation, Gatekeeper assessment, source
    commit, and checksums as release evidence.
 
-The package script signs and verifies the embedded executables and app, submits
-both the app archive and DMG to Apple's notary service, staples accepted
+The package script exports the exact clean HEAD with `git archive` into a fresh
+temporary source directory, builds the universal app there, and signs and
+verifies its embedded executables and app. This binds the manifest source SHA
+to the source files used for the build and ignores prebuilt app/binary overrides.
+It submits both the app archive and DMG to Apple's notary service, staples accepted
 tickets, and runs Gatekeeper assessment. It refuses to package without signing
 and notarization configuration. This repo currently has no configured Apple
 Developer ID certificate or notarization profile, so this final process has
@@ -92,38 +95,19 @@ stapling and Gatekeeper assessment succeed.
 
 ## Acceptance still required
 
-- Exact-head CI passed for the universal bundle at
-  `db452596e8b10a42a5fb6d6187b7b0a30c79413b` in [run
-  41778857053](https://github.com/pskeffington/pip_boy/actions/runs/41778857053)
-  and for documentation head `0394056a6c3b381bf64b667ccc0ac382d90f5309` in
-  [run 41779843083](https://github.com/pskeffington/pip_boy/actions/runs/41779843083).
-  Follow-up head `2c6e15446c1414a42a08bc8f3c4c94d3c78d1f14` failed the native
-  AppKit smoke in [run 41782734765](https://github.com/pskeffington/pip_boy/actions/runs/41782734765)
-  while six other jobs passed. The failure was a stale Quit marker assertion
-  after Stop began terminating directly; the current worktree corrects that
-  assertion and waits for live-Quit child-shutdown evidence. At current head
-  `fd41d089c6e812a5d56786619f0c937a27c05271`, six jobs passed in [run
-  41783954586](https://github.com/pskeffington/pip_boy/actions/runs/41783954586),
-  while the native macOS AppKit step remained in progress and its live job logs
-  were unavailable. Review found an unbounded smoke-process wait and a
-  redundant `waitUntilExit()` inside the termination handler; the current
-  worktree removes the nested wait and bounds process waits to 30 seconds.
-  Head `8f69b5a92194fe2e36b5c12b90e27adeee8942a0` failed its live-Quit smoke
-  in [run 41785148903](https://github.com/pskeffington/pip_boy/actions/runs/41785148903):
-  Stop and Retry passed, but Quit did not exit the app within 30 seconds. The
-  current worktree reissues termination after child shutdown and requires the
-  child-stopped marker before checking app exit. Exact-head CI is pending.
+- Exact implementation head `7d77c9da0a72b55ff6c5a7fcb4ad5e384702e4e1`
+  passed 7/7 jobs in [run
+  41786181479](https://github.com/pskeffington/pip_boy/actions/runs/41786181479),
+  including actual AppKit desktop/micro/Stop/Quit actions, live-child shutdown,
+  missing-service Retry, and universal arm64+x86_64 bundle smoke.
 - Universal bundle slices compile and pass CI smoke; Intel physical-Mac
   install and runtime acceptance remain pending.
-- The automated app smoke exercises the bundled Rust service in a headless
-  mode. Hosted macOS CI also launches the AppKit host, confirms the dashboard
-  child starts, invokes the Stop lifecycle path and checks that the child exits.
-  It does not verify menu selection or use in a logged-in user session.
-- Review of the app bundle identifier, copyright, icon, minimum macOS version,
-  privacy wording, update and uninstall behavior.
+- Hosted AppKit CI verifies programmatic menu target/action dispatch.
+  Logged-in user menu selection, browser behavior, and accessibility review
+  remain pending.
+- Review of privacy wording, update behavior, and uninstall/data retention.
 - Developer ID signing and notarization on a protected macOS release runner.
 - Gatekeeper install/launch verification on a clean supported Mac account.
-- Explicit operator acceptance of browser behavior and accessibility on macOS.
 
 Apple's distribution guidance requires Developer ID signing for direct
 distribution and recommends notarization; notarization uses the hardened

@@ -44,6 +44,13 @@ test -x "$APP/Contents/MacOS/RustBoy"
 test -x "$APP/Contents/MacOS/pipboy"
 test -s "$APP/Contents/Resources/RustBoy.icns"
 file "$APP/Contents/Resources/RustBoy.icns" | grep -qi 'Mac OS X icon'
+grep -Fq 'git -C "$ROOT" archive --format=tar "$SOURCE_SHA" | tar -xf - -C "$SOURCE_ROOT"' \
+  "$ROOT/scripts/package-macos-dmg.sh"
+grep -Fq 'env -u RUSTBOY_BINARY -u RUSTBOY_APP_PATH' "$ROOT/scripts/package-macos-dmg.sh"
+grep -Fq 'RUSTBOY_TARGET=universal RUSTBOY_BUNDLE_ID=org.rustboy.desktop' \
+  "$ROOT/scripts/package-macos-dmg.sh"
+grep -Fq 'RUSTBOY_APP_OUTPUT="$APP"' "$ROOT/scripts/package-macos-dmg.sh"
+printf 'PASS Developer ID packager builds only from the exact clean source SHA.\n'
 if [[ "${RUSTBOY_VERIFY_ICNS:-0}" == "1" ]]; then
   iconutil --convert iconset --output "$TMP/RustBoy.iconset" "$APP/Contents/Resources/RustBoy.icns"
   test -s "$TMP/RustBoy.iconset/icon_512x512@2x.png"

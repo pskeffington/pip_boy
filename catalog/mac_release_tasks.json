@@ -55,7 +55,8 @@
       "paths": [
         "scripts/build-macos-app.sh",
         "scripts/package-macos-dmg.sh",
-        "docs/MAC_RELEASE.md"
+        "docs/MAC_RELEASE.md",
+        "tools/test_macos_app.sh"
       ],
       "acceptance": [
         "Protected Developer ID Application identity is provisioned",
@@ -63,7 +64,7 @@
         "App and DMG signatures verify, notarization succeeds, and tickets staple",
         "Gatekeeper validates the stapled distribution"
       ],
-      "evidence": "No Apple signing identity or notarization profile is configured; no distributable artifact exists. The software follow-up captures app/DMG submission JSON, Apple logs, signatures, universal slices and source/checksum evidence in unique per-attempt directories; its exact-head CI is pending."
+      "evidence": "No Apple signing identity or notarization profile is configured; no distributable artifact exists. The packager now builds a universal app from a fresh git archive of the exact clean source SHA and ignores prebuilt app/binary overrides; a regression check covers this invariant. These source-provenance changes await exact-head CI. The script preserves app/DMG submission JSON, Apple logs, signatures, universal slices and source/checksum evidence in unique per-attempt directories."
     },
     {
       "id": "MAC-REL-03",
