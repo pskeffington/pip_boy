@@ -344,6 +344,28 @@
       ],
       "hardware_gate": "software_only",
       "acceptance": "Core tests verify non-preemptive Music/TV/RADIO reservations, acknowledged Settings/switch release, and claim retention on failed suspend/shutdown. Real Music/TV engine integration and hardware acceptance remain open."
+    },
+    {
+      "id": "macos-app-distribution",
+      "boundary": "Native AppKit menu-bar launcher, bundled loopback Rust service, universal app icon/bundle builder, and fail-closed Developer ID notarization packager.",
+      "code": [
+        "macos/RustBoyLauncher.swift",
+        "macos/generate_app_icon.swift",
+        "macos/build_icns.py",
+        "scripts/build-macos-app.sh",
+        "scripts/package-macos-dmg.sh",
+        "tools/test_macos_app.sh",
+        "tools/test_macos_universal.sh"
+      ],
+      "docs": [
+        "docs/MAC_RELEASE.md"
+      ],
+      "checks": [
+        "tools/test_macos_app.sh",
+        "tools/test_macos_universal.sh"
+      ],
+      "hardware_gate": "software_only",
+      "acceptance": "Hosted macOS builds verify app metadata, universal executable slices, actual NSMenu action dispatch, startup-failure retry state, and loopback desktop/micro routes. Developer ID secrets, Gatekeeper clean-account install, accessibility, and interactive operator acceptance remain separate release gates."
     }
   ]
 }

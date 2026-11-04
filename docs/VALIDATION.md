@@ -19,6 +19,28 @@ universal build is claimed. Intel hardware acceptance remains separate. The
 hosted AppKit startup/Stop lifecycle passed on ancestor source in run
 41777150345; interactive menu selection remains unverified.
 
+### Mac app release hardening follow-up (2026-11-04; exact-head CI pending)
+
+The next PR #93 slice adds a generated multi-resolution ICNS app icon and
+version/copyright/category plist checks. The hosted AppKit smoke sends actual
+menu target/actions for desktop, micro, Stop and Quit, and tests a missing
+bundled service through the visible Retry action. The builder stages
+the complete app as a temporary sibling and refuses unsafe, symlinked or
+unrelated outputs; an injected Swift compile failure checks that an existing
+bundle remains intact. Developer ID packaging now requires a clean source
+tree and universal executable slices, retains the notary submission responses
+and logs, and emits a source/version/identifier/architecture/checksum manifest
+before atomically installing the final DMG. The local headless app smoke,
+Swift compilation, and ICNS container checks passed. The opt-in local AppKit
+smoke aborted during AppKit application registration through the restricted
+LaunchServices environment (SIGABRT); it does not establish a source-level
+menu failure. Hosted native macOS CI must verify those menu action and retry
+paths. Rust formatting, warnings-denied Clippy, Rust workspace tests (a full
+rerun passed after one transient 409), Rust 1.90 workspace check, repository
+validators, and smoke roster passed locally. Exact-head hosted CI remains
+pending for this source slice. No signing credentials are present, so no
+notarization or Gatekeeper result is claimed.
+
 ## RM-018 supervised child integration checkpoint — 2026-10-30 (local, not release acceptance)
 
 - The host install resolver was independently exercised with temporary install roots: a valid executable+manifest pin resolves, changed manifest bytes are denied, and symlinked package roots/manifests are denied. The targeted process suite now passes all 10 tests, including timeout kill/reap, unexpected exit, shutdown, audio-lease cleanup and a supported UI input over the child protocol. Re-running `tools/test_supervised_music_process.py` built the independent module into `/private/tmp` and passed the real Rust Music child handshake/activate/shutdown path under the host. Warnings-denied Clippy, formatting, package/component validators and UI regressions passed in this checkpoint.

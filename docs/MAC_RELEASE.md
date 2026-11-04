@@ -32,6 +32,15 @@ browser opening disabled, and verifies both local dashboard routes over
 loopback. scripts/launch-dashboard.command remains the source/developer
 launcher and continues to require Rust.
 
+The bundle builder selects the `pipboy` package version by package name,
+includes a generated multi-resolution Rust-Boy app icon and standard utility
+metadata, and builds into a temporary sibling directory before replacing an
+existing Rust-Boy bundle. It refuses unsafe output paths, symlinks, and
+unrelated existing bundles. Hosted macOS smoke drives the actual menu item
+actions for both browser surfaces, Stop, and Quit; a separate negative case
+removes the bundled service and verifies the menu exposes Retry. The hosted
+smoke also asks Apple's `iconutil` to decode the generated ICNS resource.
+
 ## Developer ID distribution
 
 Outside-App-Store distribution requires a Developer ID Application identity
@@ -54,7 +63,12 @@ both the app archive and DMG to Apple's notary service, staples accepted
 tickets, and runs Gatekeeper assessment. It refuses to package without signing
 and notarization configuration. This repo currently has no configured Apple
 Developer ID certificate or notarization profile, so this final process has
-not been run and no signed/notarized artifact is available.
+not been run and no signed/notarized artifact is available. On a configured
+release runner it also refuses a dirty Git tree, validates the universal slices,
+preserves both notary submission responses and JSON logs, and writes a
+source-SHA/version/identifier/architecture/checksum manifest to the private
+evidence directory. The final DMG is moved into place only after notarization,
+stapling and Gatekeeper assessment succeed.
 
 ## User data and support boundaries
 
@@ -74,9 +88,13 @@ not been run and no signed/notarized artifact is available.
 
 ## Acceptance still required
 
-- Exact-head CI for the app-bundle launch smoke and release scripts passed at
-  `db452596e8b10a42a5fb6d6187b7b0a30c79413b`; the AppKit startup/Stop lifecycle
-  also passed on its recorded ancestor head in run 41777150345.
+- Exact-head CI passed for the universal bundle at
+  `db452596e8b10a42a5fb6d6187b7b0a30c79413b` in [run
+  41778857053](https://github.com/pskeffington/pip_boy/actions/runs/41778857053)
+  and for documentation head `0394056a6c3b381bf64b667ccc0ac382d90f5309` in
+  [run 41779843083](https://github.com/pskeffington/pip_boy/actions/runs/41779843083).
+  The new icon, retry-state, actual menu-action, and atomic-output regression
+  changes are awaiting their exact-head CI.
 - Universal bundle slices compile and pass CI smoke; Intel physical-Mac
   install and runtime acceptance remain pending.
 - The automated app smoke exercises the bundled Rust service in a headless

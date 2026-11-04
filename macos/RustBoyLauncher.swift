@@ -9,6 +9,8 @@ final class RustBoyAppDelegate: NSObject, NSApplicationDelegate {
     private var pendingPath = "/"
     private var outputBuffer = ""
     private var lifecycleSmokeScheduled = false
+    private var failureSmokeScheduled = false
+    private var launchFailure: String?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
@@ -36,8 +38,7 @@ final class RustBoyAppDelegate: NSObject, NSApplicationDelegate {
               let resultFile = ProcessInfo.processInfo.environment["RUSTBOY_LIFECYCLE_RESULT_FILE"] else {
             return
         }
-        try? "\(childPID)\n".write(toFile: resultFile, atomically: true, encoding: .utf8)
-        NSApp.terminate(nil)
+        appendSmokeResult("stopped_child_pid=\(childPID)", to: resultFile)
     }
     @objc private func quit() { NSApp.terminate(nil) }
 
@@ -47,12 +48,15 @@ final class RustBoyAppDelegate: NSObject, NSApplicationDelegate {
             startServer()
             return
         }
+        if ProcessInfo.processInfo.environment["RUSTBOY_DISABLE_BROWSER_OPEN"] == "1" {
+            return
+        }
         if let target = URL(string: path, relativeTo: dashboardURL)?.absoluteURL {
             NSWorkspace.shared.open(target)
         }
     }
 
-    private func startServer() {
+    @objc private func startServer() {
         guard server == nil else {
             if dashboardURL == nil {
                 pendingPath = "/"
@@ -61,6 +65,8 @@ final class RustBoyAppDelegate: NSObject, NSApplicationDelegate {
         }
         let executable = Bundle.main.bundleURL
             .appendingPathComponent("Contents/MacOS/pipboy", isDirectory: false)
+        launchFailure = nil
+        outputBuffer = ""
         let process = Process()
         process.executableURL = executable
         process.arguments = ["dashboard", "--port", "0"]
@@ -73,6 +79,9 @@ final class RustBoyAppDelegate: NSObject, NSApplicationDelegate {
                 guard self?.server === process else { return }
                 self?.server = nil
                 self?.dashboardURL = nil
+                if process.terminationStatus != 0 {
+                    self?.launchFailure = "Dashboard stopped unexpectedly (\(process.terminationStatus))."
+                }
                 self?.rebuildMenu()
             }
         }
@@ -94,7 +103,10 @@ final class RustBoyAppDelegate: NSObject, NSApplicationDelegate {
             rebuildMenu()
         } catch {
             server = nil
+            launchFailure = "Dashboard could not start: \(error.localizedDescription)"
             NSLog("Rust-Boy dashboard failed to start: %@", error.localizedDescription)
+            rebuildMenu()
+            scheduleFailureSmokeIfNeeded()
         }
     }
 
@@ -131,11 +143,25 @@ final class RustBoyAppDelegate: NSObject, NSApplicationDelegate {
 
     private func rebuildMenu() {
         let menu = NSMenu()
-        let title = dashboardURL == nil ? "Starting local dashboard…" : "Dashboard running on this Mac"
+        let title: String
+        if let launchFailure {
+            title = launchFailure.hasPrefix("Dashboard could not start")
+                ? "Dashboard unavailable — retry below"
+                : launchFailure
+        } else if dashboardURL != nil {
+            title = "Dashboard running on this Mac"
+        } else if server != nil {
+            title = "Starting local dashboard…"
+        } else {
+            title = "Dashboard stopped"
+        }
         let state = NSMenuItem(title: title, action: nil, keyEquivalent: "")
         state.isEnabled = false
         menu.addItem(state)
         menu.addItem(.separator())
+        if server == nil {
+            menu.addItem(NSMenuItem(title: "Retry Dashboard", action: #selector(startServer), keyEquivalent: ""))
+        }
         menu.addItem(NSMenuItem(title: "Open Desktop Dashboard", action: #selector(openDashboard), keyEquivalent: ""))
         menu.addItem(NSMenuItem(title: "Open Field HUD", action: #selector(openMicroHUD), keyEquivalent: ""))
         menu.addItem(NSMenuItem(title: "Stop Dashboard", action: #selector(stopDashboard), keyEquivalent: ""))
@@ -143,6 +169,10 @@ final class RustBoyAppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(NSMenuItem(title: "Quit Rust-Boy", action: #selector(quit), keyEquivalent: "q"))
         for item in menu.items where item.action != nil { item.target = self }
         statusItem.menu = menu
+        if !failureSmokeScheduled, launchFailure != nil,
+           ProcessInfo.processInfo.environment["RUSTBOY_FAILURE_SMOKE"] == "1" {
+            scheduleFailureSmokeIfNeeded()
+        }
         guard !lifecycleSmokeScheduled,
               dashboardURL != nil,
               ProcessInfo.processInfo.environment["RUSTBOY_LIFECYCLE_SMOKE"] == "1" else {
@@ -150,7 +180,59 @@ final class RustBoyAppDelegate: NSObject, NSApplicationDelegate {
         }
         lifecycleSmokeScheduled = true
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { [weak self] in
-            self?.stopDashboard()
+            guard let self else { return }
+            let desktopOpened = self.dispatchMenuAction(named: "Open Desktop Dashboard")
+            let microOpened = self.dispatchMenuAction(named: "Open Field HUD")
+            let stopDispatched = self.dispatchMenuAction(named: "Stop Dashboard")
+            self.appendSmokeResult(
+                "desktop_action=\(desktopOpened)\nmicro_action=\(microOpened)\nstop_action=\(stopDispatched)",
+                to: ProcessInfo.processInfo.environment["RUSTBOY_LIFECYCLE_RESULT_FILE"] ?? ""
+            )
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+                let quitDispatched = self.dispatchMenuAction(named: "Quit Rust-Boy")
+                self.appendSmokeResult("quit_action=\(quitDispatched)", to: ProcessInfo.processInfo.environment["RUSTBOY_LIFECYCLE_RESULT_FILE"] ?? "")
+            }
+        }
+    }
+
+    private func dispatchMenuAction(named title: String) -> Bool {
+        guard let item = statusItem.menu?.item(withTitle: title),
+              let action = item.action else {
+            return false
+        }
+        return NSApp.sendAction(action, to: item.target, from: item)
+    }
+
+    private func appendSmokeResult(_ line: String, to path: String) {
+        guard !path.isEmpty else { return }
+        let url = URL(fileURLWithPath: path)
+        let data = Data((line + "\n").utf8)
+        if FileManager.default.fileExists(atPath: path),
+           let handle = try? FileHandle(forWritingTo: url) {
+            defer { try? handle.close() }
+            _ = try? handle.seekToEnd()
+            try? handle.write(contentsOf: data)
+        } else {
+            try? data.write(to: url, options: .atomic)
+        }
+    }
+
+    private func scheduleFailureSmokeIfNeeded() {
+        guard !failureSmokeScheduled,
+              ProcessInfo.processInfo.environment["RUSTBOY_FAILURE_SMOKE"] == "1" else {
+            return
+        }
+        failureSmokeScheduled = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
+            guard let self else { return }
+            let retryDispatched = self.dispatchMenuAction(named: "Retry Dashboard")
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                let stateTitle = self.statusItem.menu?.items.first?.title ?? ""
+                let retryAvailable = self.statusItem.menu?.item(withTitle: "Retry Dashboard")?.isEnabled == true
+                let result = "retry_dispatched=\(retryDispatched)\nretry_available=\(retryAvailable)\nstate=\(stateTitle)"
+                self.appendSmokeResult(result, to: ProcessInfo.processInfo.environment["RUSTBOY_FAILURE_RESULT_FILE"] ?? "")
+                _ = self.dispatchMenuAction(named: "Quit Rust-Boy")
+            }
         }
     }
 }

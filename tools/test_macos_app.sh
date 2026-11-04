@@ -9,14 +9,17 @@ APP_PID=""
 SERVER_PID=""
 LIFECYCLE_APP_PID=""
 LIFECYCLE_SERVER_PID=""
+FAILURE_APP_PID=""
 BUNDLE_ID="org.rustboy.desktop.test"
 cleanup() {
   [[ -n "$SERVER_PID" ]] && kill "$SERVER_PID" 2>/dev/null || true
   [[ -n "$APP_PID" ]] && kill "$APP_PID" 2>/dev/null || true
   [[ -n "$LIFECYCLE_SERVER_PID" ]] && kill "$LIFECYCLE_SERVER_PID" 2>/dev/null || true
   [[ -n "$LIFECYCLE_APP_PID" ]] && kill "$LIFECYCLE_APP_PID" 2>/dev/null || true
+  [[ -n "$FAILURE_APP_PID" ]] && kill "$FAILURE_APP_PID" 2>/dev/null || true
   [[ -n "$APP_PID" ]] && wait "$APP_PID" 2>/dev/null || true
   [[ -n "$LIFECYCLE_APP_PID" ]] && wait "$LIFECYCLE_APP_PID" 2>/dev/null || true
+  [[ -n "$FAILURE_APP_PID" ]] && wait "$FAILURE_APP_PID" 2>/dev/null || true
   rm -rf "$TMP"
 }
 trap cleanup EXIT
@@ -27,9 +30,37 @@ RUSTBOY_BUNDLE_ID="$BUNDLE_ID" RUSTBOY_BINARY="$ROOT/target/debug/pipboy" RUSTBO
   bash scripts/build-macos-app.sh
 /usr/libexec/PlistBuddy -c 'Print :CFBundlePackageType' "$APP/Contents/Info.plist" | grep -qx APPL
 /usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$APP/Contents/Info.plist" | grep -qx RustBoy
+/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$APP/Contents/Info.plist" | grep -qx "$BUNDLE_ID"
+/usr/libexec/PlistBuddy -c 'Print :CFBundleIconFile' "$APP/Contents/Info.plist" | grep -qx RustBoy
+/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP/Contents/Info.plist" | grep -Eq '^[0-9]+(\.[0-9]+){1,2}$'
+/usr/libexec/PlistBuddy -c 'Print :NSHumanReadableCopyright' "$APP/Contents/Info.plist" | grep -q 'Rust-Boy contributors'
+/usr/libexec/PlistBuddy -c 'Print :LSApplicationCategoryType' "$APP/Contents/Info.plist" | grep -qx 'public.app-category.utilities'
 test -x "$APP/Contents/MacOS/RustBoy"
 test -x "$APP/Contents/MacOS/pipboy"
+test -s "$APP/Contents/Resources/RustBoy.icns"
+file "$APP/Contents/Resources/RustBoy.icns" | grep -qi 'Mac OS X icon'
+if [[ "${RUSTBOY_VERIFY_ICNS:-0}" == "1" ]]; then
+  iconutil --convert iconset --output "$TMP/RustBoy.iconset" "$APP/Contents/Resources/RustBoy.icns"
+  test -s "$TMP/RustBoy.iconset/icon_512x512@2x.png"
+fi
 file "$APP/Contents/MacOS/pipboy" | grep -q 'Mach-O'
+if RUSTBOY_BUNDLE_ID="$BUNDLE_ID" RUSTBOY_APP_OUTPUT="$ROOT" bash scripts/build-macos-app.sh; then
+  echo "App builder unexpectedly accepted the repository root as its output." >&2
+  exit 1
+else
+  test "$?" -eq 2
+fi
+PRESERVED_APP="$TMP/Preserved.app"
+cp -R "$APP" "$PRESERVED_APP"
+PRESERVED_SERVICE_SHA="$(shasum -a 256 "$PRESERVED_APP/Contents/MacOS/pipboy" | awk '{print $1}')"
+if MACOSX_DEPLOYMENT_TARGET=not-a-version RUSTBOY_BUNDLE_ID="$BUNDLE_ID" \
+  RUSTBOY_BINARY="$ROOT/target/debug/pipboy" RUSTBOY_APP_OUTPUT="$PRESERVED_APP" \
+  bash scripts/build-macos-app.sh; then
+  echo "App builder unexpectedly accepted an invalid deployment target." >&2
+  exit 1
+fi
+test "$(shasum -a 256 "$PRESERVED_APP/Contents/MacOS/pipboy" | awk '{print $1}')" = "$PRESERVED_SERVICE_SHA"
+printf 'PASS failed rebuild preserved the existing app bundle.\n'
 if RUSTBOY_SIGN_IDENTITY= RUSTBOY_NOTARY_PROFILE= bash scripts/package-macos-dmg.sh; then
   echo "Unsigned DMG packaging unexpectedly succeeded." >&2
   exit 1
@@ -54,7 +85,7 @@ curl --fail --silent --show-error "${URL%/}/micro" | grep -qi 'micro'
 printf 'PASS macOS app bundle build and loopback dashboard launch: %s\n' "$URL"
 
 if [[ "${RUSTBOY_TEST_APPKIT:-0}" == "1" ]]; then
-  PIPBOY_HOME="$TMP/appkit-data" RUSTBOY_LIFECYCLE_SMOKE=1 \
+  PIPBOY_HOME="$TMP/appkit-data" RUSTBOY_LIFECYCLE_SMOKE=1 RUSTBOY_DISABLE_BROWSER_OPEN=1 \
     RUSTBOY_LIFECYCLE_RESULT_FILE="$LIFECYCLE_RESULT" \
     "$APP/Contents/MacOS/RustBoy" &
   LIFECYCLE_APP_PID=$!
@@ -66,12 +97,36 @@ if [[ "${RUSTBOY_TEST_APPKIT:-0}" == "1" ]]; then
     sleep 0.1
   done
   test -s "$LIFECYCLE_RESULT"
-  LIFECYCLE_SERVER_PID="$(sed -n '1p' "$LIFECYCLE_RESULT")"
+  LIFECYCLE_SERVER_PID="$(sed -n 's/^stopped_child_pid=//p' "$LIFECYCLE_RESULT")"
   [[ "$LIFECYCLE_SERVER_PID" =~ ^[0-9]+$ ]]
   APPKIT_PID="$LIFECYCLE_APP_PID"
   wait "$LIFECYCLE_APP_PID"
   LIFECYCLE_APP_PID=""
   ! kill -0 "$APPKIT_PID" 2>/dev/null
   ! kill -0 "$LIFECYCLE_SERVER_PID" 2>/dev/null
-  printf 'PASS AppKit lifecycle and Stop action terminated the dashboard child.\n'
+  grep -qx 'desktop_action=true' "$LIFECYCLE_RESULT"
+  grep -qx 'micro_action=true' "$LIFECYCLE_RESULT"
+  grep -qx 'stop_action=true' "$LIFECYCLE_RESULT"
+  grep -qx 'quit_action=true' "$LIFECYCLE_RESULT"
+  printf 'PASS AppKit menu actions opened both surfaces, stopped the child and quit.\n'
+
+  BROKEN_APP="$TMP/Rust-Boy-broken.app"
+  FAILURE_RESULT="$TMP/failure-result"
+  cp -R "$APP" "$BROKEN_APP"
+  rm "$BROKEN_APP/Contents/MacOS/pipboy"
+  PIPBOY_HOME="$TMP/failure-data" RUSTBOY_FAILURE_SMOKE=1 RUSTBOY_DISABLE_BROWSER_OPEN=1 \
+    RUSTBOY_FAILURE_RESULT_FILE="$FAILURE_RESULT" "$BROKEN_APP/Contents/MacOS/RustBoy" &
+  FAILURE_APP_PID=$!
+  for _ in $(seq 1 100); do
+    [[ -s "$FAILURE_RESULT" ]] && break
+    if ! kill -0 "$FAILURE_APP_PID" 2>/dev/null; then wait "$FAILURE_APP_PID"; fi
+    sleep 0.1
+  done
+  test -s "$FAILURE_RESULT"
+  wait "$FAILURE_APP_PID"
+  FAILURE_APP_PID=""
+  grep -qx 'retry_dispatched=true' "$FAILURE_RESULT"
+  grep -qx 'retry_available=true' "$FAILURE_RESULT"
+  grep -q '^state=Dashboard unavailable' "$FAILURE_RESULT"
+  printf 'PASS AppKit shows a retry action after the bundled service fails to start.\n'
 fi
