@@ -16,25 +16,24 @@
     {
       "id": "MAC-REL-01",
       "title": "Build and smoke-test a native menu-bar app bundle",
-      "status": "accepted_software",
+      "status": "implemented_unverified",
       "paths": [
         "macos/RustBoyLauncher.swift",
         "scripts/build-macos-app.sh",
         "tools/test_macos_app.sh",
+        "tools/test_macos_universal.sh",
         ".github/workflows/rust.yml"
       ],
       "local_evidence": {
         "swift": "Swift app host compiled for arm64-apple-macosx13.0.",
-        "smoke": "tools/test_macos_app.sh passed: app bundle/plist/executable checks, bundled loopback server startup, desktop and micro GETs, and refusal to produce an unsigned DMG.",
+        "smoke": "tools/test_macos_app.sh passed for the native host architecture: app bundle/plist/executable checks, bundled loopback server startup, desktop and micro GETs, and refusal to produce an unsigned DMG.",
+        "universal": "Universal arm64+x86_64 builder and CI smoke are implemented; local x86_64 Rust standard library was unavailable in the constrained environment, so this slice awaits exact-head CI.",
         "limitation": "The smoke uses a headless test path and does not launch the AppKit status menu."
       },
-      "ci_evidence": {
-        "head": "12f18a0e3e9b0f33226aa99eba900bab0857be82",
-        "run": "https://github.com/pskeffington/pip_boy/actions/runs/41777150345",
-        "result": "7/7 jobs passed, including native macOS bundle smoke and AppKit startup/Stop lifecycle with child exit"
-      },
+      "ci_evidence": "pending for the universal bundle code head",
       "acceptance": [
-        "macOS native workflow builds the bundle and passes local loopback smoke",
+        "macOS native workflow builds and verifies arm64+x86_64 Rust and Swift slices",
+        "Universal bundle starts and serves desktop and micro loopback routes on the runner",
         "Hosted macOS CI launches AppKit, starts the child dashboard, invokes Stop and verifies child exit",
         "Interactive status-menu selection, Quit and accessibility verified in a logged-in user session"
       ]

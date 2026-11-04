@@ -6,6 +6,15 @@ The new app builder assembles a native menu-bar executable and the Rust dashboar
 
 The local headless smoke exercises the bundled Rust service. Hosted macOS CI starts the AppKit host and exercises its Stop lifecycle, but does not verify menu selection or use in a logged-in user session. The local LaunchServices environment rejects app launches, so interactive status-menu behavior, signed install, Gatekeeper, notarization, clean-account upgrade/uninstall and accessibility remain pending. No release artifact is signed or available.
 
+### Universal architecture follow-up (2026-11-04)
+
+The builder now accepts `universal-apple-darwin` and combines Rust plus Swift
+arm64 and x86_64 slices. The native macOS workflow installs the official Intel
+Rust standard library and checks both executable slices before starting the
+bundle and checking desktop/micro routes. The local environment could not add
+that Rust target, so this new universal slice has no local execution evidence;
+exact-head CI is pending. Intel hardware acceptance remains separate.
+
 ## RM-018 supervised child integration checkpoint — 2026-10-30 (local, not release acceptance)
 
 - The host install resolver was independently exercised with temporary install roots: a valid executable+manifest pin resolves, changed manifest bytes are denied, and symlinked package roots/manifests are denied. The targeted process suite now passes all 10 tests, including timeout kill/reap, unexpected exit, shutdown, audio-lease cleanup and a supported UI input over the child protocol. Re-running `tools/test_supervised_music_process.py` built the independent module into `/private/tmp` and passed the real Rust Music child handshake/activate/shutdown path under the host. Warnings-denied Clippy, formatting, package/component validators and UI regressions passed in this checkpoint.

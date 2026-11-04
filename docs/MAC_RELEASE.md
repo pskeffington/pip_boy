@@ -11,13 +11,18 @@ network service, module installation, or automatic update channel.
 ## Build and validate a local app
 
 Requirements: macOS 13 or newer, Xcode Command Line Tools, Rust 1.90+, Python
-3, and a default browser. The builder targets the current Rust host
-architecture; the produced architecture is printed and is not a universal
-binary unless that is explicitly built and verified.
+3, and a default browser. The builder can create arm64 or x86_64 bundles. A
+universal bundle is built by combining both Rust and Swift slices:
 
-    bash scripts/build-macos-app.sh
+    RUSTBOY_TARGET=universal-apple-darwin bash scripts/build-macos-app.sh
     open target/macos/Rust-Boy.app
     bash tools/test_macos_app.sh
+
+The universal build requires the Rust standard library for both
+`aarch64-apple-darwin` and `x86_64-apple-darwin`, plus Xcode's macOS SDK and
+`lipo`. CI installs the Intel Rust target, checks both executable slices, and
+starts the bundled dashboard on the runner's native architecture. Intel Mac
+hardware acceptance remains separate.
 
 The unsigned app bundle is for local validation only. The smoke test builds the
 Rust binary, assembles the app bundle, launches the native menu-bar host with
@@ -68,6 +73,8 @@ not been run and no signed/notarized artifact is available.
 ## Acceptance still required
 
 - Exact-head CI for the app-bundle launch smoke and release scripts.
+- Universal bundle slices compile and pass CI smoke; Intel physical-Mac
+  install and runtime acceptance remain pending.
 - The automated app smoke exercises the bundled Rust service in a headless
   mode. Hosted macOS CI also launches the AppKit host, confirms the dashboard
   child starts, invokes the Stop lifecycle path and checks that the child exits.
