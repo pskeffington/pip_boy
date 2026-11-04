@@ -70,7 +70,7 @@ tickets, and runs Gatekeeper assessment. It refuses to package without signing
 and notarization configuration. This repo currently has no configured Apple
 Developer ID certificate or notarization profile, so this final process has
 not been run and no signed/notarized artifact is available. Credential setup and
-release evidence requirements are tracked in [issue #94](https://github.com/pskeffington/pip_boy/issues/94). The current packager follow-up also fixes an uninitialized app path found during review; its regression assertion and local Mac smoke passed, while exact-head CI is pending. On a configured
+release evidence requirements are tracked in [issue #94](https://github.com/pskeffington/pip_boy/issues/94). Review found and fixed an uninitialized app path; exact corrected head `51a26c33a2661f2535830bed25d4fd96fe338fee` passed 7/7 CI jobs in [run 41791223195](https://github.com/pskeffington/pip_boy/actions/runs/41791223195). On a configured
 release runner it also refuses a dirty Git tree, validates the universal slices,
 preserves both notary submission responses and JSON logs, and writes a
 source-SHA/version/identifier/architecture/checksum manifest to the private
@@ -102,6 +102,7 @@ stapling and Gatekeeper assessment succeed.
   including actual AppKit desktop/micro/Stop/Quit actions, live-child shutdown,
   missing-service Retry, universal arm64+x86_64 bundle smoke, and the source-bound
   packaging regression.
+- Corrected packager head `51a26c33a2661f2535830bed25d4fd96fe338fee` passed 7/7 jobs in [run 41791223195](https://github.com/pskeffington/pip_boy/actions/runs/41791223195), including Rust stable and 1.90, Windows, adapter/manifest, native macOS, and universal bundle smoke jobs.
 - Universal bundle slices compile and pass CI smoke; Intel physical-Mac
   install and runtime acceptance remain pending.
 - Hosted AppKit CI verifies programmatic menu target/action dispatch.

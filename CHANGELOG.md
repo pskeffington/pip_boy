@@ -9,7 +9,7 @@
 - Extend Developer ID packaging to require clean source and universal slices, preserve Apple notarization submissions/logs per attempt, and write source/checksum evidence before installing the final DMG.
 - Pass 7/7 exact-head CI at `7d77c9d`, including AppKit menu/retry/live-Quit checks and the universal bundle smoke ([run 41786181479](https://github.com/pskeffington/pip_boy/actions/runs/41786181479)).
 - Bind Developer ID release provenance to the source SHA by building from a clean `git archive` export and ignoring prebuilt app/binary overrides; the exact-head 7/7 CI run `41787914386` validates this invariant.
-- Fix credentialed packaging's temporary app-path initialization and add a regression assertion; local Mac bundle/loopback and repository validators pass, with exact-head CI pending.
+- Fix credentialed packaging's temporary app-path initialization and add a regression assertion; corrected head `51a26c3` passed 7/7 jobs in [run 41791223195](https://github.com/pskeffington/pip_boy/actions/runs/41791223195).
 - Keep Developer ID credentials, notarization, Gatekeeper installation, logged-in user accessibility, and production publication pending.
 
 ## 2026-11-03 — Mac menu-bar packaging candidate
