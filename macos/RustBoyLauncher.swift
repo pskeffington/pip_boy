@@ -8,6 +8,7 @@ final class RustBoyAppDelegate: NSObject, NSApplicationDelegate {
     private var dashboardURL: URL?
     private var pendingPath = "/"
     private var outputBuffer = ""
+    private var lifecycleSmokeScheduled = false
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
@@ -27,7 +28,17 @@ final class RustBoyAppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func openDashboard() { open(path: "/") }
     @objc private func openMicroHUD() { open(path: "/micro") }
-    @objc private func stopDashboard() { stopServer(); rebuildMenu() }
+    @objc private func stopDashboard() {
+        let childPID = server?.processIdentifier ?? 0
+        stopServer()
+        rebuildMenu()
+        guard ProcessInfo.processInfo.environment["RUSTBOY_LIFECYCLE_SMOKE"] == "1",
+              let resultFile = ProcessInfo.processInfo.environment["RUSTBOY_LIFECYCLE_RESULT_FILE"] else {
+            return
+        }
+        try? "\(childPID)\n".write(toFile: resultFile, atomically: true, encoding: .utf8)
+        NSApp.terminate(nil)
+    }
     @objc private func quit() { NSApp.terminate(nil) }
 
     private func open(path: String) {
@@ -132,6 +143,15 @@ final class RustBoyAppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(NSMenuItem(title: "Quit Rust-Boy", action: #selector(quit), keyEquivalent: "q"))
         for item in menu.items where item.action != nil { item.target = self }
         statusItem.menu = menu
+        guard !lifecycleSmokeScheduled,
+              dashboardURL != nil,
+              ProcessInfo.processInfo.environment["RUSTBOY_LIFECYCLE_SMOKE"] == "1" else {
+            return
+        }
+        lifecycleSmokeScheduled = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { [weak self] in
+            self?.stopDashboard()
+        }
     }
 }
 

@@ -244,6 +244,8 @@ jobs:
       - name: macOS app bundle and loopback launch acceptance
         if: matrix.os == 'macos-latest'
         shell: bash
+        env:
+          RUSTBOY_TEST_APPKIT: "1"
         run: bash tools/test_macos_app.sh
       - name: Native Windows ConPTY terminal journey
         if: matrix.os == 'windows-latest'
