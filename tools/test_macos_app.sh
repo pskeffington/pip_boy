@@ -13,12 +13,14 @@ FAILURE_APP_PID=""
 QUIT_LIVE_APP_PID=""
 BUNDLE_ID="org.rustboy.desktop.test"
 cleanup() {
-  [[ -n "$SERVER_PID" ]] && kill "$SERVER_PID" 2>/dev/null || true
-  [[ -n "$APP_PID" ]] && kill "$APP_PID" 2>/dev/null || true
-  [[ -n "$LIFECYCLE_SERVER_PID" ]] && kill "$LIFECYCLE_SERVER_PID" 2>/dev/null || true
-  [[ -n "$LIFECYCLE_APP_PID" ]] && kill "$LIFECYCLE_APP_PID" 2>/dev/null || true
-  [[ -n "$FAILURE_APP_PID" ]] && kill "$FAILURE_APP_PID" 2>/dev/null || true
-  [[ -n "$QUIT_LIVE_APP_PID" ]] && kill "$QUIT_LIVE_APP_PID" 2>/dev/null || true
+  for pid in "$SERVER_PID" "$APP_PID" "$LIFECYCLE_SERVER_PID" \
+    "$LIFECYCLE_APP_PID" "$FAILURE_APP_PID" "$QUIT_LIVE_APP_PID"; do
+    [[ -n "$pid" ]] || continue
+    for child_pid in $(pgrep -P "$pid" 2>/dev/null || true); do
+      kill -KILL "$child_pid" 2>/dev/null || true
+    done
+    kill -KILL "$pid" 2>/dev/null || true
+  done
   [[ -n "$APP_PID" ]] && wait "$APP_PID" 2>/dev/null || true
   [[ -n "$LIFECYCLE_APP_PID" ]] && wait "$LIFECYCLE_APP_PID" 2>/dev/null || true
   [[ -n "$FAILURE_APP_PID" ]] && wait "$FAILURE_APP_PID" 2>/dev/null || true
@@ -96,7 +98,7 @@ wait_for_app_exit() {
     fi
     sleep 0.1
   done
-  kill "$pid" 2>/dev/null || true
+  kill -KILL "$pid" 2>/dev/null || true
   wait "$pid" 2>/dev/null || true
   printf 'AppKit smoke process %s did not exit within 30 seconds.\n' "$pid" >&2
   return 1
