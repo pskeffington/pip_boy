@@ -14,6 +14,12 @@ Develop the Rust-Boy host into a production-capable, offline-first, one-package-
 4. Implement the smallest vertical slice with tests and proof; update task status only with links to real code/test evidence. If CI is blocked by startup_failure or has zero jobs, mark `blocked_ci`, not `passed`.
 5. On every pass update relevant docs, machine-readable index, command help, compatibility notes and release evidence; explicitly list what is implemented, tested, simulated, not connected, or still requires hardware verification.
 
+### Current execution checkpoint — 2026-11-03
+
+PR [#88](https://github.com/pskeffington/pip_boy/pull/88) is merged to `main` at `1ba2b8f019cbd3b61b36c89171ddbbb5941f829d`. Its exact head `457d9659d6e0ee29a6663ade0bae6b3875b2e969` passed 7/7 jobs in [Actions run 41127024688](https://github.com/pskeffington/pip_boy/actions/runs/41127024688), including the terminal bridge and full-screen TUI palette. TC-A02 is software-verified at that exact merged scope. A follow-up now adds an executor metadata recheck, read-only curated RADIO listing, and desktop/micro palette through the same Rust dispatcher; local gates pass, but exact-head CI is pending. Preserve that distinction and do not call undiscovered packages installed or hardware-ready.
+
+See [the November 3 execution packet](docs/CODEX_PASS_2026-11-03.md) for the reconciled #83/#86/#87/#89/#91 state and the exact CI evidence. Open non-mergeable drafts must be synchronized and revalidated before merge.
+
 ## Terminal command and module rules
 
 - `crates/pipboy/src/terminal_commands.rs` is a provisional offline-only command prompt, NOT the final shared dispatcher. Do not copy or embed its verb handling separately in TUI/GUI. Extract a typed parser/catalog/dispatcher into `pipboy-core` first, then migrate callers one at a time with compatibility tests.
@@ -32,6 +38,7 @@ The single coordinator owns the queue, cross-module contracts, GitHub PR merge d
 - **ADAPTER agent:** TC-A03 approved RADIO/MAP native handlers and lifecycle, then TV/COMMS only after actual installed handler contracts; depends on TC-A01.
 - **SECURITY/QA agent:** TC-A04 negative tests, permission/revocation and CI evidence, can begin independently; gates every merge.
 - **GUI agent:** TC-A05 shared desktop/micro command palette after TC-A01 and TC-A02; no duplicate dispatcher.
+- **HARDWARE_PI agent:** Prepare repeatable Pi 5 HDMI evidence capture; no physical result without actual-device records.
 - **RELEASE agent:** TC-A06 documentation, regression, CI and release matrix after predecessors.
 
 Assign concrete file ownership per PR; if two agents need the same file, serialize their changes or coordinate a single PR. Always inspect versioned source before changing it.

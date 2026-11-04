@@ -12,7 +12,7 @@ class Element {
     this.tagName = tag; this.ownerDocument = document; this.children = [];
     this.attributes = {}; this.dataset = {}; this.events = new Map();
     this.className = ""; this.text = ""; this.clientHeight = 210;
-    this.scrollHeight = 210; this.open = false;
+    this.scrollHeight = 210; this.open = false; this.value = ""; this.disabled = false;
     this.classList = {
       add: name => { this.className += " " + name; },
       remove: name => { this.className = this.className.split(" ").filter(x => x !== name).join(" "); },
@@ -71,12 +71,18 @@ const packageFixture = {
     {manifest:{name:"<img src=x>",package_id:"org.test.untrusted"},installed:false,activatable:false}
   ]
 };
+const commandFixture = {commands:[
+  {tool_id:"net-lab",verb:"cidr",arguments:"network_input",discoverable:true,side_effect:"read_only",required_scope:null,confirmation_required:false,connectivity:"offline"},
+  {tool_id:"radio",verb:"stations",arguments:"none",discoverable:true,side_effect:"device",required_scope:"radio.receive",confirmation_required:true,connectivity:"network"}
+]};
+let commandRequest = null;
 const context = vm.createContext({document, window, Element, console, Intl, Date,
   setTimeout:() => 1, clearTimeout() {}, setInterval() {},
   MutationObserver:class {observe() {}},
-  fetch:async url => {
+  fetch:async (url, options = {}) => {
     requests.push(url);
-    return {ok:true,json:async()=>url==="/api/packages"?packageFixture:url==="/api/packages/select"?{active_package_id:"org.rustboy.tv",view:{title:"TV",text:"Ready",items:["Channel 1"]}}:fixture};
+    if (url === "/api/command") commandRequest = JSON.parse(options.body);
+    return {ok:true,json:async()=>url==="/api/packages"?packageFixture:url==="/api/commands"?commandFixture:url==="/api/command"?{output:"10.0.0.0/24",status:"succeeded"}:url==="/api/packages/select"?{active_package_id:"org.rustboy.tv",view:{title:"TV",text:"Ready",items:["Channel 1"]}}:fixture};
   }
 });
 vm.runInContext(fs.readFileSync(path.join(assets, "micro.js"), "utf8"), context);
@@ -172,6 +178,27 @@ const tiles = () => content.querySelectorAll(".tile");
   assert.deepEqual(requests,["/api/state","/api/packages","/api/packages/select"],"Untrusted package row cannot dispatch a request");
   document.getElementById("close-modules").click();
   assert.equal(moduleDialog.open,false,"The module switcher has a visible close action");
+  document.getElementById("micro-settings").click();
+  const commandButton = walk(content).find(x => x.textContent === "OFFLINE COMMANDS");
+  assert.ok(commandButton, "Host Settings exposes the shared offline command palette");
+  commandButton.click();
+  await new Promise(setImmediate);
+  const commandDialog = document.getElementById("micro-command-dialog");
+  assert.equal(commandDialog.open, true);
+  assert.equal(requests.at(-1), "/api/commands", "Opening the palette only reads descriptors");
+  assert.equal(requests.includes("/api/command"), false, "Catalog browsing does not dispatch");
+  document.getElementById("micro-command-tool").value = "net-lab";
+  document.getElementById("micro-command-tool").events.get("change")();
+  document.getElementById("micro-command-verb").value = "cidr";
+  document.getElementById("micro-command-verb").events.get("change")();
+  document.getElementById("micro-command-args").value = "10.0.0.0/24";
+  assert.equal(requests.includes("/api/command"), false, "Selecting a tool and verb does not dispatch");
+  document.getElementById("micro-command-run").click();
+  await new Promise(setImmediate);
+  assert.deepEqual(commandRequest, {tool_id:"net-lab",command:"cidr 10.0.0.0/24"});
+  assert.equal(document.getElementById("micro-command-output").textContent, "10.0.0.0/24");
+  assert.equal(requests.at(-1), "/api/command");
+  commandDialog.close();
   // A resize must leave mounted tool editors intact.
   run('snapshot.active.profile = "role-0"; openTool("byte-lab")');
   const editor = content.children[0];

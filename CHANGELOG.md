@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-11-03 — Shared terminal/TUI command palette and host reconciliation
+
+- Merge PR #88 at `1ba2b8f`; its exact source head passed 7/7 Actions jobs, including terminal/TUI, Rust 1.90, macOS and Windows checks.
+- Record TC-A02 as software-verified while keeping GUI palette, production package pins, OS isolation and Pi 5 physical acceptance open.
+- Prepare a Pi 5 HDMI smoke checklist and per-run evidence template; no device was probed or tested.
+
 ## 2026-10-30 — Bounded package process transport
 
 - Define `RBPK` v1 binary stdio framing with strict 16 KiB frames, identity and request sequencing, bounded text/library views, and a shared hello vector.

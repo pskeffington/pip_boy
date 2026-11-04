@@ -16,6 +16,8 @@ for(const id of [
   "workspace-title","status-role","status-modules","workspace-stage",
   "command-heading","command-authority","command-current-role","command-policy",
   "command-board","command-open-messages","command-open-viewport","command-open-modules",
+  "command-open-palette","host-command-dialog","host-command-tool","host-command-verb",
+  "host-command-args","host-command-run","host-command-output",
   "extension-content","messenger-dock","inspector-return",
   "host-packages-open","host-package-list",
   "details-heading","detail-info","detail-description","detail-status",
@@ -71,6 +73,11 @@ assert.match(js,/api\("\/api\/packages\/select", \{ package_id: packageId \}\)/,
   "Desktop package switching must use the host lifecycle route");
 assert.match(js,/api\("\/api\/packages\/intent", \{ action: "ui\.select", payload: \{ index \} \}\)/,
   "Desktop package input must use the host intent route");
+assert.match(js,/api\("\/api\/commands"\)/,"Command palette must read pinned host descriptors");
+assert.match(js,/api\("\/api\/command", \{tool_id:tool, command\}\)/,
+  "Command execution must route through the shared Rust dispatcher");
+assert.match(js,/hostCommandDescriptors = Array\.isArray\(result\.commands\)/,
+  "Browser must consume Rust-provided command descriptors");
 assert.match(js,/rolesPerPage\(\)/,
   "Mainline adaptive station paging must remain");
 assert.match(css,/\.module-card\s*\{[^}]*min-height:\s*48px/s,

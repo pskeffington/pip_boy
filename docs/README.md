@@ -8,9 +8,11 @@ Technical contracts, architecture decisions, research provenance and validation 
 
 [Agent instructions](../AGENTS.md) · [Execution work packets and release gates](TERMINAL_AGENT_EXECUTION.md) · [Machine-readable task queue](../catalog/terminal_agent_tasks.json) · [Core dispatcher issue](https://github.com/pskeffington/pip_boy/issues/73) · [Security/CI issue](https://github.com/pskeffington/pip_boy/issues/74). Software implementation is developed and validated through GitHub; operator-local side-by-side testing is not a prerequisite.
 
+[November 3 execution packet and PR reconciliation](CODEX_PASS_2026-11-03.md) records the #88 merge, the current local TC-A03/TC-A05 scope, unresolved PR bases, exact workflow evidence, and Pi 5 physical acceptance boundaries.
+
 ## Terminal module command integration
 
-[Terminal-to-module command surface](TERMINAL_MODULE_COMMANDS.md) documents TC-A01's typed offline catalog/parser/dispatcher, the terminal bridge migration now in source, and the remaining full-screen TUI/GUI work. TC-A01 passed all seven exact-head jobs in [Actions run 41003353102](https://github.com/pskeffington/pip_boy/actions/runs/41003353102); the terminal bridge's focused stable/Rust 1.90 tests are local pending exact-head CI.
+[Terminal-to-module command surface](TERMINAL_MODULE_COMMANDS.md) documents TC-A01 and merged TC-A02. PR #88 merged at `1ba2b8f`; exact source head passed 7/7 jobs in [Actions run 41127024688](https://github.com/pskeffington/pip_boy/actions/runs/41127024688). A follow-up with read-only RADIO metadata and desktop/micro palettes passes local checks; its exact-head CI and Chromium viewport job remain pending. Pi hardware evidence remains pending.
 
 ## Universal adapter SDK
 
@@ -23,6 +25,10 @@ Technical contracts, architecture decisions, research provenance and validation 
 ## Host package roadmap
 
 [Single-package viewport and phased host implementation gates](HOST_PACKAGE_ROADMAP.md) is the canonical target design; the existing desktop and micro interfaces remain active until their replacement gates pass.
+
+## Raspberry Pi 5 field evidence
+
+[Pi 5 hardware test baseline](https://github.com/pskeffington/pip_boy/blob/docs/longterm-codex-roadmap-20261031/docs/PI5_REFERENCE_TEST_BASELINE.md) defines PI5-00–PI5-08 in pending PR [#89](https://github.com/pskeffington/pip_boy/pull/89). The [Codex smoke checklist and evidence template](PI5_CODEX_SMOKE.md) prepares repeatable HDMI/keyboard/mouse runs; it does not record a physical result. All Pi field acceptance remains pending until actual device evidence is attached.
 
 ## Start here
 

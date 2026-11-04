@@ -114,6 +114,7 @@
                 <button type="button" id="command-open-messages">MESSAGES</button>
                 <button type="button" id="command-open-viewport">ACTIVE VIEW</button>
                 <button type="button" id="command-open-modules">MODULES</button>
+                <button type="button" id="command-open-palette">OFFLINE COMMANDS</button>
               </div>
             </aside>
           </div>
@@ -235,6 +236,20 @@
   <dialog id="location-settings-dialog" aria-label="Location and map settings">
     <button id="location-settings-close" type="button" class="secondary-button">CLOSE LOCATION SETTINGS</button>
     <div id="location-settings-host"></div>
+  </dialog>
+  <dialog id="host-command-dialog" aria-labelledby="host-command-heading">
+    <form id="host-command-form" method="dialog" class="host-command-form">
+      <h2 id="host-command-heading">OFFLINE COMMAND PALETTE</h2>
+      <p>Registered read-only handlers from pinned tools. Opening and selecting commands performs no action.</p>
+      <label>PINNED TOOL<select id="host-command-tool" required></select></label>
+      <label>COMMAND<select id="host-command-verb" required></select></label>
+      <label>ARGUMENTS<input id="host-command-args" type="text" maxlength="256" autocomplete="off"></label>
+      <div class="host-command-actions">
+        <button type="submit" value="cancel" class="secondary-button">CLOSE</button>
+        <button id="host-command-run" type="button" class="primary-button">RUN OFFLINE COMMAND</button>
+      </div>
+      <pre id="host-command-output" aria-live="polite">No command executed.</pre>
+    </form>
   </dialog>
 </body>
 </html>

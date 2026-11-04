@@ -126,6 +126,10 @@ impl CommandExecutor for OfflineExecutor {
                     let _ = writeln!(self.output, "{} / {}", op.id, op.name);
                 }
             }
+            HandlerId::RadioStations => {
+                self.output
+                    .push_str(&crate::radio::curated_station_listing());
+            }
             handler => {
                 let (mode, first, second) = match handler {
                     HandlerId::NetworkCidr4 => ("cidr", input, None),
@@ -152,6 +156,15 @@ impl CommandExecutor for OfflineExecutor {
 }
 
 fn run_action(action: TerminalAction) -> Result<String, String> {
+    if let TerminalAction::Execute(request) = &action {
+        if request.side_effect != pipboy_core::command_catalog::SideEffectClass::ReadOnly
+            || request.required_scope.is_some()
+            || request.confirmation_required
+            || request.connectivity != pipboy_core::command_catalog::ConnectivityState::Offline
+        {
+            return Err("terminal surfaces accept only offline read-only handlers".into());
+        }
+    }
     let mut output = String::new();
     let mut executor = OfflineExecutor::default();
     match command_catalog::dispatch(action, &mut executor)? {
@@ -312,6 +325,39 @@ mod tests {
         assert!(execute_tui_command("scan local", Some("net-lab"), &pinned).is_err());
         assert!(execute_tui_command("status", Some("host"), &["net-lab"]).is_err());
         assert!(execute_tui_command("select host", Some("net-lab"), &pinned).is_err());
+    }
+
+    #[test]
+    fn radio_stations_dispatches_static_metadata_and_keeps_direct_route() {
+        let action = command_catalog::parse_input("stations", Some("radio"), &["radio"])
+            .expect("radio must be pinned for dispatch");
+        let output = run_action(action).unwrap();
+        assert!(output.contains("CURATED DIRECTORY / published metadata, stream unchecked"));
+        assert!(output.contains("skylab | Skylab Radio (UK)"));
+        assert!(output.contains("no playback begins"));
+
+        let mut selected = None;
+        assert!(route("radio", &mut selected, &["radio"]).unwrap());
+        assert_eq!(selected, Some("radio"));
+        assert!(route("stations", &mut selected, &["radio"]).unwrap());
+        assert!(route("stations", &mut selected, &["host"]).is_err());
+    }
+
+    #[test]
+    fn terminal_dispatch_rechecks_offline_read_only_metadata() {
+        let board = Workbench::from_preset(&PRESETS[2]);
+        let pinned = pinned_tools(&board);
+        let mut request =
+            match command_catalog::parse_input("cidr 10.0.0.0/24", Some("net-lab"), &pinned)
+                .unwrap()
+            {
+                TerminalAction::Execute(request) => request,
+                other => panic!("expected execute request, got {other:?}"),
+            };
+        request.side_effect = pipboy_core::command_catalog::SideEffectClass::Network;
+        assert!(run_action(TerminalAction::Execute(request))
+            .unwrap_err()
+            .contains("offline read-only"));
     }
 
     #[test]

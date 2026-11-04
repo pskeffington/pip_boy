@@ -28,7 +28,8 @@ const ui = {
   toast: $("micro-toast"),
   rolePrev: $("role-prev"),
   roleNext: $("role-next"),
-  rolePaging: $("role-page")
+  rolePaging: $("role-page"),
+  commandDialog: $("micro-command-dialog")
 };
 const pages = ["stat", "role", "data", "map", "radio"];
 const pageTitles = {
@@ -67,6 +68,7 @@ let paletteOpen = false;
 let rolePage = 0;
 const MICRO_PAGE_SIZE = 6;
 const tilePageSizes = {};
+let commandDescriptors = [];
 
 function toolsPerPage(key) {
   // The Custom palette reserves a row for its settings action.
@@ -213,6 +215,66 @@ async function api(path, data) {
   }
   if (!response.ok) throw new Error(body.error || "Local dashboard request refused");
   return body;
+}
+
+function renderCommandVerbs() {
+  const tool = $("micro-command-tool").value;
+  const select = $("micro-command-verb");
+  select.replaceChildren();
+  commandDescriptors.filter(command => command.tool_id === tool).forEach(command => {
+    const option = make("option", "", command.verb + " · " + command.arguments);
+    option.value = command.verb;
+    select.append(option);
+  });
+  const descriptor = commandDescriptors.find(command => command.tool_id === tool && command.verb === select.value);
+  $("micro-command-args").disabled = !descriptor || descriptor.arguments === "none";
+  $("micro-command-args").value = "";
+}
+
+async function openCommandPalette() {
+  const output = $("micro-command-output");
+  output.textContent = "Loading pinned offline command descriptors…";
+  try {
+    const result = await api("/api/commands");
+    commandDescriptors = Array.isArray(result.commands)
+      ? result.commands.filter(command => command.discoverable && command.side_effect === "read_only"
+        && !command.required_scope && !command.confirmation_required && command.connectivity === "offline")
+      : [];
+    const tools = [...new Set(commandDescriptors.map(command => command.tool_id))];
+    const select = $("micro-command-tool");
+    select.replaceChildren();
+    tools.forEach(tool => {
+      const option = make("option", "", tool);
+      option.value = tool;
+      select.append(option);
+    });
+    renderCommandVerbs();
+    output.textContent = commandDescriptors.length ? "No command executed." : "No registered offline handlers for pinned tools.";
+    if (!ui.commandDialog.open) ui.commandDialog.showModal();
+  } catch (error) {
+    output.textContent = "COMMAND CATALOG UNAVAILABLE · " + error.message;
+    if (!ui.commandDialog.open) ui.commandDialog.showModal();
+  }
+}
+
+async function runCommandPalette() {
+  const tool = $("micro-command-tool").value;
+  const verb = $("micro-command-verb").value;
+  const descriptor = commandDescriptors.find(command => command.tool_id === tool && command.verb === verb);
+  if (!descriptor) return;
+  const args = $("micro-command-args").value.trim();
+  const command = args ? descriptor.verb + " " + args : descriptor.verb;
+  const output = $("micro-command-output");
+  output.textContent = "RUNNING OFFLINE HANDLER…";
+  $("micro-command-run").disabled = true;
+  try {
+    const result = await api("/api/command", {tool_id:tool, command});
+    output.textContent = typeof result.output === "string" ? result.output : "Command completed without text output.";
+  } catch (error) {
+    output.textContent = "DENIED · " + error.message;
+  } finally {
+    $("micro-command-run").disabled = false;
+  }
 }
 
 function activeProfile() {
@@ -449,6 +511,7 @@ function showConf() {
   root.append(current);
   const effects = make("div", "button-row");
   effects.append(
+    button("OFFLINE COMMANDS", openCommandPalette, "micro-button"),
     button(reducedEffects ? "CRT OFF" : "CRT ON", () => {
       reducedEffects = !reducedEffects;
       document.body.classList.toggle("scanlines-off", reducedEffects);
@@ -859,6 +922,9 @@ function init() {
   });
   ui.tabs.forEach((item) => item.addEventListener("click", () => setTab(item.dataset.tab)));
   $("micro-settings").addEventListener("click", () => setTab("conf"));
+  $("micro-command-tool").addEventListener("change", renderCommandVerbs);
+  $("micro-command-verb").addEventListener("change", renderCommandVerbs);
+  $("micro-command-run").addEventListener("click", () => { void runCommandPalette(); });
   $("micro-modules").addEventListener("click", openModuleSwitcher);
   $("close-modules").addEventListener("click", () => ui.modulesDialog.close());
   ui.back.addEventListener("click", back);

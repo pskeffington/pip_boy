@@ -138,6 +138,10 @@ async function main() {
         ref.includes("scenario=scout")?"scout":ref.includes("scenario=security")?"security":"default";
       return send(200,JSON.stringify(state(scenario)),"application/json");
     }
+    if(url.pathname==="/api/commands")return send(200,JSON.stringify({commands:[
+      {tool_id:"host",verb:"status",arguments:"none",discoverable:true,side_effect:"read_only",required_scope:null,confirmation_required:false,connectivity:"offline"},
+      {tool_id:"net-lab",verb:"cidr",arguments:"network_input",discoverable:true,side_effect:"read_only",required_scope:null,confirmation_required:false,connectivity:"offline"}
+    ]}),"application/json");
     if(url.pathname.startsWith("/assets/")){
       const name=url.pathname.slice("/assets/".length);
       if(!/^[a-z0-9-]+\.(js|css)$/.test(name))return send(403,"Denied","text/plain");
@@ -152,7 +156,7 @@ async function main() {
   });
   try{
     for(const [width,height,scenario] of [
-      [480,320,"default"],[800,480,"default"],[1280,720,"default"],
+      [480,320,"default"],[800,480,"default"],[1024,768,"default"],[1440,900,"default"],[1280,720,"default"],
       [1920,1080,"default"],[480,320,"custom"],[1280,720,"custom"],
       [480,320,"scout"],[800,480,"security"]
     ]){
@@ -170,6 +174,7 @@ async function main() {
       assert.deepEqual(r.initial.commonTabs,["COMMAND","MODULES","VIEWPORT","MESSAGES","SETTINGS"],"Role-independent nav mismatch");
       assert.equal(r.commandAccessible,true,"Vault mission command cannot be opened");
       assert.equal(r.commandNavVisible,true,"Mission command action rail missing");
+      assert.deepEqual(r.commandPalette,{open:true,visible:true,fits:true,toolOptions:2,output:"No command executed."},"Shared command palette should fit and remain inert while browsing");
       if (scenario==="default") {
         assert.equal(r.commandStartup,true,"Overseer must open in mission command by default");
         assert.equal(r.commandFits,true,"Overseer command stage clipped");

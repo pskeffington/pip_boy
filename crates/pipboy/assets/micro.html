@@ -112,6 +112,22 @@
     </div>
   </dialog>
 
+  <dialog id="micro-command-dialog" class="roles-dialog" aria-labelledby="micro-command-heading">
+    <form id="micro-command-form" class="dialog-wrap" method="dialog">
+      <div class="dialog-head">
+        <span class="micro-label">HOST / OFFLINE COMMANDS</span>
+        <button type="submit" value="cancel" class="tiny-button" aria-label="Close command palette">✕</button>
+      </div>
+      <h2 id="micro-command-heading">COMMAND PALETTE</h2>
+      <p class="dialog-copy">Pinned read-only handlers. Browsing the catalog does not run a command.</p>
+      <label class="micro-command-field">TOOL<select id="micro-command-tool" required></select></label>
+      <label class="micro-command-field">COMMAND<select id="micro-command-verb" required></select></label>
+      <label class="micro-command-field">ARGUMENTS<input id="micro-command-args" type="text" maxlength="256" autocomplete="off"></label>
+      <button id="micro-command-run" type="button" class="micro-button solid">RUN OFFLINE COMMAND</button>
+      <pre id="micro-command-output" class="micro-command-output" aria-live="polite">No command executed.</pre>
+    </form>
+  </dialog>
+
   <div id="micro-toast" class="micro-toast" role="status" aria-live="polite" hidden></div>
 </body>
 </html>

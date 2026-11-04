@@ -63,6 +63,7 @@ let radioPaneOpen = false;
 let desktopHostPackage = null;
 let extensionMode = "map";
 let queuedSiteId = null;
+let hostCommandDescriptors = [];
 const PAGE_SIZE = 6;
 const rolesPerPage = () => window.innerHeight <= 480 ? 2 : PAGE_SIZE;
 const cardsPerPage = () => window.innerHeight <= 480 ? 4 : PAGE_SIZE;
@@ -282,6 +283,67 @@ async function api(path, data) {
   }
   if (!response.ok) throw new Error(payload.error || "Dashboard request failed");
   return payload;
+}
+
+function populateHostCommandVerbs() {
+  const tool = byId("host-command-tool").value;
+  const select = byId("host-command-verb");
+  select.replaceChildren();
+  hostCommandDescriptors.filter(command => command.tool_id === tool).forEach(command => {
+    const option = el("option", "", command.verb + " · " + command.arguments);
+    option.value = command.verb;
+    select.append(option);
+  });
+  const descriptor = hostCommandDescriptors.find(command => command.tool_id === tool && command.verb === select.value);
+  byId("host-command-args").disabled = !descriptor || descriptor.arguments === "none";
+  byId("host-command-args").value = "";
+}
+
+async function openHostCommandPalette() {
+  const dialog = byId("host-command-dialog");
+  const output = byId("host-command-output");
+  output.textContent = "Loading pinned offline command descriptors…";
+  try {
+    const result = await api("/api/commands");
+    hostCommandDescriptors = Array.isArray(result.commands)
+      ? result.commands.filter(command => command.discoverable && command.side_effect === "read_only"
+        && !command.required_scope && !command.confirmation_required && command.connectivity === "offline")
+      : [];
+    const tools = [...new Set(hostCommandDescriptors.map(command => command.tool_id))];
+    const toolSelect = byId("host-command-tool");
+    toolSelect.replaceChildren();
+    tools.forEach(tool => {
+      const option = el("option", "", tool);
+      option.value = tool;
+      toolSelect.append(option);
+    });
+    populateHostCommandVerbs();
+    output.textContent = hostCommandDescriptors.length ? "No command executed." : "No registered offline handlers for pinned tools.";
+    if (!dialog.open) dialog.showModal();
+  } catch (error) {
+    output.textContent = "COMMAND CATALOG UNAVAILABLE · " + error.message;
+    if (!dialog.open) dialog.showModal();
+  }
+}
+
+async function runHostCommand() {
+  const tool = byId("host-command-tool").value;
+  const verb = byId("host-command-verb").value;
+  const descriptor = hostCommandDescriptors.find(command => command.tool_id === tool && command.verb === verb);
+  if (!descriptor) return;
+  const args = byId("host-command-args").value.trim();
+  const command = args ? descriptor.verb + " " + args : descriptor.verb;
+  const output = byId("host-command-output");
+  output.textContent = "RUNNING OFFLINE HANDLER…";
+  byId("host-command-run").disabled = true;
+  try {
+    const result = await api("/api/command", {tool_id:tool, command});
+    output.textContent = typeof result.output === "string" ? result.output : "Command completed without text output.";
+  } catch (error) {
+    output.textContent = "DENIED · " + error.message;
+  } finally {
+    byId("host-command-run").disabled = false;
+  }
 }
 
 function profile() {
@@ -855,6 +917,10 @@ byId("radio-view-toggle").addEventListener("click", toggleRadioSubview);
 byId("command-open-messages").addEventListener("click", () => activateStage("messages"));
 byId("command-open-viewport").addEventListener("click", () => activateStage("viewport"));
 byId("command-open-modules").addEventListener("click", () => activateStage("modules"));
+byId("command-open-palette").addEventListener("click", () => { void openHostCommandPalette(); });
+byId("host-command-tool").addEventListener("change", populateHostCommandVerbs);
+byId("host-command-verb").addEventListener("change", populateHostCommandVerbs);
+byId("host-command-run").addEventListener("click", () => { void runHostCommand(); });
 byId("host-packages-open").addEventListener("click", () => { void loadHostPackages(); });
 byId("inspector-return").addEventListener("click", () => { activateStage("modules"); activatePane("workspace"); });
 window.addEventListener("resize", () => { if (!snapshot) return; renderRoles(); renderModules(); });

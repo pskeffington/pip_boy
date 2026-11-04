@@ -2,17 +2,17 @@
 
 **Mode:** GitHub-first, agent-driven, no required operator side-by-side/local terminal testing for software gates.
 **Source of truth:** [machine-readable queue](../catalog/terminal_agent_tasks.json), [agent instructions](../AGENTS.md), [terminal contract](TERMINAL_MODULE_COMMANDS.md), [host roadmap](HOST_PACKAGE_ROADMAP.md).
-**Current implementation:** TC-A01 typed bounded command catalog/parser/dispatcher and structured outcomes passed all seven exact-head jobs in [Actions run 41003353102](https://github.com/pskeffington/pip_boy/actions/runs/41003353102). The terminal bridge now uses this parser/dispatcher locally; focused tests pass on stable and Rust 1.90. Full-screen `tui` migration remains the next TC-A02 slice, after which TC-A03 and TC-A05 proceed. The current exact PR head still needs hosted validation. MAP / TV / RADIO / COMMS reference sockets remain uninstalled and unavailable.
+**Current implementation:** TC-A01 and TC-A02 are software-verified. PR [#88](https://github.com/pskeffington/pip_boy/pull/88) merged at `1ba2b8f`; its exact head `457d965` passed all seven jobs in [Actions run 41127024688](https://github.com/pskeffington/pip_boy/actions/runs/41127024688). A local follow-up implements read-only curated RADIO metadata and a desktop/micro palette through the same dispatcher; full local Rust gates and browser DOM journeys pass, while exact-head CI and Chromium viewport checks are pending. Live network/audio/SDR operations, MAP filesystem access, and TV/COMMS execution remain unavailable.
 
 ## Agent work packets
 
 | ID | Agent | Work | Dependencies | Merge gate |
 |---|---|---|---|---|
 | TC-A01 | CORE | Define first-party `CommandDescriptor`, `CommandRequest`, structured `CommandResult`, bounded parser and stable help/source registry in `pipboy-core`; map only inventoried offline handlers | None | 7/7 exact-head Actions jobs pass on source commit `7c4b06bc64f89cdb41b4be877b7b8742c130f38e` |
-| TC-A02 | TERMINAL | Route existing `terminal_commands` plus full-screen `tui` through dispatcher; terminal bridge is locally migrated, remaining work is TUI keyboard prompt + scoped toolset help, no privileged side effects from navigation | A01 | TUI snapshot/interaction and CLI compatibility tests; exact-head CI |
-| TC-A03 | ADAPTER | Bind actual read-only RADIO and offline MAP handlers, trusted adapter selection/lifecycle. Do not advertise TV/COMMS as runnable until installed and approved | A01 | Real native handler tests; denied manifests/capability gating |
+| TC-A02 | TERMINAL | Route CLI and full-screen TUI through shared catalog; preserve aliases and bounded palette | A01 | **Software-verified:** PR #88 merged; exact head and 7/7 Actions jobs linked above |
+| TC-A03 | ADAPTER | Expose only static curated RADIO station metadata through the typed catalog; MAP remains scope-gated, TV/COMMS unavailable | A01 | Local tests pass; exact-head CI pending |
 | TC-A04 | SECURITY/QA | Negative permission, source trust, bad input, cancellation, restart and CI-gate evidence tests | None | Reproducible CI job evidence, not green badges without jobs |
-| TC-A05 | GUI | One command palette for desktop and micro using shared host dispatcher, not browser-side command emulation | A01+A02 | Automated desktop and 480x320 viewport checks |
+| TC-A05 | GUI | Desktop and micro palettes resolve pinned descriptors and submit via shared Rust dispatcher | A01+A02 | Local DOM/Rust tests pass; Chromium viewport and exact-head CI pending |
 | TC-A06 | RELEASE | Validate release matrix and update root docs, help, catalog indices and status report | A02+A03+A04+A05 | Exact CI jobs and security signoff, field-gate separation |
 
 ## Next Codex instruction
@@ -39,7 +39,3 @@
 ## Release boundary
 
 Software acceptance is not hardware or production acceptance. No demand for operator Mac verification during coding. Hardware radio, physical Raspberry Pi, external streams, paired devices, emergency message delivery, regulated data and native isolation remain separate real-device/security release gates.
-
-## October 31 polishing work packet
-
-[Command consolidation, one-package viewport and regression checklist](POLISHING_PASS_2026-10-31.md) records the observed duplicate offline dispatcher in `terminal_commands.rs`, the still-separate TUI, and the ordered TC-A02 → TC-A03 → TC-A05 polishing gates. This is tasking only, not implementation or test evidence. Codex should start with TC-A02, verify any open PR first, and preserve existing command behavior.
