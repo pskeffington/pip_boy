@@ -36,9 +36,9 @@ final class RustBoyAppDelegate: NSObject, NSApplicationDelegate {
                let resultFile = ProcessInfo.processInfo.environment["RUSTBOY_LIFECYCLE_RESULT_FILE"] {
                 self.appendSmokeResult("quit_stopped_child_pid=\(childPID)", to: resultFile)
             }
-            NSApp.reply(toApplicationShouldTerminate: true)
+            NSApp.terminate(nil)
         }
-        return .terminateLater
+        return .terminateCancel
     }
 
     @objc private func openDashboard() { open(path: "/") }

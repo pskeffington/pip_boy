@@ -50,10 +50,11 @@ unavailable. Review found the test's unbounded app wait and a nested
 `waitUntilExit()` in the termination handler; the current worktree removes the
 nested wait and bounds test process waits. Hosted native macOS CI must verify
 this correction. Follow-up head `8f69b5a92194fe2e36b5c12b90e27adeee8942a0`
-also remained in progress at the AppKit smoke in [run
-41785148903](https://github.com/pskeffington/pip_boy/actions/runs/41785148903).
-The current worktree force-cleans isolated smoke processes and bounds cleanup
-waits. Rust formatting, warnings-denied Clippy, Rust workspace tests (a full
+failed at the live-Quit smoke in [run
+41785148903](https://github.com/pskeffington/pip_boy/actions/runs/41785148903): Stop
+and Retry passed, but Quit did not exit the host app within 30 seconds. The
+current worktree reissues termination after child shutdown and requires the
+child-stopped marker before checking app exit. Rust formatting, warnings-denied Clippy, Rust workspace tests (a full
 rerun passed after one transient 409), Rust 1.90 workspace check, repository
 validators, and smoke roster passed locally. Exact-head hosted CI remains
 pending for this source slice. No signing credentials are present, so no

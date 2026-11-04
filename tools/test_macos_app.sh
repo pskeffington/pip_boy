@@ -158,7 +158,8 @@ if [[ "${RUSTBOY_TEST_APPKIT:-0}" == "1" ]]; then
     if ! kill -0 "$QUIT_LIVE_APP_PID" 2>/dev/null; then wait "$QUIT_LIVE_APP_PID"; fi
     sleep 0.1
   done
-  test -s "$QUIT_LIVE_RESULT"
+  grep -qx 'quit_action=true' "$QUIT_LIVE_RESULT"
+  grep -q '^quit_stopped_child_pid=' "$QUIT_LIVE_RESULT"
   wait_for_app_exit "$QUIT_LIVE_APP_PID"
   QUIT_LIVE_APP_PID=""
   grep -qx 'quit_action=true' "$QUIT_LIVE_RESULT"

@@ -107,11 +107,11 @@ stapling and Gatekeeper assessment succeed.
   were unavailable. Review found an unbounded smoke-process wait and a
   redundant `waitUntilExit()` inside the termination handler; the current
   worktree removes the nested wait and bounds process waits to 30 seconds.
-  The next head `8f69b5a92194fe2e36b5c12b90e27adeee8942a0` also remained in
-  progress at the native AppKit smoke in [run
-  41785148903](https://github.com/pskeffington/pip_boy/actions/runs/41785148903).
-  The current worktree force-cleans isolated smoke processes and bounds all
-  wait paths. Exact-head CI for this follow-up is pending.
+  Head `8f69b5a92194fe2e36b5c12b90e27adeee8942a0` failed its live-Quit smoke
+  in [run 41785148903](https://github.com/pskeffington/pip_boy/actions/runs/41785148903):
+  Stop and Retry passed, but Quit did not exit the app within 30 seconds. The
+  current worktree reissues termination after child shutdown and requires the
+  child-stopped marker before checking app exit. Exact-head CI is pending.
 - Universal bundle slices compile and pass CI smoke; Intel physical-Mac
   install and runtime acceptance remain pending.
 - The automated app smoke exercises the bundled Rust service in a headless
