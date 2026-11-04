@@ -22,6 +22,9 @@ if [[ "$OUTPUT_NAME" != *.dmg || "$OUTPUT_PARENT" == "/" || -L "$OUTPUT_PARENT/$
   exit 2
 fi
 OUTPUT="$OUTPUT_PARENT/$OUTPUT_NAME"
+TMP="$(mktemp -d)"
+APP="$TMP/Rust-Boy.app"
+trap 'rm -rf "$TMP"' EXIT
 EVIDENCE_ROOT="${RUSTBOY_RELEASE_EVIDENCE_DIR:-$ROOT/target/macos/release-evidence}"
 mkdir -p "$EVIDENCE_ROOT"
 [[ ! -L "$EVIDENCE_ROOT" ]] || { printf 'Refusing symlink evidence root: %s\n' "$EVIDENCE_ROOT" >&2; exit 2; }
@@ -35,11 +38,9 @@ EVIDENCE_PARENT="$EVIDENCE_ROOT/$SOURCE_SHA"
 mkdir -p "$EVIDENCE_PARENT"
 EVIDENCE_DIR="$(mktemp -d "$EVIDENCE_PARENT/attempt.XXXXXX")"
 chmod 700 "$EVIDENCE_DIR"
-TMP="$(mktemp -d)"
 OUTPUT_STAGE="$(mktemp -d "$OUTPUT_PARENT/.rustboy-dmg.XXXXXX")"
 trap 'rm -rf "$TMP" "$OUTPUT_STAGE"' EXIT
 SOURCE_ROOT="$TMP/source"
-APP="$TMP/Rust-Boy.app"
 STAGE="$TMP/stage"
 DMG_CANDIDATE="$OUTPUT_STAGE/Rust-Boy.dmg"
 mkdir -p "$SOURCE_ROOT" "$STAGE"

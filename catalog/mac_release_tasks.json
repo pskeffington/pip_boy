@@ -10,6 +10,7 @@
     "blocked_credentials": "requires protected Apple signing or notarization credentials",
     "blocked_acceptance": "requires a clean interactive Mac or operator evidence",
     "accepted_software": "relevant automated software gates passed",
+    "follow_up_ci_pending": "a software correction passed local checks and awaits exact-head CI",
     "released": "signed, notarized, Gatekeeper-verified artifact and release evidence published"
   },
   "tasks": [
@@ -51,7 +52,7 @@
       "id": "MAC-REL-02",
       "title": "Sign and notarize a Developer ID app and DMG",
       "status": "blocked_credentials",
-      "implementation_status": "accepted_software",
+      "implementation_status": "follow_up_ci_pending",
       "paths": [
         "scripts/build-macos-app.sh",
         "scripts/package-macos-dmg.sh",
@@ -64,7 +65,7 @@
         "App and DMG signatures verify, notarization succeeds, and tickets staple",
         "Gatekeeper validates the stapled distribution"
       ],
-      "evidence": "The source-bound packaging implementation passed exact-head 7/7 CI at 708cf7aeb0eff3c6a657c33402d26fe640f739e8 in https://github.com/pskeffington/pip_boy/actions/runs/41787914386. The packager builds from a fresh git archive of the exact clean source SHA and ignores prebuilt app/binary overrides. No Apple signing identity or notarization profile is configured, so no signed artifact, notarization, or Gatekeeper result exists. Provisioning and evidence requirements are tracked in https://github.com/pskeffington/pip_boy/issues/94."
+      "evidence": "Source-bound packaging passed exact-head 7/7 CI at 708cf7aeb0eff3c6a657c33402d26fe640f739e8 in https://github.com/pskeffington/pip_boy/actions/runs/41787914386. Review found an uninitialized APP path in the later credentialed flow; the fix and regression assertion pass local Mac app/loopback smoke, with exact-head CI pending. The packager builds from a fresh git archive of the exact clean source SHA and ignores prebuilt app/binary overrides. No Apple signing identity or notarization profile is configured, so no signed artifact, notarization, or Gatekeeper result exists. Provisioning and evidence requirements are tracked in https://github.com/pskeffington/pip_boy/issues/94."
     },
     {
       "id": "MAC-REL-03",

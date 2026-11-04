@@ -50,6 +50,18 @@ grep -Fq 'env -u RUSTBOY_BINARY -u RUSTBOY_APP_PATH' "$ROOT/scripts/package-maco
 grep -Fq 'RUSTBOY_TARGET=universal RUSTBOY_BUNDLE_ID=org.rustboy.desktop' \
   "$ROOT/scripts/package-macos-dmg.sh"
 grep -Fq 'RUSTBOY_APP_OUTPUT="$APP"' "$ROOT/scripts/package-macos-dmg.sh"
+python3 - "$ROOT/scripts/package-macos-dmg.sh" <<'PY'
+import sys
+from pathlib import Path
+
+script = Path(sys.argv[1]).read_text(encoding="utf-8")
+app_assignment = script.index('APP="$TMP/Rust-Boy.app"')
+evidence_app_check = script.index('"$EVIDENCE_ROOT" == "$APP"')
+assert app_assignment < evidence_app_check, "APP must be initialized before evidence-path validation"
+assert 'trap \'rm -rf "$TMP"\' EXIT' in script[:evidence_app_check], (
+    "temporary source directory must be cleaned up on early validation failure"
+)
+PY
 printf 'PASS Developer ID packager builds only from the exact clean source SHA.\n'
 if [[ "${RUSTBOY_VERIFY_ICNS:-0}" == "1" ]]; then
   iconutil --convert iconset --output "$TMP/RustBoy.iconset" "$APP/Contents/Resources/RustBoy.icns"
