@@ -1,5 +1,7 @@
 # Rust-Boy | Evidence-based development roadmap
 
+> **October 31, 2026 coordination update:** Use [PRODUCTION_ROADMAP_2026_10_31.md](PRODUCTION_ROADMAP_2026_10_31.md) for current priority gates, proposed-vs-merged distinctions and release evidence. [CODEX_LONG_HORIZON.md](CODEX_LONG_HORIZON.md) is the continuous Codex execution contract. Historical snapshots below retain their original dates; do not infer current completion from them.
+
 ## Mainline integration status — 2026-10-25
 
 - LAN/UniFi connected-client inventory and DIAG ingestion are merged in PR #15; Linux stable, Rust 1.90, native macOS/Windows and catalog validation passed at `badabc5`.

@@ -1,0 +1,59 @@
+{
+  "schema_version": 1,
+  "purpose": "Planning-only hardware coding inventory; no device has been detected or certified by this file",
+  "reference_release_target": "rb-pi5-ref-a",
+  "profiles": [
+    {
+      "id": "rb-pi5-ref-a",
+      "reported_model": "Raspberry Pi 5",
+      "reported_availability": "planned_reference",
+      "identity": "unverified",
+      "class": "reference",
+      "current_display": "full_size_hdmi",
+      "input": ["keyboard", "mouse"],
+      "architecture": "unverified",
+      "ram_bytes": null,
+      "os": null,
+      "gates": ["PI5-00","PI5-01","PI5-02A","PI5-03","PI5-04","PI5-05","PI5-06","PI5-07","PI5-08"],
+      "deferred_gates": ["PI5-02B"],
+      "release_authority": "requires_physical_evidence"
+    },
+    {
+      "id": "rb-pi4-compat",
+      "reported_model": "Raspberry Pi 4 (uncertain)",
+      "reported_availability": "user_reported_inventory",
+      "identity": "unverified",
+      "class": "compatibility",
+      "current_display": "unknown",
+      "input": [],
+      "architecture": "unverified",
+      "ram_bytes": null,
+      "os": null,
+      "gates": ["HW-INV","HW-SMOKE","HW-UI","HW-MAP","HW-RADIO","HW-NET","HW-RESOURCE"],
+      "deferred_gates": ["HW-TOUCH"],
+      "release_authority": "none"
+    },
+    {
+      "id": "rb-pi3t-unidentified",
+      "reported_model": "Pi 3T (unverified device label)",
+      "reported_availability": "user_reported_inventory",
+      "identity": "unverified",
+      "class": "compatibility",
+      "current_display": "unknown",
+      "input": [],
+      "architecture": "unverified",
+      "ram_bytes": null,
+      "os": null,
+      "gates": ["HW-INV","HW-SMOKE","HW-RESOURCE"],
+      "deferred_gates": ["HW-UI","HW-MAP","HW-RADIO","HW-NET","HW-TOUCH"],
+      "release_authority": "none"
+    }
+  ],
+  "safety": {
+    "auto_network_probe": false,
+    "auto_hardware_activation": false,
+    "collect_serial_number": false,
+    "collect_ip_or_mac_address": false,
+    "accept_simulated_result_as_hardware": false
+  }
+}
