@@ -20,9 +20,11 @@ universal bundle is built by combining both Rust and Swift slices:
 
 The universal build requires the Rust standard library for both
 `aarch64-apple-darwin` and `x86_64-apple-darwin`, plus Xcode's macOS SDK and
-`lipo`. CI installs the Intel Rust target, checks both executable slices, and
-starts the bundled dashboard on the runner's native architecture. Intel Mac
-hardware acceptance remains separate.
+`lipo`. Exact head `db452596e8b10a42a5fb6d6187b7b0a30c79413b` passed 7/7 jobs
+in [Actions run 41778857053](https://github.com/pskeffington/pip_boy/actions/runs/41778857053).
+The native macOS job installed the Intel Rust target, checked both Rust and
+Swift executable slices, launched the universal bundle, and fetched desktop
+and micro routes. Intel Mac hardware acceptance remains separate.
 
 The unsigned app bundle is for local validation only. The smoke test builds the
 Rust binary, assembles the app bundle, launches the native menu-bar host with
@@ -72,7 +74,9 @@ not been run and no signed/notarized artifact is available.
 
 ## Acceptance still required
 
-- Exact-head CI for the app-bundle launch smoke and release scripts.
+- Exact-head CI for the app-bundle launch smoke and release scripts passed at
+  `db452596e8b10a42a5fb6d6187b7b0a30c79413b`; the AppKit startup/Stop lifecycle
+  also passed on its recorded ancestor head in run 41777150345.
 - Universal bundle slices compile and pass CI smoke; Intel physical-Mac
   install and runtime acceptance remain pending.
 - The automated app smoke exercises the bundled Rust service in a headless
