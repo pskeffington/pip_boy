@@ -9,11 +9,15 @@ The local headless smoke exercises the bundled Rust service. Hosted macOS CI sta
 ### Universal architecture follow-up (2026-11-04)
 
 The builder now accepts `universal-apple-darwin` and combines Rust plus Swift
-arm64 and x86_64 slices. The native macOS workflow installs the official Intel
-Rust standard library and checks both executable slices before starting the
-bundle and checking desktop/micro routes. The local environment could not add
-that Rust target, so this new universal slice has no local execution evidence;
-exact-head CI is pending. Intel hardware acceptance remains separate.
+arm64 and x86_64 slices. Exact head
+`db452596e8b10a42a5fb6d6187b7b0a30c79413b` passed 7/7 jobs in [Actions run
+41778857053](https://github.com/pskeffington/pip_boy/actions/runs/41778857053).
+The native macOS job installed the official Intel Rust standard library,
+checked both executable slices, started the bundle, and fetched desktop/micro
+routes. The local environment could not add that Rust target, so no local
+universal build is claimed. Intel hardware acceptance remains separate. The
+hosted AppKit startup/Stop lifecycle passed on ancestor source in run
+41777150345; interactive menu selection remains unverified.
 
 ## RM-018 supervised child integration checkpoint — 2026-10-30 (local, not release acceptance)
 
