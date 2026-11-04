@@ -80,7 +80,9 @@ stapling and Gatekeeper assessment succeed.
 If a release command fails after an attempt directory is created, the packager
 atomically marks its private `release-context.json` as `failed`, recording the
 source SHA, exit code and timestamp while preserving existing context. It does
-not capture command output or credential values in that record.
+not capture command output or credential values in that record. The hosted Mac
+regression invokes the actual EXIT handler with a controlled failure and checks
+that it preserves the exit code and removes only the temporary build paths.
 
 ## User data and support boundaries
 

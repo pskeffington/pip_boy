@@ -12,6 +12,7 @@
 - Fix credentialed packaging's temporary app-path initialization and add a regression assertion; corrected head `51a26c3` passed 7/7 jobs in [run 41791223195](https://github.com/pskeffington/pip_boy/actions/runs/41791223195).
 - Record failed credentialed release attempts as private atomic evidence with the source SHA, exit code, and timestamp; never persist command output or credentials.
 - Pass exact-head 7/7 CI at `350609d`, including native macOS universal bundle smoke ([run 41793673976](https://github.com/pskeffington/pip_boy/actions/runs/41793673976)).
+- Exercise the real release-attempt EXIT handler under an injected failure, preserving its exit status and cleaning temporary paths; mark the dependent publish task `blocked_dependency` while signing and clean-account acceptance remain open.
 - Keep Developer ID credentials, notarization, Gatekeeper installation, logged-in user accessibility, and production publication pending.
 
 ## 2026-11-03 — Mac menu-bar packaging candidate

@@ -50,11 +50,12 @@ grep -Fq 'env -u RUSTBOY_BINARY -u RUSTBOY_APP_PATH' "$ROOT/scripts/package-maco
 grep -Fq 'RUSTBOY_TARGET=universal RUSTBOY_BUNDLE_ID=org.rustboy.desktop' \
   "$ROOT/scripts/package-macos-dmg.sh"
 grep -Fq 'RUSTBOY_APP_OUTPUT="$APP"' "$ROOT/scripts/package-macos-dmg.sh"
-python3 - "$ROOT/scripts/package-macos-dmg.sh" <<'PY'
+python3 - "$ROOT/scripts/package-macos-dmg.sh" "$ROOT/scripts/macos_release_attempt.sh" <<'PY'
 import sys
 from pathlib import Path
 
 script = Path(sys.argv[1]).read_text(encoding="utf-8")
+attempt_handler = Path(sys.argv[2]).read_text(encoding="utf-8")
 app_assignment = script.index('APP="$TMP/Rust-Boy.app"')
 evidence_app_check = script.index('"$EVIDENCE_ROOT" == "$APP"')
 assert app_assignment < evidence_app_check, "APP must be initialized before evidence-path validation"
@@ -62,7 +63,8 @@ assert 'trap \'rm -rf "$TMP"\' EXIT' in script[:evidence_app_check], (
     "temporary source directory must be cleaned up on early validation failure"
 )
 assert "trap record_failed_attempt_and_cleanup EXIT" in script
-assert 'tools/record_macos_release_failure.py' in script
+assert 'source "$ROOT/scripts/macos_release_attempt.sh"' in script
+assert 'tools/record_macos_release_failure.py' in attempt_handler
 PY
 python3 - "$ROOT/tools/record_macos_release_failure.py" "$TMP/release-evidence" <<'PY'
 import json
@@ -93,6 +95,38 @@ subprocess.run([sys.executable, str(recorder), str(fresh_context), "def456", "2"
 fresh = json.loads(fresh_context.read_text(encoding="utf-8"))
 assert fresh["state"] == "failed" and fresh["exit_code"] == 2
 assert fresh["source_sha"] == "def456"
+PY
+ATTEMPT_DIR="$TMP/release-attempt-integration"
+mkdir -m 700 "$ATTEMPT_DIR"
+mkdir "$ATTEMPT_DIR/source" "$ATTEMPT_DIR/dmg-stage"
+printf '{"state":"in_progress","bundle_identifier":"org.rustboy.desktop"}\n' \
+  > "$ATTEMPT_DIR/release-context.json"
+set +e
+(
+  ROOT="$ROOT"
+  SOURCE_SHA="feedface"
+  EVIDENCE_DIR="$ATTEMPT_DIR"
+  TMP="$ATTEMPT_DIR/source"
+  OUTPUT_STAGE="$ATTEMPT_DIR/dmg-stage"
+  source "$ROOT/scripts/macos_release_attempt.sh"
+  trap record_failed_attempt_and_cleanup EXIT
+  exit 23
+)
+ATTEMPT_EXIT=$?
+set -e
+test "$ATTEMPT_EXIT" -eq 23
+test ! -e "$ATTEMPT_DIR/source"
+test ! -e "$ATTEMPT_DIR/dmg-stage"
+python3 - "$ATTEMPT_DIR/release-context.json" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+record = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert record["state"] == "failed"
+assert record["exit_code"] == 23
+assert record["source_sha"] == "feedface"
+assert record["bundle_identifier"] == "org.rustboy.desktop"
 PY
 printf 'PASS Developer ID packager builds only from the exact clean source SHA.\n'
 if [[ "${RUSTBOY_VERIFY_ICNS:-0}" == "1" ]]; then

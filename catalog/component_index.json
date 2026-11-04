@@ -353,6 +353,7 @@
         "macos/generate_app_icon.swift",
         "macos/build_icns.py",
         "scripts/build-macos-app.sh",
+        "scripts/macos_release_attempt.sh",
         "scripts/package-macos-dmg.sh",
         "tools/record_macos_release_failure.py",
         "tools/test_macos_app.sh",
