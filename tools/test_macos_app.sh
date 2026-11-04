@@ -87,6 +87,21 @@ curl --fail --silent --show-error "$URL" | grep -qi 'Rust-Boy'
 curl --fail --silent --show-error "${URL%/}/micro" | grep -qi 'micro'
 printf 'PASS macOS app bundle build and loopback dashboard launch: %s\n' "$URL"
 
+wait_for_app_exit() {
+  local pid="$1"
+  for _ in $(seq 1 300); do
+    if ! kill -0 "$pid" 2>/dev/null; then
+      wait "$pid"
+      return
+    fi
+    sleep 0.1
+  done
+  kill "$pid" 2>/dev/null || true
+  wait "$pid" 2>/dev/null || true
+  printf 'AppKit smoke process %s did not exit within 30 seconds.\n' "$pid" >&2
+  return 1
+}
+
 if [[ "${RUSTBOY_TEST_APPKIT:-0}" == "1" ]]; then
   PIPBOY_HOME="$TMP/appkit-data" RUSTBOY_LIFECYCLE_SMOKE=1 RUSTBOY_DISABLE_BROWSER_OPEN=1 \
     RUSTBOY_LIFECYCLE_RESULT_FILE="$LIFECYCLE_RESULT" \
@@ -103,7 +118,7 @@ if [[ "${RUSTBOY_TEST_APPKIT:-0}" == "1" ]]; then
   LIFECYCLE_SERVER_PID="$(sed -n 's/^stopped_child_pid=//p' "$LIFECYCLE_RESULT")"
   [[ "$LIFECYCLE_SERVER_PID" =~ ^[0-9]+$ ]]
   APPKIT_PID="$LIFECYCLE_APP_PID"
-  wait "$LIFECYCLE_APP_PID"
+  wait_for_app_exit "$LIFECYCLE_APP_PID"
   LIFECYCLE_APP_PID=""
   ! kill -0 "$APPKIT_PID" 2>/dev/null
   ! kill -0 "$LIFECYCLE_SERVER_PID" 2>/dev/null
@@ -125,7 +140,7 @@ if [[ "${RUSTBOY_TEST_APPKIT:-0}" == "1" ]]; then
     sleep 0.1
   done
   test -s "$FAILURE_RESULT"
-  wait "$FAILURE_APP_PID"
+  wait_for_app_exit "$FAILURE_APP_PID"
   FAILURE_APP_PID=""
   grep -qx 'retry_dispatched=true' "$FAILURE_RESULT"
   grep -qx 'retry_available=true' "$FAILURE_RESULT"
@@ -142,7 +157,7 @@ if [[ "${RUSTBOY_TEST_APPKIT:-0}" == "1" ]]; then
     sleep 0.1
   done
   test -s "$QUIT_LIVE_RESULT"
-  wait "$QUIT_LIVE_APP_PID"
+  wait_for_app_exit "$QUIT_LIVE_APP_PID"
   QUIT_LIVE_APP_PID=""
   grep -qx 'quit_action=true' "$QUIT_LIVE_RESULT"
   QUIT_STOPPED_PID="$(sed -n 's/^quit_stopped_child_pid=//p' "$QUIT_LIVE_RESULT")"

@@ -42,8 +42,14 @@ failed the native AppKit smoke in [run
 41782734765](https://github.com/pskeffington/pip_boy/actions/runs/41782734765)
 while six other jobs passed. Log inspection isolated a stale Quit marker
 assertion after Stop began terminating directly; the current worktree removes
-that assertion and waits for live-Quit child-shutdown evidence. Hosted native
-macOS CI must verify the correction. Rust formatting, warnings-denied Clippy, Rust workspace tests (a full
+that assertion and waits for live-Quit child-shutdown evidence. At head
+`fd41d089c6e812a5d56786619f0c937a27c05271`, six jobs passed in [run
+41783954586](https://github.com/pskeffington/pip_boy/actions/runs/41783954586),
+while native macOS AppKit smoke remained in progress and its live logs were
+unavailable. Review found the test's unbounded app wait and a nested
+`waitUntilExit()` in the termination handler; the current worktree removes the
+nested wait and bounds test process waits. Hosted native macOS CI must verify
+this correction. Rust formatting, warnings-denied Clippy, Rust workspace tests (a full
 rerun passed after one transient 409), Rust 1.90 workspace check, repository
 validators, and smoke roster passed locally. Exact-head hosted CI remains
 pending for this source slice. No signing credentials are present, so no

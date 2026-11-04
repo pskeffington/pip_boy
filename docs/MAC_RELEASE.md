@@ -100,8 +100,14 @@ stapling and Gatekeeper assessment succeed.
   AppKit smoke in [run 41782734765](https://github.com/pskeffington/pip_boy/actions/runs/41782734765)
   while six other jobs passed. The failure was a stale Quit marker assertion
   after Stop began terminating directly; the current worktree corrects that
-  assertion and waits for live-Quit child-shutdown evidence. Exact-head CI for
-  the fix is pending.
+  assertion and waits for live-Quit child-shutdown evidence. At current head
+  `fd41d089c6e812a5d56786619f0c937a27c05271`, six jobs passed in [run
+  41783954586](https://github.com/pskeffington/pip_boy/actions/runs/41783954586),
+  while the native macOS AppKit step remained in progress and its live job logs
+  were unavailable. Review found an unbounded smoke-process wait and a
+  redundant `waitUntilExit()` inside the termination handler; the current
+  worktree removes the nested wait and bounds process waits to 30 seconds.
+  Exact-head CI for this follow-up is pending.
 - Universal bundle slices compile and pass CI smoke; Intel physical-Mac
   install and runtime acceptance remain pending.
 - The automated app smoke exercises the bundled Rust service in a headless

@@ -97,11 +97,8 @@ final class RustBoyAppDelegate: NSObject, NSApplicationDelegate {
         process.standardOutput = output
         process.standardError = errors
         process.terminationHandler = { [weak self] _ in
-            DispatchQueue.global(qos: .utility).async {
-                process.waitUntilExit()
-                DispatchQueue.main.async {
-                    self?.processDidTerminate(process)
-                }
+            DispatchQueue.main.async {
+                self?.processDidTerminate(process)
             }
         }
         do {
