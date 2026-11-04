@@ -42,7 +42,12 @@ final class RustBoyAppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func startServer() {
-        guard server == nil else { return }
+        guard server == nil else {
+            if dashboardURL == nil {
+                pendingPath = "/"
+            }
+            return
+        }
         let executable = Bundle.main.bundleURL
             .appendingPathComponent("Contents/MacOS/pipboy", isDirectory: false)
         let process = Process()
@@ -52,14 +57,6 @@ final class RustBoyAppDelegate: NSObject, NSApplicationDelegate {
         let errors = Pipe()
         process.standardOutput = output
         process.standardError = errors
-        output.fileHandleForReading.readabilityHandler = { [weak self] handle in
-            let data = handle.availableData
-            guard !data.isEmpty, let text = String(data: data, encoding: .utf8) else { return }
-            DispatchQueue.main.async { self?.consumeOutput(text) }
-        }
-        errors.fileHandleForReading.readabilityHandler = { handle in
-            if handle.availableData.isEmpty { handle.readabilityHandler = nil }
-        }
         process.terminationHandler = { [weak self] _ in
             DispatchQueue.main.async {
                 guard self?.server === process else { return }
@@ -71,6 +68,18 @@ final class RustBoyAppDelegate: NSObject, NSApplicationDelegate {
         do {
             try process.run()
             server = process
+            let outputHandle = output.fileHandleForReading
+            DispatchQueue.global(qos: .utility).async { [weak self, outputHandle] in
+                while true {
+                    let data = outputHandle.availableData
+                    guard !data.isEmpty, let text = String(data: data, encoding: .utf8) else { break }
+                    DispatchQueue.main.async { self?.consumeOutput(text) }
+                }
+            }
+            let errorHandle = errors.fileHandleForReading
+            DispatchQueue.global(qos: .utility).async { [errorHandle] in
+                while !errorHandle.availableData.isEmpty {}
+            }
             rebuildMenu()
         } catch {
             server = nil
@@ -101,7 +110,10 @@ final class RustBoyAppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func stopServer() {
-        if let server, server.isRunning { server.terminate() }
+        if let server, server.isRunning {
+            server.terminate()
+            server.waitUntilExit()
+        }
         server = nil
         dashboardURL = nil
     }
@@ -138,10 +150,15 @@ struct RustBoyLauncher {
     }
 
     private static func runHeadlessSmoke() {
-        let appBundle = URL(fileURLWithPath: CommandLine.arguments[0])
-            .deletingLastPathComponent()
-            .deletingLastPathComponent()
-            .deletingLastPathComponent()
+        let appBundle: URL
+        if let configuredPath = ProcessInfo.processInfo.environment["RUSTBOY_APP_BUNDLE_PATH"] {
+            appBundle = URL(fileURLWithPath: configuredPath)
+        } else {
+            appBundle = URL(fileURLWithPath: CommandLine.arguments[0])
+                .deletingLastPathComponent()
+                .deletingLastPathComponent()
+                .deletingLastPathComponent()
+        }
         let process = Process()
         process.executableURL = appBundle.appendingPathComponent("Contents/MacOS/pipboy")
         process.arguments = ["dashboard", "--port", "0"]
