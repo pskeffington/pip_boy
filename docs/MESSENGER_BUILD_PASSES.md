@@ -12,7 +12,7 @@ physical interoperability and independent security review remain open.**
 | A — canonical protocol | Fixed-order v1 JSON, strict bounded decoding, typed durable receipt, `MessageTransport`, integration with existing SSH sender/receiver; deterministic drop/delay/duplicate/reorder/lost-receipt simulation | Transport-specific integration and field loss/latency measurements |
 | B — crypto and keys | age 0.12.1 file encryption, separate X25519 storage identity in keyring 3.6.3; atomic encrypted queue; wrong-key/corruption/locked-store fail closed | Independent integration/security review; native OS credential lifecycle tests; recovery, rotation/revocation, migration and rollback policy; E2EE protocol selection |
 | C — local-IP fallback | Explicit RFC1918 IPv4 retry; original enrolled host retained as SSH `HostKeyAlias`; typed receipt unchanged; OpenSSH's own `-G` evaluates effective routing/trust options in tests when installed | Real two-host private-network test, wrong-host-key test and independent acceptance sign-off |
-| C — passive USB | Bounded fragmented/noisy Meshtastic stream decoder; opaque FromRadio payloads; read-only adapter boundary and regular capture-file CLI | OS-enforced serial broker, generated/pinned protobuf decoding, real USB/firmware interoperability, reset/hot-unplug tests |
+| C — passive USB | Bounded fragmented/noisy Meshtastic stream framing; recorded capture-file CLI; payloads remain opaque unless passed to the separate unverified text inspector | OS-enforced serial broker, pinned-schema decoding, real USB/firmware interoperability, reset/hot-unplug tests |
 
 Implementation tests do not establish independent human review, an audited
 Rust-Boy integration, radio coverage or delivery across physical hardware.
@@ -143,6 +143,21 @@ resynchronizes around noise and oversized/zero-length frames. State is bounded
 by one frame. Framing is not protobuf or cryptographic validation. Frames remain
 **untrusted opaque FromRadio bytes**, do not enter the message book and cannot
 produce chat receipts.
+
+The offline `meshtastic_decode` module parses only the bounded
+`FromRadio.packet → MeshPacket.decoded → Data` text-message path. Its output is
+an **unverified observation**: it does not authenticate a node or channel,
+validate a Rust-Boy peer, establish delivery/read status, or enter Messenger or
+PACE state. Unsupported/encrypted payloads remain unsupported. CLI capture
+inspection continues to print counts only; message contents are not exposed by
+default. This parser does not enumerate/open serial devices or perform network,
+filesystem-write, or persistence operations.
+
+The parser's software fixture is synthetic and hand-encoded from the upstream
+Meshtastic protobuf field mapping pinned alongside its test. It is not yet
+cross-validated against generated upstream bindings or an independent decoder,
+is not an actual radio capture, and does not establish firmware
+interoperability; those remain pending the evidence below.
 
 An operator can inspect a previously recorded binary USB capture:
 

@@ -16,6 +16,7 @@ pub mod diagnostics;
 pub mod game;
 pub mod host_report;
 pub mod lifecycle;
+pub mod meshtastic_decode;
 pub mod meshtastic_passive;
 pub mod message_keys;
 pub mod message_pace;
