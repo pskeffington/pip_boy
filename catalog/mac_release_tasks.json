@@ -1,0 +1,105 @@
+{
+  "schema_version": 1,
+  "updated": "2026-11-05",
+  "project": "Rust-Boy macOS Developer ID release",
+  "distribution": "outside Mac App Store using Developer ID",
+  "workflow": "github_first",
+  "status_semantics": {
+    "queued": "ready for a software slice",
+    "implemented_unverified": "source exists; exact-head CI pending",
+    "blocked_credentials": "requires protected Apple signing or notarization credentials",
+    "blocked_acceptance": "requires a clean interactive Mac or operator evidence",
+    "blocked_dependency": "waiting on one or more prerequisite tasks",
+    "accepted_software": "relevant automated software gates passed",
+    "follow_up_ci_pending": "a software correction passed local checks and awaits exact-head CI",
+    "released": "signed, notarized, Gatekeeper-verified artifact and release evidence published"
+  },
+  "tasks": [
+    {
+      "id": "MAC-REL-01",
+      "title": "Build and smoke-test a native menu-bar app bundle",
+      "status": "accepted_software",
+      "paths": [
+        "macos/RustBoyLauncher.swift",
+        "macos/generate_app_icon.swift",
+        "macos/build_icns.py",
+        "scripts/build-macos-app.sh",
+        "tools/test_macos_app.sh",
+        "tools/test_macos_universal.sh",
+        ".github/workflows/rust.yml"
+      ],
+      "local_evidence": {
+        "swift": "Swift app host compiled for arm64-apple-macosx13.0.",
+        "smoke": "tools/test_macos_app.sh passed for the native host architecture: app bundle/plist/executable checks, bundled loopback server startup, desktop and micro GETs, and refusal to produce an unsigned DMG.",
+        "universal": "Universal arm64+x86_64 builder and CI smoke passed on the native macOS runner. The runner installed the Intel Rust standard library, checked both Rust and Swift executable slices, and fetched desktop and micro routes from the bundled service.",
+        "limitation": "Local AppKit launch remains unavailable in the restricted LaunchServices environment (SIGABRT). Hosted CI verifies software paths; logged-in user session, accessibility, signing/notarization, Gatekeeper, and hardware acceptance remain separate.",
+        "appkit_ci": "Exact head 7d77c9da0a72b55ff6c5a7fcb4ad5e384702e4e1 passed all 7 jobs in https://github.com/pskeffington/pip_boy/actions/runs/41786181479. Native macOS CI passed actual desktop/micro/Stop/Quit menu actions, live-child shutdown, Retry after missing service, and universal arm64+x86_64 app bundle smoke."
+      },
+      "ci_evidence": "Final Mac implementation head 708cf7aeb0eff3c6a657c33402d26fe640f739e8 passed 7/7 jobs in https://github.com/pskeffington/pip_boy/actions/runs/41787914386, including AppKit desktop/micro/Stop/Quit, live-child shutdown, Retry, and universal bundle smoke. This also validates the package-source regression that binds the release SHA to a clean git archive build. Rebased release PR head 7bb686bcb3708eca20cf785f52fd470cd028571e passed 7/7 jobs in https://github.com/pskeffington/pip_boy/actions/runs/41951804327 after PR #92 merged to main; includes the current-main native macOS universal bundle smoke. Follow-up exact-host validation and clearer local-network prompt are implemented; awaiting exact-head CI. Loopback endpoint hardening head 8960e10d34528c54ac41acb5a6b7293324e99560 passed 7/7 jobs in https://github.com/pskeffington/pip_boy/actions/runs/41954534190, including URL parser tests, native AppKit smoke and universal bundle validation.",
+      "software_acceptance": [
+        "macOS native workflow builds and verifies arm64+x86_64 Rust and Swift slices",
+        "Universal bundle starts and serves desktop and micro loopback routes on the runner",
+        "Hosted macOS CI invokes the actual open, Stop, and Quit menu actions and verifies child exit",
+        "Hosted macOS CI verifies Quit asynchronously waits for its live child to exit",
+        "Hosted macOS CI verifies a missing bundled service exposes a working Retry action",
+        "Bundle includes an ICNS icon accepted by macOS iconutil plus tested version, copyright and category metadata; failed rebuilds preserve the existing app"
+      ],
+      "release_acceptance": [
+        "Interactive status-menu selection and browser behavior verified in a logged-in user session",
+        "Keyboard, VoiceOver, contrast and reduced-motion accessibility review completed"
+      ]
+    },
+    {
+      "id": "MAC-REL-02",
+      "title": "Sign and notarize a Developer ID app and DMG",
+      "status": "blocked_credentials",
+      "implementation_status": "accepted_software",
+      "paths": [
+        "scripts/build-macos-app.sh",
+        "scripts/macos_release_attempt.sh",
+        "scripts/package-macos-dmg.sh",
+        "docs/MAC_RELEASE.md",
+        "tools/record_macos_release_failure.py",
+        "tools/test_macos_app.sh"
+      ],
+      "acceptance": [
+        "Protected Developer ID Application identity is provisioned",
+        "Notarytool keychain profile is provisioned on a protected macOS runner",
+        "App and DMG signatures verify, notarization succeeds, and tickets staple",
+        "Gatekeeper validates the stapled distribution"
+      ],
+      "evidence": "Source-bound packaging passed exact-head 7/7 CI at 708cf7aeb0eff3c6a657c33402d26fe640f739e8 in https://github.com/pskeffington/pip_boy/actions/runs/41787914386. Corrected head 51a26c33a2661f2535830bed25d4fd96fe338fee passed 7/7 CI in https://github.com/pskeffington/pip_boy/actions/runs/41791223195, including native macOS universal app smoke and package regression checks. Failure handling records private atomic failed-state evidence with source SHA and exit code while preserving existing context; head 350609d653a04c450d574b1780f1ad99cb5b0635 passed all seven jobs, including native macOS universal bundle smoke, in https://github.com/pskeffington/pip_boy/actions/runs/41793673976. Regression head f8ad470a021bfb5811bffb65b4d55dae33c5a0bc executes the actual EXIT cleanup handler, verifies preservation of the original exit code and temporary-directory cleanup, and passed all seven jobs in https://github.com/pskeffington/pip_boy/actions/runs/41916479067. The packager builds from a fresh git archive of the exact clean source SHA and ignores prebuilt app/binary overrides. No Apple signing identity or notarization profile is configured, so no signed artifact, notarization, or Gatekeeper result exists. Provisioning and evidence requirements are tracked in https://github.com/pskeffington/pip_boy/issues/94. Rebased release PR head 7bb686bcb3708eca20cf785f52fd470cd028571e passed 7/7 jobs in https://github.com/pskeffington/pip_boy/actions/runs/41951804327 after PR #92 merged to main. This validates the software packaging path only; signing credentials, notarization, Gatekeeper, and clean-account acceptance remain pending."
+    },
+    {
+      "id": "MAC-REL-03",
+      "title": "Validate clean-account installation and update/removal behavior",
+      "status": "blocked_acceptance",
+      "depends_on": [
+        "MAC-REL-02"
+      ],
+      "acceptance": [
+        "Install and launch from the signed DMG on a clean supported Mac account",
+        "Check loopback privacy prompt, default-browser routing, menu controls and data isolation",
+        "Upgrade without unintended data loss and document uninstall/data retention",
+        "Complete keyboard, VoiceOver, contrast and reduced-motion review"
+      ],
+      "evidence": "The current execution surface cannot launch GUI apps through LaunchServices; interactive acceptance remains open. Credential provisioning is tracked in https://github.com/pskeffington/pip_boy/issues/94."
+    },
+    {
+      "id": "MAC-REL-04",
+      "title": "Publish a supported Mac release with provenance and manual updates",
+      "status": "blocked_dependency",
+      "depends_on": [
+        "MAC-REL-01",
+        "MAC-REL-02",
+        "MAC-REL-03"
+      ],
+      "acceptance": [
+        "Declare supported architectures and minimum macOS version",
+        "Publish signed/notarized app and DMG with source SHA and checksums",
+        "Publish privacy, local-data, update and uninstall guidance",
+        "Do not claim production availability before all prerequisite tasks pass"
+      ]
+    }
+  ]
+}

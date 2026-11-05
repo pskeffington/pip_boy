@@ -28,6 +28,8 @@ Opening a non-Overseer desktop reads only `GET /api/state`; Overseer additionall
 
 **Status:** developer-preview shell running entirely from Rust-Boy on **127.0.0.1**, with a responsive original HTML/CSS/JavaScript frontend embedded in the Rust executable. This is a real working local web UI, **not** a public website, a packaged desktop binary, a RustGIS map renderer, an ATAK client or a released handheld OS.
 
+The menu-bar app bundle is a separate packaging candidate described in [the Mac release guide](MAC_RELEASE.md). Until its Developer ID notarization and clean-account Gatekeeper checks pass, the supported distribution remains the source launcher below.
+
 ## Dedicated handheld micro route
 
 Use [micro handheld mode](MICRO_UI.md) when testing a real micro-display layout instead of shrinking the desktop workstation. Start `./scripts/launch-micro.command` or `cargo run --locked -p pipboy -- dashboard --micro --open` on Mac. The local server serves **/micro** alongside the existing **/** desktop route. Both use the exact same workbench API; changing a job template in either view is reflected in the other after reload.

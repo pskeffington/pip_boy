@@ -1,5 +1,31 @@
 # Changelog
 
+## 2026-11-05 — Mac local endpoint validation
+
+- Validate the dashboard URL emitted by the bundled process as plain HTTP on exactly `127.0.0.1`, with a valid port, root path, and no user info, query, or fragment before browser opening or smoke evidence capture.
+- Clarify the macOS local-network permission prompt that the dashboard is hosted only on this Mac; add accepted/rejected URL parser regression cases.
+
+## 2026-11-04 — Mac app release hardening follow-up
+
+- Add a generated multi-resolution Rust-Boy app icon and tested bundle version, copyright, and category metadata.
+- Drive actual AppKit menu item actions in hosted CI; verify desktop/micro actions, Stop/Quit, and retry after a missing-service startup failure.
+- Stop and Quit reap the dashboard asynchronously, with bounded SIGKILL escalation; add a live-child Quit regression.
+- Build app bundles in temporary sibling paths and preserve an existing bundle if a rebuild fails.
+- Extend Developer ID packaging to require clean source and universal slices, preserve Apple notarization submissions/logs per attempt, and write source/checksum evidence before installing the final DMG.
+- Pass 7/7 exact-head CI at `7d77c9d`, including AppKit menu/retry/live-Quit checks and the universal bundle smoke ([run 41786181479](https://github.com/pskeffington/pip_boy/actions/runs/41786181479)).
+- Bind Developer ID release provenance to the source SHA by building from a clean `git archive` export and ignoring prebuilt app/binary overrides; the exact-head 7/7 CI run `41787914386` validates this invariant.
+- Fix credentialed packaging's temporary app-path initialization and add a regression assertion; corrected head `51a26c3` passed 7/7 jobs in [run 41791223195](https://github.com/pskeffington/pip_boy/actions/runs/41791223195).
+- Record failed credentialed release attempts as private atomic evidence with the source SHA, exit code, and timestamp; never persist command output or credentials.
+- Pass exact-head 7/7 CI at `350609d`, including native macOS universal bundle smoke ([run 41793673976](https://github.com/pskeffington/pip_boy/actions/runs/41793673976)).
+- Exercise the real release-attempt EXIT handler under an injected failure, preserving its exit status and cleaning temporary paths; mark the dependent publish task `blocked_dependency` while signing and clean-account acceptance remain open.
+- Keep Developer ID credentials, notarization, Gatekeeper installation, logged-in user accessibility, and production publication pending.
+
+## 2026-11-03 — Mac menu-bar packaging candidate
+
+- Add a native status-menu host for starting the loopback dashboard and opening the desktop or micro surface.
+- Add an unsigned local app-bundle builder, a server launch smoke test, and a fail-closed Developer ID DMG notarization script.
+- Keep signed distribution, Gatekeeper install, accessibility, update behavior, and production acceptance open.
+
 ## 2026-11-03 — Shared terminal/TUI command palette and host reconciliation
 
 - Merge PR #88 at `1ba2b8f`; its exact source head passed 7/7 Actions jobs, including terminal/TUI, Rust 1.90, macOS and Windows checks.
@@ -361,3 +387,4 @@ This file records notable changes to Rust-Boy. This repository is in **developme
 ## Project identity
 
 Public name: **Rust-Boy**. Repository slug: `pip_boy`. Main CLI: `pipboy`. Denial-only binary: `rust-boy-broker`. The project is independent and unofficial and does not bundle third-party game artwork or proprietary firmware.
+- The endpoint-hardening implementation passed 7/7 exact-head CI jobs at `8960e10` ([run 41954534190](https://github.com/pskeffington/pip_boy/actions/runs/41954534190)); signing, notarization, and clean-account acceptance remain separate gates.

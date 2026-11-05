@@ -6,6 +6,7 @@
   "agent_instructions": "AGENTS.md",
   "execution_guide": "docs/TERMINAL_AGENT_EXECUTION.md",
   "next_execution_packet": "docs/CODEX_PASS_2026-11-03.md",
+  "mac_release_queue": "catalog/mac_release_tasks.json",
   "workflow": "github_first_no_required_live_side_by_side",
   "status_semantics": {
     "queued": "ready for development",
@@ -74,7 +75,7 @@
       "issue": 75,
       "local_evidence": {
         "merged_scope": "CLI and full-screen TUI share pipboy-core::command_catalog; direct selection, legacy run COMMAND and DIAG host shorthand preserved; slash palette is pinned-tool scoped; Escape cancels without dispatch; Settings remains host-owned.",
-        "follow_up": "The executor-side metadata recheck is included in the current unsubmitted follow-up and passes local tests; exact-head CI is pending. The desktop/micro palette is implemented in the same follow-up, with viewport CI pending."
+        "follow_up": "Executor-side metadata recheck and desktop/micro palette are implemented on PR #92 head 815dba08f1782aaca409d45486ba6c445ed30a51; exact-head run 41761848423 passed 7/7. PR #92 is ready for review but not merged."
       },
       "ci_evidence": {
         "source_commit": "457d9659d6e0ee29a6663ade0bae6b3875b2e969",
@@ -113,7 +114,7 @@
         "workspace": "cargo test --workspace --locked: 421 passed, 0 failed; cargo fmt --all -- --check, warnings-denied workspace Clippy and cargo +1.90.0 check --workspace --locked passed on the local worktree.",
         "focused": "command_catalog tests 8/8; terminal_commands tests 8/8; command_security integration tests 5/5.",
         "scope": "radio stations lists checked-in curated metadata only. No provider probe, network access, SDR enumeration or playback. MAP filesystem actions, TV and COMMS remain unavailable; no package is installed or mounted.",
-        "hosted_ci": "pending for this follow-up source head"
+        "hosted_ci": "The implemented read-only RADIO listing slice was included on PR #92 head 815dba08f1782aaca409d45486ba6c445ed30a51, whose exact run 41761848423 passed 7/7. This does not complete TC-A03: MAP filesystem actions and adapter lifecycle paths remain absent."
       },
       "next_slice": "Add an offline MAP action only after a typed filesystem scope and bounded path contract are reviewed."
     },
@@ -159,7 +160,7 @@
         "TC-A01",
         "TC-A02"
       ],
-      "status": "implemented_unverified",
+      "status": "accepted_software",
       "paths": [
         "crates/pipboy/src/dashboard.rs",
         "crates/pipboy/src/dashboard"
@@ -175,8 +176,8 @@
       "local_evidence": {
         "rust": "dashboard command API tests 26/26; full workspace tests 421/421.",
         "browser": "node tools/test_micro_ui.cjs and node tools/test_desktop_focus_ui.cjs passed; dashboard and micro JavaScript syntax checks passed.",
-        "viewport": "node tools/test_dashboard_viewport.cjs was blocked because Chromium is not installed in this environment. Exact-head CI must run 480x320, 800x480, 1024x768 and 1440x900 cases.",
-        "hosted_ci": "pending for this follow-up source head"
+        "viewport": "Hosted Chromium viewport checks passed in exact-head Actions run 41761848423; all required browser viewport jobs succeeded.",
+        "hosted_ci": "Exact PR #92 source head 815dba08f1782aaca409d45486ba6c445ed30a51 passed 7/7 jobs in https://github.com/pskeffington/pip_boy/actions/runs/41761848423. Software acceptance is at that PR head; PR remains unmerged pending review."
       },
       "note": "Both palettes read pinned descriptors and explicit RUN dispatches through the existing Rust typed executor. Browsing does not execute commands; no browser-side handler map was added."
     },
@@ -253,6 +254,14 @@
         "head": "d9ac51a46cbb7dd7335eb70b2b25e44c9af16c84",
         "workflow_run": "https://github.com/pskeffington/pip_boy/actions/runs/41758312559",
         "result": "7/7 jobs passed; packet was read and its tasking is reconciled in this branch"
+      },
+      {
+        "number": 92,
+        "state": "open_ready_for_review",
+        "head": "815dba08f1782aaca409d45486ba6c445ed30a51",
+        "base": "main",
+        "workflow_run": "https://github.com/pskeffington/pip_boy/actions/runs/41761848423",
+        "result": "7/7 jobs passed, including native macOS and Chromium viewport checks; ready for review, not merged."
       }
     ]
   }

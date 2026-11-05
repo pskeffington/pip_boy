@@ -1,0 +1,138 @@
+# Rust-Boy for macOS: release path
+
+Status: **packaging candidate; not a production release**.
+
+The current UI is a local Rust HTTP server with browser-based desktop and micro
+surfaces. The native menu-bar bundle starts that server, opens the selected
+surface in the default browser, and offers explicit Stop and Quit controls. It
+binds only to IPv4 loopback. It does not add a public listener, background
+network service, module installation, or automatic update channel.
+
+Before browser launch or smoke-evidence capture, the AppKit host validates the
+service's printed endpoint as plain HTTP on exactly `127.0.0.1`, a valid port,
+and the root path, with no credentials, query, or fragment. The macOS local
+network permission description states that the dashboard is hosted only on
+this Mac.
+
+## Build and validate a local app
+
+Requirements: macOS 13 or newer, Xcode Command Line Tools, Rust 1.90+, Python
+3, and a default browser. The builder can create arm64 or x86_64 bundles. A
+universal bundle is built by combining both Rust and Swift slices:
+
+    RUSTBOY_TARGET=universal-apple-darwin bash scripts/build-macos-app.sh
+    open target/macos/Rust-Boy.app
+    bash tools/test_macos_app.sh
+
+The universal build requires the Rust standard library for both
+`aarch64-apple-darwin` and `x86_64-apple-darwin`, plus Xcode's macOS SDK and
+`lipo`. Exact implementation head `7d77c9da0a72b55ff6c5a7fcb4ad5e384702e4e1`
+passed 7/7 jobs in [Actions run 41786181479](https://github.com/pskeffington/pip_boy/actions/runs/41786181479). The native Mac job passed the hosted AppKit action/retry/live-Quit checks and the universal bundle build/smoke. Earlier universal baseline head `db452596e8b10a42a5fb6d6187b7b0a30c79413` also passed 7/7 jobs
+in [Actions run 41778857053](https://github.com/pskeffington/pip_boy/actions/runs/41778857053).
+The native macOS job installed the Intel Rust target, checked both Rust and
+Swift executable slices, launched the universal bundle, and fetched desktop
+and micro routes. Intel Mac hardware acceptance remains separate.
+
+The unsigned app bundle is for local validation only. The smoke test builds the
+Rust binary, assembles the app bundle, launches the native menu-bar host with
+browser opening disabled, and verifies both local dashboard routes over
+loopback. scripts/launch-dashboard.command remains the source/developer
+launcher and continues to require Rust.
+
+The bundle builder selects the `pipboy` package version by package name,
+includes a generated multi-resolution Rust-Boy app icon and standard utility
+metadata, and builds into a temporary sibling directory before replacing an
+existing Rust-Boy bundle. It refuses unsafe output paths, symlinks, and
+unrelated existing bundles. Hosted macOS smoke drives the actual menu item
+actions for both browser surfaces, Stop, and Quit; a separate negative case
+removes the bundled service and verifies the menu exposes Retry. The hosted
+smoke also asks Apple's `iconutil` to decode the generated ICNS resource.
+Stop and Quit send SIGTERM off the main-thread path, wait asynchronously, and
+send SIGKILL after a bounded grace period if the dashboard does not exit.
+
+## Developer ID distribution
+
+Outside-App-Store distribution requires a Developer ID Application identity
+and an App Store Connect API key configured with notarytool. Keep certificate
+private keys and API credentials in the release runner's protected keychain or
+secret store; never commit them or print them in logs.
+
+1. Import the Developer ID certificate into the runner keychain and set
+   RUSTBOY_SIGN_IDENTITY to its exact signing identity.
+2. Store notary credentials once with xcrun notarytool store-credentials and
+   set RUSTBOY_NOTARY_PROFILE to that keychain profile name.
+3. Run scripts/package-macos-dmg.sh. It builds the universal app from the
+   clean exact source HEAD and ignores any prebuilt binary or app override.
+4. Preserve the resulting app/DMG, notarization submission ID and log,
+   codesign verification, stapler validation, Gatekeeper assessment, source
+   commit, and checksums as release evidence.
+
+The package script exports the exact clean HEAD with `git archive` into a fresh
+temporary source directory, builds the universal app there, and signs and
+verifies its embedded executables and app. This binds the manifest source SHA
+to the source files used for the build and ignores prebuilt app/binary overrides.
+It submits both the app archive and DMG to Apple's notary service, staples accepted
+tickets, and runs Gatekeeper assessment. It refuses to package without signing
+and notarization configuration. This repo currently has no configured Apple
+Developer ID certificate or notarization profile, so this final process has
+not been run and no signed/notarized artifact is available. Credential setup and
+release evidence requirements are tracked in [issue #94](https://github.com/pskeffington/pip_boy/issues/94). Review found and fixed an uninitialized app path; exact corrected head `51a26c33a2661f2535830bed25d4fd96fe338fee` passed 7/7 CI jobs in [run 41791223195](https://github.com/pskeffington/pip_boy/actions/runs/41791223195). On a configured
+release runner it also refuses a dirty Git tree, validates the universal slices,
+preserves both notary submission responses and JSON logs, and writes a
+source-SHA/version/identifier/architecture/checksum manifest to the private
+per-attempt evidence directory without overwriting earlier attempts. The final
+DMG is moved into place only after notarization,
+stapling and Gatekeeper assessment succeed.
+If a release command fails after an attempt directory is created, the packager
+atomically marks its private `release-context.json` as `failed`, recording the
+source SHA, exit code and timestamp while preserving existing context. It does
+not capture command output or credential values in that record. The hosted Mac
+regression invokes the actual EXIT handler with a controlled failure and checks
+that it preserves the exit code and removes only the temporary build paths.
+
+## User data and support boundaries
+
+- Rust-Boy stores local state under ~/.pipboy by default, or under the explicit
+  PIPBOY_HOME directory. Removing the app does not erase that data.
+- The desktop and micro surfaces are local browser pages. Local role labels do
+  not authenticate a human, and local journals are not encrypted at rest.
+- Do not store credentials, regulated medical records, or other protected data
+  in this development-preview build.
+- Optional network and device operations retain their explicit authorization
+  paths. Package selection does not grant permissions.
+- MAP, RADIO, and other modules retain their separate availability and
+  hardware acceptance gates. Raspberry Pi acceptance does not establish Mac
+  package signing or notarization.
+- Updates are manual replacement of the app. There is no in-app updater or
+  automatic migration guarantee. Back up the data directory before upgrades.
+
+## Acceptance still required
+
+- Exact implementation head `708cf7aeb0eff3c6a657c33402d26fe640f739e8`
+  passed 7/7 jobs in [run
+  41787914386](https://github.com/pskeffington/pip_boy/actions/runs/41787914386),
+  including actual AppKit desktop/micro/Stop/Quit actions, live-child shutdown,
+  missing-service Retry, universal arm64+x86_64 bundle smoke, and the source-bound
+  packaging regression.
+- Corrected packager head `51a26c33a2661f2535830bed25d4fd96fe338fee` passed 7/7 jobs in [run 41791223195](https://github.com/pskeffington/pip_boy/actions/runs/41791223195), including Rust stable and 1.90, Windows, adapter/manifest, native macOS, and universal bundle smoke jobs.
+- Private failed-attempt evidence implementation head `350609d653a04c450d574b1780f1ad99cb5b0635` passed all 7 CI jobs in [run 41793673976](https://github.com/pskeffington/pip_boy/actions/runs/41793673976), including native macOS universal bundle smoke.
+- EXIT-handler integration test head `f8ad470a021bfb5811bffb65b4d55dae33c5a0bc` passed all 7 jobs in [run 41916479067](https://github.com/pskeffington/pip_boy/actions/runs/41916479067), including injected-failure status preservation and temporary build-path cleanup.
+- Universal bundle slices compile and pass CI smoke; Intel physical-Mac
+  install and runtime acceptance remain pending.
+- Hosted AppKit CI verifies programmatic menu target/action dispatch.
+  Logged-in user menu selection, browser behavior, and accessibility review
+  remain pending.
+- Review of privacy wording, update behavior, and uninstall/data retention.
+- Developer ID signing and notarization on a protected macOS release runner.
+- Gatekeeper install/launch verification on a clean supported Mac account.
+
+Apple's distribution guidance requires Developer ID signing for direct
+distribution and recommends notarization; notarization uses the hardened
+runtime. See [Distributing software on macOS](https://developer.apple.com/macos/distribution/)
+and [Notarizing macOS software before distribution](https://developer.apple.com/documentation/security/notarizing-macos-software-before-distribution).
+
+### Rebased release validation (2026-11-05)
+
+After prerequisite PR #92 merged to `main` at `22c43f835465a5656b1c907f44eb853b754d0c2b`, the Mac release branch was rebased directly onto `main`. Exact rebased head `7bb686bcb3708eca20cf785f52fd470cd028571e` passed all 7 jobs in [Actions run 41951804327](https://github.com/pskeffington/pip_boy/actions/runs/41951804327), including the universal arm64+x86_64 app bundle smoke. This confirms software integration on the current host branch; it does not provide Apple signing credentials, notarization, Gatekeeper, or clean-account interactive acceptance.
+
+The loopback URL validation follow-up at exact head `8960e10d34528c54ac41acb5a6b7293324e99560` passed 7/7 jobs in [Actions run 41954534190](https://github.com/pskeffington/pip_boy/actions/runs/41954534190), including native macOS URL parser, AppKit, and universal bundle checks. This remains software evidence; Developer ID signing and clean-account acceptance are still open.
