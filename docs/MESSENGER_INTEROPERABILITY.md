@@ -75,12 +75,25 @@ The station being present on the network is not by itself an authorization to
 connect. Until the OS network broker exists and the station-specific service
 and payload framing are verified, only recorded captures are supported.
 MESH-05 accepts the design only; no LAN transport is implemented. MESH-06
-remains blocked on the broker, endpoint trust and station-specific details.
+remains blocked on the broker and station-specific service details.
+
+On 2026-11-05, the operator confirmed out of band that the station's observed
+TLS certificate fingerprint matches the station. Using that verified identity,
+the explicitly supplied HTTPS root returned a generic Meshtastic Web page; the
+previously supplied broadcast route returned HTTP 404. No additional paths,
+MQTT services, topics, credentials, or message data were accessed. This
+establishes the web UI root and the supplied route result only; it does not
+identify an enabled receive service or authorize a live Rust-Boy connection.
+The private endpoint address and certificate fingerprint are intentionally
+omitted from this public repository record.
 
 For this endpoint family, require a literal address and port, explicit
 protocol, and verified TLS identity (trusted CA or a certificate/public-key
 pin obtained out of band); first-use trust of a self-signed certificate and
-TLS verification bypass are not acceptable. Avoid DNS/mDNS discovery and
+TLS verification bypass are not acceptable. For the operator-supplied web
+root, the observed fingerprint was confirmed out of band, but this pin has not
+been entered into a Rust-Boy broker enrollment or bound to an MQTT service.
+Avoid DNS/mDNS discovery and
 fallback. MQTT subscriptions should begin at QoS 0 with exact broker-authorized
 topics, explicit retained-message behavior, strict size/rate caps, and replay
 metadata. See the detailed platform and protocol boundaries in

@@ -122,9 +122,16 @@
       "depends_on": ["MESH-05"],
       "blocking_conditions": [
         "OS-enforced network receive broker implementation and independent security review are not complete",
-        "Actual Station model, enabled service, topic and payload framing are unverified",
-        "The endpoint TLS identity must be validated with a trusted CA or an out-of-band pin before any page/socket data is read"
+        "Actual Station model, enabled receive service, topic, broker ACL and payload framing are unverified",
+        "Although the operator confirmed the observed web-root certificate fingerprint out of band, no Rust-Boy enrollment has bound that pin to an identified MQTT endpoint"
       ],
+      "observations": {
+        "date": "2026-11-05",
+        "web_root": "Operator-supplied HTTPS root returned a generic Meshtastic Web page after out-of-band certificate fingerprint confirmation.",
+        "supplied_route": "The previously supplied broadcast route returned HTTP 404.",
+        "scope": "No other paths or services, credentials, MQTT topics, or message data were accessed. Private endpoint and fingerprint omitted.",
+        "acceptance": "Observation only; no live Rust-Boy socket, service identification, or receive acceptance."
+      },
       "paths": [
         "docs/MESSENGER_INTEROPERABILITY.md",
         "crates/pipboy-core/src/meshtastic_decode.rs"
