@@ -49,7 +49,9 @@
       "id": "MESH-02",
       "title": "Implement OS-enforced receive-only USB broker authorization",
       "status": "blocked_dependency",
-      "depends_on": ["OS_DEVICE_BROKER"],
+      "blocking_conditions": [
+        "OS-enforced device broker implementation and independent security review are not complete"
+      ],
       "paths": [
         "crates/rust-boy-broker/src/main.rs",
         "docs/OS_DEVICE_BROKER.md"
@@ -84,6 +86,43 @@
         "Explicit one-operation confirmation, device-bound grant and regional airtime constraints",
         "Interrupted sends report UNKNOWN OUTCOME absent an independent receipt",
         "No claim of delivery/read status from radio transmission alone"
+      ]
+    },
+    {
+      "id": "MESH-05",
+      "title": "Specify the OS-enforced LAN receive scope for WisMesh Station",
+      "status": "queued",
+      "paths": [
+        "docs/OS_DEVICE_BROKER.md",
+        "docs/MESSENGER_INTEROPERABILITY.md"
+      ],
+      "acceptance": [
+        "Define the receive-only scope separately from serial.read, network.fetch and mesh.transmit",
+        "Specify endpoint/protocol/port binding, deadline, bounded buffers, cancellation, revocation and credential handling",
+        "If MQTT is selected, explicitly scope CONNECT/SUBSCRIBE/keepalive control frames, require read-only topic ACLs and forbid publish operations",
+        "Require policy denial before socket creation and no connection from browse, select or module viewing",
+        "Design only; no socket, station or radio I/O, and no claim that the OS-enforced broker is implemented"
+      ]
+    },
+    {
+      "id": "MESH-06",
+      "title": "Integrate and verify passive LAN reception from WisMesh Station",
+      "status": "blocked_dependency",
+      "depends_on": ["MESH-05"],
+      "blocking_conditions": [
+        "OS-enforced network receive broker implementation and independent security review are not complete"
+      ],
+      "paths": [
+        "docs/MESSENGER_INTEROPERABILITY.md",
+        "crates/pipboy-core/src/meshtastic_decode.rs"
+      ],
+      "acceptance": [
+        "Identify the actual station model, firmware, explicitly selected endpoint and enabled LAN service without network discovery",
+        "Review TCP client startup side effects before claiming receive-only; standard Meshtastic client initialization may request configuration and send heartbeats",
+        "Use a separately authorized passive data source; if MQTT is used, scope CONNECT/SUBSCRIBE/keepalive control frames and enforce read-only broker ACLs, with no publish operations",
+        "Do not change station, radio, MQTT or mesh configuration implicitly; never write Meshtastic ToRadio configuration/packet frames or transmit RF",
+        "Use the reviewed network scope with bounded framing, cancellation, revoke behavior and safe credential handling before live sockets",
+        "Keep decoded observations unverified; no Messenger/PACE receipt, persistence or radio transmit claim"
       ]
     }
   ]

@@ -11,11 +11,15 @@ Technical contracts, architecture decisions, research provenance and validation 
 
 [Agent instructions](../AGENTS.md) · [Execution work packets and release gates](TERMINAL_AGENT_EXECUTION.md) · [Machine-readable task queue](../catalog/terminal_agent_tasks.json) · [Core dispatcher issue](https://github.com/pskeffington/pip_boy/issues/73) · [Security/CI issue](https://github.com/pskeffington/pip_boy/issues/74). Software implementation is developed and validated through GitHub; operator-local side-by-side testing is not a prerequisite.
 
-[November 3 execution packet and PR reconciliation](CODEX_PASS_2026-11-03.md) records the #88 merge, PR #92's current exact-head CI evidence, unresolved PR bases, and Pi 5 physical acceptance boundaries.
+[November 3 execution packet and post-packet reconciliation](CODEX_PASS_2026-11-03.md) records the #88/#92/#93/#96 merges, current CI evidence, unresolved drafts, and Pi 5 / Meshtastic physical acceptance boundaries.
 
 ## Terminal module command integration
 
-[Terminal-to-module command surface](TERMINAL_MODULE_COMMANDS.md) documents TC-A01 and merged TC-A02. PR #88 merged at `1ba2b8f`; exact source head passed 7/7 jobs in [Actions run 41127024688](https://github.com/pskeffington/pip_boy/actions/runs/41127024688). PR #92 adds the executor metadata recheck, offline RADIO metadata, and desktop/micro palettes; its exact head passed 7/7 jobs in [Actions run 41761848423](https://github.com/pskeffington/pip_boy/actions/runs/41761848423), and it is ready for review but not merged. Pi hardware evidence remains pending.
+[Terminal-to-module command surface](TERMINAL_MODULE_COMMANDS.md) documents TC-A01 through TC-A05. PR #88 merged the CLI/TUI bridge; PR #92 merged the shared desktop/micro palette at `22c43f8`. Pi hardware evidence remains pending.
+
+## Meshtastic communications
+
+[Meshtastic interoperability record](MESSENGER_INTEROPERABILITY.md) and [machine-readable queue](../catalog/meshtastic_tasks.json) distinguish the merged recorded-capture decoder from live USB/LAN reception. PR #96 merged at `ee04da5`; its exact head passed 7/7 jobs in [Actions run 41958732527](https://github.com/pskeffington/pip_boy/actions/runs/41958732527). No radio connection, transmit path, or hardware acceptance is claimed.
 
 ## Universal adapter SDK
 

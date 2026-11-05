@@ -43,3 +43,11 @@ Local checks for the current worktree: formatting passed; warnings-denied worksp
 4. Keep TC-A03 partial until its MAP scope decision is implemented and tested; do not activate reference/discovered packages.
 5. Record real Pi 5 evidence only after an operator runs the physical checklist on the actual board. Touch, SDR/GNSS, audio, camera, paired devices, and production isolation remain distinct gates.
 
+## Post-packet integration addendum
+
+The later GitHub reconciliations merged PR #92 (shared desktop/micro command palette) at `22c43f835465a5656b1c907f44eb853b754d0c2b`, PR #93 (Mac app packaging path) at `00582b9c19743302863a0fac3249e760c3ee69df`, and PR #96 (recorded Meshtastic capture decoder) at `ee04da59f1bdb1a20f097b37271a992bcdae81a3`. PR #96 exact head `842eb38dad53a683422c129de3341fa6ad22cb3e` passed 7/7 jobs in [Actions run 41958732527](https://github.com/pskeffington/pip_boy/actions/runs/41958732527).
+
+Mac app software packaging is integrated. Developer ID signing/notarization credentials, a clean-account Gatekeeper launch, and logged-in accessibility acceptance remain open; issue [#94](https://github.com/pskeffington/pip_boy/issues/94) tracks credential setup. Do not claim a signed release or production readiness.
+
+Meshtastic software currently decodes recorded FromRadio bytes only. A local OS inventory observed a RAK WisCore RAK4631 (`239A:8029`) and `/dev/cu.usbmodem1101`, without opening the serial endpoint. The operator also reports a WisMesh Station-family system on the LAN. Neither observation supplies a grant or hardware acceptance. USB reception remains gated on an OS-enforced broker; LAN reception needs an explicit passive transport contract. In particular, do not assume that the normal TCP client startup is receive-only. See [MESH tasks](../catalog/meshtastic_tasks.json) and the [interoperability record](MESSENGER_INTEROPERABILITY.md).
+

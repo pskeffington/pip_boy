@@ -35,7 +35,7 @@ The offline `pipboy-core::meshtastic_decode` parser now recognizes only
 bounded text and optional node/channel numbers explicitly marked unverified;
 it does not authenticate peers, record Messenger messages, or produce delivery
 receipts. Its synthetic field-mapping fixture is not a hardware capture and has
-has been compared byte-for-byte with `protoc` output using a minimal schema
+been compared byte-for-byte with `protoc` output using a minimal schema
 matching the pinned v2.8.0 field types; no generated upstream bindings or actual
 radio capture were used. Parser tests cover malformed/truncated fields,
 field-number overflow aliasing, fixed32 node IDs, uint32 bounds, duplicate
@@ -51,3 +51,27 @@ FromRadio reception must never be promoted to authenticated Rust-Boy peer state.
 
 Record results beneath each row or link a sanitized immutable run artifact.
 Do not replace Pending with Passed based only on the test definition.
+
+## LAN WisMesh Station path
+
+The operator reports a WisMesh Station-family Meshtastic system on the local
+network. RAKwireless identifies Station/Station HP (RAK8622/RAK8623) as a
+Raspberry Pi 4 gateway with `meshtasticd` and a local MQTT broker; the exact
+model, firmware, network address, and enabled services for this installation
+have not been independently identified. See the [RAKwireless product page](https://store.rakwireless.com/products/meshtastic-gateway-raspberry-pi-wismesh-station)
+and [Station quick start downloads](https://downloads.rakwireless.com/Meshtastic/).
+
+Rust-Boy does not connect to the LAN station yet. The standard Meshtastic TCP
+client workflow is not presumed receive-only: client initialization can request
+configuration and send heartbeats ([CLI connection options](https://meshtastic.org/docs/software/python/cli/),
+[client API](https://python.meshtastic.org/mesh_interface.html)). Any future
+LAN reader must use an explicit operator-selected endpoint and a dedicated
+receive-only data scope. A read-only MQTT subscription may still require MQTT
+CONNECT/SUBSCRIBE/keepalive control frames; these must be explicitly covered by
+the grant and constrained by broker-side read ACLs. It must forbid publishing,
+Meshtastic `ToRadio` configuration or packet writes, and RF transmission. Bound
+framing and cancellation, and redact credentials and message content from logs.
+The station being present on the network is not by itself an authorization to
+connect. Until that contract and network broker exist, only recorded captures
+are supported. MESH-05 tracks the unimplemented scope design; MESH-06 remains
+blocked on that design and the OS-enforced network broker.

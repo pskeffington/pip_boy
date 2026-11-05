@@ -88,6 +88,22 @@ to test Windows terminal interaction, resize behavior and terminal restoration
 inside GitHub Actions; the new interactive regression passed in [run 40162936734](https://github.com/pskeffington/pip_boy/actions/runs/40162936734). It does **not** grant Rust-Boy access to any external
 device, and it does not implement or validate the proposed broker.
 
+## Separate LAN receive scope (planned)
+
+Meshtastic over a LAN node is a network resource, not `serial.read`, and a
+network receive scope must not be inferred from `mesh.transmit` or the existing
+`network.fetch` capability. The proposed `OS_NETWORK_RECEIVE_SCOPE` design is
+tracked as MESH-05 but is not implemented. Before any live LAN socket, define a
+broker-enforced grant bound to an operator-selected endpoint, protocol, port
+and receive-only data operation, with a deadline, bounded buffers,
+cancellation, revoke behavior and safe credential handling. If MQTT is used,
+the scope must specify the control frames needed for a read-only subscription
+(such as CONNECT, SUBSCRIBE and keepalive) while forbidding publish operations;
+broker-side ACLs must restrict topics. Denial must happen before socket
+creation; browsing a module or selecting the station must not connect. The
+scope must not imply Meshtastic configuration writes or RF transmission. See
+MESH-05 and MESH-06 in the [Meshtastic task queue](../catalog/meshtastic_tasks.json).
+
 Primary platform references:
 - [Microsoft: Creating a Pseudoconsole Session](https://learn.microsoft.com/en-us/windows/console/creating-a-pseudoconsole-session)
 - [Microsoft: UpdateProcThreadAttribute](https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-updateprocthreadattribute)
