@@ -75,3 +75,12 @@ The station being present on the network is not by itself an authorization to
 connect. Until that contract and network broker exist, only recorded captures
 are supported. MESH-05 tracks the unimplemented scope design; MESH-06 remains
 blocked on that design and the OS-enforced network broker.
+
+For this endpoint family, require a literal address and port, explicit
+protocol, and verified TLS identity (trusted CA or a certificate/public-key
+pin obtained out of band); first-use trust of a self-signed certificate and
+TLS verification bypass are not acceptable. Avoid DNS/mDNS discovery and
+fallback. MQTT subscriptions should begin at QoS 0 with exact broker-authorized
+topics, explicit retained-message behavior, strict size/rate caps, and replay
+metadata. See the detailed platform and protocol boundaries in
+[OS broker design](OS_DEVICE_BROKER.md#separate-lan-receive-scope-planned).

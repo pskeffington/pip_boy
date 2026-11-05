@@ -96,13 +96,81 @@ network receive scope must not be inferred from `mesh.transmit` or the existing
 tracked as MESH-05 but is not implemented. Before any live LAN socket, define a
 broker-enforced grant bound to an operator-selected endpoint, protocol, port
 and receive-only data operation, with a deadline, bounded buffers,
-cancellation, revoke behavior and safe credential handling. If MQTT is used,
-the scope must specify the control frames needed for a read-only subscription
-(such as CONNECT, SUBSCRIBE and keepalive) while forbidding publish operations;
-broker-side ACLs must restrict topics. Denial must happen before socket
-creation; browsing a module or selecting the station must not connect. The
-scope must not imply Meshtastic configuration writes or RF transmission. See
-MESH-05 and MESH-06 in the [Meshtastic task queue](../catalog/meshtastic_tasks.json).
+cancellation, revoke behavior and safe credential handling.
+
+The endpoint must be a literal IPv4 or IPv6 address, with an explicit port; do
+not perform DNS, `.local` resolution, mDNS, SRV lookup, subnet scanning or
+automatic fallback. Reject unspecified, multicast and broadcast addresses;
+reject loopback in production policy (test-only fixtures cannot mint runtime
+grants), normalize IPv4-mapped IPv6 before address-class checks, and require an
+explicit IPv6 link-local interface scope. TLS is mandatory. For a literal IP, validate
+the certificate IP subjectAltName; alternatively accept an out-of-band
+verified certificate/public-key pin bound to that exact IP and port. A
+self-signed certificate is not trusted by its first successful handshake, and
+pin rotation requires a new explicit enrollment. Do not disable certificate
+validation or downgrade to plaintext. Credentials may come only from an
+operator-approved OS credential store and must not enter logs or capture data.
+
+The first design candidate is MQTT 3.1.1 over TLS at one explicit endpoint,
+with one exact topic filter, QoS 0 and a broker ACL limited to that topic. The
+ordinary Meshtastic TCP client startup can send `want_config_id` and
+heartbeats, so it is excluded from the receive profile. MQTT client frames are
+limited to CONNECT, SUBSCRIBE, PINGREQ and DISCONNECT; PUBLISH, UNSUBSCRIBE and
+PUBACK are forbidden. The one exact topic must be valid MQTT UTF-8, with no NUL
+or wildcard characters. Parse fixed-header flags and Remaining Length strictly
+with no overflow, overlong encoding or trailing-frame ambiguity. If the broker
+offers QoS above 0, or an unexpected frame, wildcard, retained message or topic,
+close the connection and return no accepted message. The actual station service, topic and payload framing must
+be identified before MESH-06 implementation; this candidate does not assert
+that any is enabled on the user's station.
+
+The broker-to-client allowlist is CONNACK, a SUBACK granting QoS 0 for the
+single requested filter, PINGRESP and non-retained PUBLISH at QoS 0 for that
+exact topic. Reject a SUBACK granting higher QoS, any mismatched topic or
+retained flag, duplicate SUBACK, unexpected control packet, malformed UTF-8 or
+invalid Remaining Length; then close and mark the capture incomplete.
+
+Initial per-session maxima for the design are: 300 seconds, one topic of at
+most 128 valid UTF-8 bytes, 10 incoming messages/second with burst 20, 4,096 bytes
+per MQTT packet, 512 bytes per extracted Meshtastic frame, 16 queued messages
+and 65,536 aggregate queued bytes, plus 1 MiB total received payload. Exceeding
+any cap closes the connection and reports an incomplete unverified capture;
+limits may be lowered per grant but never raised by the caller. QoS 0 and
+rejecting retained messages avoid broker acknowledgement/replay writes. Keep
+duplicate/reorder metadata; do not deduplicate into authenticated identity.
+
+The host-owned confirmation surface must show the exact endpoint, protocol,
+topic and duration and require a direct user action; saved preferences and
+module selection cannot create a grant. Each confirmation creates a fresh,
+nonserializable session generation bound to the signed caller, endpoint,
+protocol, exact topic, caps and deadline.
+On revoke, expiry, sleep, disconnect, malformed/over-limit input or broker
+failure, immediately cancel reads and close the socket, clear queued bytes,
+invalidate the generation, and reject callbacks/replies from old generations.
+An interrupted capture is incomplete/UNKNOWN; no message receipt is inferred.
+Every resulting observation stays unverified.
+
+On macOS, App Sandbox entitlements for serial and outgoing network access can
+limit a packaged helper's capabilities, but the TCP client entitlement does
+not restrict TCP data direction. A separately sandboxed, on-demand XPC service
+is the candidate owner for the endpoint/socket handle; authenticate the peer
+with a code-signing requirement and expose only the narrow receive RPC. Direct
+distribution of the app and helper must use the Developer ID/hardened-runtime
+path; an ad-hoc local build is not release trust evidence. Local
+Network privacy acceptance must use the signed packaged app identity: Apple
+documents that command-line tools launched from Terminal or SSH are
+automatically allowed, so a CLI probe does not demonstrate the packaged app's
+consent flow. Do not install or start a privileged helper. These are design
+constraints, not implemented protections. See [Apple's serial entitlement](https://developer.apple.com/library/archive/documentation/Miscellaneous/Reference/EntitlementKeyReference/Chapters/EnablingAppSandbox.html),
+[TCP network client entitlement](https://developer.apple.com/documentation/bundleresources/entitlements/com.apple.security.network.client),
+[XPC peer signing requirement](https://developer.apple.com/documentation/foundation/nsxpcconnection/setcodesigningrequirement%28_%3A%29),
+[local network privacy note TN3179](https://developer.apple.com/documentation/technotes/tn3179-understanding-local-network-privacy),
+and [notarization requirements](https://developer.apple.com/documentation/security/notarizing-macos-software-before-distribution).
+
+Denial must happen before socket creation; browsing a module or selecting the
+station must not connect. The scope must not imply Meshtastic configuration
+writes or RF transmission. See MESH-05 and MESH-06 in the
+[Meshtastic task queue](../catalog/meshtastic_tasks.json).
 
 Primary platform references:
 - [Microsoft: Creating a Pseudoconsole Session](https://learn.microsoft.com/en-us/windows/console/creating-a-pseudoconsole-session)
