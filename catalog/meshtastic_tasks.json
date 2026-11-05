@@ -49,7 +49,9 @@
       "id": "MESH-02",
       "title": "Implement OS-enforced receive-only USB broker authorization",
       "status": "blocked_dependency",
-      "depends_on": ["OS_DEVICE_BROKER"],
+      "blocking_conditions": [
+        "OS-enforced device broker implementation and independent security review are not complete"
+      ],
       "paths": [
         "crates/rust-boy-broker/src/main.rs",
         "docs/OS_DEVICE_BROKER.md"
