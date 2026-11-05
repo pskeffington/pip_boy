@@ -36,7 +36,7 @@
       ],
       "evidence": {
         "source_commit": "4ede2597d90ba240775f67c95767e59a82708751",
-        "focused_tests": "cargo test --locked -p pipboy-core meshtastic_decode::tests — 8 passed",
+        "focused_tests": "cargo test --locked -p pipboy-core meshtastic_decode::tests \u2014 8 passed",
         "local_gates": "workspace fmt, warnings-denied Clippy, full locked tests, Rust 1.90 check, catalog/security validators passed; one unrelated dashboard test was transiently flaky on the first full run and passed in a repeat run",
         "fixture": "Synthetic bytes match protoc encoding using a minimal schema aligned to the pinned field types; not generated from upstream bindings and not a hardware capture",
         "independent_review": "No remaining actionable parser defects reported after fixes",
@@ -67,7 +67,9 @@
       "id": "MESH-03",
       "title": "Verify passive reception against owned Meshtastic radios",
       "status": "blocked_hardware",
-      "depends_on": ["MESH-02"],
+      "depends_on": [
+        "MESH-02"
+      ],
       "acceptance_record": "docs/MESSENGER_INTEROPERABILITY.md",
       "acceptance": [
         "Record intended Mac and Raspberry Pi 5, two owned radios, model, firmware, USB identity and region",
@@ -80,7 +82,10 @@
       "id": "MESH-04",
       "title": "Design a separately authorized Meshtastic transmit contract",
       "status": "blocked_dependency",
-      "depends_on": ["MESH-02", "MESH-03"],
+      "depends_on": [
+        "MESH-02",
+        "MESH-03"
+      ],
       "acceptance": [
         "Independent protocol and security review before any transmit implementation",
         "Explicit one-operation confirmation, device-bound grant and regional airtime constraints",
@@ -116,10 +121,41 @@
       }
     },
     {
+      "id": "MESH-07",
+      "title": "Implement offline LAN receive scope and freshness contract",
+      "status": "accepted_software",
+      "paths": [
+        "crates/pipboy-core/src/mesh_receive_scope.rs",
+        "docs/OS_DEVICE_BROKER.md"
+      ],
+      "acceptance": [
+        "Validate literal IP endpoints only; reject production loopback, unspecified, multicast and IPv4 limited broadcast; canonicalize IPv4-mapped IPv6 and require scope for IPv6 link-local; defer subnet-directed-broadcast checks to a broker with trusted interface-prefix data",
+        "Validate one exact MQTT UTF-8 topic with no wildcard or prohibited code points and a 128-byte maximum; leave full wire-encoding validation to the future MQTT parser",
+        "Bind the typed scope plan to a nonzero TLS SHA-256 pin and a maximum 300-second duration; expose fixed packet, frame, queue, session and rate limits",
+        "Bind the local generation guard to the complete immutable scope plan and reject expired, revoked, wrong-generation and wrong-scope callbacks before the test transport can open or read; caller identity and OS consent remain unimplemented",
+        "A matching current test lease reaches only a fake transport; no production socket, credential lookup, DNS, station or radio I/O is implemented",
+        "Label the contract as non-OS-enforced and do not use it to claim MESH-06 acceptance"
+      ],
+      "evidence": {
+        "source_commit": "81da428d775810694ffe63b018097833e51db2f9",
+        "focused_tests": "6 offline unit tests passed: literal endpoint policy, full-plan generation binding, expiry/revocation/denial, topic bounds, TLS pin and duration bounds",
+        "limitations": "Pure Rust parameter/freshness contract only. No authenticated XPC caller, OS grant, production socket, MQTT wire parser, credential store, interface-prefix check, station or radio I/O. Rate and byte caps are declared, not operationally enforced.",
+        "local_gates": "cargo fmt --all -- --check; cargo clippy --workspace --all-targets -- -D warnings; cargo test --workspace --locked; cargo +1.90.0 check --workspace --locked; repository, catalog and security validators passed",
+        "workflow_run": 41965952404,
+        "workflow_url": "https://github.com/pskeffington/pip_boy/actions/runs/41965952404",
+        "workflow_head": "fdfb2589473c3505026a7dce965b85c3156a027a",
+        "jobs_passed": "7/7",
+        "independent_review": "SECURITY_QA found no remaining blocker for this offline precursor; review confirms no OS auth or production transport."
+      }
+    },
+    {
       "id": "MESH-06",
       "title": "Integrate and verify passive LAN reception from WisMesh Station",
       "status": "blocked_dependency",
-      "depends_on": ["MESH-05"],
+      "depends_on": [
+        "MESH-05",
+        "MESH-07"
+      ],
       "blocking_conditions": [
         "OS-enforced network receive broker implementation and independent security review are not complete",
         "Actual Station model, enabled receive service, topic, broker ACL and payload framing are unverified",

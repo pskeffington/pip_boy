@@ -19,7 +19,7 @@ Technical contracts, architecture decisions, research provenance and validation 
 
 ## Meshtastic communications
 
-[Meshtastic interoperability record](MESSENGER_INTEROPERABILITY.md) and [machine-readable queue](../catalog/meshtastic_tasks.json) distinguish the merged recorded-capture decoder from live USB/LAN reception. PR #96 merged at `ee04da5`; its exact head passed 7/7 jobs in [Actions run 41958732527](https://github.com/pskeffington/pip_boy/actions/runs/41958732527). PR #99 accepted the LAN receive design only (7/7 in [Actions run 41963337334](https://github.com/pskeffington/pip_boy/actions/runs/41963337334)). The operator-verified web UI root does not identify an enabled receive service; live broker, socket, and hardware acceptance remain pending.
+[Meshtastic interoperability record](MESSENGER_INTEROPERABILITY.md) and [machine-readable queue](../catalog/meshtastic_tasks.json) distinguish the merged recorded-capture decoder from live USB/LAN reception. PR #96 merged at `ee04da5`; its exact head passed 7/7 jobs in [Actions run 41958732527](https://github.com/pskeffington/pip_boy/actions/runs/41958732527). PR #99 accepted the LAN receive design only (7/7 in [Actions run 41963337334](https://github.com/pskeffington/pip_boy/actions/runs/41963337334)). The operator-verified web UI root does not identify an enabled receive service. MESH-07 now has an accepted offline scope/freshness contract (7/7 in [Actions run 41965952404](https://github.com/pskeffington/pip_boy/actions/runs/41965952404)); live broker, socket, and hardware acceptance remain pending.
 
 ## Universal adapter SDK
 

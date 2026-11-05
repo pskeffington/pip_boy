@@ -93,8 +93,9 @@ device, and it does not implement or validate the proposed broker.
 Meshtastic over a LAN node is a network resource, not `serial.read`, and a
 network receive scope must not be inferred from `mesh.transmit` or the existing
 `network.fetch` capability. MESH-05 accepts the `OS_NETWORK_RECEIVE_SCOPE`
-design, but neither the scope nor a LAN broker is implemented. Before any live
-LAN socket, define a broker-enforced grant bound to an operator-selected
+design. MESH-07 adds only a pure offline contract; the OS-enforced grant and LAN
+broker are still unimplemented. Before any live LAN socket, require a
+broker-enforced grant bound to an operator-selected
 endpoint, protocol, port
 and receive-only data operation, with a deadline, bounded buffers,
 cancellation, revoke behavior and safe credential handling.
@@ -180,3 +181,30 @@ Primary platform references:
 Related: [security](../SECURITY.md), [adapter preferences](PERMISSIONS.md),
 [virtual transport](VIRTUAL_TRANSPORT.md), [typed mock adapters](MOCK_ADAPTERS.md),
 and [G2 roadmap](ROADMAP.md).
+
+## Offline LAN receive-scope contract (MESH-07)
+
+`pipboy-core::mesh_receive_scope` contains a pure validation and freshness
+contract for a future broker. It accepts literal IP endpoints only, canonicalizes
+IPv4-mapped IPv6 before address checks, rejects loopback/unspecified/multicast/
+broadcast endpoints, and requires an interface scope for IPv6 link-local
+addresses. It validates the exact MQTT topic, TLS SHA-256 pin, and session
+duration, and defines fixed maxima for message rate, packet/frame sizes, and
+queue/session totals from the MESH-05 design. `GenerationGuard` binds the
+complete immutable `ScopePlan` to a local generation and deadline and rejects
+a changed endpoint, topic, or pin. It does
+not establish caller identity or operator consent. IPv4 limited broadcast is
+rejected; subnet-directed broadcast cannot be determined without trusted
+interface-prefix data and must be checked by the eventual broker before open.
+
+A `ScopePlan` is parameter data, not consent or authorization. Topic checks
+cover the supported in-memory form only; the eventual MQTT parser must enforce
+wire encoding and compare the exact topic bytes. Rate and size constants are
+specified but are not operationally enforced here. `GenerationGuard` is an
+in-process freshness helper, not an opaque credential or OS grant. The only
+transport exercised by its regression tests is a counter-based fake. No
+production transport-opening API is present: this code performs no DNS, socket,
+keychain, USB, or radio operations. It does not authenticate an XPC peer, enforce
+sandbox entitlements, parse MQTT frames, enroll the operator-confirmed station
+certificate, or make the station usable. MESH-07 is a software precursor only;
+MESH-06 remains blocked on the real broker and verified station service details.
