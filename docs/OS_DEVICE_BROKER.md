@@ -92,9 +92,10 @@ device, and it does not implement or validate the proposed broker.
 
 Meshtastic over a LAN node is a network resource, not `serial.read`, and a
 network receive scope must not be inferred from `mesh.transmit` or the existing
-`network.fetch` capability. The proposed `OS_NETWORK_RECEIVE_SCOPE` design is
-tracked as MESH-05 but is not implemented. Before any live LAN socket, define a
-broker-enforced grant bound to an operator-selected endpoint, protocol, port
+`network.fetch` capability. MESH-05 accepts the `OS_NETWORK_RECEIVE_SCOPE`
+design, but neither the scope nor a LAN broker is implemented. Before any live
+LAN socket, define a broker-enforced grant bound to an operator-selected
+endpoint, protocol, port
 and receive-only data operation, with a deadline, bounded buffers,
 cancellation, revoke behavior and safe credential handling.
 
@@ -103,8 +104,8 @@ not perform DNS, `.local` resolution, mDNS, SRV lookup, subnet scanning or
 automatic fallback. Reject unspecified, multicast and broadcast addresses;
 reject loopback in production policy (test-only fixtures cannot mint runtime
 grants), normalize IPv4-mapped IPv6 before address-class checks, and require an
-explicit IPv6 link-local interface scope. TLS is mandatory. For a literal IP, validate
-the certificate IP subjectAltName; alternatively accept an out-of-band
+explicit IPv6 link-local interface scope. TLS is mandatory. For a literal IP,
+validate the certificate IP subjectAltName; alternatively accept an out-of-band
 verified certificate/public-key pin bound to that exact IP and port. A
 self-signed certificate is not trusted by its first successful handshake, and
 pin rotation requires a new explicit enrollment. Do not disable certificate
