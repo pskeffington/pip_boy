@@ -1,0 +1,14 @@
+:root{color-scheme:dark;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;color:#9bffac;background:#06120b}
+*{box-sizing:border-box}body{margin:0;min-height:100svh;padding:16px}main{max-width:640px;margin:auto}
+.eyebrow{font-size:11px;letter-spacing:.1em;color:#7be9a6}h1{font-size:1.1rem;letter-spacing:.09em;margin:12px 0}
+.note{font-size:.84rem;line-height:1.5;color:#9dcfa5}
+.screen{position:relative;display:grid;place-items:center;min-height:340px;background:radial-gradient(ellipse at center,#15341d,#07170c 66%);border:1px solid #487a50;border-radius:12px;overflow:hidden}
+.screen::after{position:absolute;inset:0;pointer-events:none;content:"";opacity:.19;background:repeating-linear-gradient(to bottom,transparent 0,transparent 3px,#010701 4px,#010701 5px)}
+canvas{display:block;width:min(196px,60vw);height:auto;filter:drop-shadow(0 0 3px #67ec8244)}
+#pose-label{position:absolute;bottom:12px;left:16px;font-size:11px;letter-spacing:.12em;color:#a3f7b1}
+.controls{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+button{cursor:pointer;min-width:100px;min-height:44px;border:1px solid #4b9b64;border-radius:6px;padding:8px 14px;background:#10291a;color:#b7ffc3;font:inherit}
+button[aria-pressed=true]{background:#386d4b;color:#fff}
+button:focus-visible,a:focus-visible{outline:3px solid #c5ffd1;outline-offset:2px}
+a{color:#9bffac}
+@media(prefers-reduced-motion:reduce){.screen::after{display:none}canvas{filter:none}}
