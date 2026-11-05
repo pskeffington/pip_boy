@@ -123,7 +123,7 @@
     {
       "id": "MESH-07",
       "title": "Implement offline LAN receive scope and freshness contract",
-      "status": "implemented_unverified",
+      "status": "accepted_software",
       "paths": [
         "crates/pipboy-core/src/mesh_receive_scope.rs",
         "docs/OS_DEVICE_BROKER.md"
@@ -141,7 +141,11 @@
         "focused_tests": "6 offline unit tests passed: literal endpoint policy, full-plan generation binding, expiry/revocation/denial, topic bounds, TLS pin and duration bounds",
         "limitations": "Pure Rust parameter/freshness contract only. No authenticated XPC caller, OS grant, production socket, MQTT wire parser, credential store, interface-prefix check, station or radio I/O. Rate and byte caps are declared, not operationally enforced.",
         "local_gates": "cargo fmt --all -- --check; cargo clippy --workspace --all-targets -- -D warnings; cargo test --workspace --locked; cargo +1.90.0 check --workspace --locked; repository, catalog and security validators passed",
-        "workflow_run": "pending exact-head CI"
+        "workflow_run": 41965952404,
+        "workflow_url": "https://github.com/pskeffington/pip_boy/actions/runs/41965952404",
+        "workflow_head": "fdfb2589473c3505026a7dce965b85c3156a027a",
+        "jobs_passed": "7/7",
+        "independent_review": "SECURITY_QA found no remaining blocker for this offline precursor; review confirms no OS auth or production transport."
       }
     },
     {
