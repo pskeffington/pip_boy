@@ -338,7 +338,7 @@ mod tests {
     }
 
     #[test]
-    fn exact_topic_and_fixed_caps_are_enforced() {
+    fn exact_topic_is_validated_and_fixed_caps_are_declared() {
         for topic in ["", "x+", "x/#", "x\0y", "x\n", "x\u{0085}", "x\u{fffd}"] {
             assert!(ExactTopic::parse(topic).is_err(), "{topic:?}");
         }

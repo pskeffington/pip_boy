@@ -188,10 +188,11 @@ and [G2 roadmap](ROADMAP.md).
 contract for a future broker. It accepts literal IP endpoints only, canonicalizes
 IPv4-mapped IPv6 before address checks, rejects loopback/unspecified/multicast/
 broadcast endpoints, and requires an interface scope for IPv6 link-local
-addresses. It bounds the exact MQTT topic, TLS SHA-256 pin, session duration,
-message rate, packet/frame sizes, and queue/session totals from the MESH-05
-design. `GenerationGuard` binds the complete immutable `ScopePlan` to a local
-generation and deadline and rejects a changed endpoint, topic, or pin. It does
+addresses. It validates the exact MQTT topic, TLS SHA-256 pin, and session
+duration, and defines fixed maxima for message rate, packet/frame sizes, and
+queue/session totals from the MESH-05 design. `GenerationGuard` binds the
+complete immutable `ScopePlan` to a local generation and deadline and rejects
+a changed endpoint, topic, or pin. It does
 not establish caller identity or operator consent. IPv4 limited broadcast is
 rejected; subnet-directed broadcast cannot be determined without trusted
 interface-prefix data and must be checked by the eventual broker before open.
