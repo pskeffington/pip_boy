@@ -124,3 +124,7 @@ Apple's distribution guidance requires Developer ID signing for direct
 distribution and recommends notarization; notarization uses the hardened
 runtime. See [Distributing software on macOS](https://developer.apple.com/macos/distribution/)
 and [Notarizing macOS software before distribution](https://developer.apple.com/documentation/security/notarizing-macos-software-before-distribution).
+
+### Rebased release validation (2026-11-05)
+
+After prerequisite PR #92 merged to `main` at `22c43f835465a5656b1c907f44eb853b754d0c2b`, the Mac release branch was rebased directly onto `main`. Exact rebased head `7bb686bcb3708eca20cf785f52fd470cd028571e` passed all 7 jobs in [Actions run 41951804327](https://github.com/pskeffington/pip_boy/actions/runs/41951804327), including the universal arm64+x86_64 app bundle smoke. This confirms software integration on the current host branch; it does not provide Apple signing credentials, notarization, Gatekeeper, or clean-account interactive acceptance.
