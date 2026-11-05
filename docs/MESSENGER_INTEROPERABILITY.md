@@ -74,8 +74,10 @@ framing and cancellation, and redact credentials and message content from logs.
 The station being present on the network is not by itself an authorization to
 connect. Until the OS network broker exists and the station-specific service
 and payload framing are verified, only recorded captures are supported.
-MESH-05 accepts the design only; no LAN transport is implemented. MESH-06
-remains blocked on the broker and station-specific service details.
+MESH-05 accepts the design only; no LAN transport is implemented. The
+`mesh_receive_scope` module adds an offline validation/freshness contract under
+MESH-07; it has no production transport and is not an OS authorization boundary.
+MESH-06 remains blocked on the broker and station-specific service details.
 
 On 2026-11-05, the operator confirmed out of band that the station's observed
 TLS certificate fingerprint matches the station. Using that verified identity,
