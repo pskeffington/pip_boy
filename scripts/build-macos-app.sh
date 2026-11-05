@@ -82,7 +82,8 @@ for index in "${!TARGETS[@]}"; do
   install -m 755 "$BIN" "$STAGING/pipboy-$ARCH"
   swiftc -parse-as-library -target "$ARCH-apple-macosx$MACOSX_DEPLOYMENT_TARGET" \
     -module-cache-path "$ROOT/target/swift-module-cache" -O \
-    -framework AppKit "$ROOT/macos/RustBoyLauncher.swift" -o "$STAGING/RustBoy-$ARCH"
+    -framework AppKit "$ROOT/macos/DashboardEndpoint.swift" \
+    "$ROOT/macos/RustBoyLauncher.swift" -o "$STAGING/RustBoy-$ARCH"
 done
 mkdir -p "$MACOS"
 if [[ "${#ARCHES[@]}" -eq 1 ]]; then
@@ -116,7 +117,7 @@ cat > "$CONTENTS/Info.plist" <<PLIST
 <key>LSMinimumSystemVersion</key><string>$MACOSX_DEPLOYMENT_TARGET</string>
 <key>LSUIElement</key><true/>
 <key>NSHighResolutionCapable</key><true/>
-<key>NSLocalNetworkUsageDescription</key><string>Rust-Boy hosts its dashboard on this Mac for access from your browser.</string>
+<key>NSLocalNetworkUsageDescription</key><string>Rust-Boy hosts its dashboard only on this Mac for access from your browser.</string>
 </dict></plist>
 PLIST
 /usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$CONTENTS/Info.plist" >/dev/null

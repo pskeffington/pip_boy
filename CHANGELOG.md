@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-11-05 — Mac local endpoint validation
+
+- Validate the dashboard URL emitted by the bundled process as plain HTTP on exactly `127.0.0.1`, with a valid port, root path, and no user info, query, or fragment before browser opening or smoke evidence capture.
+- Clarify the macOS local-network permission prompt that the dashboard is hosted only on this Mac; add accepted/rejected URL parser regression cases.
+
 ## 2026-11-04 — Mac app release hardening follow-up
 
 - Add a generated multi-resolution Rust-Boy app icon and tested bundle version, copyright, and category metadata.

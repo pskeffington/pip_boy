@@ -130,8 +130,8 @@ final class RustBoyAppDelegate: NSObject, NSApplicationDelegate {
         outputBuffer += text
         let lines = outputBuffer.components(separatedBy: "\n")
         outputBuffer = lines.last ?? ""
-        guard let line = lines.dropLast().first(where: { $0.hasPrefix("Open http://127.0.0.1:") }),
-              let url = URL(string: String(line.dropFirst("Open ".count))) else {
+        guard let line = lines.dropLast().first(where: { $0.hasPrefix("Open ") }),
+              let url = DashboardEndpoint.rootURL(from: line) else {
             return
         }
         dashboardURL = url
@@ -342,8 +342,8 @@ struct RustBoyLauncher {
                 let data = output.fileHandleForReading.availableData
                 guard !data.isEmpty, let text = String(data: data, encoding: .utf8) else { break }
                 if let line = text.split(whereSeparator: \.isNewline)
-                    .first(where: { $0.hasPrefix("Open http://127.0.0.1:") }),
-                   let url = URL(string: String(line.dropFirst("Open ".count))),
+                    .first(where: { $0.hasPrefix("Open ") }),
+                   let url = DashboardEndpoint.rootURL(from: String(line)),
                    let readyFile = ProcessInfo.processInfo.environment["RUSTBOY_READY_FILE"] {
                     let record = "\(url.absoluteString)\n\(process.processIdentifier)\n"
                     try? record.write(toFile: readyFile, atomically: true, encoding: .utf8)

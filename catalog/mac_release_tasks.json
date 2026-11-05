@@ -18,7 +18,7 @@
     {
       "id": "MAC-REL-01",
       "title": "Build and smoke-test a native menu-bar app bundle",
-      "status": "accepted_software",
+      "status": "follow_up_ci_pending",
       "paths": [
         "macos/RustBoyLauncher.swift",
         "macos/generate_app_icon.swift",
@@ -35,7 +35,7 @@
         "limitation": "Local AppKit launch remains unavailable in the restricted LaunchServices environment (SIGABRT). Hosted CI verifies software paths; logged-in user session, accessibility, signing/notarization, Gatekeeper, and hardware acceptance remain separate.",
         "appkit_ci": "Exact head 7d77c9da0a72b55ff6c5a7fcb4ad5e384702e4e1 passed all 7 jobs in https://github.com/pskeffington/pip_boy/actions/runs/41786181479. Native macOS CI passed actual desktop/micro/Stop/Quit menu actions, live-child shutdown, Retry after missing service, and universal arm64+x86_64 app bundle smoke."
       },
-      "ci_evidence": "Final Mac implementation head 708cf7aeb0eff3c6a657c33402d26fe640f739e8 passed 7/7 jobs in https://github.com/pskeffington/pip_boy/actions/runs/41787914386, including AppKit desktop/micro/Stop/Quit, live-child shutdown, Retry, and universal bundle smoke. This also validates the package-source regression that binds the release SHA to a clean git archive build. Rebased release PR head 7bb686bcb3708eca20cf785f52fd470cd028571e passed 7/7 jobs in https://github.com/pskeffington/pip_boy/actions/runs/41951804327 after PR #92 merged to main; includes the current-main native macOS universal bundle smoke.",
+      "ci_evidence": "Final Mac implementation head 708cf7aeb0eff3c6a657c33402d26fe640f739e8 passed 7/7 jobs in https://github.com/pskeffington/pip_boy/actions/runs/41787914386, including AppKit desktop/micro/Stop/Quit, live-child shutdown, Retry, and universal bundle smoke. This also validates the package-source regression that binds the release SHA to a clean git archive build. Rebased release PR head 7bb686bcb3708eca20cf785f52fd470cd028571e passed 7/7 jobs in https://github.com/pskeffington/pip_boy/actions/runs/41951804327 after PR #92 merged to main; includes the current-main native macOS universal bundle smoke. Follow-up exact-host validation and clearer local-network prompt are implemented; awaiting exact-head CI.",
       "software_acceptance": [
         "macOS native workflow builds and verifies arm64+x86_64 Rust and Swift slices",
         "Universal bundle starts and serves desktop and micro loopback routes on the runner",

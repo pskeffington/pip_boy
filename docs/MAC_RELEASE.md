@@ -8,6 +8,12 @@ surface in the default browser, and offers explicit Stop and Quit controls. It
 binds only to IPv4 loopback. It does not add a public listener, background
 network service, module installation, or automatic update channel.
 
+Before browser launch or smoke-evidence capture, the AppKit host validates the
+service's printed endpoint as plain HTTP on exactly `127.0.0.1`, a valid port,
+and the root path, with no credentials, query, or fragment. The macOS local
+network permission description states that the dashboard is hosted only on
+this Mac.
+
 ## Build and validate a local app
 
 Requirements: macOS 13 or newer, Xcode Command Line Tools, Rust 1.90+, Python

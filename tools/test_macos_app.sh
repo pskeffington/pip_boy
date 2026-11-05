@@ -30,6 +30,9 @@ cleanup() {
 trap cleanup EXIT
 
 cd "$ROOT"
+swiftc -parse-as-library "$ROOT/macos/DashboardEndpoint.swift" \
+  "$ROOT/tools/test_dashboard_endpoint.swift" -o "$TMP/dashboard-endpoint-tests"
+"$TMP/dashboard-endpoint-tests"
 cargo build --locked -p pipboy --bin pipboy
 RUSTBOY_BUNDLE_ID="$BUNDLE_ID" RUSTBOY_BINARY="$ROOT/target/debug/pipboy" RUSTBOY_APP_OUTPUT="$APP" \
   bash scripts/build-macos-app.sh
