@@ -27,6 +27,9 @@ raw private conversations, live node locations or credential-store exports.
 
 ## Software capture-decoder slice
 
+The machine-readable sequence and status for Meshtastic work is recorded in
+[`catalog/meshtastic_tasks.json`](../catalog/meshtastic_tasks.json).
+
 The offline `pipboy-core::meshtastic_decode` parser now recognizes only
 `FromRadio.packet → MeshPacket.decoded → Data(TEXT_MESSAGE_APP)`. It returns
 bounded text and optional node/channel numbers explicitly marked unverified;

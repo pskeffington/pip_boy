@@ -1,0 +1,90 @@
+{
+  "schema_version": 1,
+  "updated": "2026-11-05",
+  "project": "Rust-Boy Meshtastic radio transport",
+  "protocol_schema": {
+    "repository": "meshtastic/protobufs",
+    "version": "v2.8.0",
+    "commit": "7b2464c9b8c1521f93852261e4123826e5b25e11",
+    "file": "meshtastic/mesh.proto",
+    "url": "https://github.com/meshtastic/protobufs/blob/7b2464c9b8c1521f93852261e4123826e5b25e11/meshtastic/mesh.proto"
+  },
+  "status_semantics": {
+    "queued": "ready for implementation",
+    "implemented_unverified": "source exists but required software evidence is incomplete",
+    "accepted_software": "required automated software gates and independent code review passed",
+    "blocked_dependency": "requires a separately accepted software or security prerequisite",
+    "blocked_hardware": "requires evidence from the specified physical devices",
+    "accepted_hardware": "real device evidence was captured and independently reviewed"
+  },
+  "tasks": [
+    {
+      "id": "MESH-01",
+      "title": "Decode recorded FromRadio text as an unverified observation",
+      "status": "accepted_software",
+      "paths": [
+        "crates/pipboy-core/src/meshtastic_decode.rs",
+        "docs/MESSENGER_BUILD_PASSES.md",
+        "docs/MESSENGER_INTEROPERABILITY.md"
+      ],
+      "acceptance": [
+        "Bounded recorded-capture parser only; no serial open, network, persistence or ToRadio path",
+        "Decode only FromRadio.packet -> MeshPacket.decoded -> Data(TEXT_MESSAGE_APP)",
+        "fixed32 from/to, uint32 channel, valid field-number range and FromRadio oneof conflicts are checked",
+        "Output remains unverified and never enters Messenger/PACE state or creates a delivery receipt",
+        "Malformed, duplicate, oversized, unsupported, invalid UTF-8 and bidi/control cases are covered"
+      ],
+      "evidence": {
+        "source_commit": "4ede2597d90ba240775f67c95767e59a82708751",
+        "focused_tests": "cargo test --locked -p pipboy-core meshtastic_decode::tests — 8 passed",
+        "local_gates": "workspace fmt, warnings-denied Clippy, full locked tests, Rust 1.90 check, catalog/security validators passed; one unrelated dashboard test was transiently flaky on the first full run and passed in a repeat run",
+        "fixture": "Synthetic bytes match protoc encoding using a minimal schema aligned to the pinned field types; not generated from upstream bindings and not a hardware capture",
+        "independent_review": "No remaining actionable parser defects reported after fixes",
+        "workflow_run": 41957817207,
+        "workflow_url": "https://github.com/pskeffington/pip_boy/actions/runs/41957817207",
+        "jobs_passed": "7/7"
+      }
+    },
+    {
+      "id": "MESH-02",
+      "title": "Implement OS-enforced receive-only USB broker authorization",
+      "status": "blocked_dependency",
+      "depends_on": ["OS_DEVICE_BROKER"],
+      "paths": [
+        "crates/rust-boy-broker/src/main.rs",
+        "docs/OS_DEVICE_BROKER.md"
+      ],
+      "acceptance": [
+        "Deny-by-default device selection and receive-only scope enforced outside UI",
+        "Missing, stale, wrong-device, revoked and denied grants cause zero USB I/O",
+        "Close on revoke, unplug and suspend; bound reads and cancellation",
+        "No automatic connection on app launch, package selection or capture inspection"
+      ]
+    },
+    {
+      "id": "MESH-03",
+      "title": "Verify passive reception against owned Meshtastic radios",
+      "status": "blocked_hardware",
+      "depends_on": ["MESH-02"],
+      "acceptance_record": "docs/MESSENGER_INTEROPERABILITY.md",
+      "acceptance": [
+        "Record intended Mac and Raspberry Pi 5, two owned radios, model, firmware, USB identity and region",
+        "Capture actual FromRadio frames and independently decode using the pinned schema",
+        "Evidence proves zero host-to-radio bytes, reset/config changes or application transmission",
+        "Record unplug, suspend, malformed-frame and cleanup behavior with an independent reviewer"
+      ]
+    },
+    {
+      "id": "MESH-04",
+      "title": "Design a separately authorized Meshtastic transmit contract",
+      "status": "blocked_dependency",
+      "depends_on": ["MESH-02", "MESH-03"],
+      "acceptance": [
+        "Independent protocol and security review before any transmit implementation",
+        "Explicit one-operation confirmation, device-bound grant and regional airtime constraints",
+        "Interrupted sends report UNKNOWN OUTCOME absent an independent receipt",
+        "No claim of delivery/read status from radio transmission alone"
+      ]
+    }
+  ]
+}

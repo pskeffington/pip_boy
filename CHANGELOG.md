@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-11-05 — Meshtastic recorded-capture decoding
+
+- Add a bounded recorded-frame decoder for text-message protobufs, correcting `fixed32` node IDs and checking the `FromRadio` oneof and field-number bounds.
+- Keep observations unverified and offline; add a separate task ledger for USB broker, physical reception, and transmit gates.
+- Verify a synthetic fixture byte-for-byte with `protoc` against a minimal schema matching pinned Meshtastic protobufs v2.8.0 field types; no radio capture or firmware acceptance is claimed.
+- Pass all 7 hosted CI jobs on exact head `4ede259` ([run 41957817207](https://github.com/pskeffington/pip_boy/actions/runs/41957817207)) after independent parser review fixes.
+
 ## 2026-11-05 — Mac local endpoint validation
 
 - Validate the dashboard URL emitted by the bundled process as plain HTTP on exactly `127.0.0.1`, with a valid port, root path, and no user info, query, or fragment before browser opening or smoke evidence capture.
