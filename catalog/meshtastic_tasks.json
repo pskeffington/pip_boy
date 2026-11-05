@@ -91,7 +91,7 @@
     {
       "id": "MESH-05",
       "title": "Specify the OS-enforced LAN receive scope for WisMesh Station",
-      "status": "queued",
+      "status": "accepted_software",
       "paths": [
         "docs/OS_DEVICE_BROKER.md",
         "docs/MESSENGER_INTEROPERABILITY.md"
@@ -106,7 +106,14 @@
         "Bind a nonserializable generation to signed caller/endpoint/protocol/topic/deadline; explicit confirmation; close socket, clear queue and reject stale callbacks on revoke/expiry/suspend/error",
         "Require policy denial before socket creation and no connection from browse/select/view; specify macOS sandbox/XPC peer identity and Local Network privacy evidence",
         "Design only; no socket, station or radio I/O, and no claim that the OS-enforced broker is implemented"
-      ]
+      ],
+      "evidence": {
+        "source_commit": "2be6a39ae37a4b2733813e0ed009fb05b7d65885",
+        "workflow_run": 41962705586,
+        "workflow_url": "https://github.com/pskeffington/pip_boy/actions/runs/41962705586",
+        "jobs_passed": "7/7",
+        "independent_review": "SECURITY_QA confirmed no remaining MESH-05 design blockers; design-only review, not broker implementation or hardware evidence"
+      }
     },
     {
       "id": "MESH-06",

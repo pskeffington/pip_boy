@@ -72,9 +72,10 @@ the grant and constrained by broker-side read ACLs. It must forbid publishing,
 Meshtastic `ToRadio` configuration or packet writes, and RF transmission. Bound
 framing and cancellation, and redact credentials and message content from logs.
 The station being present on the network is not by itself an authorization to
-connect. Until that contract and network broker exist, only recorded captures
-are supported. MESH-05 tracks the unimplemented scope design; MESH-06 remains
-blocked on that design and the OS-enforced network broker.
+connect. Until the OS network broker exists and the station-specific service
+and payload framing are verified, only recorded captures are supported.
+MESH-05 accepts the design only; no LAN transport is implemented. MESH-06
+remains blocked on the broker, endpoint trust and station-specific details.
 
 For this endpoint family, require a literal address and port, explicit
 protocol, and verified TLS identity (trusted CA or a certificate/public-key
