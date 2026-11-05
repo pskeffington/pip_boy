@@ -30,6 +30,7 @@ pub enum HandlerId {
     NetworkMac,
     NetworkVlan,
     NetworkMtu,
+    RadioStations,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
@@ -172,6 +173,12 @@ pub const COMMANDS: &[CommandDescriptor] = &[
         HandlerId::NetworkMtu,
         ArgumentSchema::NetworkInput,
     ),
+    descriptor(
+        "radio",
+        "stations",
+        HandlerId::RadioStations,
+        ArgumentSchema::None,
+    ),
 ];
 
 const fn descriptor(
@@ -212,6 +219,7 @@ const fn handler_source(handler: HandlerId) -> &'static str {
         | HandlerId::NetworkMac
         | HandlerId::NetworkVlan
         | HandlerId::NetworkMtu => "crates/pipboy-core/src/network_suite.rs",
+        HandlerId::RadioStations => "crates/pipboy/src/radio.rs",
     }
 }
 
@@ -524,7 +532,7 @@ fn registered_pins(pinned_tools: &[&str]) -> Vec<&'static str> {
 }
 
 pub fn registered_tools() -> &'static [&'static str] {
-    &["host", "diag", "library", "byte-lab", "net-lab"]
+    &["host", "diag", "library", "byte-lab", "net-lab", "radio"]
 }
 
 /// Returns stable JSON: fixed descriptor order, field order, and enum spelling.
@@ -608,7 +616,37 @@ mod tests {
             command.tool_id == "net-lab"
                 && command.source == "crates/pipboy-core/src/network_suite.rs"
         }));
-        assert!(help_for("radio").is_empty());
+        let radio = help_for("radio");
+        assert_eq!(radio.len(), 1);
+        assert_eq!(radio[0].verb, "stations");
+        assert_eq!(radio[0].handler, HandlerId::RadioStations);
+        assert_eq!(radio[0].source, "crates/pipboy/src/radio.rs");
+        assert_eq!(radio[0].side_effect, SideEffectClass::ReadOnly);
+        assert_eq!(radio[0].connectivity, ConnectivityState::Offline);
+        assert!(radio[0].required_scope.is_none());
+        assert!(!radio[0].confirmation_required);
+    }
+
+    #[test]
+    fn radio_stations_is_offline_metadata_and_requires_a_pin() {
+        let action = parse_input("stations", Some("radio"), &["radio"]).unwrap();
+        assert!(matches!(
+            action,
+            TerminalAction::Execute(CommandRequest {
+                tool_id: "radio",
+                handler: HandlerId::RadioStations,
+                arguments: TypedArguments::None,
+                side_effect: SideEffectClass::ReadOnly,
+                required_scope: None,
+                confirmation_required: false,
+                connectivity: ConnectivityState::Offline,
+                ..
+            })
+        ));
+        assert_eq!(
+            parse_input("stations", Some("radio"), &["host"]),
+            Err(CommandError::ToolNotPinned)
+        );
     }
 
     #[test]
@@ -668,7 +706,7 @@ mod tests {
         assert!(matches!(result, DispatchResult::Control(_)));
         assert_eq!(
             parse_input("radio", None, PINNED),
-            Err(CommandError::UnknownTool)
+            Err(CommandError::ToolNotPinned)
         );
         assert_eq!(
             parse_input("select library", None, PINNED),

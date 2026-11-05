@@ -1,10 +1,11 @@
 {
   "schema_version": 1,
-  "updated": "2026-10-30",
+  "updated": "2026-11-03",
   "project": "Rust-Boy terminal-to-module integration",
   "source_contract": "docs/TERMINAL_MODULE_COMMANDS.md",
   "agent_instructions": "AGENTS.md",
   "execution_guide": "docs/TERMINAL_AGENT_EXECUTION.md",
+  "next_execution_packet": "docs/CODEX_PASS_2026-11-03.md",
   "workflow": "github_first_no_required_live_side_by_side",
   "status_semantics": {
     "queued": "ready for development",
@@ -56,7 +57,7 @@
       "depends_on": [
         "TC-A01"
       ],
-      "status": "in_progress",
+      "status": "accepted_software",
       "paths": [
         "crates/pipboy/src/terminal_commands.rs",
         "crates/pipboy/src/console.rs",
@@ -72,16 +73,16 @@
       "gate": "TC-2",
       "issue": 75,
       "local_evidence": {
-        "stable": "cargo +stable test --locked --offline -p pipboy --bin pipboy terminal_commands::tests (6 passed), console::tests (7 passed), tui::tests (7 passed); warnings-denied Clippy and fmt check passed.",
-        "rust_1_90": "Same focused terminal, console and TUI tests passed (6/7/7); warnings-denied Clippy and fmt check passed.",
-        "remaining": "Full-screen TUI palette is implemented locally; exact-head CI is pending. GUI palette and independent interaction acceptance remain open."
+        "merged_scope": "CLI and full-screen TUI share pipboy-core::command_catalog; direct selection, legacy run COMMAND and DIAG host shorthand preserved; slash palette is pinned-tool scoped; Escape cancels without dispatch; Settings remains host-owned.",
+        "follow_up": "The executor-side metadata recheck is included in the current unsubmitted follow-up and passes local tests; exact-head CI is pending. The desktop/micro palette is implemented in the same follow-up, with viewport CI pending."
       },
       "ci_evidence": {
-        "source_commit": "b21cff7e67d06472c1321113bb2b02f4d7cabab8",
-        "workflow_run": 41125631609,
-        "workflow_url": "https://github.com/pskeffington/pip_boy/actions/runs/41125631609",
+        "source_commit": "457d9659d6e0ee29a6663ade0bae6b3875b2e969",
+        "merge_commit": "1ba2b8f019cbd3b61b36c89171ddbbb5941f829d",
+        "workflow_run": 41127024688,
+        "workflow_url": "https://github.com/pskeffington/pip_boy/actions/runs/41127024688",
         "jobs_passed": "7/7",
-        "note": "This exact-head run validates the preceding universal-host/docs head; it predates the current TUI palette changes and is not evidence for the pending TUI integration."
+        "note": "Exact PR #88 head. All seven jobs completed successfully; platform-only steps marked skipped are not counted as separate jobs. CI is software evidence only, not hardware or production acceptance."
       }
     },
     {
@@ -92,8 +93,10 @@
       "depends_on": [
         "TC-A01"
       ],
-      "status": "queued",
+      "status": "implemented_unverified",
       "paths": [
+        "crates/pipboy-core/src/command_catalog.rs",
+        "crates/pipboy/src/terminal_commands.rs",
         "crates/pipboy-core/src/universal_adapter.rs",
         "crates/pipboy/src/radio.rs",
         "crates/pipboy/src/scout.rs"
@@ -105,7 +108,14 @@
         "Adapter failure, suspend/resume and loss of connectivity tested"
       ],
       "gate": "TC-3/TC-4",
-      "issue": 75
+      "issue": 75,
+      "local_evidence": {
+        "workspace": "cargo test --workspace --locked: 421 passed, 0 failed; cargo fmt --all -- --check, warnings-denied workspace Clippy and cargo +1.90.0 check --workspace --locked passed on the local worktree.",
+        "focused": "command_catalog tests 8/8; terminal_commands tests 8/8; command_security integration tests 5/5.",
+        "scope": "radio stations lists checked-in curated metadata only. No provider probe, network access, SDR enumeration or playback. MAP filesystem actions, TV and COMMS remain unavailable; no package is installed or mounted.",
+        "hosted_ci": "pending for this follow-up source head"
+      },
+      "next_slice": "Add an offline MAP action only after a typed filesystem scope and bounded path contract are reviewed."
     },
     {
       "id": "TC-A04",
@@ -149,7 +159,7 @@
         "TC-A01",
         "TC-A02"
       ],
-      "status": "blocked_dependency",
+      "status": "implemented_unverified",
       "paths": [
         "crates/pipboy/src/dashboard.rs",
         "crates/pipboy/src/dashboard"
@@ -161,7 +171,14 @@
         "No viewport regression or fake readiness indicator"
       ],
       "gate": "TC-5",
-      "issue": 75
+      "issue": 75,
+      "local_evidence": {
+        "rust": "dashboard command API tests 26/26; full workspace tests 421/421.",
+        "browser": "node tools/test_micro_ui.cjs and node tools/test_desktop_focus_ui.cjs passed; dashboard and micro JavaScript syntax checks passed.",
+        "viewport": "node tools/test_dashboard_viewport.cjs was blocked because Chromium is not installed in this environment. Exact-head CI must run 480x320, 800x480, 1024x768 and 1440x900 cases.",
+        "hosted_ci": "pending for this follow-up source head"
+      },
+      "note": "Both palettes read pinned descriptors and explicit RUN dispatches through the existing Rust typed executor. Browsing does not execute commands; no browser-side handler map was added."
     },
     {
       "id": "TC-A06",
@@ -190,5 +207,53 @@
       ],
       "gate": "TC-6"
     }
-  ]
+  ],
+  "pr_reconciliation": {
+    "checked_against_main": "1ba2b8f019cbd3b61b36c89171ddbbb5941f829d",
+    "prs": [
+      {
+        "number": 88,
+        "state": "merged",
+        "source_head": "457d9659d6e0ee29a6663ade0bae6b3875b2e969",
+        "merge_commit": "1ba2b8f019cbd3b61b36c89171ddbbb5941f829d",
+        "workflow_run": "https://github.com/pskeffington/pip_boy/actions/runs/41127024688",
+        "result": "7/7 jobs passed; TC-A02 merged software scope"
+      },
+      {
+        "number": 89,
+        "state": "open_draft_nonmergeable",
+        "head": "79718798392cd59009aac7b54fde1445b40f7edd",
+        "workflow_run": "https://github.com/pskeffington/pip_boy/actions/runs/41177160241",
+        "result": "7/7 jobs passed at exact head; branch is four commits behind current main and needs conflict/base reconciliation before merge. Pi 5 inventory and baseline remain on this PR, not main."
+      },
+      {
+        "number": 86,
+        "state": "open_draft_nonmergeable",
+        "head": "d98895a89111280918474f31beb54137db49b66a",
+        "workflow_run": "https://github.com/pskeffington/pip_boy/actions/runs/41177620852",
+        "result": "exact-head workflow succeeded; branch needs current-main reconciliation before merge"
+      },
+      {
+        "number": 87,
+        "state": "open_draft_base_is_pr_83",
+        "head": "9608dbe21f33a345ec89ff5ea5442f92227ed7b5",
+        "workflow_run": "https://github.com/pskeffington/pip_boy/actions/runs/41025584846",
+        "result": "inert SCAN registry only; based on planning PR #83 and not a runnable camera package"
+      },
+      {
+        "number": 83,
+        "state": "open_draft_nonmergeable",
+        "head": "1f926dedf55da328a9bc3ef61cd029b5175baab4",
+        "workflow_run": "https://github.com/pskeffington/pip_boy/actions/runs/41023134572",
+        "result": "planning-only reciprocal phone/camera contract; exact-head workflow succeeded; no camera runtime or acceptance"
+      },
+      {
+        "number": 91,
+        "state": "open_draft_reconciliation_packet",
+        "head": "d9ac51a46cbb7dd7335eb70b2b25e44c9af16c84",
+        "workflow_run": "https://github.com/pskeffington/pip_boy/actions/runs/41758312559",
+        "result": "7/7 jobs passed; packet was read and its tasking is reconciled in this branch"
+      }
+    ]
+  }
 }

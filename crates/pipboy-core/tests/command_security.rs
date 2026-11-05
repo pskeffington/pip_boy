@@ -61,6 +61,10 @@ fn parser_denies_unpinned_invalid_prompt_copy_and_sensitive_echo() {
     );
     assert_eq!(
         parse_input("select radio", None, PINNED),
+        Err(CommandError::ToolNotPinned)
+    );
+    assert_eq!(
+        parse_input("select not-a-tool", None, PINNED),
         Err(CommandError::UnknownTool)
     );
     assert_eq!(

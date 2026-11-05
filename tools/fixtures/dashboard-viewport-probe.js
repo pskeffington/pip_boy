@@ -15,7 +15,7 @@
   const documentFits = () => document.documentElement.scrollHeight <= innerHeight+1 &&
     document.documentElement.scrollWidth <= innerWidth+1 &&
     document.body.scrollHeight <= innerHeight+1;
-  function report() {
+  async function report() {
     const result={width:innerWidth, height:innerHeight, documentFits:documentFits()};
     try {
       const roles=$("#role-list"),modules=$("#module-grid");
@@ -30,6 +30,17 @@
         inside($('[data-stage="command"]'),$("#workspace-stage"));
       result.commandNavVisible = !!$("#command-open-modules") &&
         shown($("#command-open-modules"));
+      $("#command-open-palette").click();
+      await new Promise(resolve => setTimeout(resolve,25));
+      const commandDialog=$("#host-command-dialog"), commandRect=commandDialog.getBoundingClientRect();
+      result.commandPalette={
+        open:commandDialog.open,
+        visible:shown(commandDialog),
+        fits:commandRect.left>=0&&commandRect.top>=0&&commandRect.right<=innerWidth+1&&commandRect.bottom<=innerHeight+1,
+        toolOptions:$("#host-command-tool").options.length,
+        output:$("#host-command-output").textContent
+      };
+      commandDialog.close();
       $('[data-stage-target="modules"]').click();
       result.initial={
         deckFits:shown($('[data-stage="modules"]')) &&

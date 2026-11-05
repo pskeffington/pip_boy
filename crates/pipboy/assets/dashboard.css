@@ -544,6 +544,15 @@ html, body { height:100%; overflow:hidden; }
 }
 
 #location-settings-dialog { width:min(720px,calc(100vw - 24px)); max-height:calc(100dvh - 24px); overflow:auto; color:var(--text); background:#09190e; border:1px solid #51864c; }
+#host-command-dialog { width:min(640px,calc(100vw - 24px)); max-height:calc(100dvh - 24px); overflow:auto; color:var(--text); background:#09190e; border:1px solid #51864c; border-radius:12px; }
+#host-command-dialog::backdrop { background:#000a; }
+.host-command-form { display:grid; gap:10px; }
+.host-command-form h2,.host-command-form p { margin:0; }
+.host-command-form p { color:var(--sub); font-size:12px; }
+.host-command-form label { display:grid; gap:5px; color:var(--lime-dark); font:10px var(--mono); letter-spacing:.08em; }
+.host-command-form input,.host-command-form select { min-width:0; min-height:40px; color:var(--text); background:#101815; border:1px solid var(--border-lit); border-radius:6px; padding:7px; }
+.host-command-actions { display:flex; justify-content:flex-end; gap:8px; }
+#host-command-output { max-height:34vh; overflow:auto; white-space:pre-wrap; overflow-wrap:anywhere; padding:10px; margin:0; color:var(--lime); background:#050b08; border:1px solid var(--border); }
 #location-settings-close { min-height:44px; margin-bottom:10px; }
 
 /* Give the desktop map the full workspace, without inspector/status duplication. */

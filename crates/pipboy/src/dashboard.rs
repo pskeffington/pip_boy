@@ -500,6 +500,57 @@ fn package_snapshot(host: &UniversalAdapterHost) -> Response {
     )
 }
 
+fn command_catalog(store: &WorkbenchStore) -> Response {
+    let workbench = match store.load() {
+        Ok(workbench) => workbench,
+        Err(_) => return Response::error(409, "Cannot read the local workbench"),
+    };
+    let pinned: Vec<&str> = workbench
+        .slots
+        .iter()
+        .map(|slot| slot.tool.as_str())
+        .collect();
+    let commands: Vec<_> = pipboy_core::command_catalog::COMMANDS
+        .iter()
+        .filter(|command| pinned.contains(&command.tool_id))
+        .collect();
+    Response::json(200, &json!({ "commands": commands }))
+}
+
+fn command_execute(req: &Request, store: &WorkbenchStore) -> Result<Response, Response> {
+    let body = parse_json_body(req, &["tool_id", "command"])?;
+    let tool_id = str_field(&body, "tool_id")?;
+    let command = str_field(&body, "command")?;
+    let workbench = store
+        .load()
+        .map_err(|_| Response::error(409, "Cannot read the local workbench"))?;
+    let pinned: Vec<&str> = workbench
+        .slots
+        .iter()
+        .map(|slot| slot.tool.as_str())
+        .collect();
+    if !pinned.contains(&tool_id) {
+        return Err(Response::error(403, "Command tool is not pinned"));
+    }
+    let output = crate::terminal_commands::execute_tui_command(command, Some(tool_id), &pinned)
+        .map_err(|_| Response::error(422, "Command was denied or could not be completed"))?;
+    const MAX_OUTPUT_BYTES: usize = 4096;
+    let mut bounded = output;
+    if bounded.len() > MAX_OUTPUT_BYTES {
+        const MARKER: &str = "\n[output truncated]";
+        let mut boundary = MAX_OUTPUT_BYTES - MARKER.len();
+        while !bounded.is_char_boundary(boundary) {
+            boundary -= 1;
+        }
+        bounded.truncate(boundary);
+        bounded.push_str(MARKER);
+    }
+    Ok(Response::json(
+        200,
+        &json!({ "tool_id": tool_id, "output": bounded, "status": "succeeded" }),
+    ))
+}
+
 fn state(store: &WorkbenchStore) -> Result<Response, Response> {
     let active = store.load().map_err(|_| {
         Response::error(
@@ -1397,6 +1448,8 @@ fn dispatch(req: &Request, store: &WorkbenchStore, port: u16) -> Response {
         ("GET", "/api/packages") => package_references(),
         ("POST", "/api/packages/select") => package_select(req).unwrap_or_else(|error| error),
         ("POST", "/api/packages/intent") => package_intent(req).unwrap_or_else(|error| error),
+        ("GET", "/api/commands") => command_catalog(store),
+        ("POST", "/api/command") => command_execute(req, store).unwrap_or_else(|error| error),
         ("GET", "/api/radio") => radio_state(store),
         ("POST", "/api/radio") => radio_command(req, store).unwrap_or_else(|error| error),
         ("GET", "/api/reclamation") => reclamation_read(store, false).unwrap_or_else(|error| error),
@@ -2751,6 +2804,55 @@ mod tests {
             json!({"action":"ui.select","payload":{"index":0}}),
         );
         assert_eq!(dispatch(&ui_input, &store, 8765).status, 409);
+    }
+
+    #[test]
+    fn browser_command_palette_uses_pinned_catalog_and_shared_offline_dispatcher() {
+        let temp = tempfile::tempdir().unwrap();
+        let store = WorkbenchStore::new(temp.path().join("workbench"));
+        store.apply_preset("head-engineer").unwrap();
+
+        let catalog = dispatch(&request("GET", "/api/commands", Value::Null), &store, 8765);
+        assert_eq!(catalog.status, 200);
+        let descriptors: Value = serde_json::from_slice(&catalog.body).unwrap();
+        let commands = descriptors["commands"].as_array().unwrap();
+        assert!(commands
+            .iter()
+            .any(|command| { command["tool_id"] == "net-lab" && command["verb"] == "cidr" }));
+        assert!(!commands.iter().any(|command| command["tool_id"] == "radio"));
+
+        let computed = dispatch(
+            &request(
+                "POST",
+                "/api/command",
+                json!({"tool_id":"net-lab","command":"cidr 10.0.0.0/24"}),
+            ),
+            &store,
+            8765,
+        );
+        assert_eq!(computed.status, 200);
+        let result: Value = serde_json::from_slice(&computed.body).unwrap();
+        assert_eq!(result["status"], "succeeded");
+        assert!(result["output"].as_str().unwrap().contains("10.0.0.0/24"));
+
+        let oversized = "A".repeat(pipboy_core::command_catalog::MAX_COMMAND_BYTES + 1);
+        for (tool_id, command) in [
+            ("radio", "stations"),
+            ("net-lab", "scan local --confirm"),
+            ("net-lab", oversized.as_str()),
+        ] {
+            let denied = dispatch(
+                &request(
+                    "POST",
+                    "/api/command",
+                    json!({"tool_id":tool_id,"command":command}),
+                ),
+                &store,
+                8765,
+            );
+            assert_ne!(denied.status, 200);
+        }
+        assert!(!temp.path().join("workbench/permissions.json").exists());
     }
 
     #[test]

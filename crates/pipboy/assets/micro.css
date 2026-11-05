@@ -452,6 +452,9 @@ small { font-size:11px; }
 
 #role-tab-label { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:100%; }
 #micro-settings { min-width:44px; min-height:44px; }
+.micro-command-field { display:grid; gap:4px; color:var(--rb-muted); font:10px var(--mono); }
+.micro-command-field input,.micro-command-field select { min-width:0; min-height:40px; padding:7px; color:var(--rb-text); background:#09120b; border:1px solid var(--rb-line); border-radius:6px; }
+.micro-command-output { max-height:22vh; overflow:auto; white-space:pre-wrap; overflow-wrap:anywhere; padding:8px; margin:0; color:var(--rb-text); background:#050b08; border:1px solid var(--rb-line-soft); font-size:11px; }
 
 /* Keep the header Settings target inside its row at handheld sizes. */
 .micro-device { grid-template-rows:44px 50px minmax(0,1fr) 59px 21px; }

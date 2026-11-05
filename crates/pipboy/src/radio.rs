@@ -74,14 +74,7 @@ pub fn run(args: Vec<String>) -> Result<(), Box<dyn Error>> {
             Ok(())
         }
         [action] if action == "stations" => {
-            println!("RADIO / CURATED DIRECTORY / published metadata, stream unchecked");
-            for station in curated_stations() {
-                println!(
-                    "{} | {} | {} | {}",
-                    station.id, station.name, station.genre, station.playlist_url
-                );
-            }
-            println!("Standalone rust_radio module; no playback begins until an explicit listen/Play command.");
+            print!("{}", curated_station_listing());
             Ok(())
         }
         [action, confirm] if action == "stations" && confirm == "--check-ip" => {
@@ -137,6 +130,26 @@ pub fn run(args: Vec<String>) -> Result<(), Box<dyn Error>> {
         }
         _ => Err("usage: pipboy radio <capabilities|source|stations [--check-ip]|check STATION_ID --confirm|probe STATION_ID --confirm|validate STATION_ID --confirm|listen STATION_ID --confirm [--seconds 1..300]|simulate FREQ_HZ am|nfm|wfm|usb|lsb|iq>".into()),
     }
+}
+
+/// Formats the checked-in curated station metadata without checking reachability,
+/// enumerating hardware, opening streams, or starting playback.
+pub(crate) fn curated_station_listing() -> String {
+    use std::fmt::Write as _;
+
+    let mut output =
+        String::from("RADIO / CURATED DIRECTORY / published metadata, stream unchecked\n");
+    for station in curated_stations() {
+        let _ = writeln!(
+            output,
+            "{} | {} | {} | {}",
+            station.id, station.name, station.genre, station.playlist_url
+        );
+    }
+    output.push_str(
+        "Standalone rust_radio module; no playback begins until an explicit listen/Play command.\n",
+    );
+    output
 }
 
 #[cfg(test)]
