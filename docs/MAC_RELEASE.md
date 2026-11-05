@@ -134,3 +134,5 @@ and [Notarizing macOS software before distribution](https://developer.apple.com/
 ### Rebased release validation (2026-11-05)
 
 After prerequisite PR #92 merged to `main` at `22c43f835465a5656b1c907f44eb853b754d0c2b`, the Mac release branch was rebased directly onto `main`. Exact rebased head `7bb686bcb3708eca20cf785f52fd470cd028571e` passed all 7 jobs in [Actions run 41951804327](https://github.com/pskeffington/pip_boy/actions/runs/41951804327), including the universal arm64+x86_64 app bundle smoke. This confirms software integration on the current host branch; it does not provide Apple signing credentials, notarization, Gatekeeper, or clean-account interactive acceptance.
+
+The loopback URL validation follow-up at exact head `8960e10d34528c54ac41acb5a6b7293324e99560` passed 7/7 jobs in [Actions run 41954534190](https://github.com/pskeffington/pip_boy/actions/runs/41954534190), including native macOS URL parser, AppKit, and universal bundle checks. This remains software evidence; Developer ID signing and clean-account acceptance are still open.

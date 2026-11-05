@@ -387,3 +387,4 @@ This file records notable changes to Rust-Boy. This repository is in **developme
 ## Project identity
 
 Public name: **Rust-Boy**. Repository slug: `pip_boy`. Main CLI: `pipboy`. Denial-only binary: `rust-boy-broker`. The project is independent and unofficial and does not bundle third-party game artwork or proprietary firmware.
+- The endpoint-hardening implementation passed 7/7 exact-head CI jobs at `8960e10` ([run 41954534190](https://github.com/pskeffington/pip_boy/actions/runs/41954534190)); signing, notarization, and clean-account acceptance remain separate gates.
