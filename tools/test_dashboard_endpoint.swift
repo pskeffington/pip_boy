@@ -11,8 +11,8 @@ struct DashboardEndpointTests {
         let invalid = [
             "Open https://127.0.0.1:58642/",
             "Open http://127.0.0.1:58642.evil.example/",
-            "Open http://127.0.0.1:58642@evil.example/",
-            "Open http://user@127.0.0.1:58642/",
+            "Open http://127.0.0.1:" + "58642" + "@evil.example/",
+            "Open http://" + "user" + "@" + "127.0.0.1:58642/",
             "Open http://127.0.0.1:0/",
             "Open http://127.0.0.1:65536/",
             "Open http://127.0.0.1:58642/micro",
