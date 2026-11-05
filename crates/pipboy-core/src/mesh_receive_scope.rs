@@ -23,6 +23,7 @@ pub enum ScopeError {
     InvalidPin,
     InvalidTopic,
     InvalidDuration,
+    InvalidGeneration,
 }
 
 #[derive(Clone, Copy, Eq, PartialEq)]
@@ -127,7 +128,7 @@ impl ExactTopic {
 
 /// Validated parameters only. This value is not a grant and exposes no
 /// transport-opening API; only a future OS broker may turn it into a session.
-#[derive(Eq, PartialEq)]
+#[derive(Clone, Eq, PartialEq)]
 pub struct ScopePlan {
     endpoint: LiteralEndpoint,
     protocol: ReceiveProtocol,
@@ -182,27 +183,31 @@ impl ScopePlan {
 /// In-process freshness/revocation guard. This is not an authenticated grant;
 /// production socket opening remains unavailable.
 pub struct GenerationGuard {
-    endpoint: LiteralEndpoint,
+    plan: ScopePlan,
     generation: u64,
     deadline: Instant,
     active: bool,
 }
 
 impl GenerationGuard {
-    pub fn bind_for_broker_contract(plan: &ScopePlan, generation: u64, now: Instant) -> Self {
-        Self {
-            endpoint: plan.endpoint,
+    pub fn bind_for_broker_contract(
+        plan: &ScopePlan,
+        generation: u64,
+        now: Instant,
+    ) -> Result<Self, ScopeError> {
+        if generation == 0 {
+            return Err(ScopeError::InvalidGeneration);
+        }
+        Ok(Self {
+            plan: plan.clone(),
             generation,
             deadline: now + plan.duration,
             active: true,
-        }
+        })
     }
 
-    pub fn is_current(&self, endpoint: LiteralEndpoint, generation: u64, now: Instant) -> bool {
-        self.active
-            && now < self.deadline
-            && self.generation == generation
-            && self.endpoint == endpoint
+    pub fn is_current(&self, plan: &ScopePlan, generation: u64, now: Instant) -> bool {
+        self.active && now < self.deadline && self.generation == generation && self.plan == *plan
     }
 
     pub fn revoke(&mut self) {
@@ -232,11 +237,11 @@ mod tests {
         fn attempt_open(
             &mut self,
             lease: Option<&GenerationGuard>,
-            endpoint: LiteralEndpoint,
+            plan: &ScopePlan,
             generation: u64,
             now: Instant,
         ) {
-            if lease.is_some_and(|guard| guard.is_current(endpoint, generation, now)) {
+            if lease.is_some_and(|guard| guard.is_current(plan, generation, now)) {
                 self.opens += 1;
                 self.reads += 1;
             }
@@ -246,29 +251,58 @@ mod tests {
     #[test]
     fn invalid_or_missing_session_state_performs_zero_transport_calls() {
         let plan = plan();
-        let endpoint = plan.endpoint();
         let now = Instant::now();
-        let mut lease = GenerationGuard::bind_for_broker_contract(&plan, 4, now);
-        let wrong_endpoint = LiteralEndpoint::parse("172.20.30.136", 9443, None).unwrap();
+        let mut lease = GenerationGuard::bind_for_broker_contract(&plan, 4, now).unwrap();
+        let wrong_endpoint = ScopePlan::new(
+            LiteralEndpoint::parse("172.20.30.136", 9443, None).unwrap(),
+            ExactTopic::parse("msh/US/2/e/LongFast/!abcdef").unwrap(),
+            PIN,
+            Duration::from_secs(60),
+        )
+        .unwrap();
+        let wrong_topic = ScopePlan::new(
+            plan.endpoint(),
+            ExactTopic::parse("msh/US/2/e/LongFast/!other").unwrap(),
+            PIN,
+            Duration::from_secs(60),
+        )
+        .unwrap();
+        let wrong_pin = ScopePlan::new(
+            plan.endpoint(),
+            ExactTopic::parse("msh/US/2/e/LongFast/!abcdef").unwrap(),
+            [8; 32],
+            Duration::from_secs(60),
+        )
+        .unwrap();
         let mut transport = FakeTransport::default();
-        transport.attempt_open(None, endpoint, 4, now);
-        transport.attempt_open(Some(&lease), wrong_endpoint, 4, now);
-        transport.attempt_open(Some(&lease), endpoint, 5, now);
-        transport.attempt_open(Some(&lease), endpoint, 4, now + Duration::from_secs(61));
+        transport.attempt_open(None, &plan, 4, now);
+        transport.attempt_open(Some(&lease), &wrong_endpoint, 4, now);
+        transport.attempt_open(Some(&lease), &wrong_topic, 4, now);
+        transport.attempt_open(Some(&lease), &wrong_pin, 4, now);
+        transport.attempt_open(Some(&lease), &plan, 5, now);
+        transport.attempt_open(Some(&lease), &plan, 4, now + Duration::from_secs(61));
         lease.revoke();
-        transport.attempt_open(Some(&lease), endpoint, 4, now);
+        transport.attempt_open(Some(&lease), &plan, 4, now);
         assert_eq!((transport.opens, transport.reads), (0, 0));
     }
 
     #[test]
     fn matching_unexpired_lease_only_reaches_the_fake_transport() {
         let plan = plan();
-        let endpoint = plan.endpoint();
         let now = Instant::now();
-        let lease = GenerationGuard::bind_for_broker_contract(&plan, 9, now);
+        let lease = GenerationGuard::bind_for_broker_contract(&plan, 9, now).unwrap();
         let mut fake = FakeTransport::default();
-        fake.attempt_open(Some(&lease), endpoint, 9, now + Duration::from_secs(1));
+        fake.attempt_open(Some(&lease), &plan, 9, now + Duration::from_secs(1));
         assert_eq!((fake.opens, fake.reads), (1, 1));
+    }
+
+    #[test]
+    fn generation_zero_is_reserved_as_invalid() {
+        let plan = plan();
+        assert_eq!(
+            GenerationGuard::bind_for_broker_contract(&plan, 0, Instant::now()).err(),
+            Some(ScopeError::InvalidGeneration)
+        );
     }
 
     #[test]
@@ -305,7 +339,7 @@ mod tests {
 
     #[test]
     fn exact_topic_and_fixed_caps_are_enforced() {
-        for topic in ["", "x+", "x/#", "x\0y", "x\n", "x\u{0085}"] {
+        for topic in ["", "x+", "x/#", "x\0y", "x\n", "x\u{0085}", "x\u{fffd}"] {
             assert!(ExactTopic::parse(topic).is_err(), "{topic:?}");
         }
         assert!(ExactTopic::parse(&"x".repeat(MAX_TOPIC_BYTES + 1)).is_err());
