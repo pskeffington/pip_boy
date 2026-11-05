@@ -1,0 +1,448 @@
+{
+  "schema_version": 1,
+  "updated": "2026-10-30",
+  "project": "SCAN: camera-first, reciprocal paired phone/Rust-Boy TRANS integration",
+  "package_id": "org.rustboy.scan",
+  "branch_workflow": "draft_docs_then_tested_code_then_verified_field_release",
+  "existing_modules": [
+    "MAP",
+    "TV",
+    "RADIO",
+    "COMMS"
+  ],
+  "state": "planning_only_not_installed",
+  "host_roadmap": "docs/SCAN_RUSTBOY_INTEGRATION.md",
+  "capture_contract": "docs/SCAN_CAPTURE_CONTRACT.md",
+  "status_semantics": {
+    "queued": "actionable planning task awaiting implementation",
+    "blocked_dependency": "dependency not yet accepted",
+    "implemented_unverified": "source proposed but no matching actual test evidence",
+    "accepted_software": "exact-head executed tests and CI evidence",
+    "accepted_field": "real two-direction device/phone tests and operator review"
+  },
+  "gates": [
+    "SCAN-0 contract",
+    "SCAN-1 registry",
+    "SCAN-2 adapter",
+    "SCAN-3 local capture",
+    "SCAN-4 paired reciprocal capture",
+    "SCAN-5 governed pipeline",
+    "SCAN-6 release and review",
+    "SCAN-7 field and production"
+  ],
+  "tasks": [
+    {
+      "id": "SCAN-H00",
+      "repository": "pskeffington/pip_boy",
+      "owner": "HOST_ARCH",
+      "priority": "P0",
+      "depends_on": [],
+      "title": "Freeze camera-first SCAN v0 authority map, capture/media split, protocol and bidirectional source/requester roles",
+      "status": "queued",
+      "acceptance": [
+        "Reviewed canonical guide and capture proposal",
+        "No claim of working device or installed module"
+      ]
+    },
+    {
+      "id": "SCAN-H01",
+      "repository": "pskeffington/pip_boy",
+      "owner": "REGISTRY",
+      "priority": "P0",
+      "depends_on": [
+        "SCAN-H00"
+      ],
+      "title": "Add inert fifth SCAN fixture, known scopes and tests to registry/SDK indexes and validators, no install claim",
+      "status": "blocked_dependency",
+      "acceptance": [
+        "All manifest invalid cases fail closed",
+        "No regressions in four existing module fixtures"
+      ]
+    },
+    {
+      "id": "SCAN-H02",
+      "repository": "pskeffington/pip_boy",
+      "owner": "ADAPTER",
+      "priority": "P0",
+      "depends_on": [
+        "SCAN-H01"
+      ],
+      "title": "Add trusted SCAN synthetic adapter, status/typed action dispatch, one-foreground lifecycle",
+      "status": "blocked_dependency",
+      "acceptance": [
+        "No IO on listing/select/help",
+        "Fault/revoke/settings/suspend proven under tests"
+      ]
+    },
+    {
+      "id": "SCAN-H03",
+      "repository": "pskeffington/pip_boy",
+      "owner": "CAMERA_HOST",
+      "priority": "P0",
+      "depends_on": [
+        "SCAN-H02"
+      ],
+      "title": "Broker permission-safe attached-camera enumeration and explicit still capture for local SCAN",
+      "status": "blocked_dependency",
+      "acceptance": [
+        "Camera absent/denied/busy safely unavailable",
+        "User click, OS grant and bytes/TTL caps checked"
+      ]
+    },
+    {
+      "id": "SCAN-H04",
+      "repository": "pskeffington/pip_boy",
+      "owner": "PAIRING",
+      "priority": "P0",
+      "depends_on": [
+        "SCAN-H02"
+      ],
+      "title": "Build versioned authenticated encrypted media side channel, consent and receipt primitives",
+      "status": "blocked_dependency",
+      "acceptance": [
+        "No image bytes on adapter or task transport",
+        "Replay/revocation/digest/timeout/bounded media tests"
+      ]
+    },
+    {
+      "id": "SCAN-H05",
+      "repository": "pskeffington/pip_boy",
+      "owner": "PAIRING",
+      "priority": "P0",
+      "depends_on": [
+        "SCAN-H03",
+        "SCAN-H04"
+      ],
+      "title": "Enable phone->RB and reciprocal RB->phone capture requests with independent camera-owner approval",
+      "status": "blocked_dependency",
+      "acceptance": [
+        "Two directions proven on synthetic peers",
+        "No silent capture or public dashboard listener"
+      ]
+    },
+    {
+      "id": "SCAN-H06",
+      "repository": "pskeffington/pip_boy",
+      "owner": "INTEGRATION",
+      "priority": "P0",
+      "depends_on": [
+        "SCAN-H03",
+        "SCAN-I02",
+        "SCAN-V02",
+        "SCAN-T02"
+      ],
+      "title": "Connect pinned intake/visual/HTR review receipts using local sidecar handles",
+      "status": "blocked_dependency",
+      "acceptance": [
+        "Exact SHA and schema version correlated",
+        "No raw payload in bounded packets"
+      ]
+    },
+    {
+      "id": "SCAN-H07",
+      "repository": "pskeffington/pip_boy",
+      "owner": "RELEASE_QA",
+      "priority": "P1",
+      "depends_on": [
+        "SCAN-H06",
+        "SCAN-R02",
+        "SCAN-D02"
+      ],
+      "title": "Wire draft, release and optional scholarly review as separate operations",
+      "status": "blocked_dependency",
+      "acceptance": [
+        "No publish from confidence or preview",
+        "Release denied state verified"
+      ]
+    },
+    {
+      "id": "SCAN-H08",
+      "repository": "pskeffington/pip_boy",
+      "owner": "UI_FIELD",
+      "priority": "P1",
+      "depends_on": [
+        "SCAN-H05",
+        "SCAN-H07"
+      ],
+      "title": "Micro/desktop one-module SCAN UI, accessible capture/review and physical Mac/Pi/iOS/Android tests",
+      "status": "blocked_dependency",
+      "acceptance": [
+        "Field receipt both directions",
+        "Viewport, latency, power, security, package rollback evidence"
+      ]
+    },
+    {
+      "id": "SCAN-I01",
+      "repository": "pskeffington/ctl-injest",
+      "owner": "INTAKE",
+      "priority": "P0",
+      "depends_on": [
+        "SCAN-H00"
+      ],
+      "title": "Version local/paired camera pointer-only capture admission schema with source rights, owner consent receipt and digest",
+      "status": "blocked_dependency",
+      "acceptance": [
+        "Existing admissions remain fail closed",
+        "No durable raw frames in receipts"
+      ]
+    },
+    {
+      "id": "SCAN-I02",
+      "repository": "pskeffington/ctl-injest",
+      "owner": "INTAKE",
+      "priority": "P0",
+      "depends_on": [
+        "SCAN-I01"
+      ],
+      "title": "Accept scoped, short-lived verified media handles from trusted SCAN capture broker",
+      "status": "blocked_dependency",
+      "acceptance": [
+        "Digest/expiry/revoked/unknown-source negative fixtures",
+        "Exact page/frame source identity preserved"
+      ]
+    },
+    {
+      "id": "SCAN-I03",
+      "repository": "pskeffington/ctl-injest",
+      "owner": "INTAKE_QA",
+      "priority": "P1",
+      "depends_on": [
+        "SCAN-I02"
+      ],
+      "title": "Prove cross-stage intake preflight and source policy under two capture directions",
+      "status": "blocked_dependency",
+      "acceptance": [
+        "Synthetic end-to-end evidence",
+        "Source owner/processor roles not conflated"
+      ]
+    },
+    {
+      "id": "SCAN-V01",
+      "repository": "pskeffington/Eagle-Eye",
+      "owner": "VISUAL",
+      "priority": "P0",
+      "depends_on": [
+        "SCAN-H00"
+      ],
+      "title": "Map attached/paired still image handles into existing frame/page/region visual evidence",
+      "status": "blocked_dependency",
+      "acceptance": [
+        "No paper-only assumptions",
+        "No raw visual content in cross-repo packet"
+      ]
+    },
+    {
+      "id": "SCAN-V02",
+      "repository": "pskeffington/Eagle-Eye",
+      "owner": "VISUAL",
+      "priority": "P0",
+      "depends_on": [
+        "SCAN-V01",
+        "SCAN-I02"
+      ],
+      "title": "Bounded crop, orientation, quality and handoff to TRANS with capture-origin receipts",
+      "status": "blocked_dependency",
+      "acceptance": [
+        "Unsupported/blur/rotation/unknown text cases routed to review",
+        "Hash chain stable"
+      ]
+    },
+    {
+      "id": "SCAN-V03",
+      "repository": "pskeffington/Eagle-Eye",
+      "owner": "VISUAL_QA",
+      "priority": "P1",
+      "depends_on": [
+        "SCAN-V02"
+      ],
+      "title": "Test two directions, multi-camera and interrupted media source failure",
+      "status": "blocked_dependency",
+      "acceptance": [
+        "Camera provenance retained",
+        "No admission or HTR claim fabricated"
+      ]
+    },
+    {
+      "id": "SCAN-T01",
+      "repository": "pskeffington/trans",
+      "owner": "HTR",
+      "priority": "P0",
+      "depends_on": [
+        "SCAN-H00"
+      ],
+      "title": "Inventory reproducible local OCR/HTR inference models, licensing, memory/CPU constraints and offline fallback",
+      "status": "blocked_dependency",
+      "acceptance": [
+        "Model identity and rights accounted",
+        "No benchmark or language claim without real evidence"
+      ]
+    },
+    {
+      "id": "SCAN-T02",
+      "repository": "pskeffington/trans",
+      "owner": "HTR",
+      "priority": "P0",
+      "depends_on": [
+        "SCAN-T01",
+        "SCAN-V01"
+      ],
+      "title": "Emit bounded preview/review receipt and exact model/candidate provenance for SCAN",
+      "status": "blocked_dependency",
+      "acceptance": [
+        "Unknown/low-confidence route to review",
+        "Candidate not treated as source truth"
+      ]
+    },
+    {
+      "id": "SCAN-T03",
+      "repository": "pskeffington/trans",
+      "owner": "HTR_QA",
+      "priority": "P1",
+      "depends_on": [
+        "SCAN-T02"
+      ],
+      "title": "Introduce multi-script candidate routing and safe local draft review with byte-bounded handles",
+      "status": "blocked_dependency",
+      "acceptance": [
+        "Latin/Hebrew/unknown routed without scholarly approval",
+        "No prohibited raw corpus retention"
+      ]
+    },
+    {
+      "id": "SCAN-T04",
+      "repository": "pskeffington/trans",
+      "owner": "HTR_QA",
+      "priority": "P1",
+      "depends_on": [
+        "SCAN-T02"
+      ],
+      "title": "Run pinned offline benchmarks, latency/memory and explicit no-model fallback",
+      "status": "blocked_dependency",
+      "acceptance": [
+        "Reproducible exact-head receipts",
+        "No synthetic accuracy promoted"
+      ]
+    },
+    {
+      "id": "SCAN-R01",
+      "repository": "pskeffington/trans-release",
+      "owner": "RELEASE",
+      "priority": "P1",
+      "depends_on": [
+        "SCAN-T02"
+      ],
+      "title": "Version SCAN evidence eligibility separately from local draft and user confirmation",
+      "status": "blocked_dependency",
+      "acceptance": [
+        "Preview!=approval",
+        "Approval remains identity-bound"
+      ]
+    },
+    {
+      "id": "SCAN-R02",
+      "repository": "pskeffington/trans-release",
+      "owner": "RELEASE",
+      "priority": "P1",
+      "depends_on": [
+        "SCAN-R01"
+      ],
+      "title": "Correlate reviewed SCAN candidate and explicit approval with exact source/capture/model evidence",
+      "status": "blocked_dependency",
+      "acceptance": [
+        "Missing/mismatched/stale/revoked states blocked",
+        "No confidence-based promotion"
+      ]
+    },
+    {
+      "id": "SCAN-D01",
+      "repository": "pskeffington/trans-downstream",
+      "owner": "OUTPUT",
+      "priority": "P1",
+      "depends_on": [
+        "SCAN-R01"
+      ],
+      "title": "Define local private Save Draft vs release-approved export/destination policy",
+      "status": "blocked_dependency",
+      "acceptance": [
+        "No ambient publisher/network side effects",
+        "Sensitive images absent from output receipts"
+      ]
+    },
+    {
+      "id": "SCAN-D02",
+      "repository": "pskeffington/trans-downstream",
+      "owner": "OUTPUT",
+      "priority": "P1",
+      "depends_on": [
+        "SCAN-D01",
+        "SCAN-R02"
+      ],
+      "title": "Produce bounded offline projection and separately authorized destination plan from approved SCAN receipt",
+      "status": "blocked_dependency",
+      "acceptance": [
+        "No auto-send and no uncontrolled raw content",
+        "Mixed/blocked receipts fail closed"
+      ]
+    },
+    {
+      "id": "SCAN-L01",
+      "repository": "pskeffington/trans-latin",
+      "owner": "LATIN",
+      "priority": "P1",
+      "depends_on": [
+        "SCAN-T02"
+      ],
+      "title": "Validate Latin candidate processor handoff and witness/unit/source identity",
+      "status": "blocked_dependency",
+      "acceptance": [
+        "No auto-acceptance or false authorship",
+        "Uncleared source excluded"
+      ]
+    },
+    {
+      "id": "SCAN-L02",
+      "repository": "pskeffington/trans-latin",
+      "owner": "LATIN_QA",
+      "priority": "P1",
+      "depends_on": [
+        "SCAN-L01"
+      ],
+      "title": "Review/compare/correct/reject SCAN candidate before Latin scholarly release",
+      "status": "blocked_dependency",
+      "acceptance": [
+        "Adjudication outcomes audited",
+        "No upstream result mutates accepted scholarly fields"
+      ]
+    },
+    {
+      "id": "SCAN-B01",
+      "repository": "pskeffington/Trans-heb",
+      "owner": "HEBREW",
+      "priority": "P1",
+      "depends_on": [
+        "SCAN-T02"
+      ],
+      "title": "Validate Hebrew candidate processor handoff with witness, unit, folio and language tags",
+      "status": "blocked_dependency",
+      "acceptance": [
+        "Unverified Vatican/BAV remains link-only",
+        "No auto normalization to accepted reading"
+      ]
+    },
+    {
+      "id": "SCAN-B02",
+      "repository": "pskeffington/Trans-heb",
+      "owner": "HEBREW_QA",
+      "priority": "P1",
+      "depends_on": [
+        "SCAN-B01"
+      ],
+      "title": "Test reviewer gate, SQLite provenance, permitted outputs and rejection of placeholders",
+      "status": "blocked_dependency",
+      "acceptance": [
+        "Hebrew authority retained",
+        "No unapproved diplomatic transcription or release"
+      ]
+    }
+  ]
+}
