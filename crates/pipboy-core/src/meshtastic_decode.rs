@@ -13,11 +13,11 @@ pub const TEXT_MESSAGE_APP: u64 = 1;
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct UnverifiedTextObservation {
     /// Source node number as recorded in the capture; not authenticated.
-    pub source_node_unverified: Option<u64>,
+    pub source_node_unverified: Option<u32>,
     /// Destination node number as recorded in the capture; not authenticated.
-    pub destination_node_unverified: Option<u64>,
+    pub destination_node_unverified: Option<u32>,
     /// Channel index as recorded in the capture; not authenticated.
-    pub channel_index_unverified: Option<u64>,
+    pub channel_index_unverified: Option<u32>,
     /// Decoded text from a capture, not a delivery or receipt record.
     pub text_unverified: String,
 }
@@ -41,7 +41,8 @@ struct Field<'a> {
 enum Value<'a> {
     Varint(u64),
     Bytes(&'a [u8]),
-    Fixed,
+    Fixed32(u32),
+    Fixed64,
 }
 
 struct Fields<'a> {
@@ -59,16 +60,20 @@ impl<'a> Fields<'a> {
             return Ok(None);
         }
         let key = read_varint(self.input, &mut self.offset)?;
-        let number = (key >> 3) as u32;
+        let number_wide = key >> 3;
+        if number_wide == 0 || number_wide > 536_870_911 {
+            return Err(DecodeError::Malformed("invalid protobuf field number"));
+        }
+        let number = number_wide as u32;
         let wire = (key & 7) as u8;
-        if number == 0 || number > 536_870_911 || (19000..=19999).contains(&number) {
+        if (19000..=19999).contains(&number) {
             return Err(DecodeError::Malformed("invalid protobuf field number"));
         }
         let value = match wire {
             0 => Value::Varint(read_varint(self.input, &mut self.offset)?),
             1 => {
                 take(self.input, &mut self.offset, 8)?;
-                Value::Fixed
+                Value::Fixed64
             }
             2 => {
                 let len = read_varint(self.input, &mut self.offset)?;
@@ -77,8 +82,11 @@ impl<'a> Fields<'a> {
                 Value::Bytes(take(self.input, &mut self.offset, len)?)
             }
             5 => {
-                take(self.input, &mut self.offset, 4)?;
-                Value::Fixed
+                let bytes = take(self.input, &mut self.offset, 4)?;
+                let bytes: [u8; 4] = bytes
+                    .try_into()
+                    .map_err(|_| DecodeError::Malformed("invalid fixed32 field"))?;
+                Value::Fixed32(u32::from_le_bytes(bytes))
             }
             3 | 4 => return Err(DecodeError::Malformed("protobuf groups are not accepted")),
             _ => return Err(DecodeError::Malformed("invalid protobuf wire type")),
@@ -151,6 +159,20 @@ fn varint(field: Field<'_>, label: &'static str) -> Result<u64, DecodeError> {
     }
 }
 
+fn fixed32(field: Field<'_>, label: &'static str) -> Result<u32, DecodeError> {
+    if field.wire != 5 {
+        return Err(DecodeError::Malformed(label));
+    }
+    match field.value {
+        Value::Fixed32(value) => Ok(value),
+        _ => Err(DecodeError::Malformed(label)),
+    }
+}
+
+fn uint32(value: u64, label: &'static str) -> Result<u32, DecodeError> {
+    u32::try_from(value).map_err(|_| DecodeError::Malformed(label))
+}
+
 /// Decode a recorded FromRadio protobuf payload, bounded to 512 bytes.
 /// Unknown fields with valid protobuf encodings are skipped. Only the path
 /// FromRadio.packet -> MeshPacket.decoded -> Data(TEXT_MESSAGE_APP) is read.
@@ -160,14 +182,32 @@ pub fn decode_recorded_from_radio(
     if input.len() > MAX_CAPTURE_BYTES {
         return Err(DecodeError::CaptureTooLarge);
     }
-    let mut packet = None;
+    let (mut id, mut packet, mut oneof_seen) = (None, None, false);
     let mut fields = Fields::new(input);
     while let Some(field) = fields.next()? {
-        if field.number == 2 {
-            if packet.is_some() {
-                return Err(DecodeError::Duplicate("FromRadio.packet oneof"));
+        match field.number {
+            1 => set_once(
+                &mut id,
+                uint32(
+                    varint(field, "FromRadio.id must be uint32")?,
+                    "FromRadio.id overflow",
+                )?,
+                "FromRadio.id",
+            )?,
+            2..=17 => {
+                let expected_wire = if matches!(field.number, 7 | 8) { 0 } else { 2 };
+                if field.wire != expected_wire {
+                    return Err(DecodeError::Malformed("invalid FromRadio oneof wire type"));
+                }
+                if oneof_seen {
+                    return Err(DecodeError::Duplicate("FromRadio.payload_variant oneof"));
+                }
+                oneof_seen = true;
+                if field.number == 2 {
+                    packet = Some(bytes(field, "FromRadio.packet must be length-delimited")?);
+                }
             }
-            packet = Some(bytes(field, "FromRadio.packet must be length-delimited")?);
+            _ => {}
         }
     }
     let Some(packet) = packet else {
@@ -184,17 +224,20 @@ fn decode_packet(input: &[u8]) -> Result<Option<UnverifiedTextObservation>, Deco
         match field.number {
             1 => set_once(
                 &mut source,
-                varint(field, "MeshPacket.from must be varint")?,
+                fixed32(field, "MeshPacket.from must be fixed32")?,
                 "MeshPacket.from",
             )?,
             2 => set_once(
                 &mut destination,
-                varint(field, "MeshPacket.to must be varint")?,
+                fixed32(field, "MeshPacket.to must be fixed32")?,
                 "MeshPacket.to",
             )?,
             3 => set_once(
                 &mut channel,
-                varint(field, "MeshPacket.channel must be varint")?,
+                uint32(
+                    varint(field, "MeshPacket.channel must be uint32")?,
+                    "MeshPacket.channel overflow",
+                )?,
                 "MeshPacket.channel",
             )?,
             4 => {
@@ -230,9 +273,9 @@ fn set_once<T>(slot: &mut Option<T>, value: T, label: &'static str) -> Result<()
 
 fn decode_data(
     input: &[u8],
-    source: Option<u64>,
-    destination: Option<u64>,
-    channel: Option<u64>,
+    source: Option<u32>,
+    destination: Option<u32>,
+    channel: Option<u32>,
 ) -> Result<Option<UnverifiedTextObservation>, DecodeError> {
     let (mut port, mut payload) = (None, None);
     let mut fields = Fields::new(input);
@@ -290,12 +333,15 @@ fn is_forbidden_text_char(c: char) -> bool {
 mod tests {
     use super::*;
 
-    // Golden fixture encoded from Meshtastic protobuf schema
-    // v2.8.0 (upstream commit 7b2464c): FromRadio.packet=2, MeshPacket.from=1,
-    // to=2, channel=3, decoded=4; Data.portnum=1 (TEXT_MESSAGE_APP=1),
-    // payload=2. Values: from=1, to=2, channel=0, text="hi".
+    // Golden fixture encoded from Meshtastic protobuf schema v2.8.0
+    // (upstream commit 7b2464c9b8c1521f93852261e4123826e5b25e11):
+    // FromRadio.packet=2, MeshPacket.from=1, MeshPacket.to=2 are fixed32;
+    // channel=3 and Data.portnum=1
+    // are uint32; decoded=4 and Data.payload=2 are length-delimited.
+    // Values: from=1, to=2, channel=0, text="hi".
     const GOLDEN: &[u8] = &[
-        0x12, 0x0c, 0x08, 0x01, 0x10, 0x02, 0x22, 0x06, 0x08, 0x01, 0x12, 0x02, b'h', b'i',
+        0x12, 0x12, 0x0d, 0x01, 0x00, 0x00, 0x00, 0x15, 0x02, 0x00, 0x00, 0x00, 0x22, 0x06, 0x08,
+        0x01, 0x12, 0x02, b'h', b'i',
     ];
 
     #[test]
@@ -327,8 +373,65 @@ mod tests {
     #[test]
     fn skips_well_formed_unknown_fields() {
         let mut input = GOLDEN.to_vec();
-        input.extend([0x78, 0x07]); // unknown field 15, varint
+        input.extend([0xa0, 0x01, 0x07]); // unknown field 20, varint
         assert!(decode_recorded_from_radio(&input).unwrap().is_some());
+    }
+
+    #[test]
+    fn rejects_field_number_aliases_and_packet_oneof_conflicts() {
+        let mut aliased_field_number = Vec::new();
+        let mut key = ((u64::from(u32::MAX) + 3) << 3) | 2;
+        while key >= 0x80 {
+            aliased_field_number.push((key as u8 & 0x7f) | 0x80);
+            key >>= 7;
+        }
+        aliased_field_number.push(key as u8);
+        aliased_field_number.push(0); // zero-length payload for oversized field
+        assert!(matches!(
+            decode_recorded_from_radio(&aliased_field_number),
+            Err(DecodeError::Malformed(_))
+        ));
+
+        // FromRadio.my_info (field 3) conflicts with packet (field 2), in
+        // either wire order. The parser must not apply last-oneof-wins silently.
+        let mut packet_then_info = GOLDEN.to_vec();
+        packet_then_info.extend([0x1a, 0x00]);
+        assert!(matches!(
+            decode_recorded_from_radio(&packet_then_info),
+            Err(DecodeError::Duplicate(_))
+        ));
+        let mut info_then_packet = vec![0x1a, 0x00];
+        info_then_packet.extend_from_slice(GOLDEN);
+        assert!(matches!(
+            decode_recorded_from_radio(&info_then_packet),
+            Err(DecodeError::Duplicate(_))
+        ));
+    }
+
+    #[test]
+    fn enforces_fixed32_node_fields_and_uint32_channel() {
+        let invalid_from_wire = [
+            0x12, 0x0a, 0x08, 0x01, 0x22, 0x06, 0x08, 0x01, 0x12, 0x02, b'h', b'i',
+        ];
+        assert!(matches!(
+            decode_recorded_from_radio(&invalid_from_wire),
+            Err(DecodeError::Malformed(_))
+        ));
+
+        let mut oversized_channel = GOLDEN.to_vec();
+        // Add MeshPacket.channel=2^32, then repair enclosing lengths by
+        // building a complete valid nested message explicitly.
+        let packet = [
+            0x0d, 1, 0, 0, 0, 0x15, 2, 0, 0, 0, 0x18, 0x80, 0x80, 0x80, 0x80, 0x10, 0x22, 0x06,
+            0x08, 0x01, 0x12, 0x02, b'h', b'i',
+        ];
+        oversized_channel.clear();
+        oversized_channel.extend([0x12, packet.len() as u8]);
+        oversized_channel.extend(packet);
+        assert!(matches!(
+            decode_recorded_from_radio(&oversized_channel),
+            Err(DecodeError::Malformed(_))
+        ));
     }
 
     #[test]

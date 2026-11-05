@@ -32,11 +32,13 @@ The offline `pipboy-core::meshtastic_decode` parser now recognizes only
 bounded text and optional node/channel numbers explicitly marked unverified;
 it does not authenticate peers, record Messenger messages, or produce delivery
 receipts. Its synthetic field-mapping fixture is not a hardware capture and has
-not yet been cross-validated against generated upstream bindings. Parser tests
-cover malformed/truncated fields, duplicate interpreted fields/oneofs,
-well-formed unknown fields, unsupported application ports, text size/UTF-8 and
-control/bidi rejection. Live USB, actual firmware decoding, and the independent
-schema comparison above remain Pending.
+has been compared byte-for-byte with `protoc` output using a minimal schema
+matching the pinned v2.8.0 field types; no generated upstream bindings or actual
+radio capture were used. Parser tests cover malformed/truncated fields,
+field-number overflow aliasing, fixed32 node IDs, uint32 bounds, duplicate
+interpreted fields/oneofs, well-formed unknown fields, unsupported application
+ports, text size/UTF-8 and control/bidi rejection. Live USB, actual firmware
+decoding, and independent-device schema comparison above remain Pending.
 
 Minimum hardware: the intended Mac, the intended Pi, and two explicitly owned
 Meshtastic USB radios with recorded model/firmware/region. This read-only stage

@@ -154,10 +154,12 @@ default. This parser does not enumerate/open serial devices or perform network,
 filesystem-write, or persistence operations.
 
 The parser's software fixture is synthetic and hand-encoded from the upstream
-Meshtastic protobuf field mapping pinned alongside its test. It is not yet
-cross-validated against generated upstream bindings or an independent decoder,
-is not an actual radio capture, and does not establish firmware
-interoperability; those remain pending the evidence below.
+Meshtastic protobuf field mapping pinned alongside its test. Its wire bytes
+were compared byte-for-byte with `protoc` encoding using a minimal schema that
+matches the pinned field types, including `fixed32` node IDs. This does not use
+generated upstream bindings, is not an actual radio capture, and does not
+establish firmware interoperability. The authoritative schema is
+[Meshtastic protobufs v2.8.0 `mesh.proto`](https://github.com/meshtastic/protobufs/blob/7b2464c9b8c1521f93852261e4123826e5b25e11/meshtastic/mesh.proto).
 
 An operator can inspect a previously recorded binary USB capture:
 
