@@ -314,6 +314,44 @@ pub fn sync_from_store(tasks: &TaskStore, peers: &PeerStore, alias: &str) -> io:
     tasks.reconcile_remote_reports(alias, source, &reports)
 }
 
+/// Explicit authenticated reachability check. The existing restricted SSH
+/// receipts command proves remote device identity and source authorization.
+/// It does not mark records delivered, reconcile tasks, or imply a persistent link.
+pub fn check_peer_from_store(peers: &PeerStore, alias: &str) -> io::Result<Value> {
+    if !valid_device_id(alias) {
+        return Err(invalid("Invalid field device alias"));
+    }
+    let config = peers.load()?;
+    let source = own_device(&config)?;
+    let destination = peers.get(alias)?;
+    if alias == source {
+        return Err(invalid("A device cannot connect to itself"));
+    }
+    let response = run_ssh(
+        &destination,
+        &format!("pipboy peer receipts {source}"),
+        None,
+    )?;
+    if response.get("schema_version").and_then(Value::as_u64) != Some(1)
+        || get_id(&response, "kind")? != "reports"
+        || get_id(&response, "receiver_device")? != alias
+        || get_id(&response, "for_device")? != source
+        || !response.get("reports").is_some_and(Value::is_array)
+    {
+        return Err(invalid("Field device returned mismatched authenticated identity"));
+    }
+    Ok(json!({
+        "alias": alias,
+        "connected": true,
+        "authenticated": "pinned_openssh",
+        "remote_device": alias,
+        "local_device": source,
+        "session": "explicit_one_shot",
+        "automatic_sync": false,
+        "progress_imported": false
+    }))
+}
+
 pub fn sync_peer(alias: &str) -> io::Result<usize> {
     let (_, peers, tasks) = setup()?;
     sync_from_store(&tasks, &peers, alias)
