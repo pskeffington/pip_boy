@@ -98,9 +98,13 @@
       ],
       "acceptance": [
         "Define the receive-only scope separately from serial.read, network.fetch and mesh.transmit",
-        "Specify endpoint/protocol/port binding, deadline, bounded buffers, cancellation, revocation and credential handling",
-        "If MQTT is selected, explicitly scope CONNECT/SUBSCRIBE/keepalive control frames, require read-only topic ACLs and forbid publish operations",
-        "Require policy denial before socket creation and no connection from browse, select or module viewing",
+        "Bind literal IP, protocol and port; prohibit DNS/mDNS discovery and fallback; normalize IPv4-mapped IPv6, deny production loopback, define link-local handling",
+        "Require TLS with IP subjectAltName validation or out-of-band pin bound to IP/port; no TOFU/plaintext downgrade; credentials use OS store",
+        "Choose MQTT 3.1.1 QoS 0 as the initial candidate; exact topic only, broker read ACL; whitelist client CONNECT/SUBSCRIBE/PINGREQ/DISCONNECT and server CONNACK/SUBACK-QoS0/PINGRESP/nonretained-PUBLISH-QoS0; reject other packets",
+        "Validate exact MQTT topic UTF-8; reject NUL/wildcards, malformed flags, invalid/overlong Remaining Length, overflow and framing ambiguity",
+        "Set initial caps: 300s; one 128-byte topic; 10 msg/s burst 20; 4096-byte MQTT packet; 512-byte decoded frame; queue 16/65,536 bytes; 1 MiB/session",
+        "Bind a nonserializable generation to signed caller/endpoint/protocol/topic/deadline; explicit confirmation; close socket, clear queue and reject stale callbacks on revoke/expiry/suspend/error",
+        "Require policy denial before socket creation and no connection from browse/select/view; specify macOS sandbox/XPC peer identity and Local Network privacy evidence",
         "Design only; no socket, station or radio I/O, and no claim that the OS-enforced broker is implemented"
       ]
     },
@@ -110,7 +114,9 @@
       "status": "blocked_dependency",
       "depends_on": ["MESH-05"],
       "blocking_conditions": [
-        "OS-enforced network receive broker implementation and independent security review are not complete"
+        "OS-enforced network receive broker implementation and independent security review are not complete",
+        "Actual Station model, enabled service, topic and payload framing are unverified",
+        "The endpoint TLS identity must be validated with a trusted CA or an out-of-band pin before any page/socket data is read"
       ],
       "paths": [
         "docs/MESSENGER_INTEROPERABILITY.md",
@@ -119,7 +125,8 @@
       "acceptance": [
         "Identify the actual station model, firmware, explicitly selected endpoint and enabled LAN service without network discovery",
         "Review TCP client startup side effects before claiming receive-only; standard Meshtastic client initialization may request configuration and send heartbeats",
-        "Use a separately authorized passive data source; if MQTT is used, scope CONNECT/SUBSCRIBE/keepalive control frames and enforce read-only broker ACLs, with no publish operations",
+        "Use the reviewed MQTT 3.1.1 QoS 0 candidate only after confirming the actual service and framing; exact topic, read ACL, no wildcard/retained/QoS>0, no publish",
+        "Verify broker-side publish denial from an authorized read-only ACL or isolated test broker; do not send a live mesh payload as a test",
         "Do not change station, radio, MQTT or mesh configuration implicitly; never write Meshtastic ToRadio configuration/packet frames or transmit RF",
         "Use the reviewed network scope with bounded framing, cancellation, revoke behavior and safe credential handling before live sockets",
         "Keep decoded observations unverified; no Messenger/PACE receipt, persistence or radio transmit claim"
