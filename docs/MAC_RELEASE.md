@@ -53,14 +53,20 @@ send SIGKILL after a bounded grace period if the dashboard does not exit.
 ## Developer ID distribution
 
 Outside-App-Store distribution requires a Developer ID Application identity
-and an App Store Connect API key configured with notarytool. Keep certificate
-private keys and API credentials in the release runner's protected keychain or
-secret store; never commit them or print them in logs.
+for code signing and separate notarization credentials stored as a `notarytool`
+keychain profile. Apple supports an Apple ID with an app-specific password or an
+App Store Connect team API key with NotaryTool access. The Developer ID signing
+certificate and its private key are separate from notarization credentials. Keep
+both in the release runner's protected keychain or secret store; never commit
+them or print them in logs. See Apple's [notarytool migration note](https://developer.apple.com/documentation/technotes/tn3147-migrating-to-the-latest-notarization-tool)
+and [custom notarization workflow](https://developer.apple.com/documentation/security/customizing-the-notarization-workflow).
 
 1. Import the Developer ID certificate into the runner keychain and set
    RUSTBOY_SIGN_IDENTITY to its exact signing identity.
-2. Store notary credentials once with xcrun notarytool store-credentials and
-   set RUSTBOY_NOTARY_PROFILE to that keychain profile name.
+2. Store either the Apple ID/app-specific password or an eligible team API
+   key once with `xcrun notarytool store-credentials`; set
+   `RUSTBOY_NOTARY_PROFILE` to that keychain profile name. Keep the secret out
+   of shell history, command output, and repository files.
 3. Run scripts/package-macos-dmg.sh. It builds the universal app from the
    clean exact source HEAD and ignores any prebuilt binary or app override.
 4. Preserve the resulting app/DMG, notarization submission ID and log,
