@@ -1,6 +1,6 @@
 # Rust-Boy host and single-package viewport roadmap
 
-Status (2026-11-04): **RM-018 host supervision and TC-A02 terminal/TUI integration are merged and software-verified; production integration remains blocked on reviewed release artifacts and target-platform acceptance.** PR #88 merged at `1ba2b8f`; exact source head `457d965` passed 7/7 jobs in [Actions run 41127024688](https://github.com/pskeffington/pip_boy/actions/runs/41127024688). The source-controlled executable and manifest roster is empty and startup mounts no external modules. This is fault containment and typed offline command dispatch, not OS isolation or production readiness.
+Status (2026-11-05): **RM-018 host supervision and TC-A02 terminal/TUI integration are merged and software-verified; production integration remains blocked on reviewed release artifacts and target-platform acceptance.** PR #88 merged at `1ba2b8f`; exact source head `457d965` passed 7/7 jobs in [Actions run 41127024688](https://github.com/pskeffington/pip_boy/actions/runs/41127024688). The source-controlled executable and manifest roster is empty and startup mounts no external modules. This is fault containment and typed offline command dispatch, not OS isolation or production readiness.
 
 ### Current gate evidence
 
