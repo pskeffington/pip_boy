@@ -22,8 +22,26 @@ raw private conversations, live node locations or credential-store exports.
 | Read-only USB authorization | OS broker denies unauthorized callers, wrong device, stale grant and saved denial | Pending broker |
 | USB passive framing | Actual firmware FromRadio capture decodes without wake/config/heartbeat/ToRadio writes | Pending hardware |
 | USB reset / unplug / suspend | No unwanted DTR reset where supported; bounded cancellation, cleanup and stale status | Pending hardware |
-| Meshtastic protobuf/model/version | Independently decode same capture using pinned upstream schema; compare selected fields | Pending schema integration |
+| Meshtastic protobuf/model/version | Independently decode an actual FromRadio capture using pinned upstream schema; compare selected fields with Rust-Boy's unverified text observation | Pending hardware/schema interoperability |
 | Independent reviewer | Named reviewer signs off on crypto/key boundary and real local-IP evidence | Pending |
+
+## Software capture-decoder slice
+
+The machine-readable sequence and status for Meshtastic work is recorded in
+[`catalog/meshtastic_tasks.json`](../catalog/meshtastic_tasks.json).
+
+The offline `pipboy-core::meshtastic_decode` parser now recognizes only
+`FromRadio.packet → MeshPacket.decoded → Data(TEXT_MESSAGE_APP)`. It returns
+bounded text and optional node/channel numbers explicitly marked unverified;
+it does not authenticate peers, record Messenger messages, or produce delivery
+receipts. Its synthetic field-mapping fixture is not a hardware capture and has
+has been compared byte-for-byte with `protoc` output using a minimal schema
+matching the pinned v2.8.0 field types; no generated upstream bindings or actual
+radio capture were used. Parser tests cover malformed/truncated fields,
+field-number overflow aliasing, fixed32 node IDs, uint32 bounds, duplicate
+interpreted fields/oneofs, well-formed unknown fields, unsupported application
+ports, text size/UTF-8 and control/bidi rejection. Live USB, actual firmware
+decoding, and independent-device schema comparison above remain Pending.
 
 Minimum hardware: the intended Mac, the intended Pi, and two explicitly owned
 Meshtastic USB radios with recorded model/firmware/region. This read-only stage
