@@ -291,21 +291,24 @@
   "current_pr_inventory": {
     "as_of": "2026-11-09T20:48:24Z",
     "scope_note": "Historical open-PR snapshot captured at this timestamp immediately before the RBG5-00 amendment was pushed. The #109 row intentionally records its pre-amendment head. It is not the live current PR list; consult after_snapshot_updates and refresh before any merge or closure decision.",
-    "main_sha": "651b0b07e02ac60132ab2eae9f6cee60ce9ae14f",
+    "main_sha": "6978303766bc0e5c539ec6ae4b0e5db0d1ebd260",
     "merged_verified": [
       104,
       95,
       105,
       106,
       107,
-      108
+      108,
+      111,
+      109
     ],
     "superseded_closed_verified": [
       80,
       81,
       82,
       86,
-      91
+      91,
+      67
     ],
     "open": [
       {
@@ -442,12 +445,13 @@
       }
     ],
     "after_snapshot_updates": {
-      "as_of": "2026-11-09T21:10:00Z",
+      "as_of": "2026-11-09T21:21:00Z",
       "tasking_pr_109": {
-        "head": "081cb43e2726b3a833a70f33e02131cfc57f1848",
-        "state": "open_draft",
-        "actions_run": "https://github.com/pskeffington/pip_boy/actions/runs/42696482886",
-        "result": "7/7 actual jobs passed; not yet merged"
+        "head": "ad34efa2b353cfecd47be815504f41b1c6db8843",
+        "state": "merged",
+        "merge_sha": "62fa2fc65c8cb05fc065bcf3455e8024c2f759a2",
+        "actions_run": "https://github.com/pskeffington/pip_boy/actions/runs/42699859436",
+        "result": "7/7 actual jobs passed; merged"
       },
       "field_topology_pr_111": {
         "head": "771b28eda4dc47c54e89aaa61ab7d6b6a6dfe135",
@@ -461,16 +465,16 @@
         "purpose": "host-owned authorization gap blocks salvage of PR #66"
       },
       "scout_gis_pr_112": {
-        "head": "da0092016985681232c0b2ed8c9c55682d6e18d5",
+        "head": "8158d54dd73570778245997238341a34533a57bd",
         "state": "open_draft",
-        "actions": "pending_at_snapshot",
-        "scope": "bounded read-only GeoJSON summary parser; exact-head CI not yet reported"
+        "actions_run": "https://github.com/pskeffington/pip_boy/actions/runs/42700010248",
+        "result": "7/7 actual jobs passed; independent review no blocker; awaiting merge"
       },
       "pi5_runbook_pr_113": {
         "head": "ee1022b49571ea82f94c8145703a250efcbf2274",
         "state": "open_draft",
-        "actions": "pending_at_snapshot",
-        "scope": "procedure only; physical Pi 5 acceptance remains pending"
+        "actions_run": "https://github.com/pskeffington/pip_boy/actions/runs/42699802970",
+        "result": "7/7 actual jobs passed; independent review pending; procedure only"
       }
     }
   }
