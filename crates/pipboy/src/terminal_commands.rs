@@ -17,7 +17,7 @@ fn pinned_tools(board: &Workbench) -> Vec<&str> {
 }
 
 fn display_help(tool_id: Option<&str>, pinned: &[&str]) -> String {
-    let mut output = String::from("tools | select TOOL | help | run COMMAND | quit\n");
+    let mut output = String::from("tools | select TOOL | help/? | run COMMAND | q/quit/exit\n");
     if let Some(tool_id) = tool_id {
         if !pinned.contains(&tool_id) {
             let _ = writeln!(output, "{tool_id}: not pinned");
