@@ -973,6 +973,23 @@ while True:
             .unwrap();
         host.select("org.rustboy.music").unwrap();
         assert_eq!(broker.owner(), Some(AudioModule::Music));
+        assert!(
+            broker.try_acquire(AudioModule::Radio).is_none(),
+            "the active Music adapter excludes the host Radio audio claimant"
+        );
+        host.open_settings();
+        assert_eq!(
+            broker.owner(),
+            None,
+            "acknowledged Music suspend releases focus"
+        );
+        let radio = broker
+            .try_acquire(AudioModule::Radio)
+            .expect("Radio can acquire output after Music suspends");
+        drop(radio);
+        host.close_settings()
+            .expect("Music resumes after Radio releases output");
+        assert_eq!(broker.owner(), Some(AudioModule::Music));
         host.intent(
             "ui.music.next",
             None,
