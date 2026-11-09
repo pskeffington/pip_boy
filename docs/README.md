@@ -9,6 +9,8 @@ Technical contracts, architecture decisions, research provenance and validation 
 
 ## GitHub-first agents and task queue
 
+**Current RB-G5 agent packet:** [2026-11-09 post-consolidation assignments](RBG5_AGENT_TASKING_2026-11-09.md). This supersedes earlier work-order priority without retroactively changing earlier CI or hardware acceptance evidence.
+
 [Agent instructions](../AGENTS.md) · [Execution work packets and release gates](TERMINAL_AGENT_EXECUTION.md) · [Machine-readable task queue](../catalog/terminal_agent_tasks.json) · [Core dispatcher issue](https://github.com/pskeffington/pip_boy/issues/73) · [Security/CI issue](https://github.com/pskeffington/pip_boy/issues/74). Software implementation is developed and validated through GitHub; operator-local side-by-side testing is not a prerequisite.
 
 [November 3 execution packet and post-packet reconciliation](CODEX_PASS_2026-11-03.md) records the #88/#92/#93/#96 merges, current CI evidence, unresolved drafts, and Pi 5 / Meshtastic physical acceptance boundaries.
