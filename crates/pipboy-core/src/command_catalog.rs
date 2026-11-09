@@ -392,9 +392,9 @@ pub fn parse_input(
     let tokens: Vec<&str> = input.split_whitespace().collect();
     match tokens.as_slice() {
         [] => Ok(TerminalAction::Empty),
-        ["quit"] | ["exit"] => Ok(TerminalAction::Quit),
+        ["q"] | ["quit"] | ["exit"] => Ok(TerminalAction::Quit),
         ["tools"] => Ok(TerminalAction::ListTools(registered_pins(pinned_tools))),
-        ["help"] => {
+        ["help"] | ["?"] => {
             let tool_id = selected_tool.map(validate_tool).transpose()?;
             if let Some(id) = tool_id {
                 require_pinned(id, pinned_tools)?;
@@ -694,6 +694,25 @@ mod tests {
                 ..
             }) if value == "Hello Rust"
         ));
+    }
+
+    #[test]
+    fn legacy_quit_and_help_aliases_remain_control_actions() {
+        for alias in ["q", "quit", "exit"] {
+            assert_eq!(parse_input(alias, None, PINNED), Ok(TerminalAction::Quit));
+        }
+        for alias in ["?", "help"] {
+            assert_eq!(
+                parse_input(alias, Some("host"), PINNED),
+                Ok(TerminalAction::Help {
+                    tool_id: Some("host")
+                })
+            );
+        }
+        assert_eq!(
+            parse_input("?", Some("host"), &["net-lab"]),
+            Err(CommandError::ToolNotPinned)
+        );
     }
 
     #[test]
