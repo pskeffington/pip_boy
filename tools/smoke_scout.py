@@ -77,6 +77,11 @@ with tempfile.TemporaryDirectory() as temporary:
         call(env, "scout", *case, ok=False)
     file.write_text('{"type":"LineString","coordinates":[[0,0],[1,1]]}',
                     encoding="utf-8")
+    line_report = json.loads(call(env, "scout", "geo", "inspect", str(file)).stdout)
+    assert line_report["geometry"] == "LineString"
+    assert line_report["features"] == 1 and line_report["network_used"] is False
+    file.write_text('{"type":"GeometryCollection","geometries":[]}',
+                    encoding="utf-8")
     call(env, "scout", "geo", "inspect", str(file), ok=False)
     file.write_text(" " * (1024 * 1024 + 1), encoding="utf-8")
     call(env, "scout", "geo", "inspect", str(file), ok=False)
@@ -91,4 +96,4 @@ with tempfile.TemporaryDirectory() as temporary:
     assert not (home / "notes.json").exists()
     assert not (home / "permissions.json").exists()
 
-print("PASS: Scout GeoJSON WGS84 order, finite coordinates, bounded Point import, dateline distance, offline behavior and ready-made role")
+print("PASS: Scout GeoJSON WGS84 order, finite coordinates, bounded GeoJSON geometry summary, dateline distance, offline behavior and ready-made role")
