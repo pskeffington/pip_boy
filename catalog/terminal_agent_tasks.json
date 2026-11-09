@@ -1,11 +1,11 @@
 {
   "schema_version": 1,
-  "updated": "2026-11-03",
+  "updated": "2026-11-09",
   "project": "Rust-Boy terminal-to-module integration",
   "source_contract": "docs/TERMINAL_MODULE_COMMANDS.md",
   "agent_instructions": "AGENTS.md",
   "execution_guide": "docs/TERMINAL_AGENT_EXECUTION.md",
-  "next_execution_packet": "docs/CODEX_PASS_2026-11-03.md",
+  "next_execution_packet": "docs/RBG5_AGENT_TASKING_2026-11-09.md",
   "mac_release_queue": "catalog/mac_release_tasks.json",
   "workflow": "github_first_no_required_live_side_by_side",
   "status_semantics": {
@@ -116,7 +116,7 @@
         "scope": "radio stations lists checked-in curated metadata only. No provider probe, network access, SDR enumeration or playback. MAP filesystem actions, TV and COMMS remain unavailable; no package is installed or mounted.",
         "hosted_ci": "The implemented read-only RADIO listing slice was included on PR #92 head 815dba08f1782aaca409d45486ba6c445ed30a51, whose exact run 41761848423 passed 7/7. This does not complete TC-A03: MAP filesystem actions and adapter lifecycle paths remain absent."
       },
-      "next_slice": "Add an offline MAP action only after a typed filesystem scope and bounded path contract are reviewed."
+      "next_slice": "RBG5-01/RBG5-07: inspect consolidated main and adapter fault handling before promoting remaining MAP actions. Previous 2026-11-03 evidence is historical; revalidate on exact current head."
     },
     {
       "id": "TC-A04",
@@ -264,5 +264,28 @@
         "result": "7/7 jobs passed, including native macOS and Chromium viewport checks; ready for review, not merged."
       }
     ]
+  },
+  "post_consolidation": {
+    "baseline_main": "651b0b07e02ac60132ab2eae9f6cee60ce9ae14f",
+    "merged_prs": [
+      104,
+      95,
+      105,
+      106,
+      107,
+      108
+    ],
+    "superseded_closed": [
+      80,
+      81,
+      82,
+      86,
+      91
+    ],
+    "software_evidence": "PRs #105-#108 had 7/7 exact-head Actions jobs; #108 reported 441 workspace tests, fmt, Clippy and Rust 1.90 checks",
+    "hardware_acceptance": "pending",
+    "next_gate": "RB-G5",
+    "task_packet": "docs/RBG5_AGENT_TASKING_2026-11-09.md",
+    "note": "Prior pr_reconciliation is a historical 2026-11-03 snapshot; current state must be rechecked before decisions."
   }
 }
