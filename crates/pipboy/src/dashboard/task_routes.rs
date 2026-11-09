@@ -240,3 +240,21 @@ pub(super) fn device_sync(req: &Request, store: &WorkbenchStore) -> Result<Respo
         &json!({"updated": changed, "source": "openssh_explicit_sync"}),
     ))
 }
+
+pub(super) fn device_check(req: &Request, store: &WorkbenchStore) -> Result<Response, Response> {
+    let (_, manager) = manager_role(store)?;
+    if !manager {
+        return Err(Response::error(403, "Only Task Control can check paired field devices"));
+    }
+    let body = parse_json_body(req, &["alias", "confirm"])?;
+    if body.get("confirm").and_then(Value::as_bool) != Some(true) {
+        return Err(Response::error(422, "Explicit peer connection check required"));
+    }
+    let alias = str_field(&body, "alias")?;
+    let root = store.path().parent().unwrap_or_else(|| std::path::Path::new("."));
+    let peers = PeerStore::new(root.to_path_buf());
+    let checked = peer::check_peer_from_store(&peers, alias).map_err(|_| {
+        Response::error(409, "Field device unreachable, not enrolled, or SSH identity did not match")
+    })?;
+    Ok(Response::json(200, &checked))
+}
