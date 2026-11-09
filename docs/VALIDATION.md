@@ -389,3 +389,11 @@ volume and temporary preferences. `--live-ip` explicitly adds Skylab playback;
 `--standalone /path/to/rust-radio-cli` also checks the standalone native player.
 It never claims synthetic samples are received RF and is excluded from CI
 profiles that lack audio hardware.
+
+## RB-G5 consolidation and reconciliation — 2026-11-09
+
+Current GitHub `main` is `651b0b07e02ac60132ab2eae9f6cee60ce9ae14f`. PRs #104, #95, and #105–#108 are merged; PRs #80–#82, #86, and #91 are closed after supersession/reconciliation. PR #109's original head `8337ff6c22195c301f56261da53b652142614101` passed seven actual Actions jobs in [run 42694024298](https://github.com/pskeffington/pip_boy/actions/runs/42694024298), but review found stale #86/#91 labels in a retained historical snapshot. The current task queue preserves that history and adds a separately dated inventory; the corrective head requires new exact-head CI.
+
+RBG5 CI audit: #66's stable formatting job failed in `task_routes.rs` and `peer.rs`; #67's stable formatting job failed in `field_topology.rs`. #68's stable Clippy failure on `manual_contains` in `organization_authority.rs:359` is already corrected on current `main`; the stale PR head still needs reconciliation and a fresh run. The #66/#67 failures are executed-job failures, not Actions startup failures. PR #70's recorded run 40752144382 ended in `startup_failure` with zero jobs, so it has no CI acceptance. #83/#87 remain review-dependent, with SCAN inert and not installed. These findings are investigation evidence only; RBG5-02 still needs current-head repairs/revalidation and #70 needs a fresh admitted run.
+
+The original shared checkout's uncommitted changes were preserved. No Pi 5 physical test, live camera/audio/transport test, signing/notarization, security acceptance, or production release is claimed by this checkpoint.

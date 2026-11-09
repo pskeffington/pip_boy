@@ -1,11 +1,11 @@
 {
   "schema_version": 1,
-  "updated": "2026-11-03",
+  "updated": "2026-11-09",
   "project": "Rust-Boy terminal-to-module integration",
   "source_contract": "docs/TERMINAL_MODULE_COMMANDS.md",
   "agent_instructions": "AGENTS.md",
   "execution_guide": "docs/TERMINAL_AGENT_EXECUTION.md",
-  "next_execution_packet": "docs/CODEX_PASS_2026-11-03.md",
+  "next_execution_packet": "docs/RBG5_AGENT_TASKING_2026-11-09.md",
   "mac_release_queue": "catalog/mac_release_tasks.json",
   "workflow": "github_first_no_required_live_side_by_side",
   "status_semantics": {
@@ -116,7 +116,7 @@
         "scope": "radio stations lists checked-in curated metadata only. No provider probe, network access, SDR enumeration or playback. MAP filesystem actions, TV and COMMS remain unavailable; no package is installed or mounted.",
         "hosted_ci": "The implemented read-only RADIO listing slice was included on PR #92 head 815dba08f1782aaca409d45486ba6c445ed30a51, whose exact run 41761848423 passed 7/7. This does not complete TC-A03: MAP filesystem actions and adapter lifecycle paths remain absent."
       },
-      "next_slice": "Add an offline MAP action only after a typed filesystem scope and bounded path contract are reviewed."
+      "next_slice": "RBG5-01/RBG5-07: inspect consolidated main and adapter fault handling before promoting remaining MAP actions. Previous 2026-11-03 evidence is historical; revalidate on exact current head."
     },
     {
       "id": "TC-A04",
@@ -209,7 +209,7 @@
       "gate": "TC-6"
     }
   ],
-  "pr_reconciliation": {
+  "pr_reconciliation_2026_11_03": {
     "checked_against_main": "1ba2b8f019cbd3b61b36c89171ddbbb5941f829d",
     "prs": [
       {
@@ -264,5 +264,214 @@
         "result": "7/7 jobs passed, including native macOS and Chromium viewport checks; ready for review, not merged."
       }
     ]
+  },
+  "post_consolidation": {
+    "baseline_main": "651b0b07e02ac60132ab2eae9f6cee60ce9ae14f",
+    "merged_prs": [
+      104,
+      95,
+      105,
+      106,
+      107,
+      108
+    ],
+    "superseded_closed": [
+      80,
+      81,
+      82,
+      86,
+      91
+    ],
+    "software_evidence": "PRs #105-#108 had 7/7 exact-head Actions jobs; #108 reported 441 workspace tests, fmt, Clippy and Rust 1.90 checks",
+    "hardware_acceptance": "pending",
+    "next_gate": "RB-G5",
+    "task_packet": "docs/RBG5_AGENT_TASKING_2026-11-09.md",
+    "note": "See current_pr_inventory for the 2026-11-09 reconciliation. The 2026-11-03 reconciliation remains unchanged as historical evidence."
+  },
+  "current_pr_inventory": {
+    "as_of": "2026-11-09T20:48:24Z",
+    "scope_note": "Historical open-PR snapshot captured at this timestamp immediately before the RBG5-00 amendment was pushed. The #109 row intentionally records its pre-amendment head. It is not the live current PR list; consult after_snapshot_updates and refresh before any merge or closure decision.",
+    "main_sha": "651b0b07e02ac60132ab2eae9f6cee60ce9ae14f",
+    "merged_verified": [
+      104,
+      95,
+      105,
+      106,
+      107,
+      108
+    ],
+    "superseded_closed_verified": [
+      80,
+      81,
+      82,
+      86,
+      91
+    ],
+    "open": [
+      {
+        "number": 109,
+        "state": "draft",
+        "head": "8337ff6c22195c301f56261da53b652142614101",
+        "category": "RBG5 tasking; 7/7 exact-head jobs passed on run 42694024298; follow-up correction required for historical snapshot contradictions; new head requires new CI"
+      },
+      {
+        "number": 89,
+        "state": "draft",
+        "head": "79718798392cd59009aac7b54fde1445b40f7edd",
+        "category": "RBG5-01; hardware inventory and Pi 5 baseline are potentially unique; old base; file-level overlap and current-head validation pending"
+      },
+      {
+        "number": 87,
+        "state": "draft",
+        "head": "9608dbe21f33a345ec89ff5ea5442f92227ed7b5",
+        "category": "RBG5-04; inert SCAN registry only; based on #83; preserve review dependency; no camera runtime"
+      },
+      {
+        "number": 83,
+        "state": "draft",
+        "head": "1f926dedf55da328a9bc3ef61cd029b5175baab4",
+        "category": "RBG5-04; planning-only contract; review dependency remains open"
+      },
+      {
+        "number": 79,
+        "state": "draft",
+        "head": "da315ee8734050efa4de2cc8fdb42bd8155005d2",
+        "category": "RBG5-01; older reconciliation/tasking; overlap with #109 likely; compare before salvage"
+      },
+      {
+        "number": 71,
+        "state": "draft",
+        "head": "73952999206ec99f4de88ea645f3a3cf3798e54f",
+        "category": "RBG5-01; broad package/adapter/UI integration; stale base and high overlap; do not transplant wholesale"
+      },
+      {
+        "number": 70,
+        "state": "ready",
+        "head": "3de284d77400004fd85d0d3b8b75f13576082302",
+        "category": "RBG5-05; exact-head run 40752144382 startup_failure with zero jobs; no CI pass; validate provenance and rerun on reconciled head"
+      },
+      {
+        "number": 69,
+        "state": "ready",
+        "head": "52bd715ea8407bb87f40c5816314de0daaeb8695",
+        "category": "RBG5-03; conflicts with main; reconcile architecture/docs before any merge"
+      },
+      {
+        "number": 68,
+        "state": "ready",
+        "head": "90a600e194a13b77ff951058f4308776fcdc7554",
+        "category": "RBG5-02/03; historical stable Clippy failure at organization_authority.rs:359 is already fixed on current main; PR is 192 commits behind and needs current-base reconciliation plus fresh exact-head CI"
+      },
+      {
+        "number": 67,
+        "state": "ready",
+        "head": "bfa8f978bec89e12970128e20e624de8ef1a7ddf",
+        "category": "RBG5-02; stable rustfmt fails in field_topology.rs; correct formatting and rerun"
+      },
+      {
+        "number": 66,
+        "state": "ready",
+        "head": "98be9a6c68dc46c1d1d9f1bd4e7e5077f7b4f181",
+        "category": "RBG5-02/03; stable rustfmt fails in task_routes.rs and peer.rs; saved mission-board pin is improperly used as Task Control authorization; blocked by issue #110; pairing acceptance remains separate"
+      },
+      {
+        "number": 65,
+        "state": "ready",
+        "head": "fc0f759ce89a065f2021d0704c08f5f0eb88cf5c",
+        "category": "RBG5-03; conflicts with main; module ownership contracts require review"
+      },
+      {
+        "number": 64,
+        "state": "draft",
+        "head": "ed07458d070f292270b9a5c3016a842a6aad4e56",
+        "category": "security-sensitive; keep draft pending independent security review and current-base comparison"
+      },
+      {
+        "number": 61,
+        "state": "ready",
+        "head": "abdfd93cb90d9b067eb7d225ec0239957379acfb",
+        "category": "RBG5-03; conflicts with main; camera feeder scope needs ownership/security review"
+      },
+      {
+        "number": 60,
+        "state": "ready",
+        "head": "cb862eef970c7c01497db969ac5bf9d0cfa3b19a",
+        "category": "RBG5-03; conflicts with main; direct camera feed trust and runtime behavior need review"
+      },
+      {
+        "number": 55,
+        "state": "ready",
+        "head": "2af0309c87060b814986177b8083df38bba0d8b7",
+        "category": "RBG5-03; conflicts with main; emergency workflow requires current contract/safety review"
+      },
+      {
+        "number": 54,
+        "state": "ready",
+        "head": "85a7f3b0d7fbad6628f8308bd9e4a686e412a6c7",
+        "category": "RBG5-03; conflicts with main; MAP/UI behavior requires reconciliation"
+      },
+      {
+        "number": 53,
+        "state": "ready",
+        "head": "75d69766bccdb0d65450b7758cddd926af25f073",
+        "category": "RBG5-03; conflicts with main; MAP state fix requires current-base regression review"
+      },
+      {
+        "number": 29,
+        "state": "ready",
+        "head": "4ac4e3faf78881baa9245b9fc65901744e2e2cc8",
+        "category": "RBG5-03; conflicts with main; transport and fail-closed semantics require current security review"
+      },
+      {
+        "number": 28,
+        "state": "ready",
+        "head": "0816b609ee082c07a05d60bec063287c844b2cab",
+        "category": "RBG5-03; conflicts with main; research/documentation overlap review"
+      },
+      {
+        "number": 27,
+        "state": "ready",
+        "head": "51a674bf0992822731ad643f12558e2f888c0949",
+        "category": "RBG5-03; conflicts with main; research/documentation overlap review"
+      },
+      {
+        "number": 22,
+        "state": "ready",
+        "head": "34f2a1eddc53c1d302df811b2e8975d4d5fbcd8a",
+        "category": "RBG5-03; 551 commits behind; Boston/Census geometry is potentially unique salvage; old green run is stale and GIS/source/license review is required"
+      }
+    ],
+    "after_snapshot_updates": {
+      "as_of": "2026-11-09T21:10:00Z",
+      "tasking_pr_109": {
+        "head": "081cb43e2726b3a833a70f33e02131cfc57f1848",
+        "state": "open_draft",
+        "actions_run": "https://github.com/pskeffington/pip_boy/actions/runs/42696482886",
+        "result": "7/7 actual jobs passed; not yet merged"
+      },
+      "field_topology_pr_111": {
+        "head": "771b28eda4dc47c54e89aaa61ab7d6b6a6dfe135",
+        "state": "merged",
+        "merge_sha": "6978303766bc0e5c539ec6ae4b0e5db0d1ebd260",
+        "actions_run": "https://github.com/pskeffington/pip_boy/actions/runs/42697454595",
+        "result": "7/7 actual jobs passed; merged"
+      },
+      "issue_110": {
+        "state": "open",
+        "purpose": "host-owned authorization gap blocks salvage of PR #66"
+      },
+      "scout_gis_pr_112": {
+        "head": "da0092016985681232c0b2ed8c9c55682d6e18d5",
+        "state": "open_draft",
+        "actions": "pending_at_snapshot",
+        "scope": "bounded read-only GeoJSON summary parser; exact-head CI not yet reported"
+      },
+      "pi5_runbook_pr_113": {
+        "head": "ee1022b49571ea82f94c8145703a250efcbf2274",
+        "state": "open_draft",
+        "actions": "pending_at_snapshot",
+        "scope": "procedure only; physical Pi 5 acceptance remains pending"
+      }
+    }
   }
 }

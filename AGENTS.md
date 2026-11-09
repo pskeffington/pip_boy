@@ -14,6 +14,14 @@ Develop the Rust-Boy host into a production-capable, offline-first, one-package-
 4. Implement the smallest vertical slice with tests and proof; update task status only with links to real code/test evidence. If CI is blocked by startup_failure or has zero jobs, mark `blocked_ci`, not `passed`.
 5. On every pass update relevant docs, machine-readable index, command help, compatibility notes and release evidence; explicitly list what is implemented, tested, simulated, not connected, or still requires hardware verification.
 
+### RB-G5 consolidation checkpoint — 2026-11-09
+
+The current reviewed GitHub `main` baseline is `651b0b07e02ac60132ab2eae9f6cee60ce9ae14f`. PRs #104, #95 and #105–#108 were merged; #105–#108 each had 7/7 successful exact-head Actions jobs. PR #108 additionally passed local formatting, Clippy, 441 workspace tests and Rust 1.90 checking. Superseded PRs #80/#81/#82/#86 and #91 are closed. These are software and integration facts only, not Pi 5 field or production acceptance.
+
+**Execute [RB-G5 agent work packets](docs/RBG5_AGENT_TASKING_2026-11-09.md) before older work packets.** Coordinator must revalidate actual current head and PR status, then assign RBG5-00 (evidence inventory) first; RBG5-01 (#89/#79/#71), RBG5-02 (#66–#68), RBG5-03 (other conflicts), RBG5-04 (#83/#87 SCAN review), RBG5-05 (#70 missing CI), RBG5-06 (Pi 5 runbook), and RBG5-07 (release security/CI evidence) are scoped follow-ons. Preserve the original checkout's uncommitted work. A new head requires its own CI; a missing run is never a pass. Older dated checkpoints below are retained as historical snapshots, not current marching orders.
+
+RBG5-00 coordinator verification is recorded in the task packet and current task catalog. The tasking PR's original head `8337ff6c22195c301f56261da53b652142614101` passed 7/7 jobs in [run 42694024298](https://github.com/pskeffington/pip_boy/actions/runs/42694024298); an independent review found stale #86/#91 labels in the retained November 3 snapshot, so a corrective head is being prepared and must receive its own CI before merge. Current #66/#67 formatting failures, #68's historical Clippy lint already fixed on current `main` but stale PR head, #70 zero-job startup failure, and the #83/#87 review dependency are documented as blockers; none is counted as accepted.
+
 ### Current execution checkpoint — 2026-11-05 (main at `017614dc`)
 
 - PR [#92](https://github.com/pskeffington/pip_boy/pull/92) merged at `22c43f835465a5656b1c907f44eb853b754d0c2b`; desktop/micro shared command palette and typed dispatcher are in `main`.
