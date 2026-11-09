@@ -223,6 +223,21 @@ impl UniversalAdapterHost {
         }
     }
 
+    /// Release only the named package. A failed background shutdown or a
+    /// rejected candidate activation must not evict another foreground view.
+    fn release_foreground_if(&mut self, package_id: &str) {
+        if self.foreground.active_package_id() == Some(package_id) {
+            self.foreground.clear_package();
+        }
+    }
+
+    /// Adapter faults invalidate that adapter's last view while leaving the
+    /// host-owned Settings surface available.
+    fn fault_and_release(&mut self, package_id: &str) {
+        self.fail(package_id);
+        self.release_foreground_if(package_id);
+    }
+
     fn invoke(&mut self, package_id: &str, body: AdapterCommand) -> Result<(), AdapterError> {
         let sequence = self
             .next_request_id
@@ -297,8 +312,7 @@ impl UniversalAdapterHost {
                         self.release_audio(id);
                     }
                     Err(error) => {
-                        self.fail(id);
-                        self.foreground.clear_package();
+                        self.fault_and_release(id);
                         return Err(error);
                     }
                 }
@@ -330,8 +344,7 @@ impl UniversalAdapterHost {
                             entry.state = AdapterState::Foreground;
                         }
                     } else {
-                        self.fail(&old);
-                        self.foreground.clear_package();
+                        self.fault_and_release(&old);
                     }
                 }
             }
@@ -360,8 +373,7 @@ impl UniversalAdapterHost {
                             entry.state = AdapterState::Foreground;
                         }
                     } else {
-                        self.fail(&old);
-                        self.foreground.clear_package();
+                        self.fault_and_release(&old);
                     }
                 }
             }
@@ -385,8 +397,7 @@ impl UniversalAdapterHost {
         }
         if let Some(id) = self.foreground.active_package_id().map(str::to_owned) {
             if self.invoke(&id, AdapterCommand::Suspend).is_err() {
-                self.fail(&id);
-                self.foreground.clear_package();
+                self.fault_and_release(&id);
             } else {
                 if let Some(entry) = self.mounted.get_mut(&id) {
                     entry.state = AdapterState::Suspended;
@@ -410,8 +421,7 @@ impl UniversalAdapterHost {
                     viewport: self.viewport,
                 },
             ) {
-                self.fail(&id);
-                self.foreground.clear_package();
+                self.fault_and_release(&id);
                 return Err(error);
             }
             if let Some(entry) = self.mounted.get_mut(&id) {
@@ -436,16 +446,15 @@ impl UniversalAdapterHost {
                         entry.last_view = None;
                     }
                 } else {
-                    self.fail(&id);
+                    self.fault_and_release(&id);
                 }
-                self.foreground.clear_package();
+                self.release_foreground_if(&id);
                 return Err(AdapterError::Unavailable(
                     "active package cannot fit the resized viewport".into(),
                 ));
             }
             if let Err(error) = self.invoke(&id, AdapterCommand::Resize { viewport }) {
-                self.fail(&id);
-                self.foreground.clear_package();
+                self.fault_and_release(&id);
                 return Err(error);
             }
         }
@@ -504,8 +513,7 @@ impl UniversalAdapterHost {
             // Malformed input should not take a healthy adapter offline;
             // a real adapter fault or bad reply must fail closed.
             if matches!(error, AdapterError::Fault(_) | AdapterError::Registry(_)) {
-                self.fail(&active);
-                self.foreground.clear_package();
+                self.fault_and_release(&active);
             }
             return Err(error);
         }
@@ -527,10 +535,7 @@ impl UniversalAdapterHost {
             .ok_or_else(|| AdapterError::Unavailable("package is not mounted".into()))?;
         if status != AdapterState::Stopped && status != AdapterState::Registered {
             if let Err(error) = self.invoke(package_id, AdapterCommand::Shutdown) {
-                self.fail(package_id);
-                if self.foreground.active_package_id() == Some(package_id) {
-                    self.foreground.clear_package();
-                }
+                self.fault_and_release(package_id);
                 return Err(error);
             }
         }
@@ -539,9 +544,7 @@ impl UniversalAdapterHost {
             entry.state = AdapterState::Stopped;
         }
         self.release_audio(package_id);
-        if self.foreground.active_package_id() == Some(package_id) {
-            self.foreground.clear_package();
-        }
+        self.release_foreground_if(package_id);
         Ok(())
     }
 }
