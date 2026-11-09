@@ -15,6 +15,12 @@ PR #92 (shared desktop/micro command palette) and PR #93 (Mac app packaging path
 
 Rust-Boy is the public product name. The existing `pip_boy` repository, `pipboy` executable, `pipboy-core` crate and `PIPBOY_HOME` data interface remain stable.
 
+## RB-G5 consolidation checkpoint — 2026-11-09
+
+GitHub `main` was verified at `651b0b07e02ac60132ab2eae9f6cee60ce9ae14f` after merges #104, #95, and #105–#108. The command-alias compatibility, bounded validation, Music/Radio audio-focus handoff fixture, and adapter fault-recovery changes are integrated. Their software CI and local validation are recorded in the [RB-G5 task packet](RBG5_AGENT_TASKING_2026-11-09.md); no physical-device acceptance follows from those checks.
+
+The open PR inventory is being reconciled in the task packet and [machine-readable task catalog](../catalog/terminal_agent_tasks.json). #66/#67 have stable formatting failures; #68's old Clippy lint is already corrected on current `main`, but the PR requires reconciliation and a new run. #70 has no executed Actions jobs because its recorded run failed at startup. #83/#87 remain a planning and review dependency; #89/#79/#71 and the remaining conflicting PRs require file-level comparison with current `main`. Pi 5 field acceptance, signed/notarized distribution, security acceptance and production release remain separate gates.
+
 > **Verified integration baseline:** [Five-job Linux/macOS/Windows CI](https://github.com/pskeffington/pip_boy/actions/runs/40164915215) passed at `e7d1090`, including macOS PTY, Windows ConPTY, and the strict deny-all broker suite. **This does not complete a packaged release or enable physical devices.** The catalog's `implemented_unverified` status denotes a pending module acceptance review, not an absence of CI execution.
 
 ## Sync core integration checkpoint — 2026-10-28
