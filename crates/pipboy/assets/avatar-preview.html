@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#06120b">
+  <title>Rust-Boy // Approved Operator Animation</title>
+  <link rel="stylesheet" href="/assets/avatar-preview.css">
+  <script defer src="/assets/avatar-preview.js"></script>
+</head>
+<body>
+  <main>
+    <header><span class="eyebrow">RB / ART BENCH / OFFLINE</span><h1>RUST-BOY // WALK CYCLE</h1></header>
+    <p class="note">Source: approved CRT character sheet. Eight procedural walking frames and one static thumbs-up pose. This is not a STATUS screen or connected sensor readout.</p>
+    <section class="screen" aria-label="Animated field operator">
+      <canvas id="avatar" width="196" height="300" role="img" aria-label="Bearded Rust-Boy cartoon walking in a phosphor-green field uniform; the rod-and-serpent is worn on the front-left chest only."></canvas>
+      <span id="pose-label" aria-live="polite">WALK</span>
+    </section>
+    <div class="controls">
+      <button type="button" id="walk" aria-pressed="true">WALK</button>
+      <button type="button" id="idle" aria-pressed="false">IDLE</button>
+      <button type="button" id="pause" aria-pressed="false">PAUSE</button>
+    </div>
+    <p id="status" class="note" role="status">LOCAL ASSET / NO NETWORK / NO SENSORS</p>
+    <p class="note">Reduced-motion settings automatically show the static idle frame. The existing micro and desktop layouts are unchanged.</p>
+    <a href="/micro">MICRO</a>
+  </main>
+</body>
+</html>
