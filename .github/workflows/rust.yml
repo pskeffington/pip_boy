@@ -166,7 +166,7 @@ jobs:
           python3 tools/run_smokes.py linux
           mkdir -p "$RUNNER_TEMP/rust-boy-linux-stage"
           bash scripts/stage-linux-native.sh target/debug/pipboy "$RUNNER_TEMP/rust-boy-linux-stage"
-          test "$(sha256sum target/debug/pipboy | cut -d\x27 \x27 -f1)" = "$(cat "$RUNNER_TEMP/rust-boy-linux-stage/usr/share/rust-boy/native-binary.sha256")"
+          test "$(sha256sum target/debug/pipboy | awk '{print $1}')" = "$(cat "$RUNNER_TEMP/rust-boy-linux-stage/usr/share/rust-boy/native-binary.sha256")"
 
   optional-sdr:
     name: Optional receive adapter ${{ matrix.feature }} (no hardware I/O)
