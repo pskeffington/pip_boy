@@ -1,0 +1,20 @@
+[Unit]
+Description=Rust-Boy local dashboard (on-demand, loopback only)
+After=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/pipboy dashboard --port 8765
+Restart=on-failure
+RestartSec=2
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=full
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+UMask=0077
+
+[Install]
+WantedBy=graphical-session.target

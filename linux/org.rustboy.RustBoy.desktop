@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Rust-Boy
+Comment=Local Vault Command dashboard
+Exec=/usr/local/bin/rust-boy-launcher
+TryExec=/usr/local/bin/pipboy
+Icon=utilities-terminal
+Terminal=false
+StartupNotify=false
+Categories=System;Utility;
