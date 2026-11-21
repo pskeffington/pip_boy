@@ -1354,11 +1354,14 @@ fn dispatch(req: &Request, store: &WorkbenchStore, port: u16) -> Response {
         }
     }
     match (req.method.as_str(), req.path.as_str()) {
-        ("GET", "/api/healthz") => Response::json(200, &serde_json::json!({
-            "schema_version": 1,
-            "service": "rust-boy",
-            "network": "loopback_only"
-        })),
+        ("GET", "/api/healthz") => Response::json(
+            200,
+            &serde_json::json!({
+                "schema_version": 1,
+                "service": "rust-boy",
+                "network": "loopback_only"
+            }),
+        ),
         ("GET", "/") => Response::new(200, "text/html; charset=utf-8", HTML.as_bytes()),
         ("GET", "/micro") | ("GET", "/micro/") => {
             Response::new(200, "text/html; charset=utf-8", MICRO_HTML.as_bytes())
@@ -1703,16 +1706,25 @@ mod tests {
         let health = dispatch(&request("GET", "/api/healthz", Value::Null), &store, 8765);
         assert_eq!(health.status, 200);
         let payload: Value = serde_json::from_slice(&health.body).unwrap();
-        assert_eq!(payload, serde_json::json!({
-            "schema_version": 1,
-            "service": "rust-boy",
-            "network": "loopback_only"
-        }));
-        assert!(!location.exists(), "readiness unexpectedly wrote user state");
+        assert_eq!(
+            payload,
+            serde_json::json!({
+                "schema_version": 1,
+                "service": "rust-boy",
+                "network": "loopback_only"
+            })
+        );
+        assert!(
+            !location.exists(),
+            "readiness unexpectedly wrote user state"
+        );
         let mut forged = request("GET", "/api/healthz", Value::Null);
         forged.headers.insert("host".into(), "evil.invalid".into());
         assert_eq!(dispatch(&forged, &store, 8765).status, 403);
-        assert_eq!(dispatch(&request("POST", "/api/healthz", Value::Null), &store, 8765).status, 404);
+        assert_eq!(
+            dispatch(&request("POST", "/api/healthz", Value::Null), &store, 8765).status,
+            404
+        );
     }
 
     #[test]
