@@ -1,5 +1,6 @@
 # Rust-Boy documentation
 
+- [Linux native launch and Nemesis handoff](LINUX_NATIVE_DEPLOYMENT.md) — on-demand KDE launcher, user service, isolated staging and deployment gates.
 - [Mac release path](MAC_RELEASE.md) — menu-bar app bundle, local validation, Developer ID signing/notarization, and current release blockers.
 - [Mac release task queue](../catalog/mac_release_tasks.json) — app packaging, signing, installation, update, and acceptance gates.
 
