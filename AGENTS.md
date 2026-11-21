@@ -2,6 +2,10 @@
 
 Scope: the entire `pip_boy` repository. More-specific nested agent instructions may refine, but must not weaken, the security and acceptance gates here.
 
+## Linux native launch ownership
+
+For Linux/Arch/Nemesis work, follow [docs/LINUX_NATIVE_DEPLOYMENT.md](docs/LINUX_NATIVE_DEPLOYMENT.md). Linux Operations owns the on-demand systemd user unit, XDG desktop entry, staging, native CI and Nemesis Operator-only packaging. Foundation (Mac) coordinates source pinning/handoffs. Never enable Rust-Boy at boot, expose the dashboard outside loopback, imply that reference packages are installed, or conflate ISO staging with VM/physical acceptance. Keep Linux source changes in a focused PR until exact-head CI and independent review pass.
+
 ## Mission and workflow
 
 Develop the Rust-Boy host into a production-capable, offline-first, one-package-at-a-time shell. The terminal, full-screen TUI, desktop Vault Command Center, and micro HUD must share **one host-owned typed command catalog**, common capability checks, and the approved native Rust handlers. MAP, RADIO, TV and COMMS remain separately owned packages: never pretend reference manifests are installed packages.
