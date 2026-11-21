@@ -6,8 +6,8 @@ set -euo pipefail
 die() { printf 'Rust-Boy Linux stage: %s\n' "$*" >&2; exit 1; }
 [[ $# -eq 2 ]] || die 'usage: bash scripts/stage-linux-native.sh BUILT_PIPBOY ABSOLUTE_STAGING_ROOT'
 binary="$1"
-dest="\${2%/}"
-root="$(cd "$(dirname "\${BASH_SOURCE[0]}")/.." && pwd)"
+dest="${2%/}"
+root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 [[ -f "$binary" && -x "$binary" && ! -L "$binary" ]] || die 'native binary missing, non-executable, or a symlink'
 [[ "$dest" == /* && "$dest" != / && -d "$dest" ]] || die 'requires an existing absolute staging root other than /'
 
@@ -26,10 +26,10 @@ paths=(
   usr/share/licenses/rust-boy/LICENSE
   usr/share/rust-boy/native-binary.sha256
 )
-for path in "\${paths[@]}"; do
+for path in "${paths[@]}"; do
   cursor="$dest"
   IFS=/ read -ra components <<< "$path"
-  for component in "\${components[@]}"; do
+  for component in "${components[@]}"; do
     cursor="$cursor/$component"
     [[ ! -L "$cursor" ]] || die "staging destination contains a symlink: $path"
   done
