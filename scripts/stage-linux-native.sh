@@ -10,6 +10,19 @@ dest="${2%/}"
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 [[ -f "$binary" && -x "$binary" && ! -L "$binary" ]] || die 'native binary missing, non-executable, or a symlink'
 [[ "$dest" == /* && "$dest" != / && -d "$dest" ]] || die 'requires an existing absolute staging root other than /'
+# Resolve before staging: /tmp/stage/../../.. must not bypass the no-root rule.
+command -v realpath >/dev/null 2>&1 || die 'realpath required for staging-root check'
+canonical_dest="$(realpath -e -- "$dest")" || die 'cannot resolve staging root'
+[[ "$canonical_dest" == "$dest" && "$canonical_dest" != / ]] || die 'staging root must be canonical and never /'
+
+# Install only an ELF built for this Linux machine, never a shell stand-in.
+command -v readelf >/dev/null 2>&1 || die 'readelf (binutils) required'
+header="$(LC_ALL=C readelf -h -- "$binary" 2>/dev/null)" || die 'binary must be native ELF'
+case "$(uname -m)" in
+  x86_64) grep -Eq 'Machine:[[:space:]]+Advanced Micro Devices X86-64' <<< "$header" || die 'ELF architecture differs from Linux x86_64' ;;
+  aarch64) grep -Eq 'Machine:[[:space:]]+AArch64' <<< "$header" || die 'ELF architecture differs from Linux aarch64' ;;
+  *) die 'unsupported native Linux staging architecture' ;;
+esac
 
 # Reject symlink redirection anywhere in the supplied staging root.
 probe="$dest"

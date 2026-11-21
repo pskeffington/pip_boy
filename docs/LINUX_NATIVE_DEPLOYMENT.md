@@ -12,7 +12,7 @@ The unit is installed but **not enabled**, and startup is on demand rather than 
 
 ## Build and stage in an authorized Linux builder
 
-Run `cargo build --release --locked -p pipboy`, create a new isolated staging root, then run `bash scripts/stage-linux-native.sh target/release/pipboy /absolute/staging/root`. The script requires a real, existing absolute root other than /, rejects symlinked paths, refuses to overwrite existing managed files, stages the existing first-party LICENSE, and records the native binary SHA-256. It does not install to the workstation, enable a unit, start a browser, fetch software or alter disk partitions.
+Run `cargo build --release --locked -p pipboy`, create a new isolated staging root, then run `bash scripts/stage-linux-native.sh target/release/pipboy /absolute/staging/root`. The script requires an existing canonical absolute staging root other than / (including paths resolving to /), rejects symlinked paths, refuses to overwrite existing managed files, and requires `readelf` (binutils) to confirm that the staged executable is an ELF matching the native Linux machine architecture (`x86_64` or `aarch64`). It stages the existing first-party LICENSE and records the native binary SHA-256. It does not install to the workstation, enable a unit, start a browser, fetch software or alter disk partitions.
 
 The package payload consists of:
 

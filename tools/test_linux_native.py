@@ -2,6 +2,8 @@
 """Offline regression checks for Linux desktop launch and rootfs staging."""
 
 import hashlib
+import platform
+import shutil
 import os
 from pathlib import Path
 import subprocess
@@ -96,7 +98,7 @@ class NativeLinuxTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as folder:
             temp = Path(folder)
             binary = temp / "pipboy"
-            binary.write_text("#!/bin/sh\nexit 0\n")
+            shutil.copyfile("/usr/bin/true", binary)
             binary.chmod(0o755)
             destination = temp / "rootfs"
             destination.mkdir()
@@ -126,6 +128,38 @@ class NativeLinuxTests(unittest.TestCase):
                 ["bash", str(STAGER), str(binary), "/"],
                 capture_output=True
             ).returncode, 0)
+            # Noncanonical staging paths must never redirect into a sibling.
+            sibling = temp / "sibling"
+            sibling.mkdir()
+            traversal = str(destination / ".." / "sibling")
+            result = subprocess.run(
+                ["bash", str(STAGER), str(binary), traversal],
+                capture_output=True, text=True
+            )
+            self.assertNotEqual(result.returncode, 0)
+            self.assertFalse((sibling / "usr/local/bin/pipboy").exists())
+            # The staging contract refuses scripts masquerading as native binaries.
+            script = temp / "shell-pipboy"
+            script.write_text("#!/bin/sh\nexit 0\n")
+            script.chmod(0o755)
+            result = subprocess.run(
+                ["bash", str(STAGER), str(script), str(sibling)],
+                capture_output=True, text=True
+            )
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("ELF", result.stderr)
+            # A foreign ELF machine header is rejected even if executable.
+            foreign = temp / "foreign-pipboy"
+            data = bytearray(binary.read_bytes())
+            data[18:20] = (183 if platform.machine() == "x86_64" else 62).to_bytes(2, "little")
+            foreign.write_bytes(data)
+            foreign.chmod(0o755)
+            result = subprocess.run(
+                ["bash", str(STAGER), str(foreign), str(sibling)],
+                capture_output=True, text=True
+            )
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("architecture", result.stderr)
 
 
 if __name__ == "__main__":
