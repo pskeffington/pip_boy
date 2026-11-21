@@ -1354,6 +1354,11 @@ fn dispatch(req: &Request, store: &WorkbenchStore, port: u16) -> Response {
         }
     }
     match (req.method.as_str(), req.path.as_str()) {
+        ("GET", "/api/healthz") => Response::json(200, &serde_json::json!({
+            "schema_version": 1,
+            "service": "rust-boy",
+            "network": "loopback_only"
+        })),
         ("GET", "/") => Response::new(200, "text/html; charset=utf-8", HTML.as_bytes()),
         ("GET", "/micro") | ("GET", "/micro/") => {
             Response::new(200, "text/html; charset=utf-8", MICRO_HTML.as_bytes())
