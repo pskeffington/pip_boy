@@ -8,6 +8,8 @@
 
 Rust-Boy is a Rust workbench for local diagnostics, field maps, network engineering and device-to-device task assignments. It has a desktop dashboard, a phosphor-style micro HUD and a terminal console. Seven occupational profiles come preloaded; Custom starts empty.
 
+**Linux native launch candidate:** XDG desktop entry, on-demand systemd user service and a staged Linux binary payload are under review. See [Linux/Nemesis integration](docs/LINUX_NATIVE_DEPLOYMENT.md). The Linux desktop, Nemesis ISO, graphical session and Pi hardware remain unaccepted.
+
 **Development preview on `main`.** The Mac source launchers require Rust 1.90+ and run the dashboard in a browser on loopback. The native menu-bar bundle and packaging pipeline are implemented; Developer ID signing/notarization and clean-account acceptance remain open in [the Mac release work](docs/MAC_RELEASE.md). No signed or notarized production release is available. Raspberry Pi, actual UniFi controller, Mac-to-Pi SSH and PlayStation acceptance remain separate field gates.
 
 Roles use short operator titles: **Overseer, Maintenance, Security, Doctor, Scientist, Reclamations, Recon, Archivist, Custom**. Security's unconfigured camera view offers labeled public publisher views for **DC, NYC, Boston and SF**; private IP-camera enrollment/decoding remains a separate gate. See [camera sources and lifecycle](docs/SECURITY_CAMERA_WALL.md).
